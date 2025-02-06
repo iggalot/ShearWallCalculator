@@ -1,0 +1,95 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+class ShearWallAnalysis
+{
+    static void Main()
+    {
+        Console.WriteLine("Welcome to Shear Wall Force Analysis Software");
+        var buildingData = GetBuildingData();
+        double loadData = GetLoadData();
+        var wallData = GetWallData();
+
+        var stiffnessMatrix = CalculateWallStiffness(wallData);
+        var forceDistribution = DistributeForces(stiffnessMatrix, loadData);
+
+        var results = AnalyzeShearForces(wallData, forceDistribution);
+        DisplayResults(results);
+    }
+
+    static Dictionary<string, double> GetBuildingData()
+    {
+        Console.Write("Enter number of floors: ");
+        int floors = int.Parse(Console.ReadLine());
+        Console.Write("Enter building height (m): ");
+        double height = double.Parse(Console.ReadLine());
+        Console.Write("Enter building width (m): ");
+        double width = double.Parse(Console.ReadLine());
+        
+        return new Dictionary<string, double> { { "floors", floors }, { "height", height }, { "width", width } };
+    }
+
+    static double GetLoadData()
+    {
+        Console.Write("Enter total lateral load (N): ");
+        return double.Parse(Console.ReadLine());
+    }
+
+    static List<Dictionary<string, double>> GetWallData()
+    {
+        Console.Write("Enter number of shear walls: ");
+        int numWalls = int.Parse(Console.ReadLine());
+        var walls = new List<Dictionary<string, double>>();
+        
+        for (int i = 0; i < numWalls; i++)
+        {
+            Console.WriteLine($"Enter details for wall {i + 1}");
+            Console.Write("Enter Young's modulus (Pa): ");
+            double E = double.Parse(Console.ReadLine());
+            Console.Write("Enter moment of inertia (m^4): ");
+            double I = double.Parse(Console.ReadLine());
+            Console.Write("Enter wall height (m): ");
+            double h = double.Parse(Console.ReadLine());
+            
+            walls.Add(new Dictionary<string, double> { { "E", E }, { "I", I }, { "h", h } });
+        }
+        return walls;
+    }
+
+    static List<double> CalculateWallStiffness(List<Dictionary<string, double>> wallData)
+    {
+        var stiffnessMatrix = new List<double>();
+        foreach (var wall in wallData)
+        {
+            double stiffness = (wall["E"] * wall["I"]) / wall["h"];
+            stiffnessMatrix.Add(stiffness);
+        }
+        return stiffnessMatrix;
+    }
+
+    static List<double> DistributeForces(List<double> stiffnessMatrix, double totalLoad)
+    {
+        double totalStiffness = stiffnessMatrix.Sum();
+        return stiffnessMatrix.Select(stiffness => (stiffness / totalStiffness) * totalLoad).ToList();
+    }
+
+    static List<Dictionary<string, double>> AnalyzeShearForces(List<Dictionary<string, double>> wallData, List<double> forceDistribution)
+    {
+        var results = new List<Dictionary<string, double>>();
+        for (int i = 0; i < wallData.Count; i++)
+        {
+            results.Add(new Dictionary<string, double> { { "wall_id", i + 1 }, { "force", forceDistribution[i] } });
+        }
+        return results;
+    }
+
+    static void DisplayResults(List<Dictionary<string, double>> results)
+    {
+        Console.WriteLine("Shear Wall Force Analysis Results:");
+        foreach (var result in results)
+        {
+            Console.WriteLine($"Wall {result["wall_id"]}: Shear Force = {result["force"]} N");
+        }
+    }
+}
