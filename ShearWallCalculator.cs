@@ -170,16 +170,16 @@ namespace calculator
         public Dictionary<int, float> X_bar_walls { get; set; } = new Dictionary<int, float>();
 
         // shear force from direct shear in X-direction -- resistance at base of diaphragm at top of walls
-        private Dictionary<int, float> DirectShear_X { get; set; } = new Dictionary<int, float>();
+        public Dictionary<int, float> DirectShear_X { get; set; } = new Dictionary<int, float>();
 
         // shear force from direct shear in Y-direction -- resistance at base of diaphragm at top of walls
-        private Dictionary<int, float> DirectShear_Y { get; set; } = new Dictionary<int, float>();
+        public Dictionary<int, float> DirectShear_Y { get; set; } = new Dictionary<int, float>();
 
         // shear force in line of wall from eccentric loading, Mr -- resistance at base of diaphragm at top of walls
-        private Dictionary<int, float> EccentricShear { get; set; } = new Dictionary<int, float>();
+        public Dictionary<int, float> EccentricShear { get; set; } = new Dictionary<int, float>();
 
         // dictionary containing the total shear acting on a wall -- resistance at nase pf diaphragm at top of walls
-        private Dictionary<int, float> TotalWallShear { get; set; } = new Dictionary<int, float>();
+        public Dictionary<int, float> TotalWallShear { get; set; } = new Dictionary<int, float>();
 
         private float TotalRigidity_X { get; set; } = 0;  // total rigidity in x-direction
         private float TotalRigidity_Y { get; set; } = 0;  // total rigidity in y-direction

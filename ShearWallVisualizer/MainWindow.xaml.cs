@@ -1,5 +1,6 @@
 ﻿using calculator;
 using DrawingHelpersLibrary;
+using ShearWallVisualizer.Controls;
 using System;
 using System.Windows;
 
@@ -32,6 +33,16 @@ namespace ShearWallVisualizer
                     MainCanvas.Height - wall.Value.End.Y * SCALE_Y - MARGIN,
                     System.Windows.Media.Brushes.Black,
                     3);
+
+                DrawingHelpersLibrary.DrawingHelpers.DrawText(
+                    MainCanvas,
+                    wall.Value.Center.X * SCALE_X + MARGIN,
+                    MainCanvas.Height - wall.Value.Center.Y * SCALE_Y - MARGIN,
+                    0,
+                    wall.Key.ToString(),
+                    System.Windows.Media.Brushes.Black,
+                    12
+                    );
             }
             //Draw the walls
             foreach (var wall in calculator.NS_Walls)
@@ -44,6 +55,16 @@ namespace ShearWallVisualizer
                     MainCanvas.Height - wall.Value.End.Y * SCALE_Y - MARGIN,
                     System.Windows.Media.Brushes.Black,
                     3);
+
+                DrawingHelpersLibrary.DrawingHelpers.DrawText(
+                    MainCanvas,
+                    (wall.Value.Center.X + 1) * SCALE_X + MARGIN,
+                    MainCanvas.Height - wall.Value.Center.Y * SCALE_Y - MARGIN,
+                    0,
+                    wall.Key.ToString(),
+                    System.Windows.Media.Brushes.Black,
+                    12
+                    );
             }
 
             // Draw the Center of Mass Point
@@ -55,6 +76,15 @@ namespace ShearWallVisualizer
                 System.Windows.Media.Brushes.Red,
                 10,
                 1);
+            DrawingHelpersLibrary.DrawingHelpers.DrawText(
+                MainCanvas,
+                calculator.CtrMass.X * SCALE_X + MARGIN,
+                MainCanvas.Height - calculator.CtrMass.Y * SCALE_Y - MARGIN -20,
+                0,
+                "C.M",
+                System.Windows.Media.Brushes.Red,
+                12
+                );
 
 
             // Draw the Center of Rigidity Point
@@ -66,6 +96,16 @@ namespace ShearWallVisualizer
                 System.Windows.Media.Brushes.Blue,
                 10,
                 1);
+            DrawingHelpersLibrary.DrawingHelpers.DrawText(
+                MainCanvas,
+                calculator.CtrRigidity.X * SCALE_X + MARGIN,
+                MainCanvas.Height - calculator.CtrRigidity.Y * SCALE_Y - MARGIN,
+                0,
+                "C.R",
+                System.Windows.Media.Brushes.Blue,
+                12
+                );
+
 
             // Draw the Loads
             if (calculator.V_x != 0)
@@ -96,6 +136,8 @@ namespace ShearWallVisualizer
                     );
             }
 
+
+
             // Draw the moment arrow
             //if (calculator.Mt_comb != 0)
             //{
@@ -116,6 +158,31 @@ namespace ShearWallVisualizer
             //}
 
 
+
+            // Create Table of Results
+            foreach (var result in calculator.TotalWallShear)
+            {
+                int id = result.Key;
+                float rigidity = calculator.EW_Walls.ContainsKey(id) ? calculator.EW_Walls[id].WallRigidity : calculator.NS_Walls[id].WallRigidity;
+                float direct_shear_x = calculator.DirectShear_X.ContainsKey(id) ? calculator.DirectShear_X[id] : 0.0f;
+                float direct_shear_y = calculator.DirectShear_Y.ContainsKey(id) ? calculator.DirectShear_Y[id] : 0.0f;
+                float eccentric_shear = calculator.EccentricShear.ContainsKey(id) ? calculator.EccentricShear[id] : 0.0f;
+                float total_shear = calculator.TotalWallShear.ContainsKey(id) ? calculator.TotalWallShear[id] : 0.0f;
+
+                ShearWallResults control = new ShearWallResults(
+                    id, 
+                    rigidity, 
+                    calculator.X_bar_walls[id],
+                    calculator.Y_bar_walls[id],
+                    direct_shear_x,
+                    direct_shear_y,
+                    eccentric_shear,
+                    total_shear
+                    );
+                
+
+                ShearWallResults.Children.Add(control);
+            }
         }
     }
 }

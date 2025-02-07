@@ -1,0 +1,19 @@
+﻿<UserControl x:Class="ShearWallVisualizer.Controls.ShearWallResults"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:ShearWallVisualizer.Controls"
+             mc:Ignorable="d" 
+             >
+        <StackPanel Orientation="Horizontal" Background="AliceBlue">
+            <Label Width="50" Height="25" Background="LightGray" Margin="5 1 5 1" FontWeight="Bold" Name="ID"/>
+            <Label Width="50" Height="25" Background="LightGray" Margin="5 1 5 1" Name="Rgidity"/>
+            <Label Width="50" Height="25" Background="LightGray" Margin="5 1 5 1" Name="Xbar"/>
+            <Label Width="50" Height="25" Background="LightGray" Margin="5 1 5 1" Name="Ybar"/>
+            <Label Width="50" Height="25" Background="LightGray" Margin="5 1 5 1" Name="Vix"/>
+            <Label Width="50" Height="25" Background="LightGray" Margin="5 1 5 1" Name="Viy"/>
+            <Label Width="50" Height="25" Background="LightGray" Margin="5 1 5 1" Name="V_ecc"/>
+            <Label Width="50" Height="25" Background="LightGray" Margin="5 1 5 1" FontWeight="Bold" Name="V_tot"/>
+        </StackPanel>
+</UserControl>
