@@ -145,8 +145,8 @@ namespace calculator
         /// Loads and eccentricty values 
         /// Uses Cartesian coordinate and right-hand rule -- x+ right, y+ up, rot+ = CCW
         /// </summary>
-        private float V_x = 40; // x direction load (kips) acting at center of mass
-        private float V_y = 0;  // y direction load (kips) acting at center of mass
+        public float V_x { get; set; } = 40; // x direction load (kips) acting at center of mass
+        public float V_y { get; set; } = 0;  // y direction load (kips) acting at center of mass
 
         /// <summary>
         /// eccentricities
@@ -155,7 +155,7 @@ namespace calculator
         private float ecc_x = 0; // eccentricity in x direction (feet) measured from center of rigidity to center of mass
         private float ecc_y = 0; // eccentricity in y direction (feet) measured from center of rigidity to center of mass
 
-        private float Mt_comb = 0; // moment due to eccentric loading  "+ = CCW, "-" = CW
+        public float Mt_comb { get; set; } = 0; // moment due to eccentric loading  "+ = CCW, "-" = CW
 
         // collection of walls in East West direction (horizontal on screen)
         public Dictionary<int, Wall> EW_Walls { get; set; } = new Dictionary<int, Wall>();
@@ -199,8 +199,8 @@ namespace calculator
         /// </summary>
         public ShearWallCalculator()
         {
-            //LoadTestWallData();
-            LoadTestWallData2();
+            LoadTestWallData();
+            //LoadTestWallData2();
 
             //update calculations once data is loaded
             Update();
@@ -556,6 +556,7 @@ namespace calculator
             Wall wall2 = new Wall(2, 9, 15, 80, 25, 80, WallDirs.EastWest);
             EW_Walls.Add(wall2.Id, wall2);
             Wall wall4 = new Wall(4, 9, 10.5875f, 0, 29.4125f, 0, WallDirs.EastWest); // this wall is 3x rigid as others
+            //Wall wall4 = new Wall(4, 9, 15, 0, 25, 0, WallDirs.EastWest); // this wall is 3x rigid as others
             EW_Walls.Add(wall4.Id, wall4);
 
             // North / South Wall Segments

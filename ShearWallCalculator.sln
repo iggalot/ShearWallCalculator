@@ -1,11 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.12.35527.113 d17.12
+VisualStudioVersion = 17.12.35527.113
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShearWallCalculator", "ShearWallCalculator.csproj", "{482E885F-E3A1-45D1-8D5B-29FAA85BF317}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShearWallCalculatorDriver", "ShearWallCalculatorDriver\ShearWallCalculatorDriver.csproj", "{F6FE81BB-4926-4F6B-A919-2ED12013ED08}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShearWallCalculatorDriver", "ShearWallCalculatorDriver\ShearWallCalculatorDriver.csproj", "{5029B6F3-BDAB-4D1A-A7B9-A3BC4EB2FA44}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShearWallVisualizer", "ShearWallVisualizer\ShearWallVisualizer.csproj", "{7DC23E4B-F7EE-4FBB-B9A7-A2D9F9E4B398}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,10 +19,14 @@ Global
 		{482E885F-E3A1-45D1-8D5B-29FAA85BF317}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{482E885F-E3A1-45D1-8D5B-29FAA85BF317}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{482E885F-E3A1-45D1-8D5B-29FAA85BF317}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F6FE81BB-4926-4F6B-A919-2ED12013ED08}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F6FE81BB-4926-4F6B-A919-2ED12013ED08}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F6FE81BB-4926-4F6B-A919-2ED12013ED08}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F6FE81BB-4926-4F6B-A919-2ED12013ED08}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5029B6F3-BDAB-4D1A-A7B9-A3BC4EB2FA44}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5029B6F3-BDAB-4D1A-A7B9-A3BC4EB2FA44}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5029B6F3-BDAB-4D1A-A7B9-A3BC4EB2FA44}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5029B6F3-BDAB-4D1A-A7B9-A3BC4EB2FA44}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7DC23E4B-F7EE-4FBB-B9A7-A2D9F9E4B398}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7DC23E4B-F7EE-4FBB-B9A7-A2D9F9E4B398}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7DC23E4B-F7EE-4FBB-B9A7-A2D9F9E4B398}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7DC23E4B-F7EE-4FBB-B9A7-A2D9F9E4B398}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
