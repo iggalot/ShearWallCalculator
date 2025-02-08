@@ -5,15 +5,36 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ShearWallVisualizer"
         mc:Ignorable="d"
-        Title="Rigid Diaphragm Shear Wall Calculator v0.1" Height="700" Width="1000">
+        Title="Rigid Diaphragm Shear Wall Calculator v0.1" Height="800" Width="1000"
+        Loaded="Window_Loaded">
     <Grid Background="LightGray">
         <StackPanel Orientation="Horizontal">
             <StackPanel Orientation="Vertical">
                 <Label Content="Rigid Diaphragm Shear Wall Calculator" HorizontalAlignment="Center" FontSize="20" FontWeight="Bold" Margin="3" Height="40" Width="420"/>
+                <Label Name="CurrentMode" Width="400" Background ="LightBlue" FontWeight="Bold"  Margin="0 0 0 0" Height="25" Content="SELECT EDIT MODE (M for MASS and R for RIGIDITY and C to CLEAR CURRENT) "/>
+                <StackPanel Orientation="Horizontal">
+                    <StackPanel Orientation="Horizontal">
+                        <Label Width="55" Height="25"  Margin="2" FontWeight="Bold" Content="C.M."/>
+                        <Label Name="CenterOfMass" Width="150" Height="25"  Margin="2" FontWeight="Bold" Content="value"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Label Width="55" Height="25"  Margin="2" FontWeight="Bold" Content="C.R."/>
+                        <Label Name="CenterOfRigidity" Width="150" Height="25"  Margin="2" FontWeight="Bold" Content="value"/>
+                    </StackPanel>
+                </StackPanel>
                 <Canvas Name="MainCanvas" Background="White"  
-                Width="400" Height="600" Margin="25 0 25 25" />
+                Width="400" Height="600" Margin="25 0 25 25" 
+                        MouseDown="MainCanvas_MouseDown"
+                        MouseMove="MainCanvas_MouseMove"
+                        />
+                <Label Name="MousePosition" Width="100"  Margin="0 0 0 0" Height="25" Content="Mouse Position: "/>
+                
+                <StackPanel Orientation="Horizontal" Width="400">
+                    <Label Name="StartClickCoord" Width="100"  Margin="0 0 0 0" Height="25" Content="Start: "/>
+                    <Label Name="EndClickCoord"  Width="100" Margin="0 0 0 0" Height="25" Content="End: "/>
+                </StackPanel>
             </StackPanel>
-            <StackPanel Name="ShearWallResults" HorizontalAlignment="Center" Orientation="Vertical">
+            <StackPanel HorizontalAlignment="Center" Orientation="Vertical">
                 <StackPanel Orientation="Horizontal" Background="AliceBlue" Margin="0 20 0 0">
                     <Label Width="55" Height="25"  Margin="2" FontWeight="Bold" Content="Wall ID"/>
                     <Label Width="55" Height="25"  Margin="2" FontWeight="Bold" Content="Rigidity"/>
@@ -24,6 +45,9 @@
                     <Label Width="55" Height="25"  Margin="2" FontWeight="Bold" Content="V_ecc (k)"/>
                     <Label Width="55" Height="25"  Margin="2" FontWeight="Bold" Content="V_tot (k)"/>
                 </StackPanel>
+                
+                <StackPanel Name="ShearWallResults" HorizontalAlignment="Center" Orientation="Vertical" />
+
             </StackPanel>
         </StackPanel>
 

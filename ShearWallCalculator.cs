@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
+using System.IO;
 using System.Numerics;
 
 namespace calculator
@@ -132,6 +134,17 @@ namespace calculator
             str += "\nRxr: " + Rxr + "  Ryr: " + Ryr;
             return str;
         }
+
+        public void WriteToFile(string filename)
+        {
+            string str = "";
+            str += Id.ToString() + " " + Start.X.ToString() + " " + Start.Y.ToString() + " " + End.X.ToString() + " " + End.Y.ToString() + " " + WallHeight.ToString() + " " + WallDir.ToString();
+
+            using (StreamWriter sw = File.AppendText(filename))
+            {
+                sw.WriteLine(str);
+            }
+        }
     }
 
     /// <summary>
@@ -141,6 +154,8 @@ namespace calculator
     /// </summary>
     public class ShearWallCalculator
     {
+        public const string FILENAME = "results.txt";
+
         /// <summary>
         /// Loads and eccentricty values 
         /// Uses Cartesian coordinate and right-hand rule -- x+ right, y+ up, rot+ = CCW
@@ -162,6 +177,8 @@ namespace calculator
 
         // collection of walls in North South direction (vertical on screen)
         public Dictionary<int, Wall> NS_Walls { get; set; } = new Dictionary<int, Wall>();
+
+        public List<System.Windows.Point> DiaphragmPoints { get; set; } = new List<System.Windows.Point>();
 
         // distance from center of wall to center of rigidity in y-direction
         public Dictionary<int, float> Y_bar_walls { get; set; } = new Dictionary<int, float>();
@@ -199,10 +216,37 @@ namespace calculator
         /// </summary>
         public ShearWallCalculator()
         {
-            LoadTestWallData();
+            //// Sample data for testing
+            //LoadTestWallData();
             //LoadTestWallData2();
 
             //update calculations once data is loaded
+            Update();           
+        }
+
+        public ShearWallCalculator(Dictionary<int, Wall> walls, List<System.Windows.Point> diaphagm_pts)
+        {
+
+            // clear the current calculator
+            EW_Walls.Clear();
+            NS_Walls.Clear();
+            DiaphragmPoints.Clear();
+
+            // sort through the list of walls and assign to appropriate dictionary
+            foreach (var wall in walls)
+            {
+                if(wall.Value.WallDir == WallDirs.EastWest)
+                {
+                    EW_Walls.Add(wall.Key, wall.Value);
+                } else
+                {
+                    NS_Walls.Add(wall.Key, wall.Value);
+                }
+            }
+
+            DiaphragmPoints = diaphagm_pts;
+
+            // update the calculations
             Update();
         }
 
@@ -211,6 +255,11 @@ namespace calculator
         /// </summary>
         private void Update()
         {
+            // find the center of mass
+            ComputeCenterOfMass();
+            Console.WriteLine("Center of Mass -- xr: " + CtrMass.X + " ft.  yr: " + CtrMass.Y + " ft.");
+            
+
             // find center of rigidity
             ComputeCenterOfRigidity();  // compute the center of rigidty for the arrangement of shear walls
             Console.WriteLine("Center of Rigidity -- xr: " + CtrRigidity.X + " ft.  yr: " + CtrRigidity.Y + " ft.");
@@ -264,6 +313,31 @@ namespace calculator
 
             // display results
             Console.WriteLine(DisplayResults());
+        }
+
+        private void ComputeCenterOfMass()
+        {
+            if(DiaphragmPoints.Count == 0)
+            {
+                CtrMass.X = 0;
+                CtrMass.Y = 0;
+            } else
+            {
+                int num_pts = DiaphragmPoints.Count;
+                // find coords
+                float sum_x = 0;
+                float sum_y = 0;
+                for (int i = 0; i < num_pts; i++)
+                {
+                    sum_x += (float)DiaphragmPoints[i].X;
+                    sum_y += (float)DiaphragmPoints[i].Y;
+                }
+                CtrMass.X = sum_x / num_pts;
+                CtrMass.Y = sum_y / num_pts;
+
+
+                
+            }
         }
 
         public string DisplayResults()
@@ -338,6 +412,7 @@ namespace calculator
         /// </summary>
         private void ComputeDirectShear_X()
         {
+            DirectShear_X.Clear();
             int sign = -1; // computing the resistance on the diaphragm
             foreach (var wall in EW_Walls)
             {
@@ -350,6 +425,7 @@ namespace calculator
         /// </summary>
         private void ComputeDirectShear_Y()
         {
+            DirectShear_Y.Clear();
             int sign = -1;  // computing the resistance on the diaphragm
             foreach (var wall in NS_Walls)
             {
@@ -359,6 +435,8 @@ namespace calculator
 
         private void ComputeEccentricShear()
         {
+            EccentricShear.Clear();
+
             foreach (var wall in EW_Walls)
             {
                 int sign = 1; // computing the resistance on the diaphragm
@@ -539,6 +617,27 @@ namespace calculator
             NS_Walls.Add(6, wall6);
             Wall wall7 = new Wall(7, 9, 20, 45, 20, 55, WallDirs.NorthSouth);
             NS_Walls.Add(7, wall7);
+        }
+
+        /// <summary>
+        /// Routine to write out wall data to the file
+        /// </summary>
+        /// <param name="filename"></param>
+        public void WriteToFile(string filename)
+        {
+            foreach (var wall in EW_Walls)
+            {
+                wall.Value.WriteToFile(FILENAME);
+            }
+            foreach (var wall in NS_Walls)
+            {
+                wall.Value.WriteToFile(FILENAME);
+            }
+        }
+
+        public void ReadFromFile(string filename)
+        {
+            throw new NotImplementedException();
         }
 
         /// <summary>
