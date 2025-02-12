@@ -1,152 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
-using System.IO;
-using System.Numerics;
 
 namespace calculator
 {
-    public enum WallDirs
-    {
-        EastWest = 0,
-        NorthSouth = 1
-    }
-    public class Point
-    {
-        public float X;
-        public float Y;
-        public Point(float x, float y)
-        {
-            X = x;
-            Y = y;
-        }
-    }
-
-    public class Wall
-    {
-        public int Id {get; set;}
-        public Point Start { get; set; } // start point of wall...bottommost point at one end
-        public Point End { get; set; } // end point of wall...bottommost point at other end
-        public Point Center { get => GetCenterPoint(); } // center point of wall
-        public float WallLength { get => GetLength(); }  // length of the wall
-        public float WallHeight { get; set; } = 9;  // height of wall feet.
-        public float WallRigidity { get => GetRigidity(); } // rigidity in direction of the wall
-
-      
-
-        public WallDirs WallDir { get; set; }
-        public Vector2 Dir { get => GetUnitDirection(); }
-
-        public float Rxr { get => ComputeFirstMomentOfRigidity_X(); }  // first moment of rigidity for horizontal walls
-        public float Ryr { get => ComputeFirstMomentOfRigidity_Y(); }  // first moment of rigidity for vertical walls
-
-        /// <summary>
-        /// Default constructor
-        /// </summary>
-        /// <param name="id">identifier for the wall segment</param>
-        /// <param name="ht">height of the wall segment</param>
-        /// <param name="sx">x-coord of start pt</param>
-        /// <param name="sy">y-coord of start pt</param>
-        /// <param name="ex">x-coord of end pt</param>
-        /// <param name="ey">y-coord of end pt</param>
-        /// <exception cref="ArgumentException"></exception>
-        public Wall(int id, float ht, float sx, float sy, float ex, float ey, WallDirs wallDir)
-        {
-            Id = id;
-            WallHeight = ht;
-            Start = new Point(sx, sy);
-            End = new Point(ex, ey);
-            WallDir = wallDir;
-        }
-
-
-        private Point GetCenterPoint()
-        {
-            return new Point((Start.X + End.X) / 2, (Start.Y + End.Y) / 2);
-        }
-
-        /// <summary>
-        /// Compute the distance from the start point to the end point
-        /// </summary>
-        /// <returns></returns>
-        private float GetLength()
-        {
-            return (float) Math.Sqrt((End.X - Start.X) * (End.X - Start.X) + (End.Y - Start.Y) * (End.Y - Start.Y));
-        }
-
-        /// <summary>
-        /// computes the cartesian unit vector from the start point to the end point
-        /// </summary>
-        /// <returns></returns>
-        private Vector2 GetUnitDirection()
-        {
-            if(WallLength == 0)
-            {
-                return new Vector2(0, 0);
-            }
-            return new Vector2((End.X - Start.X) / WallLength, (End.Y - Start.Y) / WallLength);
-        }
-
-        /// <summary>
-        /// Computes the rigidity of the wall segment in the line of the wall
-        /// Rigidity = 1 / (0.4*(h/L)^3+0.3*(h/ L)
-        /// where h = wall height
-        /// L = wall length
-        /// </summary>
-        /// <returns></returns>
-        private float GetRigidity()
-        {
-            if (WallLength == 0)
-            {
-                return 0;
-            }
-
-            return 1.0f / (0.4f * (WallHeight / WallLength) * (WallHeight / WallLength) * (WallHeight / WallLength) + 0.3f * (WallHeight / WallLength)); ;
-        }
-
-        /// <summary>
-        /// Compute first y-moment of rigidity about global origin (0,0)
-        /// </summary>
-        /// <returns></returns>
-        private float ComputeFirstMomentOfRigidity_X()
-        {
-            return (Start.X + End.X) / 2 * WallRigidity;
-        }
-
-        /// <summary>
-        /// Compute first x-moment of rigidity about global origin (0,0)
-        /// </summary>
-        /// <returns></returns>
-        private float ComputeFirstMomentOfRigidity_Y()
-        {
-            return (Start.Y + End.Y) / 2 * WallRigidity;
-        }
-        /// <summary>
-        /// Creates a string for displaying the info of the wall
-        /// </summary>
-        /// <returns></returns>
-        public string DisplayInfo()
-        {
-            string str = "";
-            str += "\nWall ID: " + Id + "   WallDir: " + WallDir;
-            str += "\nStart: " + Start.X + ", " + Start.Y + "  End: " + End.X + ", " + End.Y + "   UnitVec: <" + Dir.X + ", " + Dir.Y +">";
-            str += "\nLength: " + WallLength + "  Height: " + WallHeight + "  Rigidity: " + WallRigidity;
-            str += "\nRxr: " + Rxr + "  Ryr: " + Ryr;
-            return str;
-        }
-
-        public void WriteToFile(string filename)
-        {
-            string str = "";
-            str += Id.ToString() + " " + Start.X.ToString() + " " + Start.Y.ToString() + " " + End.X.ToString() + " " + End.Y.ToString() + " " + WallHeight.ToString() + " " + WallDir.ToString();
-
-            using (StreamWriter sw = File.AppendText(filename))
-            {
-                sw.WriteLine(str);
-            }
-        }
-    }
-
     /// <summary>
     /// Origin = Bottom left corner of building
     /// +x direction is to the right
@@ -173,10 +30,10 @@ namespace calculator
         public float Mt_comb { get; set; } = 0; // moment due to eccentric loading  "+ = CCW, "-" = CW
 
         // collection of walls in East West direction (horizontal on screen)
-        public Dictionary<int, Wall> EW_Walls { get; set; } = new Dictionary<int, Wall>();
+        public Dictionary<int, WallData> EW_Walls { get; set; } = new Dictionary<int, WallData>();
 
         // collection of walls in North South direction (vertical on screen)
-        public Dictionary<int, Wall> NS_Walls { get; set; } = new Dictionary<int, Wall>();
+        public Dictionary<int, WallData> NS_Walls { get; set; } = new Dictionary<int, WallData>();
 
         public List<System.Windows.Point> DiaphragmPoints { get; set; } = new List<System.Windows.Point>();
 
@@ -224,7 +81,7 @@ namespace calculator
             Update();           
         }
 
-        public ShearWallCalculator(Dictionary<int, Wall> walls, List<System.Windows.Point> diaphagm_pts)
+        public ShearWallCalculator(Dictionary<int, WallData> walls, List<System.Windows.Point> diaphagm_pts)
         {
 
             // clear the current calculator
@@ -601,21 +458,21 @@ namespace calculator
             CtrMass = new Point(7.58f, 37.5f);
 
             // East / West Wall Segments
-            Wall wall1 = new Wall(1, 9, 0, 0, 20, 0, WallDirs.EastWest);
+            WallData wall1 = new WallData(1, 9, 0, 0, 20, 0, WallDirs.EastWest);
             EW_Walls.Add(1, wall1);
-            Wall wall2 = new Wall(2, 9, 20, 30, 30, 30, WallDirs.EastWest);
+            WallData wall2 = new WallData(2, 9, 20, 30, 30, 30, WallDirs.EastWest);
             EW_Walls.Add(2, wall2);
-            Wall wall3 = new Wall(3, 9,20, 45, 30, 45, WallDirs.EastWest);
+            WallData wall3 = new WallData(3, 9,20, 45, 30, 45, WallDirs.EastWest);
             EW_Walls.Add(3, wall3);
-            Wall wall4 = new Wall(4, 9, 0, 75, 20, 75, WallDirs.EastWest);
+            WallData wall4 = new WallData(4, 9, 0, 75, 20, 75, WallDirs.EastWest);
             EW_Walls.Add(4, wall4);
 
             // North / South Wall Segments
-            Wall wall5 = new Wall(5, 9, 0, 27.5f, 0, 47.5f, WallDirs.NorthSouth);
+            WallData wall5 = new WallData(5, 9, 0, 27.5f, 0, 47.5f, WallDirs.NorthSouth);
             NS_Walls.Add(5, wall5);
-            Wall wall6 = new Wall(6, 9, 20, 20, 20, 30, WallDirs.NorthSouth);
+            WallData wall6 = new WallData(6, 9, 20, 20, 20, 30, WallDirs.NorthSouth);
             NS_Walls.Add(6, wall6);
-            Wall wall7 = new Wall(7, 9, 20, 45, 20, 55, WallDirs.NorthSouth);
+            WallData wall7 = new WallData(7, 9, 20, 45, 20, 55, WallDirs.NorthSouth);
             NS_Walls.Add(7, wall7);
         }
 
@@ -652,16 +509,16 @@ namespace calculator
             CtrMass = new Point(20, 40);
 
             // East / West Wall Segments
-            Wall wall2 = new Wall(2, 9, 15, 80, 25, 80, WallDirs.EastWest);
+            WallData wall2 = new WallData(2, 9, 15, 80, 25, 80, WallDirs.EastWest);
             EW_Walls.Add(wall2.Id, wall2);
-            Wall wall4 = new Wall(4, 9, 10.5875f, 0, 29.4125f, 0, WallDirs.EastWest); // this wall is 3x rigid as others
+            WallData wall4 = new WallData(4, 9, 10.5875f, 0, 29.4125f, 0, WallDirs.EastWest); // this wall is 3x rigid as others
             //Wall wall4 = new Wall(4, 9, 15, 0, 25, 0, WallDirs.EastWest); // this wall is 3x rigid as others
             EW_Walls.Add(wall4.Id, wall4);
 
             // North / South Wall Segments
-            Wall wall1 = new Wall(1, 9, 0, 5, 0, 15, WallDirs.NorthSouth);
+            WallData wall1 = new WallData(1, 9, 0, 5, 0, 15, WallDirs.NorthSouth);
             NS_Walls.Add(wall1.Id, wall1);
-            Wall wall3 = new Wall(3, 9, 40, 5, 40, 15, WallDirs.NorthSouth);
+            WallData wall3 = new WallData(3, 9, 40, 5, 40, 15, WallDirs.NorthSouth);
             NS_Walls.Add(wall3.Id, wall3);
         }
     }

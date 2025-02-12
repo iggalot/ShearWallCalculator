@@ -31,9 +31,9 @@ namespace ShearWallVisualizer
         public System.Windows.Point CurrentEndPoint { get; set; }
 
         public ShearWallCalculator Calculator { get; set; } = new ShearWallCalculator();
-        public Wall CurrentWall { get; set; }
+        public WallData CurrentWall { get; set; }
 
-        public Dictionary<int, Wall> Walls { get; set; } = new Dictionary<int, Wall>();
+        public Dictionary<int, WallData> Walls { get; set; } = new Dictionary<int, WallData>();
         public List<System.Windows.Point> DiaphragmPoints { get; set; } = new List<System.Windows.Point>();
 
         public MainWindow()
@@ -250,6 +250,28 @@ namespace ShearWallVisualizer
 
                 ShearWallResults.Children.Add(control);
             }
+
+            // Create Table of Wall Data
+            ShearWallData_EW.Children.Clear();
+            ShearWallData_NS.Children.Clear();
+
+            foreach (var result in Calculator.TotalWallShear)
+            {
+                int id = result.Key;
+                WallData wall = Calculator.EW_Walls.ContainsKey(id) ? Calculator.EW_Walls[id] : Calculator.NS_Walls[id];
+                ShearWallData control = new ShearWallData(id, wall);
+
+                if(wall.WallDir == WallDirs.EastWest)
+                {
+                    ShearWallData_EW.Children.Add(control);
+                } else if (wall.WallDir == WallDirs.NorthSouth)
+                {
+                    ShearWallData_NS.Children.Add(control);
+                } else
+                {
+                    throw new Exception("Invalid wall direction " + wall.WallDir.ToString() + " in wall #" + id.ToString());
+                }
+            }
         }
 
         private void MainCanvas_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -297,7 +319,7 @@ namespace ShearWallVisualizer
                     }
 
                     // Add to the list of wall segments
-                    CurrentWall = new Wall(GetNextWallID(), DEFAULT_WALL_HT, start_x, start_y, end_x, end_y, dir);
+                    CurrentWall = new WallData(GetNextWallID(), DEFAULT_WALL_HT, start_x, start_y, end_x, end_y, dir);
                     Walls.Add(CurrentWall.Id, CurrentWall);
 
                     StartClickIsSet = false;

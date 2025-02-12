@@ -1,0 +1,17 @@
+﻿<UserControl x:Class="ShearWallVisualizer.Controls.ShearWallData"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:ShearWallVisualizer.Controls"
+             mc:Ignorable="d" 
+             >
+    <StackPanel Orientation="Horizontal" Background="AliceBlue">
+        <Label Width="50" Height="25" Background="LightGray" Margin="5 1 5 1"  Name="lbl_ID"/>
+        <Label Width="50" Height="25" Background="LightGray" Margin="5 1 5 1"  Name="lbl_Type"/>
+        <Label Width="75" Height="25" Background="LightGray" Margin="5 1 5 1"  Name="lbl_Length"/>
+        <Label Width="75" Height="25" Background="LightGray" Margin="5 1 5 1"  Name="lbl_Height"/>
+        <Label Width="100" Height="25" Background="LightGray" Margin="5 1 5 1" Name="lbl_StartPt"/>
+        <Label Width="100" Height="25" Background="LightGray" Margin="5 1 5 1" Name="lbl_EndPt"/>
+    </StackPanel>
+</UserControl>

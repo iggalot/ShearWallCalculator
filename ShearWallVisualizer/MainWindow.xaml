@@ -34,20 +34,38 @@
                     <Label Name="EndClickCoord"  Width="100" Margin="0 0 0 0" Height="25" Content="End: "/>
                 </StackPanel>
             </StackPanel>
-            <StackPanel HorizontalAlignment="Center" Orientation="Vertical">
-                <StackPanel Orientation="Horizontal" Background="AliceBlue" Margin="0 20 0 0">
-                    <Label Width="55" Height="25"  Margin="2" FontWeight="Bold" Content="Wall ID"/>
-                    <Label Width="55" Height="25"  Margin="2" FontWeight="Bold" Content="Rigidity"/>
-                    <Label Width="55" Height="25"  Margin="2" FontWeight="Bold" Content="Xbar (ft)"/>
-                    <Label Width="55" Height="25"  Margin="2" FontWeight="Bold" Content="Ybar (ft)"/>
-                    <Label Width="55" Height="25"  Margin="2" FontWeight="Bold" Content="Vix (k)"/>
-                    <Label Width="55" Height="25"  Margin="2" FontWeight="Bold" Content="Viy (k)"/>
-                    <Label Width="55" Height="25"  Margin="2" FontWeight="Bold" Content="V_ecc (k)"/>
-                    <Label Width="55" Height="25"  Margin="2" FontWeight="Bold" Content="V_tot (k)"/>
+            <StackPanel Orientation="Vertical">
+                <StackPanel HorizontalAlignment="Center" Orientation="Vertical" Margin="0 20 0 0">
+                    <Label HorizontalAlignment="Left" Width="200" Height="30" FontWeight="Bold" Content="Shear Wall Forces Results"/>
+                    <StackPanel Orientation="Horizontal" Background="AliceBlue">
+                        <Label Width="55" Height="25"  Margin="2" FontWeight="Bold" Content="Wall ID"/>
+                        <Label Width="55" Height="25"  Margin="2" FontWeight="Bold" Content="Rigidity"/>
+                        <Label Width="55" Height="25"  Margin="2" FontWeight="Bold" Content="Xbar (ft)"/>
+                        <Label Width="55" Height="25"  Margin="2" FontWeight="Bold" Content="Ybar (ft)"/>
+                        <Label Width="55" Height="25"  Margin="2" FontWeight="Bold" Content="Vix (k)"/>
+                        <Label Width="55" Height="25"  Margin="2" FontWeight="Bold" Content="Viy (k)"/>
+                        <Label Width="55" Height="25"  Margin="2" FontWeight="Bold" Content="V_ecc (k)"/>
+                        <Label Width="55" Height="25"  Margin="2" FontWeight="Bold" Content="V_tot (k)"/>
+                    </StackPanel>
+                    <StackPanel Name="ShearWallResults" HorizontalAlignment="Center" Orientation="Vertical" />
                 </StackPanel>
-                
-                <StackPanel Name="ShearWallResults" HorizontalAlignment="Center" Orientation="Vertical" />
+                <StackPanel HorizontalAlignment="Left" Orientation="Vertical" Margin="0 20 0 0">
+                    <Label HorizontalAlignment="Left" Width="200" Height="30" FontWeight="Bold" Content="Shear Wall Data"/>
+                    <Label HorizontalAlignment="Left" Width="200" Height="30" FontWeight="Bold" Content="EAST-WEST DIRECTION"/>
+                    <StackPanel Orientation="Horizontal" Background="AliceBlue" >
+                        <Label Width="50" Height="25" FontWeight="Bold" Margin="5 1 5 1" Content="ID"/>
+                        <Label Width="50" Height="25" FontWeight="Bold" Margin="5 1 5 1" Content="Type"/>
+                        <Label Width="75" Height="25" FontWeight="Bold" Margin="5 1 5 1" Content="Length (ft)"/>
+                        <Label Width="75" Height="25" FontWeight="Bold" Margin="5 1 5 1" Content="Height (ft)"/>
+                        <Label Width="100" Height="25" FontWeight="Bold" Margin="5 1 5 1" Content="Start Pt (ft, ft)"/>
+                        <Label Width="100" Height="25" FontWeight="Bold" Margin="5 1 5 1" Content="End Pt (ft, ft)"/>
+                    </StackPanel>
+                    <StackPanel Name="ShearWallData_EW" HorizontalAlignment="Center" Orientation="Vertical" />
 
+                    <Label HorizontalAlignment="Left" Width="200" Height="30" FontWeight="Bold" Content="NORTH-SOUTH DIRECTION"/>
+                    <StackPanel Name="ShearWallData_NS" HorizontalAlignment="Center" Orientation="Vertical" />
+
+                </StackPanel>
             </StackPanel>
         </StackPanel>
 
