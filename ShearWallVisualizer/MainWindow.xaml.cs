@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Input;
+using static ShearWallVisualizer.Controls.ShearWallData;
 
 namespace ShearWallVisualizer
 {
@@ -255,6 +256,7 @@ namespace ShearWallVisualizer
             ShearWallData_EW.Children.Clear();
             ShearWallData_NS.Children.Clear();
 
+            /// Create the shearwall data controls
             foreach (var result in Calculator.TotalWallShear)
             {
                 int id = result.Key;
@@ -271,7 +273,28 @@ namespace ShearWallVisualizer
                 {
                     throw new Exception("Invalid wall direction " + wall.WallDir.ToString() + " in wall #" + id.ToString());
                 }
+
+                control.DeleteWall += OnWallDeleted;
             }
+        }
+
+        private void OnWallDeleted(object sender, DeleteWallEventArgs e)
+        {
+            if(Walls.ContainsKey(e.Id) == true)
+            {
+                Walls.Remove(e.Id);
+
+                MessageBox.Show(e.Id.ToString() + " has been deleted");
+            } else
+            {
+                MessageBox.Show(e.Id.ToString() + " does not exist in Walls");
+            }
+            
+            Update();
+
+
+
+
         }
 
         private void MainCanvas_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)

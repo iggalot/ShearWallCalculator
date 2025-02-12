@@ -53,6 +53,7 @@
                     <Label HorizontalAlignment="Left" Width="200" Height="30" FontWeight="Bold" Content="Shear Wall Data"/>
                     <Label HorizontalAlignment="Left" Width="200" Height="30" FontWeight="Bold" Content="EAST-WEST DIRECTION"/>
                     <StackPanel Orientation="Horizontal" Background="AliceBlue" >
+                        <Label Width="20" Height="20" Margin="5 1 5 1" />
                         <Label Width="50" Height="25" FontWeight="Bold" Margin="5 1 5 1" Content="ID"/>
                         <Label Width="50" Height="25" FontWeight="Bold" Margin="5 1 5 1" Content="Type"/>
                         <Label Width="75" Height="25" FontWeight="Bold" Margin="5 1 5 1" Content="Length (ft)"/>

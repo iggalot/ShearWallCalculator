@@ -7,6 +7,7 @@
              mc:Ignorable="d" 
              >
     <StackPanel Orientation="Horizontal" Background="AliceBlue">
+        <Button Name="btn_Delete" Width="20" Height="20" Margin="5 1 5 1" Background="Pink" Click="btn_Delete_Click">X</Button>
         <Label Width="50" Height="25" Background="LightGray" Margin="5 1 5 1"  Name="lbl_ID"/>
         <Label Width="50" Height="25" Background="LightGray" Margin="5 1 5 1"  Name="lbl_Type"/>
         <Label Width="75" Height="25" Background="LightGray" Margin="5 1 5 1"  Name="lbl_Length"/>

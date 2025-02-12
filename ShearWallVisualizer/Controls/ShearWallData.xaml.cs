@@ -1,4 +1,6 @@
 ﻿using calculator;
+using System;
+using System.Windows;
 using System.Windows.Controls;
 
 namespace ShearWallVisualizer.Controls
@@ -9,6 +11,23 @@ namespace ShearWallVisualizer.Controls
     /// </summary>
     public partial class ShearWallData : UserControl
     {
+        // events for other programs to connect to when a wall is deleted
+        public event EventHandler<DeleteWallEventArgs> DeleteWall;
+
+        protected virtual void OnWallDeleted(DeleteWallEventArgs e)
+        {
+            EventHandler<DeleteWallEventArgs> handler = DeleteWall;
+            if (handler != null)
+            {
+                handler(this, e);
+            }
+        }
+
+        public class DeleteWallEventArgs : EventArgs
+        {
+            public int Id { get; set; }
+        }
+
         public WallData Data { get; set; }
         public int Id { get; set; }
 
@@ -26,5 +45,16 @@ namespace ShearWallVisualizer.Controls
             lbl_StartPt.Content = "<" + wall.Start.X.ToString("0.00") + ", " + wall.Start.Y.ToString("0.00") + ">";
             lbl_EndPt.Content = "<" + wall.End.X.ToString("0.00") + ", " + wall.End.Y.ToString("0.00") + ">";
         }
+
+        private void btn_Delete_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            Button btn = sender as Button;
+            OnWallDeleted(new DeleteWallEventArgs() { Id = this.Id });
+        }
+
+
+
     }
+
+
 }

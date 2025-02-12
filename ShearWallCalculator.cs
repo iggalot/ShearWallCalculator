@@ -521,5 +521,20 @@ namespace calculator
             WallData wall3 = new WallData(3, 9, 40, 5, 40, 15, WallDirs.NorthSouth);
             NS_Walls.Add(wall3.Id, wall3);
         }
+
+        public void DeleteWall(int id)
+        {
+            Console.WriteLine("\nDeleting wall #" + id.ToString());
+            if (EW_Walls.ContainsKey(id))
+            {
+                EW_Walls.Remove(id);
+            }
+            if (NS_Walls.ContainsKey(id))
+            {
+                NS_Walls.Remove(id);
+            }
+
+            Update();
+        }
     }
 }
