@@ -51,10 +51,5 @@ namespace ShearWallVisualizer.Controls
             Button btn = sender as Button;
             OnWallDeleted(new DeleteWallEventArgs() { Id = this.Id });
         }
-
-
-
     }
-
-
 }

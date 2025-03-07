@@ -22,16 +22,6 @@ namespace calculator
         EastWest = 0,
         NorthSouth = 1
     }
-    public class Point
-    {
-        public float X;
-        public float Y;
-        public Point(float x, float y)
-        {
-            X = x;
-            Y = y;
-        }
-    }
 
     /// <summary>
     /// Base class for all wall objects
@@ -39,9 +29,9 @@ namespace calculator
     public class WallData
     {
         public int Id {get; set;}
-        public Point Start { get; set; } // start point of wall...bottommost point at one end
-        public Point End { get; set; } // end point of wall...bottommost point at other end
-        public Point Center { get => GetCenterPoint(); } // center point of wall
+        public System.Windows.Point Start { get; set; } // start point of wall...bottommost point at one end
+        public System.Windows.Point End { get; set; } // end point of wall...bottommost point at other end
+        public System.Windows.Point Center { get => GetCenterPoint(); } // center point of wall
         public float WallLength { get => GetLength(); }  // length of the wall
         public float WallHeight { get; set; } = 9;  // height of wall feet.
         public float WallRigidity { get => GetRigidity(); } // rigidity in direction of the wall
@@ -63,18 +53,17 @@ namespace calculator
         /// <param name="ex">x-coord of end pt</param>
         /// <param name="ey">y-coord of end pt</param>
         /// <exception cref="ArgumentException"></exception>
-        public WallData(int id, float ht, float sx, float sy, float ex, float ey, WallDirs wallDir)
+        public WallData(float ht, float sx, float sy, float ex, float ey, WallDirs wallDir)
         {
-            Id = id;
             WallHeight = ht;
-            Start = new Point(sx, sy);
-            End = new Point(ex, ey);
+            Start = new System.Windows.Point(sx, sy);
+            End = new System.Windows.Point(ex, ey);
             WallDir = wallDir;
         }
 
-        private Point GetCenterPoint()
+        private System.Windows.Point GetCenterPoint()
         {
-            return new Point((Start.X + End.X) / 2, (Start.Y + End.Y) / 2);
+            return new System.Windows.Point((float)(Start.X + End.X) / 2, (float)(Start.Y + End.Y) / 2);
         }
 
         /// <summary>
@@ -96,7 +85,7 @@ namespace calculator
             {
                 return new Vector2(0, 0);
             }
-            return new Vector2((End.X - Start.X) / WallLength, (End.Y - Start.Y) / WallLength);
+            return new Vector2((float)(End.X - Start.X) / WallLength, (float)(End.Y - Start.Y) / WallLength);
         }
 
         /// <summary>
@@ -122,7 +111,7 @@ namespace calculator
         /// <returns></returns>
         private float ComputeFirstMomentOfRigidity_X()
         {
-            return (Start.X + End.X) / 2 * WallRigidity;
+            return (float)(Start.X + End.X) / 2 * WallRigidity;
         }
 
         /// <summary>
@@ -131,7 +120,7 @@ namespace calculator
         /// <returns></returns>
         private float ComputeFirstMomentOfRigidity_Y()
         {
-            return (Start.Y + End.Y) / 2 * WallRigidity;
+            return (float)(Start.Y + End.Y) / 2 * WallRigidity;
         }
         /// <summary>
         /// Creates a string for displaying the info of the wall
