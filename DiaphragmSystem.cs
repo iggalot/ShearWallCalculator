@@ -1,9 +1,5 @@
-﻿using calculator;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 
 namespace ShearWallCalculator
@@ -24,12 +20,123 @@ namespace ShearWallCalculator
         public List<System.Windows.Point> DiaphragmPoints { get; set; } = new List<System.Windows.Point>();
 
 
+        /// <summary>
+        /// Returns the minimum (leftmost) X value of all diaphragm points
+        /// </summary>
+        public System.Windows.Point X_MIN 
+        { 
+            get
+            {
+                if (_diaphragms.Count == 0) return new System.Windows.Point(1000000, 1000000);
+
+                System.Windows.Point minpt = new System.Windows.Point (1000000, 1000000);
+
+                foreach (DiaphragmData_Rectangular item in _diaphragms.Values)
+                {
+                    System.Windows.Point p1 = item.P1;
+                    System.Windows.Point p2 = item.P2;
+                    System.Windows.Point p3 = item.P3;
+                    System.Windows.Point p4 = item.P4;
+
+                    if (p1.X < minpt.X) minpt = p1;
+                    if (p2.X < minpt.X) minpt = p2;
+                    if (p3.X < minpt.X) minpt = p3;
+                    if (p4.X < minpt.X) minpt = p4;
+                }
+                return minpt;
+            }
+        }
+        /// <summary>
+        /// Returns the maximum (rightmost) X value of all diaphragm points
+        /// </summary>
+        public System.Windows.Point X_MAX
+        {
+            get
+            {
+                if (_diaphragms.Count == 0) return new System.Windows.Point(-1000000, -1000000);
+
+                System.Windows.Point maxpt = new System.Windows.Point(-1000000, -1000000);
+
+                foreach (DiaphragmData_Rectangular item in _diaphragms.Values)
+                {
+                    System.Windows.Point p1 = item.P1;
+                    System.Windows.Point p2 = item.P2;
+                    System.Windows.Point p3 = item.P3;
+                    System.Windows.Point p4 = item.P4;
+
+                    if (p1.X > maxpt.X) maxpt = p1;
+                    if (p2.X > maxpt.X) maxpt = p2;
+                    if (p3.X > maxpt.X) maxpt = p3;
+                    if (p4.X > maxpt.X) maxpt = p4;
+                }
+                return maxpt;
+            }
+        }
+        /// <summary>
+        /// Returns the minimum (bottom) Y value of all diaphragm points
+        /// </summary>
+        public System.Windows.Point Y_MIN
+        {
+            get
+            {
+                if (_diaphragms.Count == 0) return new System.Windows.Point(1000000, 1000000);
+
+                System.Windows.Point minpt = new System.Windows.Point(1000000, 1000000);
+
+                foreach (DiaphragmData_Rectangular item in _diaphragms.Values)
+                {
+                    System.Windows.Point p1 = item.P1;
+                    System.Windows.Point p2 = item.P2;
+                    System.Windows.Point p3 = item.P3;
+                    System.Windows.Point p4 = item.P4;
+
+                    if (p1.Y < minpt.Y) minpt = p1;
+                    if (p2.Y < minpt.Y) minpt = p2;
+                    if (p3.Y < minpt.Y) minpt = p3;
+                    if (p4.Y < minpt.Y) minpt = p4;
+                }
+                return minpt;
+            }
+        }
+        /// <summary>
+        /// Returns the maximum (top) Y value of all diaphragm points
+        /// </summary>
+        public System.Windows.Point Y_MAX
+        {
+            get
+            {
+                if (_diaphragms.Count == 0) return new System.Windows.Point(-1000000, -1000000);
+
+                System.Windows.Point maxpt = new System.Windows.Point(-1000000, -1000000);
+
+                foreach (DiaphragmData_Rectangular item in _diaphragms.Values)
+                {
+                    System.Windows.Point p1 = item.P1;
+                    System.Windows.Point p2 = item.P2;
+                    System.Windows.Point p3 = item.P3;
+                    System.Windows.Point p4 = item.P4;
+
+                    if (p1.Y > maxpt.Y) maxpt = p1;
+                    if (p2.Y > maxpt.Y) maxpt = p2;
+                    if (p3.Y > maxpt.Y) maxpt = p3;
+                    if (p4.Y > maxpt.Y) maxpt = p4;
+                }
+                return maxpt;
+            }
+        }
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
         public DiaphragmSystem()
         {
             //DiaphragmPoints.Clear();
             Update();
         }
 
+        /// <summary>
+        /// updates the calculations for the system.
+        /// </summary>
         public void Update()
         {
             // Recompute the center of mass for the region

@@ -1,5 +1,9 @@
 ﻿using calculator;
+using System;
 using System.Data;
+using System.Media;
+using System.Security.Cryptography.X509Certificates;
+using System.Windows;
 
 namespace ShearWallCalculator
 {
@@ -7,6 +11,65 @@ namespace ShearWallCalculator
     {
         public WallSystem _wall_system = new WallSystem();
         public DiaphragmSystem _diaphragm_system = new DiaphragmSystem();
+
+        public System.Windows.Point Boundary_Max_Point { get => FindMinBoundaryPt(); }
+        public System.Windows.Point Boundary_Min_Point { get => FindMaxBoundaryPt(); }
+
+        private Point FindMaxBoundaryPt()
+        {
+            float temp_y = -1000000;
+            float temp_x = -1000000;
+
+            foreach (var wall in _wall_system._walls.Values)
+            {
+                if (wall.Start.Y > temp_y) temp_y = (float)wall.Start.Y;
+                if (wall.End.Y > temp_y) temp_y = (float)wall.End.Y;
+                if (wall.Start.X > temp_x) temp_x = (float)wall.Start.X;
+                if (wall.End.X > temp_x) temp_x = (float)wall.End.X;
+            }
+
+            foreach (var diaphragm in _diaphragm_system._diaphragms.Values)
+            {
+                if (diaphragm.P1.Y > temp_y) temp_y = (float)diaphragm.P1.Y;
+                if (diaphragm.P1.X > temp_x) temp_x = (float)diaphragm.P1.X;
+                if (diaphragm.P2.Y > temp_y) temp_y = (float)diaphragm.P2.Y;
+                if (diaphragm.P2.X > temp_x) temp_x = (float)diaphragm.P2.X;
+                if (diaphragm.P3.Y > temp_y) temp_y = (float)diaphragm.P3.Y;
+                if (diaphragm.P3.X > temp_x) temp_x = (float)diaphragm.P3.X;
+                if (diaphragm.P4.Y > temp_y) temp_y = (float)diaphragm.P4.Y;
+                if (diaphragm.P4.X > temp_x) temp_x = (float)diaphragm.P4.X;
+            }
+
+            return new System.Windows.Point(temp_x, temp_y);
+        }
+
+        private Point FindMinBoundaryPt()
+        {
+            float temp_y = 1000000;
+            float temp_x = 1000000;
+
+            foreach (var wall in _wall_system._walls.Values)
+            {
+                if (wall.Start.Y < temp_y) temp_y = (float)wall.Start.Y;
+                if (wall.End.Y < temp_y) temp_y = (float)wall.End.Y;
+                if (wall.Start.X < temp_x) temp_x = (float)wall.Start.X;
+                if (wall.End.X < temp_x) temp_x = (float)wall.End.X;
+            }
+
+            foreach (var diaphragm in _diaphragm_system._diaphragms.Values)
+            {
+                if (diaphragm.P1.Y < temp_y) temp_y = (float)diaphragm.P1.Y;
+                if (diaphragm.P1.X < temp_x) temp_x = (float)diaphragm.P1.X;
+                if (diaphragm.P2.Y < temp_y) temp_y = (float)diaphragm.P2.Y;
+                if (diaphragm.P2.X < temp_x) temp_x = (float)diaphragm.P2.X;
+                if (diaphragm.P3.Y < temp_y) temp_y = (float)diaphragm.P3.Y;
+                if (diaphragm.P3.X < temp_x) temp_x = (float)diaphragm.P3.X;
+                if (diaphragm.P4.Y < temp_y) temp_y = (float)diaphragm.P4.Y;
+                if (diaphragm.P4.X < temp_x) temp_x = (float)diaphragm.P4.X;
+            }
+
+            return new System.Windows.Point(temp_x, temp_y);
+        }
 
         public ShearWallCalculatorBase()
         {
@@ -26,6 +89,8 @@ namespace ShearWallCalculator
             LoadTestWallData();
 //            LoadTestWallData2();
         }
+
+
 
         /// <summary>
         /// Prepares a set of test data.  Based on Tonatiuh Rodriquez Niki video 01 on YouTube.

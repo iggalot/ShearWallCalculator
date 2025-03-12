@@ -42,6 +42,96 @@ namespace ShearWallCalculator
         public float InertiaYY { get; set; } // inertia of vertical walls about center of rigidity
         public float InertiaPolar { get; set; } // polar moment of all walls about center of rigidity
 
+
+        /// <summary>
+        /// Returns the minimum (leftmost) X value of all wall points
+        /// </summary>
+        public System.Windows.Point X_MIN
+        {
+            get
+            {
+                if (_walls.Count == 0) return new System.Windows.Point(1000000, 1000000);
+
+                System.Windows.Point minpt = new System.Windows.Point(1000000, 1000000);
+
+                foreach (WallData item in _walls.Values)
+                {
+                    System.Windows.Point start = item.Start;
+                    System.Windows.Point end = item.End;
+
+                    if(start.X < minpt.X) minpt = start;
+                    if(end.X < minpt.X) minpt = end;
+                }
+                return minpt;
+            }
+        }
+        /// <summary>
+        /// Returns a point with the maximum (rightmost) X value of all diaphragm points
+        /// </summary>
+        public System.Windows.Point X_MAX
+        {
+            get
+            {
+                if (_walls.Count == 0) return new System.Windows.Point(-1000000, -1000000);
+
+                System.Windows.Point maxpt = new System.Windows.Point(-1000000, -1000000);
+
+                foreach (WallData item in _walls.Values)
+                {
+                    System.Windows.Point start = item.Start;
+                    System.Windows.Point end = item.End;
+
+                    if (start.X > maxpt.X) maxpt = start;
+                    if (end.X > maxpt.X) maxpt = end;
+                }
+                return maxpt;
+            }
+        }
+        /// <summary>
+        /// Returns the minimum (bottom) Y value of all wall points
+        /// </summary>
+        public System.Windows.Point Y_MIN
+        {
+            get
+            {
+                if (_walls.Count == 0) return new System.Windows.Point(1000000, 1000000);
+
+                System.Windows.Point minpt = new System.Windows.Point(1000000, 1000000);
+
+                foreach (WallData item in _walls.Values)
+                {
+                    System.Windows.Point start = item.Start;
+                    System.Windows.Point end = item.End;
+
+                    if (start.Y < minpt.Y) minpt = start;
+                    if (end.Y < minpt.Y) minpt = end;
+                }
+                return minpt;
+            }
+        }
+        /// <summary>
+        /// Returns the maximum (top) Y value of all diaphragm points
+        /// </summary>
+        public System.Windows.Point Y_MAX
+        {
+            get
+            {
+                if (_walls.Count == 0) return new System.Windows.Point(-1000000, -1000000);
+
+                System.Windows.Point maxpt = new System.Windows.Point(-1000000, -1000000);
+
+                foreach (WallData item in _walls.Values)
+                {
+                    System.Windows.Point start = item.Start;
+                    System.Windows.Point end = item.End;
+
+                    if (start.Y > maxpt.Y) maxpt = start;
+                    if (end.Y > maxpt.Y) maxpt = end;
+                }
+                return maxpt;
+            }
+        }
+
         /// <summary>
         /// Constructor that takes a collection of wall data and creates a single wall system
         /// </summary>
