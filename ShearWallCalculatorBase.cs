@@ -12,6 +12,7 @@ namespace ShearWallCalculator
         {
             
         }
+
         /// <summary>
         /// Constructor
         /// </summary>

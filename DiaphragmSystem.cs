@@ -119,5 +119,10 @@ namespace ShearWallCalculator
                 }
             }
         }
+
+        public void Draw()
+        {
+
+        }
     }
 }
