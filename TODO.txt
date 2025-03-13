@@ -1,0 +1,37 @@
+TODO:
+
+-- Escape to Cancel point selection
+-- RightClick to cancel input
+-- C.O.M calculation
+-- C.O.R. calculation
+-- Draw C.O.R pt.
+-- Draw C.O.M pt.
+-- Color for walls
+Crosshairs for point selection
+
+
+Preview rectangle for Diaphragm
+Preview line for walls should be drawn as vertical or horizontal
+Dimensions on 
+Snap to corners of diaphragm or end points of walls
+Grid snapping toggle
+
+REFACTOR!m
+
+Load input
+
+draw loads
+draw moment
+
+Show data by hovering or selecting walls or diaphragms?
+Brace wall line grouping of individial walls -- group by max spacing
+-- sorting of EW walls by Y in table
+-- sorting of NS walls
+
+hovering over control -- highlight wall or diaphragm on canvas?
+
+Input 1:1 image overlay as background of Canvas?
+
+flexible diaphragm calculations
+
+Multiple floors?  Vertical resolution?

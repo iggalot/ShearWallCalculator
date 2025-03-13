@@ -18,14 +18,6 @@ namespace ShearWallCalculator
     {
         public DiaphragmTypes DiaphragmType = DiaphragmTypes.DIAPHRAGM_RIGID;
 
-        public float Area { get; set; } = 0.0f;
-
-        // Horizontal dimension of the diaphragm
-        public float HorizDim_X { get; set; } = 0.0f;
-        // Vertical dimension of the diaphragm
-        public float HorizDim_Y { get; set; } = 0.0f;
-
-
         /// Rectangular region defined by P1, P2, P3, P4
         /// 
         /// P4 --- P3
@@ -38,7 +30,16 @@ namespace ShearWallCalculator
         public System.Windows.Point P4 { get; set; } = new System.Windows.Point();
 
 
-        public System.Windows.Point Centroid { get => ComputeCentroid(); }
+        // Area of the diaphragm
+        public float Area { get; set; } = 0.0f;
+        
+        // Centroid of the diaphragm
+        public System.Windows.Point Centroid { get; set; } = new System.Windows.Point();
+        
+        // Horizontal dimension of the diaphragm
+        public float HorizDim_X { get; set; } = 0.0f;
+        // Vertical dimension of the diaphragm
+        public float HorizDim_Y { get; set; } = 0.0f;
 
         /// <summary>
         /// Default constructor
@@ -126,7 +127,7 @@ namespace ShearWallCalculator
 
         public void Update()
         {
-            // Compute the dimensions
+            // Compute the dimensions of diaphragm
             HorizDim_X = Math.Abs((float)(P3.X - P1.X));
             HorizDim_Y = Math.Abs((float)(P3.Y - P1.Y));
 
@@ -142,35 +143,24 @@ namespace ShearWallCalculator
         /// -- should work for non-rectangular regions
         /// </summary>
         /// <returns></returns>
-        private float ComputeArea()
+        private void ComputeArea()
         {
-            return (float)(0.5 * ((P1.X*P2.Y - P2.X*P1.Y) + (P2.X*P3.Y - P3.X*P2.Y) + (P3.X*P4.Y - P4.X*P3.Y) + (P4.X*P1.Y - P1.X*P4.Y)));
+            Area = (float)(0.5 * ((P1.X*P2.Y - P2.X*P1.Y) + (P2.X*P3.Y - P3.X*P2.Y) + (P3.X*P4.Y - P4.X*P3.Y) + (P4.X*P1.Y - P1.X*P4.Y)));
+            return;
         }
 
         /// <summary>
         /// Computes the centroid for the simple region bounded by the four points of the diaphragm
-        /// -- should work for non-rectangular regions
+        /// - for the rectangular region it should be the midpoint between P1 and P3
         /// </summary>
         /// <returns></returns>
-        private System.Windows.Point ComputeCentroid()
+        private void ComputeCentroid()
         {
-            // Make an array of our points
-            System.Windows.Point[] DiaphragmPoints = new System.Windows.Point[] { P1, P2, P3, P4 };
-
-            // Generic algorithm for computing a centroid
-            int num_pts = DiaphragmPoints.Length;
-
-            // find coords
-            float sum_x = 0;
-            float sum_y = 0;
-
-            for (int i = 0; i < 4; i++)
-            {
-                sum_x += (float)DiaphragmPoints[i].X;
-                sum_y += (float)DiaphragmPoints[i].Y;
-            }
+            float y_c = (float)(0.5 * (P1.Y + P3.Y));
+            float x_c = (float)(0.5 * (P1.X + P3.X));
             
-            return new System.Windows.Point(sum_x / num_pts, sum_y / num_pts);
+            Centroid = new System.Windows.Point(x_c, y_c);
+            return;
         }
     }
 }

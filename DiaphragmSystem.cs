@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Windows;
 
 namespace ShearWallCalculator
@@ -14,6 +15,7 @@ namespace ShearWallCalculator
 
         // center of mass of the diaphragm composite region
         public System.Windows.Point CtrMass { get; set; } = new Point(0, 0);
+        public float TotalArea { get; set; } = 0.0f;
 
         // collection of points defining thediaphragm outline.  Used for find center of mass
         // -- must be in sequential order (i.e. don't skip points and add them later)
@@ -139,36 +141,28 @@ namespace ShearWallCalculator
         /// </summary>
         public void Update()
         {
-            // Recompute the center of mass for the region
-            ComputeCenterOfMass();
+            // Recompute the center of mass  and the total area for the system
+            ComputeCenterOfMassAndTotalArea();
         }
 
         /// <summary>
         /// Compute the center of mass of multipple defined diaphragm regions
         /// </summary>
-        public void ComputeCenterOfMass()
+        public void ComputeCenterOfMassAndTotalArea()
         {
-            float x = 0;
-            float y = 0;
+            float sum_x_A = 0;
+            float sum_y_A = 0;
+            float sum_A = 0;
 
-            //if (DiaphragmPoints.Count == 0)
-            //{
-            //    x = 0;
-            //    y = 0;
-            //}
-            //else
-            //{
-            //    int num_pts = DiaphragmPoints.Count;
-            //    // find coords
-            //    float sum_x = 0;
-            //    float sum_y = 0;
-            //    for (int i = 0; i < num_pts; i++)
-            //    {
-            //        sum_x += (float)DiaphragmPoints[i].X;
-            //        sum_y += (float)DiaphragmPoints[i].Y;
-            //    }
-            //    CtrMass = new System.Windows.Point(sum_x / num_pts, sum_y / num_pts);
-            //}
+            foreach (DiaphragmData_Rectangular item in _diaphragms.Values)
+            {
+                sum_x_A += (float)(item.Area * item.Centroid.X);
+                sum_y_A += (float)(item.Area * item.Centroid.Y);
+                sum_A += (float)(item.Area);
+            }
+
+            CtrMass = new System.Windows.Point(sum_x_A / sum_A, sum_y_A / sum_A);
+            TotalArea = sum_A;
         }
 
         /// <summary>
@@ -180,6 +174,7 @@ namespace ShearWallCalculator
         {
             int id = GetNextDiaphragmID();
             _diaphragms.Add(id, diaphragm);
+            Update();
         }
 
         /// <summary>
@@ -225,11 +220,6 @@ namespace ShearWallCalculator
                     i++;
                 }
             }
-        }
-
-        public void Draw()
-        {
-
         }
     }
 }
