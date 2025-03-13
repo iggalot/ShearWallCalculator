@@ -17,11 +17,6 @@ namespace ShearWallCalculator
         public System.Windows.Point CtrMass { get; set; } = new Point(0, 0);
         public float TotalArea { get; set; } = 0.0f;
 
-        // collection of points defining thediaphragm outline.  Used for find center of mass
-        // -- must be in sequential order (i.e. don't skip points and add them later)
-        public List<System.Windows.Point> DiaphragmPoints { get; set; } = new List<System.Windows.Point>();
-
-
         /// <summary>
         /// Returns the minimum (leftmost) X value of all diaphragm points
         /// </summary>
@@ -161,8 +156,15 @@ namespace ShearWallCalculator
                 sum_A += (float)(item.Area);
             }
 
-            CtrMass = new System.Windows.Point(sum_x_A / sum_A, sum_y_A / sum_A);
-            TotalArea = sum_A;
+            if(sum_A == 0)
+            {
+                CtrMass = new System.Windows.Point(0, 0);
+                TotalArea = 0;
+            } else
+            {
+                CtrMass = new System.Windows.Point(sum_x_A / sum_A, sum_y_A / sum_A);
+                TotalArea = sum_A;
+            }
         }
 
         /// <summary>

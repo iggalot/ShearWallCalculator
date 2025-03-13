@@ -145,7 +145,7 @@ namespace ShearWallCalculator
         /// <returns></returns>
         private void ComputeArea()
         {
-            Area = (float)(0.5 * ((P1.X*P2.Y - P2.X*P1.Y) + (P2.X*P3.Y - P3.X*P2.Y) + (P3.X*P4.Y - P4.X*P3.Y) + (P4.X*P1.Y - P1.X*P4.Y)));
+            Area = (float)Math.Abs(0.5 * ((P1.X*P2.Y - P2.X*P1.Y) + (P2.X*P3.Y - P3.X*P2.Y) + (P3.X*P4.Y - P4.X*P3.Y) + (P4.X*P1.Y - P1.X*P4.Y)));
             return;
         }
 
