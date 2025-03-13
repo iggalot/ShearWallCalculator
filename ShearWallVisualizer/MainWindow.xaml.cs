@@ -65,8 +65,11 @@ namespace ShearWallVisualizer
         {
             InitializeComponent();
 
+            // create our Calculator object 
+            // TODO: This will need to be switchable between RigidDiaphragm and FlexibileDiaphragm or both
             Calculator = new ShearWallCalculator_RigidDiaphragm();
 
+            // set up scaling parameters associated with the canvas
             _scaleTransform = new ScaleTransform(SCALE_X, SCALE_Y);
             _translateTransform = new TranslateTransform();
             _transformGroup = new TransformGroup();
@@ -78,9 +81,7 @@ namespace ShearWallVisualizer
 
             // Create a some test data
             Calculator._diaphragm_system.AddDiaphragm(new DiaphragmData_Rectangular(new Point(50, 50), new Point(100, 100)));
-
             //            Calculator._diaphragm_system.AddDiaphragm(new DiaphragmData_Rectangular(new Point(100, 100), new Point(40, 60)));
-
 
             Update();
         }
@@ -95,21 +96,25 @@ namespace ShearWallVisualizer
         /// <param name="fill"></param>
         private void AddRectangleWithBorderAndCenter(double left, double top, double width, double height, Brush fill)
         {
+            // the rectangular region object
             Rectangle rect = new Rectangle { Width = width, Height = height, Fill = fill, Stroke = Brushes.Black, StrokeThickness = rect_boundary_line_thickness };
             Canvas.SetLeft(rect, left);
             Canvas.SetTop(rect, top);
             StructuralObjects.Add(rect);
 
+            // marker for center of the rectangle -- center of area / mass
             Ellipse centerCircle = new Ellipse { Width = 5, Height = 5, Fill = Brushes.Black };
             Canvas.SetLeft(centerCircle, left + width / 2 - 2.5);
             Canvas.SetTop(centerCircle, top + height / 2 - 2.5);
             StructuralObjects.Add(centerCircle);
 
+            // marker for the upper left
             Ellipse upperleft = new Ellipse { Width = 2, Height = 2, Fill = Brushes.Red };
             Canvas.SetLeft(upperleft, left);
             Canvas.SetTop(upperleft, top);
             StructuralObjects.Add(upperleft);
 
+            // marker for the lower right
             Ellipse lowerright = new Ellipse { Width = 2, Height = 2, Fill = Brushes.Blue };
             Canvas.SetLeft(lowerright, left + width);
             Canvas.SetTop(lowerright, top + height);
@@ -117,61 +122,62 @@ namespace ShearWallVisualizer
         }
 
         /// <summary>
-        /// Calculates the bounding box of the elementas on the canvas
+        /// Draw the bounding box of the elements on the canvas
         /// </summary>
         private void DrawBoundingBox()
         {
-            // look for the extreme values in the wall system lines
+            // if no calculator defined, cancel this operation
             if (Calculator == null)
             {
                 return;
             }
 
+            // retrieve the bounding box points fro the calculator (in World Coordinates_
+            // --bb_min_pt is the lower left
+            // --bb_max_pt is the upper right
             System.Windows.Point bb_min_pt = Calculator.Boundary_Min_Point;
             System.Windows.Point bb_max_pt = Calculator.Boundary_Max_Point;
 
+            // convert the bounding box points to screen coordinates
             System.Windows.Point screen_bb_min_pt = WorldCoord_ToScreen(bb_min_pt);
             System.Windows.Point screen_bb_max_pt = WorldCoord_ToScreen(bb_max_pt);
 
-            float screen_bb_left   = (float)screen_bb_min_pt.X;
-            float screen_bb_top    = (float)screen_bb_max_pt.Y;
-            float screen_bb_right  = (float)screen_bb_max_pt.X;
-            float screen_bb_bottom = (float)screen_bb_min_pt.Y;
-
-            float left = screen_bb_left;
-            float top = screen_bb_top;
-            float right = screen_bb_right;
-            float bottom = screen_bb_bottom;
+            // retrieve the min and max values for the x and y coordinates of the bounding box
+            float screen_bb_left   = (float)screen_bb_min_pt.X;  // x-min
+            float screen_bb_top    = (float)screen_bb_max_pt.Y;  // y-max
+            float screen_bb_right  = (float)screen_bb_max_pt.X;  // x-max
+            float screen_bb_bottom = (float)screen_bb_min_pt.Y;  // y- max
 
             if (Calculator._diaphragm_system._diaphragms.Count > 0 || Calculator._wall_system._walls.Count > 0)
             {
-                Line topLine = new Line { X1 = left, Y1 = top, X2 = right, Y2 = top, Stroke = Brushes.Black, StrokeThickness = 2 * rect_boundary_line_thickness, StrokeDashArray = new DoubleCollection { 1, 1 } };
-                Line bottomLine = new Line { X1 = left, Y1 = bottom, X2 = right, Y2 = bottom, Stroke = Brushes.Black, StrokeThickness = 2 * rect_boundary_line_thickness, StrokeDashArray = new DoubleCollection { 1, 1 } };
-                Line leftLine = new Line { X1 = left, Y1 = top, X2 = left, Y2 = bottom, Stroke = Brushes.Black, StrokeThickness = 2 * rect_boundary_line_thickness, StrokeDashArray = new DoubleCollection { 1, 1 } };
-                Line rightLine = new Line { X1 = right, Y1 = top, X2 = right, Y2 = bottom, Stroke = Brushes.Black, StrokeThickness = 2 * rect_boundary_line_thickness, StrokeDashArray = new DoubleCollection { 1, 1 } };
+                Line topLine = new Line { X1 = screen_bb_left, Y1 = screen_bb_top, X2 = screen_bb_right, Y2 = screen_bb_top, Stroke = Brushes.Black, StrokeThickness = 2 * rect_boundary_line_thickness, StrokeDashArray = new DoubleCollection { 1, 1 } };
+                Line bottomLine = new Line { X1 = screen_bb_left, Y1 = screen_bb_bottom, X2 = screen_bb_right, Y2 = screen_bb_bottom, Stroke = Brushes.Black, StrokeThickness = 2 * rect_boundary_line_thickness, StrokeDashArray = new DoubleCollection { 1, 1 } };
+                Line leftLine = new Line { X1 = screen_bb_left, Y1 = screen_bb_top, X2 = screen_bb_left, Y2 = screen_bb_bottom, Stroke = Brushes.Black, StrokeThickness = 2 * rect_boundary_line_thickness, StrokeDashArray = new DoubleCollection { 1, 1 } };
+                Line rightLine = new Line { X1 = screen_bb_right, Y1 = screen_bb_top, X2 = screen_bb_right, Y2 = screen_bb_bottom, Stroke = Brushes.Black, StrokeThickness = 2 * rect_boundary_line_thickness, StrokeDashArray = new DoubleCollection { 1, 1 } };
 
+                // add the lines to the canvas control
                 cnvMainCanvas.Children.Add(topLine);
                 cnvMainCanvas.Children.Add(bottomLine);
                 cnvMainCanvas.Children.Add(leftLine);
                 cnvMainCanvas.Children.Add(rightLine);
 
-                lblXMin.Content = left.ToString("0.00");
-                lblYMin.Content = bottom.ToString("0.00");
-                lblXMax.Content = right.ToString("0.00");
-                lblYMax.Content = top.ToString("0.00");
+                // update the bounding box limits display on the UI
+                lblXMin.Content = screen_bb_left.ToString("0.00");
+                lblYMin.Content = screen_bb_bottom.ToString("0.00");
+                lblXMax.Content = screen_bb_right.ToString("0.00");
+                lblYMax.Content = screen_bb_top.ToString("0.00");
             }
-
         }
 
         /// <summary>
-        /// Function handle drawing minor and major gridlines on our canvas
+        /// Function to handle drawing minor and major gridlines on our canvas
         /// </summary>
         private void CreateGridLines()
         {
             // for the major gridlines
             for (int i = (int)-cnvMainCanvas.Width; i < (int)cnvMainCanvas.Width; i += (int)default_gridline_spacing_major) // Large arbitrary bounds
             {
-                // draw the minor gridlines
+                // draw the major gridlines
                 Line verticalLine = new Line { X1 = i, Y1 = 0, X2 = i, Y2 = cnvMainCanvas.Height, Stroke = Brushes.DarkGray, StrokeDashArray = new DoubleCollection { 2, 2 }, StrokeThickness = 0.4 };
                 Line horizontalLine = new Line { X1 = 0, Y1 = i, X2 = cnvMainCanvas.Width, Y2 = i, Stroke = Brushes.DarkGray, StrokeDashArray = new DoubleCollection { 2, 2 }, StrokeThickness = 0.4 };
                 CanvasDetails.Add(verticalLine);
@@ -196,19 +202,24 @@ namespace ShearWallVisualizer
         }
 
 
+        /// <summary>
+        /// Create the drawing objects (in canvas screen coordinates) from the structural model objects in world coordinates
+        /// </summary>
         public void CreateStructuralObjects()
         {
+            // Loop through the wall system in the model and create drawing objects for the UI in screen coordinates
             foreach (var item in Calculator._wall_system._walls)
             {
                 WallDirs walldir = item.Value.WallDir;
 
-                // Get the screen coords based on the world coords of the model
+                // Get the screen coords based on the world coords in the model
                 Point canvas_start_pt = WorldCoord_ToScreen(item.Value.Start);
                 Point canvas_end_pt = WorldCoord_ToScreen(item.Value.End);
 
                 float canvas_height = (float)(canvas_end_pt.Y - canvas_start_pt.Y);
                 float canvas_width = (float)(canvas_end_pt.X - canvas_start_pt.X);
 
+                // for hoirzontal walls
                 if(walldir == WallDirs.EastWest)
                 {
                     // if the width measures as negative, swap the start and end points for drawing
@@ -220,6 +231,7 @@ namespace ShearWallVisualizer
                     }
                 }
 
+                // for vertical walls
                 if (walldir == WallDirs.NorthSouth)
                 {
                     // if the height measures as negative, swap the start and end points for drawing
@@ -231,9 +243,11 @@ namespace ShearWallVisualizer
                     }
                 }
 
+                // set the width and height for the drawing object
                 float width = (walldir == WallDirs.EastWest ? (float)Math.Abs(canvas_width) : 1.0f);
                 float height = (walldir == WallDirs.NorthSouth ? (float)Math.Abs(canvas_height) : 1.0f);
 
+                // add the drawing objects to the Canvas
                 AddRectangleWithBorderAndCenter(
                     canvas_start_pt.X,
                     canvas_start_pt.Y,
@@ -242,10 +256,10 @@ namespace ShearWallVisualizer
                     Brushes.Black);
             }
 
-
+            // Loop through the diaphragm system in the model and create drawing objects for the UI
             foreach (var item in Calculator._diaphragm_system._diaphragms)
             {
-                // P3 and P1 are opposite corners of the diaphragm definition
+                // P3 (upper right) and P1 (lower left) are opposite corners of the diaphragm definition
                 // Get the screen coords based on the world coords of the model
                 Point p1_canvas_start_pt = WorldCoord_ToScreen(item.Value.P1);
                 Point p1_canvas_end_pt = WorldCoord_ToScreen(item.Value.P1);
@@ -259,6 +273,7 @@ namespace ShearWallVisualizer
                 Point p4_canvas_start_pt = WorldCoord_ToScreen(item.Value.P4);
                 Point p4_canvas_end_pt = WorldCoord_ToScreen(item.Value.P4);
 
+                // add the rectangle using P4 (upper left) since rectangles are drawn by default from the upper left
                 AddRectangleWithBorderAndCenter(
                     p4_canvas_start_pt.X,
                     p4_canvas_start_pt.Y,
@@ -268,14 +283,24 @@ namespace ShearWallVisualizer
             }
         }
 
-        public void DrawGridLines()
+        /// <summary>
+        /// Draw the non model canvas details 
+        /// Use the function to add precalculated items to the canvas -- eliminates continuous recalculation
+        /// -- gridlines
+        /// </summary>
+        public void DrawCanvasDetails()
         {
             foreach (Line line in CanvasDetails)
             {
                 cnvMainCanvas.Children.Add(line);
             }
         }
-
+        /// <summary>
+        /// Draw the structural model objects
+        /// Use this function to add structural model objects to the canvas
+        /// -- walls and wall system
+        /// -- diaphragms and diaphragm system
+        /// </summary>
         public void DrawStructuralObjects()
         {
             foreach (var item in StructuralObjects)
@@ -284,10 +309,14 @@ namespace ShearWallVisualizer
             }
         }
 
-
+        /// <summary>
+        /// The primary draw functions for items on the canvas and the summary controls
+        /// </summary>
+        /// <exception cref="Exception"></exception>
+        /// <exception cref="NotImplementedException"></exception>
         private void DrawResults()
         {
-
+            // No calculator?  Nothing to draw so return
             if (Calculator == null)
             {
                 return;
@@ -297,7 +326,7 @@ namespace ShearWallVisualizer
             cnvMainCanvas.Children.Clear();
 
             // Draw the gridlines on the canvas
-            DrawGridLines();
+            DrawCanvasDetails();
             DrawStructuralObjects();
             DrawBoundingBox();
 
@@ -521,8 +550,6 @@ namespace ShearWallVisualizer
 
 
                 //// Create Table of Results
-                //ShearWallResults.Children.Clear();
-
                 if (Calculator.GetType() == typeof(ShearWallCalculator_RigidDiaphragm))
                 {
 
@@ -550,7 +577,6 @@ namespace ShearWallVisualizer
                             eccentric_shear,
                             total_shear
                             );
-
 
                         ShearWallResults.Children.Add(control);
                     }
@@ -581,6 +607,11 @@ namespace ShearWallVisualizer
                 }
                 else if (Calculator.GetType() == typeof(ShearWallCalculator_FlexibleDiaphragm))
                 {
+                    // Create Table of Wall Data
+                    ShearWallData_EW.Children.Clear();
+                    ShearWallData_NS.Children.Clear();
+                    ShearWallResults.Children.Clear();
+
                     throw new NotImplementedException("\nFlexible Diaphragms Calculator not implemented yet.");
                 }
                 else
@@ -644,6 +675,8 @@ namespace ShearWallVisualizer
             double scaleChangeY = _scaleTransform.ScaleY - oldScaleY;
             _translateTransform.X -= (mousePosition.X * scaleChangeX);
             _translateTransform.Y -= (mousePosition.Y * scaleChangeY);
+
+
         }
 
         /// <summary>
@@ -711,20 +744,40 @@ namespace ShearWallVisualizer
                             // and y coordinates of the start and end points.  Whichever difference is larger will be the direction
                             //  -- larger X direction = horizontal
                             //  -- larger Y direction = vertical
+                            // this function draws the corresponding line through the center point of the actual line
                             WallDirs dir = WallDirs.EastWest;
                             if ((Math.Abs(CurrentStartPoint.X - CurrentEndPoint.X)) >= Math.Abs(CurrentStartPoint.Y - CurrentEndPoint.Y))
                             {
                                 dir = WallDirs.EastWest;
-                                end_y = start_y; // move the end point to make the line horizontal
+
+                                // take the average of the vertical distance
+                                float center_y = (float)(CurrentStartPoint.Y + CurrentEndPoint.Y) / 2;  
+                                
+                                // move the y-coords of the end points to make the line horizontal
+                                end_y = center_y;
+                                start_y = end_y;
+
+                                
                             }
                             else
                             {
                                 dir = WallDirs.NorthSouth;
-                                end_x = start_x; // move the end point to make the line vertical
+
+                                // take the average of the vertical distance
+                                float center_x = (float)(CurrentStartPoint.X + CurrentEndPoint.X) / 2;
+                                
+                                // move the end point to make the line vertical
+                                end_x = center_x;
+                                start_x = center_x; ;
                             }
 
-                            Point p1 = ScreenCoord_ToWorld(CurrentStartPoint);
-                            Point p2 = ScreenCoord_ToWorld(CurrentEndPoint);
+                            // create adjusted start and end points based on the new center point location
+                            Point adj_start_x = new Point(start_x, start_y);
+                            Point adj_end_x = new Point(end_x, end_y);
+
+                            // convert screen coords to world coords to make the true wall structure
+                            Point p1 = ScreenCoord_ToWorld(adj_start_x);
+                            Point p2 = ScreenCoord_ToWorld(adj_end_x);
 
                             // Add to the list of wall segments
                             Calculator._wall_system.AddWall(new WallData(DEFAULT_WALL_HT, 
