@@ -12,9 +12,7 @@ TODO:
 -- Crosshairs for point selection
 -- Preview rectangle for Diaphragm
 -- Preview line for walls should be drawn as vertical or horizontal
-
-
-Dimensions on preview
+-- Dimensions on preview
 
 
 

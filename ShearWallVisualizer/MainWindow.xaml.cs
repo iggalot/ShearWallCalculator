@@ -135,6 +135,22 @@ namespace ShearWallVisualizer
                     shape = _currentPreviewLine;
                     shape.Opacity = 0.3f;
                     PreviewObjects.Add(shape);
+
+                    Point start = new Point((float)_currentPreviewLine.X1, (float)_currentPreviewLine.Y1);
+                    Point end = new Point((float)_currentPreviewLine.X2, (float)_currentPreviewLine.Y2);
+
+                    // Add dimension text
+                    TextBlock text = new TextBlock();
+                    if (LineIsHorizontal(_currentPreviewLine))
+                    {
+                        text.Text = $"{Math.Abs(end.X - start.X):0.0} ft";
+                    } else
+                    {
+                        text.Text = $"{Math.Abs(end.Y - start.Y):0.0} ft";
+                    }
+                    Canvas.SetTop(text, (start.X + end.X) / 2.0);
+                    Canvas.SetTop(text, (start.Y + end.Y) / 2.0);
+                    cnvMainCanvas.Children.Add(text);
                     break;
                 case InputModes.Mass:
                     float x1 = (float)_currentPreviewLine.X1;
@@ -220,13 +236,11 @@ namespace ShearWallVisualizer
 
 
                     // Add dimension text
-                    TextBlock text = new TextBlock();
-                    text.Text = $"{Math.Abs(P2.X - P1.X):0.0} x {Math.Abs(P4.Y - P1.Y):0.0} ft";
-                    Canvas.SetTop(text, (P1.X + P3.X) / 2.0);
-                    Canvas.SetTop(text, (P1.Y + P3.Y) / 2.0);
-                    cnvMainCanvas.Children.Add(text);
-
-
+                    TextBlock text2 = new TextBlock();
+                    text2.Text = $"{Math.Abs(P2.X - P1.X):0.0} x {Math.Abs(P4.Y - P1.Y):0.0} ft";
+                    Canvas.SetTop(text2, (P1.X + P3.X) / 2.0);
+                    Canvas.SetTop(text2, (P1.Y + P3.Y) / 2.0);
+                    cnvMainCanvas.Children.Add(text2);
 
                     break;
                 default:
@@ -908,8 +922,6 @@ namespace ShearWallVisualizer
             double scaleChangeY = _scaleTransform.ScaleY - oldScaleY;
             _translateTransform.X -= (mousePosition.X * scaleChangeX);
             _translateTransform.Y -= (mousePosition.Y * scaleChangeY);
-
-
         }
 
         /// <summary>
