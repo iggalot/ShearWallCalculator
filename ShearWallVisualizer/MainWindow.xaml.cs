@@ -133,6 +133,7 @@ namespace ShearWallVisualizer
                 case InputModes.Rigidity:
                     // draw preview as a line
                     shape = _currentPreviewLine;
+                    shape.Opacity = 0.3f;
                     PreviewObjects.Add(shape);
                     break;
                 case InputModes.Mass:
@@ -963,6 +964,12 @@ namespace ShearWallVisualizer
                         float end_x = ((float)CurrentEndPoint.X);
                         float end_y = ((float)CurrentEndPoint.Y);
 
+                        // Set the preview line values
+                        _currentPreviewLine.X1 = start_x;
+                        _currentPreviewLine.Y1 = start_y;
+                        _currentPreviewLine.X2 = end_x;
+                        _currentPreviewLine.Y2 = end_y;
+
                         if (CurrentInputMode == InputModes.Rigidity)
                         {
                             // Determine if this wall segment should be horizontal or vertical by looking at the difference between the x
@@ -971,27 +978,19 @@ namespace ShearWallVisualizer
                             //  -- larger Y direction = vertical
                             // this function draws the corresponding line through the center point of the actual line
                             WallDirs dir = WallDirs.EastWest;
-                            if ((Math.Abs(CurrentStartPoint.X - CurrentEndPoint.X)) >= Math.Abs(CurrentStartPoint.Y - CurrentEndPoint.Y))
+                            if (LineIsHorizontal(_currentPreviewLine))
                             {
                                 dir = WallDirs.EastWest;
 
-                                // take the average of the vertical distance
-                                float center_y = (float)(CurrentStartPoint.Y + CurrentEndPoint.Y) / 2;  
-                                
                                 // move the y-coords of the end points to make the line horizontal
-                                end_y = center_y;
-                                start_y = end_y;
+                                end_y = start_y;
                             }
                             else
                             {
                                 dir = WallDirs.NorthSouth;
 
-                                // take the average of the vertical distance
-                                float center_x = (float)(CurrentStartPoint.X + CurrentEndPoint.X) / 2;
-                                
                                 // move the end point to make the line vertical
-                                end_x = center_x;
-                                start_x = center_x; ;
+                                end_x = start_x;
                             }
 
                             // create adjusted start and end points based on the new center point location
@@ -1005,6 +1004,7 @@ namespace ShearWallVisualizer
                             // Add to the list of wall segments
                             Calculator._wall_system.AddWall(new WallData(DEFAULT_WALL_HT, 
                                 (float)world_p1.X, (float)world_p1.Y, (float)world_p2.X, (float)world_p2.Y, dir));
+
                             _currentPreviewLine = null;  // clear the preview line
                             status = "Wall added";
                             Update();
