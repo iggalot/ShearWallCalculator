@@ -8,7 +8,6 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
-using static ShearWallVisualizer.Controls.ShearWallData;
 
 namespace ShearWallVisualizer
 {
@@ -94,31 +93,51 @@ namespace ShearWallVisualizer
         /// <param name="width"></param>
         /// <param name="height"></param>
         /// <param name="fill"></param>
-        private void AddRectangleWithBorderAndCenter(double left, double top, double width, double height, Brush fill)
+        private void AddRectangleWithBorderAndCenter(double left, double top, double width, double height, Brush fill, float opacity = 1.0f)
         {
+
+            //        // Shade the rectangular region
+            //        Rectangle rect = new Rectangle() { Stroke = Brushes.Red };
+            //        rect.Width = Math.Abs(p3.X * SCALE_X - p1.X * SCALE_X);
+            //        rect.Height = Math.Abs(p3.Y * SCALE_Y - p1.Y * SCALE_Y);
+            //        Canvas.SetLeft(rect, Math.Min(p4.X * SCALE_X, p3.X * SCALE_X));
+            //        Canvas.SetTop(rect, Math.Min(p4.Y * SCALE_Y, p3.Y * SCALE_Y));
+            //        rect.Fill = new SolidColorBrush(System.Windows.Media.Color.FromArgb(50, 255, 0, 0));
+            //        MainCanvas.Children.Add(rect);
+
+            
             // the rectangular region object
-            Rectangle rect = new Rectangle { Width = width, Height = height, Fill = fill, Stroke = Brushes.Black, StrokeThickness = rect_boundary_line_thickness };
+            Rectangle rect = new Rectangle
+            {
+                Width = width,
+                Height = height,
+                Fill = fill,
+                Stroke = Brushes.Black,
+                StrokeThickness = rect_boundary_line_thickness,
+                Opacity = opacity
+            };
+
             Canvas.SetLeft(rect, left);
             Canvas.SetTop(rect, top);
             StructuralObjects.Add(rect);
 
             // marker for center of the rectangle -- center of area / mass
-            Ellipse centerCircle = new Ellipse { Width = 5, Height = 5, Fill = Brushes.Black };
+            Ellipse centerCircle = new Ellipse { Width = 5, Height = 5, Fill = Brushes.Black, Opacity = opacity };
             Canvas.SetLeft(centerCircle, left + width / 2 - 2.5);
             Canvas.SetTop(centerCircle, top + height / 2 - 2.5);
             StructuralObjects.Add(centerCircle);
 
-            // marker for the upper left
-            Ellipse upperleft = new Ellipse { Width = 2, Height = 2, Fill = Brushes.Red };
-            Canvas.SetLeft(upperleft, left);
-            Canvas.SetTop(upperleft, top);
-            StructuralObjects.Add(upperleft);
+            //// marker for the upper left
+            //Ellipse upperleft = new Ellipse { Width = 2, Height = 2, Fill = Brushes.Red };
+            //Canvas.SetLeft(upperleft, left);
+            //Canvas.SetTop(upperleft, top);
+            //StructuralObjects.Add(upperleft);
 
-            // marker for the lower right
-            Ellipse lowerright = new Ellipse { Width = 2, Height = 2, Fill = Brushes.Blue };
-            Canvas.SetLeft(lowerright, left + width);
-            Canvas.SetTop(lowerright, top + height);
-            StructuralObjects.Add(lowerright);
+            //// marker for the lower right
+            //Ellipse lowerright = new Ellipse { Width = 2, Height = 2, Fill = Brushes.Blue };
+            //Canvas.SetLeft(lowerright, left + width);
+            //Canvas.SetTop(lowerright, top + height);
+            //StructuralObjects.Add(lowerright);
         }
 
         /// <summary>
@@ -253,7 +272,8 @@ namespace ShearWallVisualizer
                     canvas_start_pt.Y,
                     width,
                     height,
-                    Brushes.Black);
+                    Brushes.Black,
+                    1.0f);
             }
 
             // Loop through the diaphragm system in the model and create drawing objects for the UI
@@ -267,11 +287,12 @@ namespace ShearWallVisualizer
                 Point p3_canvas_start_pt = WorldCoord_ToScreen(item.Value.P3);
                 Point p3_canvas_end_pt = WorldCoord_ToScreen(item.Value.P3);
 
-                float canvas_height = Math.Abs((float)(p3_canvas_end_pt.Y - p1_canvas_start_pt.Y));
-                float canvas_width = Math.Abs((float)(p3_canvas_end_pt.X - p1_canvas_start_pt.X));
-
                 Point p4_canvas_start_pt = WorldCoord_ToScreen(item.Value.P4);
                 Point p4_canvas_end_pt = WorldCoord_ToScreen(item.Value.P4);
+
+                // calculate the width and height of the diaphragm
+                float canvas_height = Math.Abs((float)(p3_canvas_end_pt.Y - p1_canvas_start_pt.Y));
+                float canvas_width = Math.Abs((float)(p3_canvas_end_pt.X - p1_canvas_start_pt.X));
 
                 // add the rectangle using P4 (upper left) since rectangles are drawn by default from the upper left
                 AddRectangleWithBorderAndCenter(
@@ -279,7 +300,8 @@ namespace ShearWallVisualizer
                     p4_canvas_start_pt.Y,
                     canvas_width,
                     canvas_height,
-                    Brushes.Red);
+                    Brushes.Red,
+                    0.5f);
             }
         }
 
@@ -325,9 +347,13 @@ namespace ShearWallVisualizer
             //// Clear the MainCanvas before redrawing.
             cnvMainCanvas.Children.Clear();
 
-            // Draw the gridlines on the canvas
+            // Draw the gridlines and other non-model objectson the canvas
             DrawCanvasDetails();
+
+            // draw the structural model objects
             DrawStructuralObjects();
+
+            // draw the bounding box around all structural model objects
             DrawBoundingBox();
 
             // Draw a preview Line 
@@ -342,21 +368,23 @@ namespace ShearWallVisualizer
             ////Draw the diaphragm subregions
             //if (Calculator._diaphragm_system != null && Calculator._diaphragm_system._diaphragms.Count > 0)
             //{
-            //    foreach (var diaphragm in Calculator._diaphragm_system._diaphragms)
+                
+            //    foreach (Dictionary<int, DiaphragmData_Rectangular> diaphragm in Calculator._diaphragm_system._diaphragms)
             //    {
+            //        Point screen_center_pt = WorldCoord_ToScreen(diaphragm.Value.Centroid);
             //        // draw centroid points
             //        DrawingHelpersLibrary.DrawingHelpers.DrawCircle(
-            //            MainCanvas,
-            //            diaphragm.Value.Centroid.X * SCALE_X,
-            //            MainCanvas.Height - diaphragm.Value.Centroid.Y * SCALE_Y,
+            //            cnvMainCanvas,
+            //            screen_center_pt.X,
+            //            screen_center_pt.Y,
             //            System.Windows.Media.Brushes.Red,
             //            System.Windows.Media.Brushes.Red,
             //            3, 1);
 
-            //        System.Windows.Point p1 = diaphragm.Value.P1;
-            //        System.Windows.Point p2 = diaphragm.Value.P2;
-            //        System.Windows.Point p3 = diaphragm.Value.P3;
-            //        System.Windows.Point p4 = diaphragm.Value.P4;
+            //        System.Windows.Point p1 = diaphragm.P1;
+            //        System.Windows.Point p2 = diaphragm.P2;
+            //        System.Windows.Point p3 = diaphragm.P3;
+            //        System.Windows.Point p4 = diaphragm.P4;
 
             //        DrawingHelpersLibrary.DrawingHelpers.DrawLine(
             //            MainCanvas,
@@ -404,10 +432,9 @@ namespace ShearWallVisualizer
             //}
 
 
-            //}
-
             // if we have a defined diaphragm, draw the centroid in screen coords
             System.Windows.Point p1 = WorldCoord_ToScreen(Calculator._diaphragm_system.CtrMass);
+
             if (Calculator._diaphragm_system != null)
             {
                 // Draw the Center of Rigidity Point
@@ -427,6 +454,9 @@ namespace ShearWallVisualizer
                     12
                     );
             }
+
+
+
 
 
             //Draw the additional wall info including labels for the center point
@@ -547,16 +577,29 @@ namespace ShearWallVisualizer
                 //        );
                 //}
 
+                // Create the diaphragm data controls
+                DiaphragmData.Children.Clear();  // clear the stack panel controls for the diaphragm data
+                foreach (var diaphragm in Calculator._diaphragm_system._diaphragms)
+                {
+                    int id = diaphragm.Key;
+                    DiaphragmData_Rectangular dia = diaphragm.Value;
 
+                    DiaphragmDataControl control = new DiaphragmDataControl(id, dia);
+
+                    DiaphragmData.Children.Add(control);
+
+                    control.DeleteDiaphragm += OnDiaphragmDeleted;
+
+                }
 
                 //// Create Table of Results
                 if (Calculator.GetType() == typeof(ShearWallCalculator_RigidDiaphragm))
                 {
 
                     // Create Table of Wall Data
-                    ShearWallData_EW.Children.Clear();
-                    ShearWallData_NS.Children.Clear();
-                    ShearWallResults.Children.Clear();
+                    ShearWallData_EW.Children.Clear(); // clear the stack panel controls for the wall data
+                    ShearWallData_NS.Children.Clear(); // clear the stack panel controls for the wall data
+                    ShearWallResults.Children.Clear(); // clear the stack panel controls for the calculation results data
 
                     foreach (var result in ((ShearWallCalculator_RigidDiaphragm)Calculator).TotalWallShear)
                     {
@@ -567,7 +610,7 @@ namespace ShearWallVisualizer
                         float eccentric_shear = ((ShearWallCalculator_RigidDiaphragm)Calculator).EccentricShear.ContainsKey(id) ? ((ShearWallCalculator_RigidDiaphragm)Calculator).EccentricShear[id] : 0.0f;
                         float total_shear = ((ShearWallCalculator_RigidDiaphragm)Calculator).TotalWallShear.ContainsKey(id) ? ((ShearWallCalculator_RigidDiaphragm)Calculator).TotalWallShear[id] : 0.0f;
 
-                        ShearWallResults control = new ShearWallResults(
+                        ShearWallResultsControl control = new ShearWallResultsControl(
                             id,
                             rigidity,
                             Calculator._wall_system.X_bar_walls[id],
@@ -587,7 +630,7 @@ namespace ShearWallVisualizer
                     {
                         int id = result.Key;
                         WallData wall = Calculator._wall_system.EW_Walls.ContainsKey(id) ? Calculator._wall_system.EW_Walls[id] : Calculator._wall_system.NS_Walls[id];
-                        ShearWallData control = new ShearWallData(id, wall);
+                        ShearWallDataControl control = new ShearWallDataControl(id, wall);
 
                         if (wall.WallDir == WallDirs.EastWest)
                         {
@@ -621,25 +664,37 @@ namespace ShearWallVisualizer
             }
         }
 
-        private void OnWallDeleted(object sender, DeleteWallEventArgs e)
+        private void OnDiaphragmDeleted(object sender, DiaphragmDataControl.DeleteDiaphragmEventArgs e)
         {
-            if(Calculator._wall_system._walls.ContainsKey(e.Id) == true)
+            if (Calculator._diaphragm_system._diaphragms.ContainsKey(e.Id) == true)
+            {
+                Calculator._diaphragm_system._diaphragms.Remove(e.Id);
+
+                MessageBox.Show(e.Id.ToString() + " has been deleted");
+            }
+            else
+            {
+                MessageBox.Show(e.Id.ToString() + " does not exist in Walls");
+            }
+
+            Update();
+        }
+
+        private void OnWallDeleted(object sender, ShearWallDataControl.DeleteWallEventArgs e)
+        {
+            if (Calculator._wall_system._walls.ContainsKey(e.Id) == true)
             {
                 Calculator._wall_system._walls.Remove(e.Id);
 
                 MessageBox.Show(e.Id.ToString() + " has been deleted");
-            } else
+            }
+            else
             {
                 MessageBox.Show(e.Id.ToString() + " does not exist in Walls");
             }
-            
+
             Update();
-
-
-
-
         }
-
 
         private void Update()
         {
@@ -702,6 +757,7 @@ namespace ShearWallVisualizer
                     System.Windows.Point p = Mouse.GetPosition(cnvMainCanvas);
                     System.Windows.Point wp = ScreenCoord_ToWorld(Mouse.GetPosition(cnvMainCanvas));
 
+                    // The first click
                     if (_startClickSet == false)
                     {
                         lblScreenStartCoord.Content = "(" + p.X.ToString("0.00") + ", " + p.Y.ToString("0.00") + ")";
@@ -717,6 +773,8 @@ namespace ShearWallVisualizer
                         status = "First point selected";
                         return;
                     }
+
+                    // This is the second click
                     else
                     {
                         lblScreenEndCoord.Content = "(" + p.X.ToString("0.00") + ", " + p.Y.ToString("0.00") + ")";
@@ -730,6 +788,8 @@ namespace ShearWallVisualizer
 
                     lblStatus.Content = status;
 
+
+                    // Both points have been clicked
                     if (_startClickSet && _endClickSet)
                     {
                         // process the canvas screen coords clicked
@@ -756,8 +816,6 @@ namespace ShearWallVisualizer
                                 // move the y-coords of the end points to make the line horizontal
                                 end_y = center_y;
                                 start_y = end_y;
-
-                                
                             }
                             else
                             {
@@ -776,24 +834,27 @@ namespace ShearWallVisualizer
                             Point adj_end_x = new Point(end_x, end_y);
 
                             // convert screen coords to world coords to make the true wall structure
-                            Point p1 = ScreenCoord_ToWorld(adj_start_x);
-                            Point p2 = ScreenCoord_ToWorld(adj_end_x);
+                            Point world_p1 = ScreenCoord_ToWorld(adj_start_x);
+                            Point world_p2 = ScreenCoord_ToWorld(adj_end_x);
 
                             // Add to the list of wall segments
                             Calculator._wall_system.AddWall(new WallData(DEFAULT_WALL_HT, 
-                                (float)p1.X, (float)p1.Y, (float)p2.X, (float)p2.Y, dir));
+                                (float)world_p1.X, (float)world_p1.Y, (float)world_p2.X, (float)world_p2.Y, dir));
                             _currentPreviewLine = null;  // clear the preview line
                             status = "Wall added";
                             Update();
                         }
                         else if (CurrentInputMode == InputModes.Mass)
                         {
-                            Point p1 = ScreenCoord_ToWorld(CurrentStartPoint);
-                            Point p2 = ScreenCoord_ToWorld(CurrentEndPoint);
+                            // Create a diaphragm section by dragging opposite corners of a rectangular region
+                            Point world_p1 = ScreenCoord_ToWorld(CurrentStartPoint);
+                            Point world_p2 = ScreenCoord_ToWorld(CurrentEndPoint);
 
                             // Add to the list of diaphragm segments
-                            Calculator._diaphragm_system.AddDiaphragm(new DiaphragmData_Rectangular(p1, p2));
-                            lblStatus.Content = "Diaphragm added";
+                            Calculator._diaphragm_system.AddDiaphragm(new DiaphragmData_Rectangular(world_p1, world_p2));
+                            _currentPreviewLine = null;  // clear the preview line
+                            status = "Diaphragm added";
+                            Update();
                         }
                         else
                         {
@@ -803,19 +864,10 @@ namespace ShearWallVisualizer
                         // then clear the variables.
                         _startClickSet = false;
                         _endClickSet = false;
+                        CurrentStartPoint = new Point();
+                        CurrentEndPoint = new Point();
                     }
 
-                    else if (CurrentInputMode == InputModes.Mass)
-                    {
-                        //System.Windows.Point p = Mouse.GetPosition(MainCanvas);
-
-                        //System.Windows.Point point = new System.Windows.Point(p.X / (float)SCALE_X, (MainCanvas.Height - p.Y) / (float)SCALE_Y);
-                        //DiaphragmPoints.Add(point);
-
-
-
-                        //Update();
-                    }
                     lblStatus.Content = status;
                 }
             }

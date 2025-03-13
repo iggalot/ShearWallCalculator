@@ -55,11 +55,15 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Page Include="Controls\ShearWallData.xaml">
+    <Page Include="Controls\DiaphragmDataControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Controls\ShearWallResults.xaml">
+    <Page Include="Controls\ShearWallDataControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\ShearWallResultsControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -71,11 +75,14 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Controls\ShearWallData.xaml.cs">
-      <DependentUpon>ShearWallData.xaml</DependentUpon>
+    <Compile Include="Controls\DiaphragmDataControl.xaml.cs">
+      <DependentUpon>DiaphragmDataControl.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Controls\ShearWallResults.xaml.cs">
-      <DependentUpon>ShearWallResults.xaml</DependentUpon>
+    <Compile Include="Controls\ShearWallDataControl.xaml.cs">
+      <DependentUpon>ShearWallDataControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\ShearWallResultsControl.xaml.cs">
+      <DependentUpon>ShearWallResultsControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="Helpers\DrawingHelpers.cs" />
     <Compile Include="MainWindow.xaml.cs">

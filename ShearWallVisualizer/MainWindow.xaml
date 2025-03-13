@@ -6,69 +6,68 @@
         xmlns:local="clr-namespace:ShearWallVisualizer"
         mc:Ignorable="d"
         Title="Rigid Diaphragm Shear Wall Calculator v0.1" Height="800" Width="1200"
-        Loaded="Window_Loaded">
-    <Grid Background="LightGray">
+        Loaded="Window_Loaded"
+        Background="LightGray">
         <StackPanel Orientation="Horizontal">
-            <StackPanel Orientation="Vertical">
-                <Label Content="Rigid Diaphragm Shear Wall Calculator" HorizontalAlignment="Center" FontSize="20" FontWeight="Bold" Margin="3" Height="40" Width="420"/>
-                <Label Name="CurrentMode" Width="400" Background ="LightBlue" FontWeight="Bold"  Margin="0 0 0 0" Height="25" Content="SELECT EDIT MODE (M for MASS and R for RIGIDITY and C to CLEAR CURRENT) "/>
+            <StackPanel Orientation="Vertical" Width="450">
+                <Label Content="Rigid Diaphragm Shear Wall Calculator" FontSize="20" FontWeight="Bold" Height="40"/>
                 <StackPanel Orientation="Horizontal">
-                    <StackPanel Orientation="Horizontal">
-                        <Label Width="55" Height="25"  Margin="2" FontWeight="Bold" Content="C.M."/>
-                        <Label Name="CenterOfMass" Width="150" Height="25"  Margin="2" FontWeight="Bold" Content="value"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <Label Width="55" Height="25"  Margin="2" FontWeight="Bold" Content="C.R."/>
-                        <Label Name="CenterOfRigidity" Width="150" Height="25"  Margin="2" FontWeight="Bold" Content="value"/>
-                    </StackPanel>
+                    <Label Width="30" Height="25"   FontWeight="Bold" Content="C.M."/>
+                    <Label Name="CenterOfMass" Width="100" Height="25" FontWeight="Bold" Content="value" Margin="0 0 30 0"/>
+                    <Label Width="30" Height="25"  FontWeight="Bold" Content="C.R."/>
+                    <Label Name="CenterOfRigidity" Width="100" Height="25" FontWeight="Bold" Content="value"/>
                 </StackPanel>
-                <ScrollViewer Name="CanvasScrollViewer" Width="450" Height="550" Margin="25 0 25 0" 
+                <ScrollViewer Name="CanvasScrollViewer" Width="450" Height="450" 
                               HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-                    <Canvas Name="cnvMainCanvas" Width="300" Height="300" Background="White"
+                    <Canvas Name="cnvMainCanvas" Width="400" Height="400" Background="White"
                             MouseWheel = "MainCanvas_MouseWheel"
                             MouseDown = "MainCanvas_MouseDown"
                             MouseMove = "MainCanvas_MouseMove"
                             MouseUp = "MainCanvas_MouseUp"
                             />
                 </ScrollViewer>
-                <StackPanel Orientation="Horizontal">
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="X-MIN: "/>
-                        <Label Name="lblXMin" Width="100"  Margin="0 0 0 0" Height="25" Content="0"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="X-MAX: "/>
-                        <Label Name="lblXMax" Width="100"  Margin="0 0 0 0" Height="25" Content="0"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="Y-MIN: "/>
-                        <Label Name="lblYMin" Width="100"  Margin="0 0 0 0" Height="25" Content="0"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="Y-MAX: "/>
-                        <Label Name="lblYMax" Width="100"  Margin="0 0 0 0" Height="25" Content="0"/>
-                    </StackPanel>
-                </StackPanel>
-                <StackPanel Orientation="Horizontal">
-                    <Label Name="MousePosition" Width="100"  Margin="0 0 0 0" Height="25" Content="Mouse Position: "/>
-                    
-                    <StackPanel Orientation="Vertical">
-                        <StackPanel Orientation="Horizontal" Width="400">
-                            <Label Content="Screen Coords: "/>
-                            <Label Name="lblScreenStartCoord" Width="100"  Margin="0 0 0 0" Height="25" Content="Start: "/>
-                            <Label Name="lblScreenEndCoord"  Width="100" Margin="0 0 0 0" Height="25" Content="End: "/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Width="400">
-                            <Label Content="World Coords: "/>
-                            <Label Name="lblWorldStartCoord" Width="100"  Margin="0 0 0 0" Height="25" Content="Start: "/>
-                            <Label Name="lblWorldEndCoord"  Width="100" Margin="0 0 0 0" Height="25" Content="End: "/>
-                        </StackPanel>
-                    </StackPanel>
-                </StackPanel>
+                <Label Name="CurrentMode" Background ="LightBlue" FontWeight="Bold"  Margin="0 0 0 0" Height="25" Content="SELECT EDIT MODE (M for MASS and R for RIGIDITY and C to CLEAR CURRENT) "/>
 
-                <Label Name ="lblStatus" Width="200" Height="30" Content="Status Label"/>
-            </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <StackPanel Orientation="Horizontal">
+                        <Label Content="X-MIN: " FontSize="8"/>
+                        <Label Name="lblXMin" Width="50" FontSize="8" Margin="0 0 0 0" Height="25" Content="0"/>
+                        <Label Content="X-MAX: " FontSize="8"/>
+                        <Label Name="lblXMax" Width="50" FontSize="8" Margin="0 0 0 0" Height="25" Content="0"/>
+                        <Label Content="Y-MIN: " FontSize="8"/>
+                        <Label Name="lblYMin" Width="50" FontSize="8" Margin="0 0 0 0" Height="25" Content="0"/>
+                        <Label Content="Y-MAX: " FontSize="8"/>
+                        <Label Name="lblYMax" Width="50" FontSize="8" Margin="0 0 0 0" Height="25" Content="0"/>
+                    </StackPanel>
+                </StackPanel>
             <StackPanel Orientation="Vertical">
+                <Label Name="MousePosition" Width="100"  Margin="0 0 0 0" Height="25" Content="Mouse Position: "/>
+                <StackPanel Orientation="Horizontal">
+                    <Label Content="Screen Coords: " FontSize="8"/>
+                    <Label Content="1st: " FontSize="8"/>
+
+                    <Label Name="lblScreenStartCoord" FontSize="8" Width="100"  Margin="0 0 0 0" Height="25" Content="Start: "/>
+                    <Label Content="2nd: " FontSize="8"/>
+
+                    <Label Name="lblScreenEndCoord" FontSize="8" Width="100" Margin="0 0 20 0" Height="25" Content="End: "/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+
+                    <Label Content="World Coords: " FontSize="8"/>
+                    <Label Content="1st: " FontSize="8"/>
+
+                    <Label Name="lblWorldStartCoord" FontSize="8" Width="100"  Margin="0 0 0 0" Height="25" Content="Start: "/>
+                    <Label Content="2nd: " FontSize="8"/>
+
+                    <Label Name="lblWorldEndCoord" FontSize="8" Width="100" Margin="0 0 0 0" Height="25" Content="End: "/>
+                </StackPanel>
+            </StackPanel>
+            <Label Name ="lblStatus" Height="30" Content="Status Label"/>
+            </StackPanel>
+
+
+            <StackPanel Orientation="Vertical">
+                <!--== Calculation Results-->
                 <StackPanel HorizontalAlignment="Center" Orientation="Vertical" Margin="0 20 0 0">
                     <Label HorizontalAlignment="Left" Width="200" Height="30" FontWeight="Bold" Content="Shear Wall Forces Results"/>
                     <StackPanel Orientation="Horizontal" Background="AliceBlue">
@@ -83,6 +82,9 @@
                     </StackPanel>
                     <StackPanel Name="ShearWallResults" HorizontalAlignment="Center" Orientation="Vertical" />
                 </StackPanel>
+
+
+                <!--Wall Data-->
                 <StackPanel HorizontalAlignment="Left" Orientation="Vertical" Margin="0 20 0 0">
                     <Label HorizontalAlignment="Left" Width="200" Height="30" FontWeight="Bold" Content="Shear Wall Data"/>
                     <Label HorizontalAlignment="Left" Width="200" Height="30" FontWeight="Bold" Content="EAST-WEST DIRECTION"/>
@@ -101,8 +103,23 @@
                     <StackPanel Name="ShearWallData_NS" HorizontalAlignment="Center" Orientation="Vertical" />
 
                 </StackPanel>
+
+                <!--Diaphragm Data-->
+                <StackPanel HorizontalAlignment="Left" Orientation="Vertical" Margin="0 20 0 0">
+                    <Label HorizontalAlignment="Left" Width="200" Height="30" FontWeight="Bold" Content="Diaphragm Data" />
+                    <StackPanel Orientation="Horizontal" Background="AliceBlue" >
+                        <Label Width="20" Height="20" Margin="5 1 5 1" />
+                        <Label Width="50" Height="25" FontWeight="Bold" Margin="5 1 5 1" Content="ID"/>
+                        <Label Width="50" Height="25" FontWeight="Bold" Margin="5 1 5 1" Content="Type"/>
+                        <Label Width="75" Height="25" FontWeight="Bold" Margin="5 1 5 1" Content="Length (ft)"/>
+                        <Label Width="75" Height="25" FontWeight="Bold" Margin="5 1 5 1" Content="Height (ft)"/>
+                        <Label Width="100" Height="25" FontWeight="Bold" Margin="5 1 5 1" Content="P1 (ft, ft)"/>
+                        <Label Width="100" Height="25" FontWeight="Bold" Margin="5 1 5 1" Content="P2 (ft, ft)"/>
+                        <Label Width="100" Height="25" FontWeight="Bold" Margin="5 1 5 1" Content="P3 (ft, ft)"/>
+                        <Label Width="100" Height="25" FontWeight="Bold" Margin="5 1 5 1" Content="P4 (ft, ft)"/>
+                    </StackPanel>
+                    <StackPanel Name="DiaphragmData" HorizontalAlignment="Center" Orientation="Vertical" />
+                </StackPanel>
             </StackPanel>
         </StackPanel>
-
-    </Grid>
 </Window>

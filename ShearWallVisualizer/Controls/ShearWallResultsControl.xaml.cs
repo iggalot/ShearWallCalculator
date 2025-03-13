@@ -18,14 +18,14 @@ namespace ShearWallVisualizer.Controls
     /// <summary>
     /// Interaction logic for ShearWallResults.xaml
     /// </summary>
-    public partial class ShearWallResults : UserControl
+    public partial class ShearWallResultsControl : UserControl
     {
-        public ShearWallResults()
+        public ShearWallResultsControl()
         {
             InitializeComponent();
         }
 
-        public ShearWallResults(int id, double rigidity, double xbar, double ybar, double vix, double viy, double v_ecc, double v_tot)
+        public ShearWallResultsControl(int id, double rigidity, double xbar, double ybar, double vix, double viy, double v_ecc, double v_tot)
         {
             InitializeComponent();
 

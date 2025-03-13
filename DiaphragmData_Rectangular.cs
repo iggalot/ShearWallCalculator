@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Security.Principal;
 
@@ -19,6 +20,11 @@ namespace ShearWallCalculator
 
         public float Area { get; set; } = 0.0f;
 
+        // Horizontal dimension of the diaphragm
+        public float HorizDim_X { get; set; } = 0.0f;
+        // Vertical dimension of the diaphragm
+        public float HorizDim_Y { get; set; } = 0.0f;
+
 
         /// Rectangular region defined by P1, P2, P3, P4
         /// 
@@ -36,20 +42,25 @@ namespace ShearWallCalculator
 
         /// <summary>
         /// Default constructor
+        ///              
+        /// P4 --- P3
+        /// |       |
+        /// P1 --- P2 
+        /// 
         /// </summary>
-        /// <param name="p1">first point of rectangle</param>
-        /// <param name="p2">second point of rectangle</param>
-        public DiaphragmData_Rectangular(System.Windows.Point p1, System.Windows.Point p2)
+        /// <param name="first_pt">first point of rectangle</param>
+        /// <param name="second_pt">second point of rectangle</param>
+        public DiaphragmData_Rectangular(System.Windows.Point first_pt, System.Windows.Point second_pt)
         {
-            if (p1 == null || p2 == null)
+            if (first_pt == null || second_pt == null)
             {
                 return;
             }
-            if (p1 == p2)
+            if (first_pt == second_pt)
             {
                 throw new System.Exception("Diaphram points must be different");
             }
-            if (p1.X == p2.X || p1.Y == p2.Y)
+            if (first_pt.X == second_pt.X || first_pt.Y == second_pt.Y)
             {
                 throw new System.Exception("Unable to draw rectangular region");
             }
@@ -61,44 +72,64 @@ namespace ShearWallCalculator
             /// P4 --- P3
             /// |       |
             /// P1 --- P2 
-            if (p1.X < p2.X)
+            
+            // first point is either P1 or P4
+            if (first_pt.X < second_pt.X)
             {
-                if (p1.Y < p2.Y)
+                // Cases:
+                // (A) first point is P1 and second point is P3
+                if (first_pt.Y < second_pt.Y)
                 {
-                    P1 = p1;
-                    P2 = new System.Windows.Point(p2.X, p1.Y);
-                    P3 = p2;
-                    P4 = new System.Windows.Point(p1.X, p2.Y);
+                    P1 = first_pt;
+                    P3 = second_pt;
+
+                    P2 = new System.Windows.Point(P3.X, P1.Y);
+                    P4 = new System.Windows.Point(P1.X, P3.Y);
                 }
+                // (B) first point is P4 and second point is P2
                 else
                 {
-                    P1 = new System.Windows.Point(p1.X, p2.Y);
-                    P2 = p2;
-                    P4 = new System.Windows.Point(p2.X, p1.Y);
-                    P4 = p1;
+                    P2 = second_pt;
+                    P4 = first_pt;
+
+                    P1 = new System.Windows.Point(P2.X, P4.Y);
+                    P3 = new System.Windows.Point(P4.X, P2.Y);
                 }
             }
+
+            // first point is either P2 or P3
             else
             {
-                if (p1.Y < p2.Y)
+                // Cases:
+                // (A) first point is P2 and second point is P4
+                if (first_pt.Y < second_pt.Y)
                 {
-                    P1 = new System.Windows.Point(p2.X, p1.Y);
-                    P2 = p1;
-                    P3 = new System.Windows.Point(p1.X, p2.Y);
-                    P4 = p2;
+                    P2 = first_pt;
+                    P4 = second_pt;
+
+                    P1 = new System.Windows.Point(P4.X, P2.Y);
+                    P3 = new System.Windows.Point(P2.X, P4.Y);
                 }
+                // (B) first point is P3 and second point is P1
                 else
                 {
-                    P1 = p2;
-                    P2 = new System.Windows.Point(p1.X, p2.Y);
-                    P3 = p1;
-                    P4 = new System.Windows.Point(p2.X, p1.Y);
+                    P1 = second_pt;
+                    P3 = first_pt;
+
+                    P2 = new System.Windows.Point(P3.X, P1.Y);
+                    P4 = new System.Windows.Point(P1.X, P3.Y);
                 }
             }
+
+            Update();  // Update the calculations
         }
 
         public void Update()
         {
+            // Compute the dimensions
+            HorizDim_X = Math.Abs((float)(P3.X - P1.X));
+            HorizDim_Y = Math.Abs((float)(P3.Y - P1.Y));
+
             // compute area of region
             ComputeArea();
 
