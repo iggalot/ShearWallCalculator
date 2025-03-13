@@ -22,6 +22,8 @@ namespace ShearWallVisualizer
     /// </summary>
     public partial class MainWindow : Window
     {
+        private Point _currentMousePosition = new Point();
+
         private List<Shape> StructuralObjects = new List<Shape>(); // a list of the structural (non-canvas drawing details) objects
         private List<Shape> CanvasDetails = new List<Shape>(); // a kist of objects drawn on the canvas but not needed to be recomputed frequently.
 
@@ -33,6 +35,10 @@ namespace ShearWallVisualizer
         private const double rect_boundary_line_thickness = 0.5;
 
         private Line _currentPreviewLine = null;
+
+        // cross hairs
+        private Line _crosshairVertical = null;
+        private Line _crosshairHorizontal = null;
 
 
         // variables for controlling canvas zooming and panning
@@ -76,7 +82,27 @@ namespace ShearWallVisualizer
             _transformGroup.Children.Add(_translateTransform);
             cnvMainCanvas.RenderTransform = _transformGroup;
 
+            // create the gridlines
             CreateGridLines();
+
+            // creates the crosshairs for point selection
+            _crosshairVertical = new Line { 
+                X1 = _currentMousePosition.X, 
+                Y1 = 0, 
+                X2 = _currentMousePosition.X, 
+                Y2 = cnvMainCanvas.Height, Stroke = Brushes.Black, StrokeThickness = 0.25 };
+
+            // creates the crosshairs for point selection
+            _crosshairHorizontal = new Line
+            {
+                Y1 = _currentMousePosition.Y,
+                X1 = 0,
+                Y2 = _currentMousePosition.Y,
+                X2 = cnvMainCanvas.Width,
+                Stroke = Brushes.Black,
+                StrokeThickness = 0.25
+            };
+
 
             // Create a some test data
             Calculator._diaphragm_system.AddDiaphragm(new DiaphragmData_Rectangular(new Point(50, 50), new Point(100, 100)));
@@ -84,6 +110,7 @@ namespace ShearWallVisualizer
 
             Update();
         }
+
 
         /// <summary>
         /// Helper function to draw a rectangle with a border and a center point and add it to our list of structural objects to be drawn
@@ -350,6 +377,9 @@ namespace ShearWallVisualizer
             // Draw center of mass and center of rigidity
             DrawCOMandCOR();
 
+            // Draw crosshairs
+            cnvMainCanvas.Children.Add(_crosshairVertical);
+            cnvMainCanvas.Children.Add(_crosshairHorizontal);
 
 
 
@@ -626,7 +656,7 @@ namespace ShearWallVisualizer
 
         private void Update()
         {
-            // Create the new calculator
+            // Update the new calculator
             Calculator.Update();
 
             cnvMainCanvas.Children.Clear(); // clear the canvas 
@@ -634,6 +664,13 @@ namespace ShearWallVisualizer
             // Recompute the structural objects to be drawn
             StructuralObjects.Clear();
             CreateStructuralObjects();
+
+            // Update the crosshairs
+            _crosshairVertical.X1 = _currentMousePosition.X;
+            _crosshairVertical.X2 = _currentMousePosition.X;
+
+            _crosshairHorizontal.Y1 = _currentMousePosition.Y;
+            _crosshairHorizontal.Y2 = _currentMousePosition.Y;
 
             DrawResults();
 
@@ -816,6 +853,8 @@ namespace ShearWallVisualizer
         /// <param name="e"></param>
         private void MainCanvas_MouseMove(object sender, MouseEventArgs e)
         {
+            _currentMousePosition = Mouse.GetPosition(cnvMainCanvas);
+
             // Check if middle mouse button is pressed and we are in panning mode
             if (_isPanning && e.MiddleButton == MouseButtonState.Pressed)
             {
@@ -847,7 +886,7 @@ namespace ShearWallVisualizer
                 }
 
                 // Update the mouse position label
-                MousePosition.Content = "(" + e.GetPosition(cnvMainCanvas).X.ToString("0.00") + ", " + e.GetPosition(cnvMainCanvas).Y.ToString("0.00") + ")";
+                MousePosition.Content = "(" + _currentMousePosition.X.ToString("0.00") + ", " + _currentMousePosition.Y.ToString("0.00") + ")";
 
                 Update();
             }
