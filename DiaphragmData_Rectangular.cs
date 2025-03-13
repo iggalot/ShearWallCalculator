@@ -66,8 +66,6 @@ namespace ShearWallCalculator
                 throw new System.Exception("Unable to draw rectangular region");
             }
 
-            System.Windows.Point _p1, _p2, _p3, _p4;
-
             /// Sort points so our region is a rectangle defined as
             /// 
             /// P4 --- P3

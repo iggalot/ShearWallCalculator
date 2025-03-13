@@ -122,6 +122,7 @@ namespace calculator
         {
             return (float)(Start.Y + End.Y) / 2 * WallRigidity;
         }
+
         /// <summary>
         /// Creates a string for displaying the info of the wall
         /// </summary>

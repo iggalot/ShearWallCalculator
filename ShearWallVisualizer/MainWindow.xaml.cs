@@ -3,10 +3,12 @@ using ShearWallCalculator;
 using ShearWallVisualizer.Controls;
 using System;
 using System.Collections.Generic;
+using System.IO.Ports;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Media3D;
 using System.Windows.Shapes;
 
 namespace ShearWallVisualizer
@@ -22,19 +24,25 @@ namespace ShearWallVisualizer
     /// </summary>
     public partial class MainWindow : Window
     {
-        private Point _currentMousePosition = new Point();
+        private float DEFAULT_WALL_HT = 9;  // ft
 
+        // Containers for Canvas drawing objects
         private List<Shape> StructuralObjects = new List<Shape>(); // a list of the structural (non-canvas drawing details) objects
-        private List<Shape> CanvasDetails = new List<Shape>(); // a kist of objects drawn on the canvas but not needed to be recomputed frequently.
+        private List<Shape> CanvasDetailsObjects = new List<Shape>(); // a list of objects drawn on the canvas but not needed to be recomputed frequently.
+        private List<Shape> PreviewObjects = new List<Shape>(); // a list of objects containing any temporary preview objects to be drawn tocanvas
 
-        private int _project_extents = 300;  // the dimensions of the canvas from one side to the other -- measured in feet
+        // constants for gridlines
         private float default_gridline_spacing_major = 10;  // the spacing of the major gridlines -- measured in feet
         private float default_gridline_spacing_minor = 5;  // the spacing of the minor gridlines -- measured in feet
 
-        // constants for drawing objects on canvas
+        // constants for properties of drawing objects on canvas
         private const double rect_boundary_line_thickness = 0.5;
 
-        private Line _currentPreviewLine = null;
+        private Shape _PreviewShape = null;
+        private Line _currentPreviewLine = null; // contains the points for first and second selection
+
+        // current mouse position
+        private Point _currentMousePosition = new Point();
 
         // cross hairs
         private Line _crosshairVertical = null;
@@ -44,16 +52,12 @@ namespace ShearWallVisualizer
         // variables for controlling canvas zooming and panning
         private ScaleTransform _scaleTransform;
         private double _zoomFactor = 1.1;  // amount of zoom when middle mouse button is scrolled
-        private Point _lastMousePosition; // last mouse position in canvas coords
-        private bool _isPanning;
+        private Point _lastMousePosition; // last mouse position in canvas coords -- used for panning
+        private bool _isPanning; // flag for panning state
         private TransformGroup _transformGroup;
         private TranslateTransform _translateTransform;
-
-
-        // scale factors for the canvas and layout of the visiualizer
-        private const double SCALE_X = 1;
-        private const double SCALE_Y = 1;
-        private float DEFAULT_WALL_HT = 9;  // ft
+        private const double SCALE_X = 1;  // scale factor for x-dir
+        private const double SCALE_Y = 1;  // scale factor for y-dir
 
         // variables for handling input
         private InputModes CurrentInputMode { get; set; } = InputModes.None;
@@ -105,12 +109,124 @@ namespace ShearWallVisualizer
 
 
             // Create a some test data
-            Calculator._diaphragm_system.AddDiaphragm(new DiaphragmData_Rectangular(new Point(50, 50), new Point(100, 100)));
+            // Calculator._diaphragm_system.AddDiaphragm(new DiaphragmData_Rectangular(new Point(50, 50), new Point(100, 100)));
             //            Calculator._diaphragm_system.AddDiaphragm(new DiaphragmData_Rectangular(new Point(100, 100), new Point(40, 60)));
 
             Update();
         }
 
+        public void CreatePreviewShape()
+        {
+            Shape shape = null;
+            PreviewObjects.Clear();
+
+            if(_currentPreviewLine == null)
+            {
+                return;
+            }   
+
+            switch (CurrentInputMode)
+            {
+                case InputModes.None:
+                    //no input mode so do nothing
+                    return;
+                case InputModes.Rigidity:
+                    // draw preview as a line
+                    shape = _currentPreviewLine;
+                    PreviewObjects.Add(shape);
+                    break;
+                case InputModes.Mass:
+                    float x1 = (float)_currentPreviewLine.X1;
+                    float y1 = (float)_currentPreviewLine.Y1;
+                    float x2 = (float)_currentPreviewLine.X2;
+                    float y2 = (float)_currentPreviewLine.Y2;
+
+                    // Sort the points in to P1, P2, P3, P4 order
+                    ///              
+                    /// P4 --- P3
+                    /// |       |
+                    /// P1 --- P2 
+                    /// 
+                    Point first_pt = new Point(x1, y1);
+                    Point second_pt = new Point(x2, y2);
+                    Console.WriteLine($"\nfirst pt: {first_pt}  second pt: {second_pt}");
+
+                    Point P1, P2, P3, P4;
+
+                    // first point is either P1 or P4
+                    if (first_pt.X < second_pt.X)
+                    {
+                        // Cases:
+                        // (A) first point is P1 and second point is P3
+                        if (first_pt.Y > second_pt.Y)
+                        {
+                            Console.WriteLine("\nA");
+                            P1 = first_pt;
+                            P3 = second_pt;
+
+                            P2 = new System.Windows.Point(P3.X, P1.Y);
+                            P4 = new System.Windows.Point(P1.X, P3.Y);
+                        }
+                        // (B) first point is P4 and second point is P2
+                        else
+                        {
+                            Console.WriteLine("\nB");
+                            P2 = second_pt;
+                            P4 = first_pt;
+
+                            P1 = new System.Windows.Point(P4.X, P2.Y);
+                            P3 = new System.Windows.Point(P2.X, P4.Y);
+                        }
+                    }
+
+                    // first point is either P2 or P3
+                    else
+                    {
+                        // Cases:
+                        // (A) first point is P2 and second point is P4
+                        if (first_pt.Y > second_pt.Y)
+                        {
+                            Console.WriteLine("\nC");
+                            P2 = first_pt;
+                            P4 = second_pt;
+
+                            P1 = new System.Windows.Point(P4.X, P2.Y);
+                            P3 = new System.Windows.Point(P2.X, P4.Y);
+                        }
+                        // (B) first point is P3 and second point is P1
+                        else
+                        {
+                            Console.WriteLine("\nD");
+                            P1 = second_pt;
+                            P3 = first_pt;
+
+                            P2 = new System.Windows.Point(P3.X, P1.Y);
+                            P4 = new System.Windows.Point(P1.X, P3.Y);
+                        }
+                    }
+
+                    // the rectangular region object
+                    shape = new Rectangle
+                    {
+                        Width = Math.Abs(P2.X-P1.X),
+                        Height = Math.Abs(P4.Y-P1.Y),
+                        Fill = Brushes.Green,
+                        Stroke = Brushes.Green,
+                        StrokeThickness = rect_boundary_line_thickness,
+                        Opacity = 0.3f
+                    };
+                    Console.WriteLine($"P1: {P1}  P2: {P2}  P3: {P3}  P4: {P4}");
+                    Console.WriteLine($"\nX: {P1.X} Y: {P1.Y}   Width: {shape.Width}   Height: {shape.Height}"  );
+                    Canvas.SetLeft(shape, P4.X);
+                    Canvas.SetTop(shape, P4.Y);
+                    PreviewObjects.Add(shape);
+
+                    break;
+                default:
+                    throw new NotImplementedException("Unknown input mode in CreatePreviewShape: " + CurrentInputMode.ToString());
+                    return;
+            }
+        }
 
         /// <summary>
         /// Helper function to draw a rectangle with a border and a center point and add it to our list of structural objects to be drawn
@@ -202,8 +318,8 @@ namespace ShearWallVisualizer
                 // draw the major gridlines
                 Line verticalLine = new Line { X1 = i, Y1 = 0, X2 = i, Y2 = cnvMainCanvas.Height, Stroke = Brushes.DarkGray, StrokeDashArray = new DoubleCollection { 2, 2 }, StrokeThickness = 0.4 };
                 Line horizontalLine = new Line { X1 = 0, Y1 = i, X2 = cnvMainCanvas.Width, Y2 = i, Stroke = Brushes.DarkGray, StrokeDashArray = new DoubleCollection { 2, 2 }, StrokeThickness = 0.4 };
-                CanvasDetails.Add(verticalLine);
-                CanvasDetails.Add(horizontalLine);
+                CanvasDetailsObjects.Add(verticalLine);
+                CanvasDetailsObjects.Add(horizontalLine);
             }
 
             // for the minor gridlines
@@ -218,8 +334,8 @@ namespace ShearWallVisualizer
                 // draw the minor gridlines
                 Line verticalLine = new Line { X1 = i, Y1 = 0, X2 = i, Y2 = cnvMainCanvas.Height, Stroke = Brushes.LightGray, StrokeDashArray = new DoubleCollection { 2, 2 }, StrokeThickness = 0.2 };
                 Line horizontalLine = new Line { X1 = 0, Y1 = i, X2 = cnvMainCanvas.Width, Y2 = i, Stroke = Brushes.LightGray, StrokeDashArray = new DoubleCollection { 2, 2 }, StrokeThickness = 0.2 };
-                CanvasDetails.Add(verticalLine);
-                CanvasDetails.Add(horizontalLine);
+                CanvasDetailsObjects.Add(verticalLine);
+                CanvasDetailsObjects.Add(horizontalLine);
             }
         }
 
@@ -315,9 +431,18 @@ namespace ShearWallVisualizer
         /// </summary>
         public void DrawCanvasDetails()
         {
-            foreach (Line line in CanvasDetails)
+            if (CanvasDetailsObjects == null || CanvasDetailsObjects.Count == 0)
             {
-                cnvMainCanvas.Children.Add(line);
+                return;
+            }
+            foreach (var item in CanvasDetailsObjects)
+            {
+                if (item == null) continue;
+
+                if (cnvMainCanvas.Children.Contains(item) != true)
+                {
+                    cnvMainCanvas.Children.Add(item);
+                }
             }
         }
         /// <summary>
@@ -328,9 +453,40 @@ namespace ShearWallVisualizer
         /// </summary>
         public void DrawStructuralObjects()
         {
+            if (StructuralObjects == null || StructuralObjects.Count == 0)
+            {
+                return;
+            }
             foreach (var item in StructuralObjects)
             {
-                cnvMainCanvas.Children.Add(item);
+                if (item == null) continue;
+
+                if (cnvMainCanvas.Children.Contains(item) != true)
+                {
+                    cnvMainCanvas.Children.Add(item);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Draw the preview shapes for point collection
+        /// -- preview cursor image
+        /// </summary>
+        public void DrawPreviewObjects()
+        {
+            if(PreviewObjects == null || PreviewObjects.Count == 0)
+            {
+                return;
+            }
+
+            foreach (Shape item in PreviewObjects)
+            {
+                if (item == null) continue;
+
+                if(cnvMainCanvas.Children.Contains(item) != true)
+                {
+                    cnvMainCanvas.Children.Add(item);
+                }
             }
         }
 
@@ -350,10 +506,10 @@ namespace ShearWallVisualizer
             //// Clear the MainCanvas before redrawing.
             cnvMainCanvas.Children.Clear();
 
-            // Draw the gridlines and other non-model objectson the canvas
+            // Draw the gridlines and other non-model objects on the canvas
             DrawCanvasDetails();
 
-            // draw the structural model objects
+            // draw the structural model objects -- do this before any added details and highlights
             DrawStructuralObjects();
 
             // draw the bounding box around all structural model objects
@@ -362,17 +518,19 @@ namespace ShearWallVisualizer
             // Draw the preview object (line or rectangle)
             if (_currentPreviewLine != null)
             {
-                if (cnvMainCanvas.Children.Contains(_currentPreviewLine) != true)
-                {
-                    cnvMainCanvas.Children.Add(_currentPreviewLine);
-                }
+                CreatePreviewShape();
+                //if (cnvMainCanvas.Children.Contains(_currentPreviewLine) != true)
+                //{
+                //    cnvMainCanvas.Children.Add(_currentPreviewLine);
+                //}
             }
+            DrawPreviewObjects();
 
-            // Draw extra information for walls -- label numbers etx.
+            // Draw extra information for walls -- label numbers etc.
             DrawWallsInfo();
 
-
-
+            // Draw extra information for diaphragms -- label numbers etc.
+            DrawDiaphragmsInfo();
 
             // Draw center of mass and center of rigidity
             DrawCOMandCOR();
@@ -544,7 +702,7 @@ namespace ShearWallVisualizer
                             0,
                             wall.Key.ToString(),
                             System.Windows.Media.Brushes.Black,
-                            12
+                            6
                             );
                     }
                 }
@@ -563,7 +721,39 @@ namespace ShearWallVisualizer
                             0,
                             wall.Key.ToString(),
                             System.Windows.Media.Brushes.Black,
-                            12
+                            6
+                            );
+                    }
+                }
+            }
+        }
+
+
+        /// <summary>
+        /// For drawing text labels and other info for walls
+        /// </summary>
+        private void DrawDiaphragmsInfo()
+        {
+            //Draw the additional wall info including labels for the center point
+            if (Calculator._diaphragm_system != null)
+            {
+                // East-West walls
+                if (Calculator._diaphragm_system._diaphragms.Count > 0)
+                {
+                    foreach (var diaphragm in Calculator._diaphragm_system._diaphragms)
+                    {
+                        System.Windows.Point cp = WorldCoord_ToScreen(diaphragm.Value.Centroid);
+
+                        // number label for the wall ID
+                        DrawingHelpersLibrary.DrawingHelpers.DrawText
+                            (
+                            cnvMainCanvas,
+                            cp.X + 1,
+                            cp.Y + 1,
+                            0,
+                            diaphragm.Key.ToString(),
+                            System.Windows.Media.Brushes.Red,
+                            6
                             );
                     }
                 }
@@ -585,7 +775,7 @@ namespace ShearWallVisualizer
                     cor_pt.Y,
                     System.Windows.Media.Brushes.Blue,
                     System.Windows.Media.Brushes.Blue,
-                    5,
+                    7,
                     0.5);
                 DrawingHelpersLibrary.DrawingHelpers.DrawText(
                     cnvMainCanvas,
@@ -593,7 +783,7 @@ namespace ShearWallVisualizer
                     cor_pt.Y - 10,
                     0,
                     "C.R",
-                    System.Windows.Media.Brushes.Blue,
+                    System.Windows.Media.Brushes.Black,
                     6
                     );
             }
@@ -608,7 +798,7 @@ namespace ShearWallVisualizer
                     p1.X, p1.Y,
                     System.Windows.Media.Brushes.Red,
                     System.Windows.Media.Brushes.Red,
-                    5,
+                    7,
                     1);
                 DrawingHelpersLibrary.DrawingHelpers.DrawText(
                     cnvMainCanvas,
@@ -616,7 +806,7 @@ namespace ShearWallVisualizer
                     p1.Y + 2,
                     0,
                     "C.M",
-                    System.Windows.Media.Brushes.Red,
+                    System.Windows.Media.Brushes.Black,
                     6
                     );
             }
@@ -671,6 +861,8 @@ namespace ShearWallVisualizer
 
             _crosshairHorizontal.Y1 = _currentMousePosition.Y;
             _crosshairHorizontal.Y2 = _currentMousePosition.Y;
+
+            CreatePreviewShape();
 
             DrawResults();
 
@@ -883,6 +1075,15 @@ namespace ShearWallVisualizer
                     var p = e.GetPosition(cnvMainCanvas);
                     _currentPreviewLine.X2 = p.X;
                     _currentPreviewLine.Y2 = p.Y;
+
+                    // force the line to be horizontal or vertical only
+                    if (LineIsHorizontal(_currentPreviewLine))
+                    {
+                        _currentPreviewLine.Y2 = _currentPreviewLine.Y1;
+                    } else
+                    {
+                        _currentPreviewLine.X2 = _currentPreviewLine.X1; 
+                    }
                 }
 
                 // Update the mouse position label
@@ -891,6 +1092,18 @@ namespace ShearWallVisualizer
                 Update();
             }
 
+        }
+
+        /// <summary>
+        /// Function to determine if a line object is more horizontal than vertical by comparing the x and y distances between the start and end points
+        /// </summary>
+        /// <param name="line"></param>
+        /// <returns></returns>
+        private bool LineIsHorizontal(Line line)
+        {
+            if (line == null) return false;
+
+            return (Math.Abs(line.X1 - line.X2) > Math.Abs(line.Y1 - line.Y2));
         }
 
         /// <summary>

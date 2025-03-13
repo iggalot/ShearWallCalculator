@@ -86,7 +86,7 @@
 
                 <!--Wall Data-->
                 <StackPanel HorizontalAlignment="Left" Orientation="Vertical" Margin="0 20 0 0">
-                    <Label HorizontalAlignment="Left" Width="200" Height="30" FontWeight="Bold" Content="Shear Wall Data"/>
+                    <Label HorizontalAlignment="Left" Background="Blue" Width="600" Height="30" FontWeight="Bold" Content="Shear Wall Data"/>
                     <Label HorizontalAlignment="Left" Width="200" Height="30" FontWeight="Bold" Content="EAST-WEST DIRECTION"/>
                     <StackPanel Orientation="Horizontal" Background="AliceBlue" >
                         <Label Width="20" Height="20" Margin="5 1 5 1" />
@@ -106,7 +106,7 @@
 
                 <!--Diaphragm Data-->
                 <StackPanel HorizontalAlignment="Left" Orientation="Vertical" Margin="0 20 0 0">
-                    <Label HorizontalAlignment="Left" Width="200" Height="30" FontWeight="Bold" Content="Diaphragm Data" />
+                    <Label HorizontalAlignment="Left" Background="Red" Width="600" Height="30" FontWeight="Bold" Content="Diaphragm Data" />
                     <StackPanel Orientation="Horizontal" Background="AliceBlue" >
                         <Label Width="20" Height="20" Margin="5 1 5 1" />
                         <Label Width="50" Height="25" FontWeight="Bold" Margin="5 1 5 1" Content="ID"/>
