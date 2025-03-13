@@ -68,7 +68,7 @@
 
             <StackPanel Orientation="Vertical">
                 <!--== Calculation Results-->
-                <StackPanel HorizontalAlignment="Center" Orientation="Vertical" Margin="0 20 0 0">
+                <StackPanel Name="spCalcResultsControls" HorizontalAlignment="Center" Orientation="Vertical" Margin="0 20 0 0">
                     <Label HorizontalAlignment="Left" Width="200" Height="30" FontWeight="Bold" Content="Shear Wall Forces Results"/>
                     <StackPanel Orientation="Horizontal" Background="AliceBlue">
                         <Label Width="55" Height="25"  Margin="2" FontWeight="Bold" Content="Wall ID"/>
@@ -85,7 +85,7 @@
 
 
                 <!--Wall Data-->
-                <StackPanel HorizontalAlignment="Left" Orientation="Vertical" Margin="0 20 0 0">
+                <StackPanel Name ="spWallDataControls" HorizontalAlignment="Left" Orientation="Vertical" Margin="0 20 0 0">
                     <Label HorizontalAlignment="Left" Background="Blue" Width="600" Height="30" FontWeight="Bold" Content="Shear Wall Data"/>
                     <Label HorizontalAlignment="Left" Width="200" Height="30" FontWeight="Bold" Content="EAST-WEST DIRECTION"/>
                     <StackPanel Orientation="Horizontal" Background="AliceBlue" >
@@ -105,7 +105,7 @@
                 </StackPanel>
 
                 <!--Diaphragm Data-->
-                <StackPanel HorizontalAlignment="Left" Orientation="Vertical" Margin="0 20 0 0">
+                <StackPanel Name="spDiaphragmDataControls" HorizontalAlignment="Left" Orientation="Vertical" Margin="0 20 0 0">
                     <Label HorizontalAlignment="Left" Background="Red" Width="600" Height="30" FontWeight="Bold" Content="Diaphragm Data" />
                     <StackPanel Orientation="Horizontal" Background="AliceBlue" >
                         <Label Width="20" Height="20" Margin="5 1 5 1" />

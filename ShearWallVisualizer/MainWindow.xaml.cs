@@ -161,7 +161,6 @@ namespace ShearWallVisualizer
                         // (A) first point is P1 and second point is P3
                         if (first_pt.Y > second_pt.Y)
                         {
-                            Console.WriteLine("\nA");
                             P1 = first_pt;
                             P3 = second_pt;
 
@@ -171,7 +170,6 @@ namespace ShearWallVisualizer
                         // (B) first point is P4 and second point is P2
                         else
                         {
-                            Console.WriteLine("\nB");
                             P2 = second_pt;
                             P4 = first_pt;
 
@@ -187,7 +185,6 @@ namespace ShearWallVisualizer
                         // (A) first point is P2 and second point is P4
                         if (first_pt.Y > second_pt.Y)
                         {
-                            Console.WriteLine("\nC");
                             P2 = first_pt;
                             P4 = second_pt;
 
@@ -197,7 +194,6 @@ namespace ShearWallVisualizer
                         // (B) first point is P3 and second point is P1
                         else
                         {
-                            Console.WriteLine("\nD");
                             P1 = second_pt;
                             P3 = first_pt;
 
@@ -216,16 +212,25 @@ namespace ShearWallVisualizer
                         StrokeThickness = rect_boundary_line_thickness,
                         Opacity = 0.3f
                     };
-                    Console.WriteLine($"P1: {P1}  P2: {P2}  P3: {P3}  P4: {P4}");
-                    Console.WriteLine($"\nX: {P1.X} Y: {P1.Y}   Width: {shape.Width}   Height: {shape.Height}"  );
+                    //Console.WriteLine($"P1: {P1}  P2: {P2}  P3: {P3}  P4: {P4}");
+                    //Console.WriteLine($"\nX: {P1.X} Y: {P1.Y}   Width: {shape.Width}   Height: {shape.Height}"  );
                     Canvas.SetLeft(shape, P4.X);
                     Canvas.SetTop(shape, P4.Y);
                     PreviewObjects.Add(shape);
 
+
+                    // Add dimension text
+                    TextBlock text = new TextBlock();
+                    text.Text = $"{Math.Abs(P2.X - P1.X):0.0} x {Math.Abs(P4.Y - P1.Y):0.0} ft";
+                    Canvas.SetTop(text, (P1.X + P3.X) / 2.0);
+                    Canvas.SetTop(text, (P1.Y + P3.Y) / 2.0);
+                    cnvMainCanvas.Children.Add(text);
+
+
+
                     break;
                 default:
                     throw new NotImplementedException("Unknown input mode in CreatePreviewShape: " + CurrentInputMode.ToString());
-                    return;
             }
         }
 
@@ -593,89 +598,104 @@ namespace ShearWallVisualizer
             //        );
             //}
 
+            // hide the results controls
+            HideAllDataControls();
+
             // Create the diaphragm data controls
-            DiaphragmData.Children.Clear();  // clear the stack panel controls for the diaphragm data
-            foreach (var diaphragm in Calculator._diaphragm_system._diaphragms)
+            if (Calculator._diaphragm_system._diaphragms.Count > 0)
             {
-                int id = diaphragm.Key;
-                DiaphragmData_Rectangular dia = diaphragm.Value;
+                // turn on the controls stackpanel visibility
+                spDiaphragmDataControls.Visibility = Visibility.Visible;
 
-                DiaphragmDataControl control = new DiaphragmDataControl(id, dia);
+                DiaphragmData.Children.Clear();  // clear the stack panel controls for the diaphragm data
+                foreach (var diaphragm in Calculator._diaphragm_system._diaphragms)
+                {
+                    int id = diaphragm.Key;
+                    DiaphragmData_Rectangular dia = diaphragm.Value;
 
-                DiaphragmData.Children.Add(control);
+                    DiaphragmDataControl control = new DiaphragmDataControl(id, dia);
 
-                control.DeleteDiaphragm += OnDiaphragmDeleted;
+                    DiaphragmData.Children.Add(control);
 
+                    control.DeleteDiaphragm += OnDiaphragmDeleted;
+
+                }
             }
 
             //// Create Table of Results
-            if (Calculator.GetType() == typeof(ShearWallCalculator_RigidDiaphragm))
+            if(Calculator._wall_system._walls.Count > 0)
             {
+                // turn on the results and wall data controls visibility
+                spWallDataControls.Visibility = Visibility.Visible;
+                spCalcResultsControls.Visibility = Visibility.Visible;
 
-                // Create Table of Wall Data
-                ShearWallData_EW.Children.Clear(); // clear the stack panel controls for the wall data
-                ShearWallData_NS.Children.Clear(); // clear the stack panel controls for the wall data
-                ShearWallResults.Children.Clear(); // clear the stack panel controls for the calculation results data
-
-                foreach (var result in ((ShearWallCalculator_RigidDiaphragm)Calculator).TotalWallShear)
+                if (Calculator.GetType() == typeof(ShearWallCalculator_RigidDiaphragm))
                 {
-                    int id = result.Key;
-                    float rigidity = ((ShearWallCalculator_RigidDiaphragm)Calculator)._wall_system.EW_Walls.ContainsKey(id) ? ((ShearWallCalculator_RigidDiaphragm)Calculator)._wall_system.EW_Walls[id].WallRigidity : Calculator._wall_system.NS_Walls[id].WallRigidity;
-                    float direct_shear_x = ((ShearWallCalculator_RigidDiaphragm)Calculator).DirectShear_X.ContainsKey(id) ? ((ShearWallCalculator_RigidDiaphragm)Calculator).DirectShear_X[id] : 0.0f;
-                    float direct_shear_y = ((ShearWallCalculator_RigidDiaphragm)Calculator).DirectShear_Y.ContainsKey(id) ? ((ShearWallCalculator_RigidDiaphragm)Calculator).DirectShear_Y[id] : 0.0f;
-                    float eccentric_shear = ((ShearWallCalculator_RigidDiaphragm)Calculator).EccentricShear.ContainsKey(id) ? ((ShearWallCalculator_RigidDiaphragm)Calculator).EccentricShear[id] : 0.0f;
-                    float total_shear = ((ShearWallCalculator_RigidDiaphragm)Calculator).TotalWallShear.ContainsKey(id) ? ((ShearWallCalculator_RigidDiaphragm)Calculator).TotalWallShear[id] : 0.0f;
 
-                    ShearWallResultsControl control = new ShearWallResultsControl(
-                        id,
-                        rigidity,
-                        Calculator._wall_system.X_bar_walls[id],
-                        Calculator._wall_system.Y_bar_walls[id],
-                        direct_shear_x,
-                        direct_shear_y,
-                        eccentric_shear,
-                        total_shear
-                        );
+                    // Create Table of Wall Data
+                    ShearWallData_EW.Children.Clear(); // clear the stack panel controls for the wall data
+                    ShearWallData_NS.Children.Clear(); // clear the stack panel controls for the wall data
+                    ShearWallResults.Children.Clear(); // clear the stack panel controls for the calculation results data
 
-                    ShearWallResults.Children.Add(control);
+                    foreach (var result in ((ShearWallCalculator_RigidDiaphragm)Calculator).TotalWallShear)
+                    {
+                        int id = result.Key;
+                        float rigidity = ((ShearWallCalculator_RigidDiaphragm)Calculator)._wall_system.EW_Walls.ContainsKey(id) ? ((ShearWallCalculator_RigidDiaphragm)Calculator)._wall_system.EW_Walls[id].WallRigidity : Calculator._wall_system.NS_Walls[id].WallRigidity;
+                        float direct_shear_x = ((ShearWallCalculator_RigidDiaphragm)Calculator).DirectShear_X.ContainsKey(id) ? ((ShearWallCalculator_RigidDiaphragm)Calculator).DirectShear_X[id] : 0.0f;
+                        float direct_shear_y = ((ShearWallCalculator_RigidDiaphragm)Calculator).DirectShear_Y.ContainsKey(id) ? ((ShearWallCalculator_RigidDiaphragm)Calculator).DirectShear_Y[id] : 0.0f;
+                        float eccentric_shear = ((ShearWallCalculator_RigidDiaphragm)Calculator).EccentricShear.ContainsKey(id) ? ((ShearWallCalculator_RigidDiaphragm)Calculator).EccentricShear[id] : 0.0f;
+                        float total_shear = ((ShearWallCalculator_RigidDiaphragm)Calculator).TotalWallShear.ContainsKey(id) ? ((ShearWallCalculator_RigidDiaphragm)Calculator).TotalWallShear[id] : 0.0f;
+
+                        ShearWallResultsControl control = new ShearWallResultsControl(
+                            id,
+                            rigidity,
+                            Calculator._wall_system.X_bar_walls[id],
+                            Calculator._wall_system.Y_bar_walls[id],
+                            direct_shear_x,
+                            direct_shear_y,
+                            eccentric_shear,
+                            total_shear
+                            );
+
+                        ShearWallResults.Children.Add(control);
+                    }
+
+                    /// Create the shearwall data controls
+                    foreach (var result in ((ShearWallCalculator_RigidDiaphragm)Calculator).TotalWallShear)
+                    {
+                        int id = result.Key;
+                        WallData wall = Calculator._wall_system.EW_Walls.ContainsKey(id) ? Calculator._wall_system.EW_Walls[id] : Calculator._wall_system.NS_Walls[id];
+                        ShearWallDataControl control = new ShearWallDataControl(id, wall);
+
+                        if (wall.WallDir == WallDirs.EastWest)
+                        {
+                            ShearWallData_EW.Children.Add(control);
+                        }
+                        else if (wall.WallDir == WallDirs.NorthSouth)
+                        {
+                            ShearWallData_NS.Children.Add(control);
+                        }
+                        else
+                        {
+                            throw new Exception("Invalid wall direction " + wall.WallDir.ToString() + " in wall #" + id.ToString());
+                        }
+
+                        control.DeleteWall += OnWallDeleted;
+                    }
                 }
-
-
-                /// Create the shearwall data controls
-                foreach (var result in ((ShearWallCalculator_RigidDiaphragm)Calculator).TotalWallShear)
+                else if (Calculator.GetType() == typeof(ShearWallCalculator_FlexibleDiaphragm))
                 {
-                    int id = result.Key;
-                    WallData wall = Calculator._wall_system.EW_Walls.ContainsKey(id) ? Calculator._wall_system.EW_Walls[id] : Calculator._wall_system.NS_Walls[id];
-                    ShearWallDataControl control = new ShearWallDataControl(id, wall);
+                    // Create Table of Wall Data
+                    ShearWallData_EW.Children.Clear();
+                    ShearWallData_NS.Children.Clear();
+                    ShearWallResults.Children.Clear();
 
-                    if (wall.WallDir == WallDirs.EastWest)
-                    {
-                        ShearWallData_EW.Children.Add(control);
-                    }
-                    else if (wall.WallDir == WallDirs.NorthSouth)
-                    {
-                        ShearWallData_NS.Children.Add(control);
-                    }
-                    else
-                    {
-                        throw new Exception("Invalid wall direction " + wall.WallDir.ToString() + " in wall #" + id.ToString());
-                    }
-
-                    control.DeleteWall += OnWallDeleted;
+                    throw new NotImplementedException("\nFlexible Diaphragms Calculator not implemented yet.");
                 }
-            }
-            else if (Calculator.GetType() == typeof(ShearWallCalculator_FlexibleDiaphragm))
-            {
-                // Create Table of Wall Data
-                ShearWallData_EW.Children.Clear();
-                ShearWallData_NS.Children.Clear();
-                ShearWallResults.Children.Clear();
-
-                throw new NotImplementedException("\nFlexible Diaphragms Calculator not implemented yet.");
-            }
-            else
-            {
-                throw new NotImplementedException("\nInvalid Calaculator type received.");
+                else
+                {
+                    throw new NotImplementedException("\nInvalid Calaculator type received.");
+                }
             }
         }
 
@@ -1076,13 +1096,18 @@ namespace ShearWallVisualizer
                     _currentPreviewLine.X2 = p.X;
                     _currentPreviewLine.Y2 = p.Y;
 
-                    // force the line to be horizontal or vertical only
-                    if (LineIsHorizontal(_currentPreviewLine))
+                    // for wall entry mode, force the preview lines to be horizontal or vertical from the first point clicked
+                    if(CurrentInputMode == InputModes.Rigidity)
                     {
-                        _currentPreviewLine.Y2 = _currentPreviewLine.Y1;
-                    } else
-                    {
-                        _currentPreviewLine.X2 = _currentPreviewLine.X1; 
+                        // force the line to be horizontal or vertical only
+                        if (LineIsHorizontal(_currentPreviewLine))
+                        {
+                            _currentPreviewLine.Y2 = _currentPreviewLine.Y1;
+                        }
+                        else
+                        {
+                            _currentPreviewLine.X2 = _currentPreviewLine.X1;
+                        }
                     }
                 }
 
@@ -1159,10 +1184,6 @@ namespace ShearWallVisualizer
                     CurrentInputMode = InputModes.Rigidity;
                     CurrentMode.Content = "SHEAR WALL ENTRY (RIGIDITY MODE)";
                     break;
-                case Key.Enter:
-                    FinishCommand();
-                    CurrentMode.Content = "NONE";
-                    break;
                 default:
                     break;
             }
@@ -1208,8 +1229,18 @@ namespace ShearWallVisualizer
             return new Point(p.X * (float)SCALE_X, cnvMainCanvas.Height - (p.Y * (float)SCALE_Y));
         }
 
-        private void FinishCommand()
+        private void HideAllDataControls()
         {
+            spCalcResultsControls.Visibility = Visibility.Collapsed;
+            spWallDataControls.Visibility = Visibility.Collapsed;
+            spDiaphragmDataControls.Visibility = Visibility.Collapsed;
+        }
+
+        private void ShowAllDataControls()
+        {
+            spCalcResultsControls.Visibility = Visibility.Visible;
+            spWallDataControls.Visibility = Visibility.Visible;
+            spDiaphragmDataControls.Visibility = Visibility.Visible;
         }
     }
 }

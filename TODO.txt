@@ -11,19 +11,23 @@ TODO:
 
 -- Crosshairs for point selection
 -- Preview rectangle for Diaphragm
-Preview line for walls should be drawn as vertical or horizontal
+-- Preview line for walls should be drawn as vertical or horizontal
 
 
-Dimensions on 
-Snap to corners of diaphragm or end points of walls
-Grid snapping toggle
+Dimensions on preview
 
-REFACTOR!m
+
+
+REFACTOR!
 
 Load input
 
 draw loads
 draw moment
+
+Grid snapping toggle 
+Snap to corners of diaphragm or end points of walls                               
+
 
 Show data by hovering or selecting walls or diaphragms?
 Brace wall line grouping of individial walls -- group by max spacing
