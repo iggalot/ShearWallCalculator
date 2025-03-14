@@ -59,6 +59,12 @@ namespace calculator
             Start = new System.Windows.Point(sx, sy);
             End = new System.Windows.Point(ex, ey);
             WallDir = wallDir;
+
+            //TODO:: resolve this exceptions so that they return null -- and then remember to handle this in the functions that created the object.
+            if(Start == End)
+            {
+                throw new ArgumentException("Start and end points cannot be the same.");
+            }
         }
 
         private System.Windows.Point GetCenterPoint()
