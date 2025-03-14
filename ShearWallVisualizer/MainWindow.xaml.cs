@@ -2,13 +2,16 @@
 using ShearWallCalculator;
 using ShearWallVisualizer.Controls;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO.Ports;
+using System.Security.Cryptography;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
+using System.Windows.Media.TextFormatting;
 using System.Windows.Shapes;
 
 namespace ShearWallVisualizer
@@ -63,6 +66,11 @@ namespace ShearWallVisualizer
         private InputModes CurrentInputMode { get; set; } = InputModes.None;
         private bool _startClickSet = false;
         private bool _endClickSet = false;
+
+        // snap mode toggles
+        private bool _shouldSnapToNearest = false;
+        private float _snapDistance = 10;  // distance in feet to check snap
+        private Point _nearestDiaphragmCornerPoint = new Point();
 
         public System.Windows.Point CurrentStartPoint { get; set; } // contains the current set canvas start point for walls and diaphragms
         public System.Windows.Point CurrentEndPoint { get; set; } // contains the current set canvas end point for walls and diaphragms
@@ -158,7 +166,6 @@ namespace ShearWallVisualizer
                     Canvas.SetLeft(centerCircle, start.X - centerCircle.Width / 2.0f);
                     Canvas.SetTop(centerCircle, start.Y - centerCircle.Height / 2.0f);
                     PreviewObjects.Add(centerCircle);
-
                     break;
                 case InputModes.Mass:
                     float x1 = (float)_currentPreviewLine.X1;
@@ -174,8 +181,6 @@ namespace ShearWallVisualizer
                     /// 
                     Point first_pt = new Point(x1, y1);
                     Point second_pt = new Point(x2, y2);
-                    Console.WriteLine($"\nfirst pt: {first_pt}  second pt: {second_pt}");
-
                     Point P1, P2, P3, P4;
 
                     // first point is either P1 or P4
@@ -236,8 +241,6 @@ namespace ShearWallVisualizer
                         StrokeThickness = rect_boundary_line_thickness,
                         Opacity = 0.3f
                     };
-                    //Console.WriteLine($"P1: {P1}  P2: {P2}  P3: {P3}  P4: {P4}");
-                    //Console.WriteLine($"\nX: {P1.X} Y: {P1.Y}   Width: {shape.Width}   Height: {shape.Height}"  );
                     Canvas.SetLeft(shape, P4.X);
                     Canvas.SetTop(shape, P4.Y);
                     PreviewObjects.Add(shape);
@@ -255,7 +258,6 @@ namespace ShearWallVisualizer
                     Canvas.SetTop(text2, (P1.X + P3.X) / 2.0);
                     Canvas.SetTop(text2, (P1.Y + P3.Y) / 2.0);
                     cnvMainCanvas.Children.Add(text2);
-
                     break;
                 default:
                     throw new NotImplementedException("Unknown input mode in CreatePreviewShape: " + CurrentInputMode.ToString());
@@ -427,6 +429,12 @@ namespace ShearWallVisualizer
                     height,
                     Brushes.Blue,
                     1.0f);
+
+                if (_shouldSnapToNearest == true)
+                {
+                    DrawCircles(canvas_start_pt, 4, Brushes.Blue);
+                    DrawCircles(canvas_end_pt, 4, Brushes.Blue);
+                }
             }
 
             // Loop through the diaphragm system in the model and create drawing objects for the UI
@@ -434,28 +442,176 @@ namespace ShearWallVisualizer
             {
                 // P3 (upper right) and P1 (lower left) are opposite corners of the diaphragm definition
                 // Get the screen coords based on the world coords of the model
-                Point p1_canvas_start_pt = WorldCoord_ToScreen(item.Value.P1);
-                Point p1_canvas_end_pt = WorldCoord_ToScreen(item.Value.P1);
-
-                Point p3_canvas_start_pt = WorldCoord_ToScreen(item.Value.P3);
-                Point p3_canvas_end_pt = WorldCoord_ToScreen(item.Value.P3);
-
-                Point p4_canvas_start_pt = WorldCoord_ToScreen(item.Value.P4);
-                Point p4_canvas_end_pt = WorldCoord_ToScreen(item.Value.P4);
+                Point p1_canvas_pt = WorldCoord_ToScreen(item.Value.P1);
+                Point p2_canvas_pt = WorldCoord_ToScreen(item.Value.P2);
+                Point p3_canvas_pt = WorldCoord_ToScreen(item.Value.P3);
+                Point p4_canvas_pt = WorldCoord_ToScreen(item.Value.P4);
 
                 // calculate the width and height of the diaphragm
-                float canvas_height = Math.Abs((float)(p3_canvas_end_pt.Y - p1_canvas_start_pt.Y));
-                float canvas_width = Math.Abs((float)(p3_canvas_end_pt.X - p1_canvas_start_pt.X));
+                float canvas_height = Math.Abs((float)(p3_canvas_pt.Y - p1_canvas_pt.Y));
+                float canvas_width = Math.Abs((float)(p3_canvas_pt.X - p1_canvas_pt.X));
 
                 // add the rectangle using P4 (upper left) since rectangles are drawn by default from the upper left
                 AddRectangleWithBorderAndCenter(
-                    p4_canvas_start_pt.X,
-                    p4_canvas_start_pt.Y,
+                    p4_canvas_pt.X,
+                    p4_canvas_pt.Y,
                     canvas_width,
                     canvas_height,
                     Brushes.Red,
                     0.5f);
+
+                if (_shouldSnapToNearest == true)
+                {
+                    DrawCircles(p1_canvas_pt, 4, Brushes.Red);
+                    DrawCircles(p2_canvas_pt, 4, Brushes.Red);
+                    DrawCircles(p3_canvas_pt, 4, Brushes.Red);
+                    DrawCircles(p4_canvas_pt, 4, Brushes.Red);
+                }
             }
+        }
+
+        /// <summary>
+        /// Adds a circular markers at specified point
+        /// </summary>
+        /// <param name="p1"></param>
+        /// <param name="p2"></param>
+        /// <param name="p3"></param>
+        /// <param name="p4"></param>
+        private void DrawCircles(Point p1, float dia, Brush color, float opacity = 1.0f)
+        {
+            // marker for P1 of the rectangle -- center of area / mass
+            Ellipse centerCircle = new Ellipse { Width = dia, Height = dia, Fill = color, Opacity = opacity };
+            Canvas.SetLeft(centerCircle, p1.X - 2.0);
+            Canvas.SetTop(centerCircle, p1.Y - 2.0);
+            StructuralObjects.Add(centerCircle);
+        }
+
+        private float DistanceBetweenPoints(Point p1, Point p2)
+        {
+            float x1 = (float)p1.X;
+            float y1 = (float)p1.Y;
+            float x2 = (float)p2.X;
+            float y2 = (float)p2.Y;
+            return (float)(Math.Sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2)));
+        }
+
+        private bool PointIsWithinRange(Point pt1, Point pt2, float range)
+        {
+            if(DistanceBetweenPoints(pt1, pt2) <= range)
+            {
+                return true;
+            }
+            return false;
+        }
+
+        private Point FindNearestSnapPoint(Point src_pt, out bool result)
+        {
+            Point pt = new Point(float.MaxValue, float.MaxValue);
+            result = false;
+            float dist = float.MaxValue;
+
+            bool wall_Result = false;
+            bool diaphragm_Result = false;
+
+            Point wall_pt = FindNearestWallEndPoint(src_pt, out wall_Result);
+            Point diaphragm_pt = FindNearestDiaphragmCornerPoint(src_pt, out diaphragm_Result);
+
+            if (wall_Result == true && diaphragm_Result == true)
+            {
+                if (DistanceBetweenPoints(wall_pt, src_pt) <= DistanceBetweenPoints(diaphragm_pt, src_pt))
+                {
+                    dist = DistanceBetweenPoints(wall_pt, src_pt);
+                    pt = wall_pt;
+                    result = true;
+                }
+                else
+                {
+                    dist = DistanceBetweenPoints(diaphragm_pt, src_pt);
+                    pt = diaphragm_pt;
+                    result = true;
+                }
+            }
+            else if (wall_Result == true)
+            {
+                dist = DistanceBetweenPoints(wall_pt, src_pt);
+                pt = wall_pt;
+                result = true;
+            }
+            else if (diaphragm_Result == true)
+            {
+                dist = DistanceBetweenPoints(diaphragm_pt, src_pt);
+                pt = diaphragm_pt;
+                result = true;
+            }
+            return pt;
+        }
+
+        private Point FindNearestWallEndPoint(Point src_pt, out bool result)
+        {
+            Point pt = new Point(float.MaxValue, float.MaxValue);
+            result = false;
+            float dist = float.MaxValue;
+            foreach (var wall in Calculator._wall_system._walls)
+            {
+                float p1_dist = DistanceBetweenPoints(wall.Value.Start, src_pt);
+                float p2_dist = DistanceBetweenPoints(wall.Value.End, src_pt);
+
+                if (p1_dist <= dist)
+                {
+                    dist = p1_dist;
+                    pt = wall.Value.Start;
+                    result = true;
+                }
+                if (p2_dist <= dist)
+                {
+                    dist = p2_dist;
+                    pt = wall.Value.End;
+                    result = true;
+                }
+            }
+            return pt;
+        }
+
+        private Point FindNearestDiaphragmCornerPoint(Point src_pt, out bool result)
+        {
+            Point pt = new Point(0, 0);
+            float dist = float.MaxValue;
+            result = false;
+
+            foreach (var diaphragm in Calculator._diaphragm_system._diaphragms)
+            {
+                float p1_dist = DistanceBetweenPoints(diaphragm.Value.P1, src_pt);
+                float p2_dist = DistanceBetweenPoints(diaphragm.Value.P2, src_pt);
+                float p3_dist = DistanceBetweenPoints(diaphragm.Value.P3, src_pt);
+                float p4_dist = DistanceBetweenPoints(diaphragm.Value.P4, src_pt);
+
+                if (p1_dist <= dist) {
+                    dist = p1_dist;
+                    pt = diaphragm.Value.P1;
+                    result = true;
+                } 
+                if(p2_dist <= dist)
+                {
+                    dist = p2_dist;
+                    pt = diaphragm.Value.P2;
+                    result = true;
+
+                }
+                if (p3_dist <= dist)
+                {
+                    dist = p3_dist;
+                    pt = diaphragm.Value.P3;
+                    result = true;
+                }
+                if (p4_dist <= dist)
+                {
+                    dist = p4_dist;
+                    pt = diaphragm.Value.P4;
+                    result = true;
+                }
+            }
+
+            return pt;
         }
 
         /// <summary>
@@ -479,6 +635,7 @@ namespace ShearWallVisualizer
                 }
             }
         }
+
         /// <summary>
         /// Draw the structural model objects
         /// Use this function to add structural model objects to the canvas
@@ -553,10 +710,6 @@ namespace ShearWallVisualizer
             if (_currentPreviewLine != null)
             {
                 CreatePreviewShape();
-                //if (cnvMainCanvas.Children.Contains(_currentPreviewLine) != true)
-                //{
-                //    cnvMainCanvas.Children.Add(_currentPreviewLine);
-                //}
             }
             DrawPreviewObjects();
 
@@ -572,6 +725,27 @@ namespace ShearWallVisualizer
             // Draw crosshairs
             cnvMainCanvas.Children.Add(_crosshairVertical);
             cnvMainCanvas.Children.Add(_crosshairHorizontal);
+            Point crosshair_intersection = new Point(_crosshairVertical.X1, _crosshairHorizontal.Y1);
+
+            if (_shouldSnapToNearest is true)
+            {
+                // add marker at cross hair intersection point
+                // marker for center of the rectangle -- center of area / mass
+                Ellipse snapCircle = new Ellipse
+                {
+                    Width = _snapDistance * 2.0f,
+                    Height = _snapDistance * 2.0f,
+                    StrokeThickness = 2.0f,
+                    Stroke = Brushes.Red,
+                    Fill = Brushes.Transparent,
+                    IsHitTestVisible = false
+                };
+                Canvas.SetLeft(snapCircle, crosshair_intersection.X - snapCircle.Width / 2.0f);
+                Canvas.SetTop(snapCircle, crosshair_intersection.Y - snapCircle.Height / 2.0f);
+                cnvMainCanvas.Children.Add(snapCircle);
+            }
+
+
 
 
 
@@ -777,7 +951,6 @@ namespace ShearWallVisualizer
             }
         }
 
-
         /// <summary>
         /// For drawing text labels and other info for walls
         /// </summary>
@@ -945,6 +1118,8 @@ namespace ShearWallVisualizer
         /// <param name="e"></param>
         private void MainCanvas_MouseDown(object sender, MouseButtonEventArgs e)
         {
+
+
             // Right button click to CANCEL
             if (e.RightButton == MouseButtonState.Pressed)
             {
@@ -965,13 +1140,39 @@ namespace ShearWallVisualizer
                 string status = "";
                 if ((CurrentInputMode == InputModes.Rigidity) || (CurrentInputMode == InputModes.Mass))
                 {
-                    _currentPreviewLine = new Line() { Stroke = Brushes.Green };
-                    System.Windows.Point p = Mouse.GetPosition(cnvMainCanvas);
-                    System.Windows.Point wp = ScreenCoord_ToWorld(Mouse.GetPosition(cnvMainCanvas));
+                    System.Windows.Point p = Mouse.GetPosition(cnvMainCanvas);  // screen coords
+                    System.Windows.Point wp = ScreenCoord_ToWorld(Mouse.GetPosition(cnvMainCanvas));  // world coords
+
+                    // Find the nearest corner point on a diaphragm andreturn that point
+                    bool snap_result = false;
+                    _nearestDiaphragmCornerPoint = FindNearestSnapPoint(wp, out snap_result);  // world coords
+
+                    float dist = DistanceBetweenPoints(wp, _nearestDiaphragmCornerPoint);
+                    lblSnap1st.Content  = "(" + _nearestDiaphragmCornerPoint.X.ToString("0.00") + ", " + _nearestDiaphragmCornerPoint.Y.ToString("0.00") + ")";
+                    lblSnap2nd.Content = "(" + dist.ToString("0.00") + ")";
 
                     // The first click
                     if (_startClickSet == false)
                     {
+                        _currentPreviewLine = new Line() { Stroke = Brushes.Green };
+
+                        // find nearest corner point on a diaphragm andreturn that point
+                        if (_shouldSnapToNearest is true)
+                        {
+                            // if there are no snap points, return without setting the point
+                            if (snap_result is false)
+                            {
+                                MessageBox.Show("No snap points found.  Try disabling SNAP MODE.");
+                                return;
+                            }
+                            Point world_temp = _nearestDiaphragmCornerPoint;
+                            if (PointIsWithinRange(wp, world_temp, _snapDistance) is true)
+                            {
+                                // convert back to screen coords
+                                p = WorldCoord_ToScreen(world_temp);
+                            }
+                        }
+
                         lblScreenStartCoord.Content = "(" + p.X.ToString("0.00") + ", " + p.Y.ToString("0.00") + ")";
                         lblWorldStartCoord.Content = "(" + wp.X.ToString("0.00") + ", " + wp.Y.ToString("0.00") + ")";
 
@@ -989,8 +1190,34 @@ namespace ShearWallVisualizer
                     // This is the second click
                     else
                     {
+                        // find nearest corner point on a diaphragm andreturn that point
+                        if (_shouldSnapToNearest is true)
+                        {
+                            // if there are no snap points, return without doing anything else
+                            if (snap_result is false)
+                            {
+                                MessageBox.Show("No snap points found.  Try disabling SNAP MODE.");
+                                return;
+                            }
+
+                            Point world_temp = _nearestDiaphragmCornerPoint;
+                            if (PointIsWithinRange(wp, world_temp, _snapDistance) is true)
+                            {
+                                // convert back to screen coords
+                                p = WorldCoord_ToScreen(world_temp);
+                            }
+                        }
+
                         lblScreenEndCoord.Content = "(" + p.X.ToString("0.00") + ", " + p.Y.ToString("0.00") + ")";
                         lblWorldEndCoord.Content = "(" + wp.X.ToString("0.00") + ", " + wp.Y.ToString("0.00") + ")";
+
+                        // If second point is same as the CurrentStartPoint, then it isn't valid, so just return;
+                        // TODO:  Should this be handled in a different way?
+                        if(p == CurrentStartPoint)
+                        {
+                            return;
+                        }
+
                         CurrentEndPoint = p;
                         _endClickSet = true;
                         _currentPreviewLine.X2 = CurrentEndPoint.X;
@@ -1052,6 +1279,8 @@ namespace ShearWallVisualizer
                                 (float)world_p1.X, (float)world_p1.Y, (float)world_p2.X, (float)world_p2.Y, dir));
 
                             _currentPreviewLine = null;  // clear the preview line
+                            ClearCoordinateDisplayData();
+
                             status = "Wall added";
                             Update();
                         }
@@ -1064,6 +1293,7 @@ namespace ShearWallVisualizer
                             // Add to the list of diaphragm segments
                             Calculator._diaphragm_system.AddDiaphragm(new DiaphragmData_Rectangular(world_p1, world_p2));
                             _currentPreviewLine = null;  // clear the preview line
+                            ClearCoordinateDisplayData();
                             status = "Diaphragm added";
                             Update();
                         }
@@ -1267,6 +1497,57 @@ namespace ShearWallVisualizer
             spCalcResultsControls.Visibility = Visibility.Visible;
             spWallDataControls.Visibility = Visibility.Visible;
             spDiaphragmDataControls.Visibility = Visibility.Visible;
+        }
+
+        private void ClearCoordinateDisplayData()
+        {
+            lblScreenEndCoord.Content = "";
+            lblScreenStartCoord.Content = "";
+            lblWorldEndCoord.Content = "";
+            lblWorldStartCoord.Content = "";
+        }
+
+
+
+
+
+
+        private void btnSnapToNearest_Click(object sender, RoutedEventArgs e)
+        {
+            _shouldSnapToNearest = !_shouldSnapToNearest;
+
+            if (_shouldSnapToNearest is true)
+            {
+                btnSnapToNearest.BorderBrush = Brushes.Black;
+                btnSnapToNearest.BorderThickness = new Thickness(3);
+
+                _crosshairVertical.Stroke = Brushes.Red;
+                _crosshairHorizontal.Stroke = Brushes.Red;
+            }
+            else
+            {
+                btnSnapToNearest.BorderBrush = Brushes.Transparent;
+                btnSnapToNearest.BorderThickness = new Thickness(0);
+
+                _crosshairVertical.Stroke = Brushes.Black;
+                _crosshairHorizontal.Stroke = Brushes.Black;
+            }
+
+            Update();
+        }
+
+        private void btnRigidityMode_Click(object sender, RoutedEventArgs e)
+        {
+            CurrentInputMode = InputModes.Rigidity;
+            CurrentMode.Content = "SHEAR WALL ENTRY (RIGIDITY MODE)";
+            Update();
+        }
+
+        private void btnMassMode_Click(object sender, RoutedEventArgs e)
+        {
+            CurrentInputMode = InputModes.Mass;
+            CurrentMode.Content = "DIAPHRAGM ENTRY (MASS MODE)";
+            Update();
         }
     }
 }

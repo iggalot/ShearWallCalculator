@@ -57,6 +57,8 @@ namespace ShearWallCalculator
             {
                 return;
             }
+
+            //TODO:: resolve these two exceptions so that they return null -- and then remember to handle this in the functions that created the object.
             if (first_pt == second_pt)
             {
                 throw new System.Exception("Diaphram points must be different");
