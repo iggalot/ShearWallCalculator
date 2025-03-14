@@ -14,6 +14,8 @@ TODO:
 -- Preview line for walls should be drawn as vertical or horizontal
 -- Dimensions on preview
 
+-- Snap to corners of diaphragm or end points of walls 
+
 
 
 REFACTOR!
@@ -23,9 +25,11 @@ Load input
 draw loads
 draw moment
 
-Grid snapping toggle 
-Snap to corners of diaphragm or end points of walls                               
+                              
 
+Grid snapping toggle 
+
+Resize diaphragm and line objects by clicking on them and dragging?c
 
 Show data by hovering or selecting walls or diaphragms?
 Brace wall line grouping of individial walls -- group by max spacing
