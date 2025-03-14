@@ -151,6 +151,14 @@ namespace ShearWallVisualizer
                     Canvas.SetTop(text, (start.X + end.X) / 2.0);
                     Canvas.SetTop(text, (start.Y + end.Y) / 2.0);
                     cnvMainCanvas.Children.Add(text);
+
+                    // add marker at first point
+                    // marker for center of the rectangle -- center of area / mass
+                    Ellipse centerCircle = new Ellipse { Width = 6, Height = 6, Fill = Brushes.Green, Opacity = 0.4f };
+                    Canvas.SetLeft(centerCircle, start.X - centerCircle.Width / 2.0f);
+                    Canvas.SetTop(centerCircle, start.Y - centerCircle.Height / 2.0f);
+                    PreviewObjects.Add(centerCircle);
+
                     break;
                 case InputModes.Mass:
                     float x1 = (float)_currentPreviewLine.X1;
@@ -234,6 +242,12 @@ namespace ShearWallVisualizer
                     Canvas.SetTop(shape, P4.Y);
                     PreviewObjects.Add(shape);
 
+                    // add marker at first point
+                    // marker for center of the rectangle -- center of area / mass
+                    centerCircle = new Ellipse { Width = 6, Height = 6, Fill = Brushes.Green, Opacity = 0.4f };
+                    Canvas.SetLeft(centerCircle, P1.X - centerCircle.Width / 2.0f);
+                    Canvas.SetTop(centerCircle, P1.Y - centerCircle.Height / 2.0f);
+                    PreviewObjects.Add(centerCircle);
 
                     // Add dimension text
                     TextBlock text2 = new TextBlock();

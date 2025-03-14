@@ -39,3 +39,5 @@ Input 1:1 image overlay as background of Canvas?
 flexible diaphragm calculations
 
 Multiple floors?  Vertical resolution?
+
+Print Diagram?  Print Control results?
