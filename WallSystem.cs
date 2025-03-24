@@ -23,6 +23,10 @@ namespace ShearWallCalculator
         // sorted collection of walls in North South direction (vertical on screen)
         public Dictionary<int, WallData> NS_Walls { get; set; } = new Dictionary<int, WallData>();
 
+        // braced wall line groups
+        public Dictionary<int, BracedWallLine> BracedWallGroups_EW { get; set; } = new Dictionary<int, BracedWallLine>();
+        public Dictionary<int, BracedWallLine> BracedWallGroups_NS { get; set; } = new Dictionary<int, BracedWallLine>();
+
 
         // distance from center of wall to center of rigidity in y-direction
         public Dictionary<int, float> Y_bar_walls { get; set; } = new Dictionary<int, float>();

@@ -15,6 +15,17 @@ namespace ShearWallCalculator
         public System.Windows.Point Boundary_Max_Point { get => FindMinBoundaryPt(); }
         public System.Windows.Point Boundary_Min_Point { get => FindMaxBoundaryPt(); }
 
+
+
+        /// <summary>
+        /// Loads and eccentricty values 
+        /// Uses Cartesian coordinate and right-hand rule -- x+ right, y+ up, rot+ = CCW
+        /// </summary>
+        public float V_x { get; set; } = 40; // x direction load (kips) acting at center of mass
+        public float V_y { get; set; } = 0;  // y direction load (kips) acting at center of mass
+
+
+
         private Point FindMaxBoundaryPt()
         {
             float temp_y = -1000000;
@@ -86,7 +97,9 @@ namespace ShearWallCalculator
             _diaphragm_system = diaphragm_system;
             _wall_system = wall_system;
 
-            LoadTestWallData();
+            BracedWallLine bracedWallLine = new BracedWallLine(5.0);
+            bracedWallLine.RunTestCase();
+//            LoadTestWallData();
 //            LoadTestWallData2();
         }
 

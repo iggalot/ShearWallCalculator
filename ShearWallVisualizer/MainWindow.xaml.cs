@@ -42,7 +42,9 @@ namespace ShearWallVisualizer
         private const double rect_boundary_line_thickness = 0.5;
 
         private Shape _PreviewShape = null;
-        private Line _currentPreviewLine = null; // contains the points for first and second selection
+        private Line _currentPreviewLine = null; // contains the points for first and second selection -- stored as a line object
+        public System.Windows.Point CurrentStartPoint { get; set; } // contains the current set canvas start point for walls and diaphragms
+        public System.Windows.Point CurrentEndPoint { get; set; } // contains the current set canvas end point for walls and diaphragms
 
         // current mouse position
         private Point _currentMousePosition = new Point();
@@ -72,12 +74,15 @@ namespace ShearWallVisualizer
         private float _snapDistance = 10;  // distance in feet to check snap
         private Point _nearestDiaphragmCornerPoint = new Point();
 
-        public System.Windows.Point CurrentStartPoint { get; set; } // contains the current set canvas start point for walls and diaphragms
-        public System.Windows.Point CurrentEndPoint { get; set; } // contains the current set canvas end point for walls and diaphragms
 
-        public ShearWallCalculatorBase Calculator { get; set; } = null; // the main source of our calculations
-        public WallData CurrentWall { get; set; }
+        /// <summary>
+        /// The main object that contains the structural model information and the calculations
+        /// </summary>
+        private ShearWallCalculatorBase Calculator { get; set; } = null; // the main source of our calculations
 
+        /// <summary>
+        /// Default constructor
+        /// </summary>
         public MainWindow()
         {
             InitializeComponent();
@@ -123,6 +128,42 @@ namespace ShearWallVisualizer
             Update();
         }
 
+        /// <summary>
+        /// Function to update the UI -- call this when the calculator or UI needs to be updated
+        /// </summary>
+        private void Update()
+        {
+            // Update the new calculator
+            Calculator.Update();
+
+            cnvMainCanvas.Children.Clear(); // clear the canvas 
+
+            // Recompute the structural objects to be drawn
+            StructuralObjects.Clear();
+            CreateStructuralObjects();
+
+            // Update the crosshairs
+            _crosshairVertical.X1 = _currentMousePosition.X;
+            _crosshairVertical.X2 = _currentMousePosition.X;
+
+            _crosshairHorizontal.Y1 = _currentMousePosition.Y;
+            _crosshairHorizontal.Y2 = _currentMousePosition.Y;
+
+            CreatePreviewShape();
+
+            DrawResults();
+
+            CenterOfMass.Content = "(" + Calculator._diaphragm_system.CtrMass.X.ToString("0.00") + ", " + Calculator._diaphragm_system.CtrMass.Y.ToString("0.00") + ")";
+            CenterOfRigidity.Content = "(" + Calculator._wall_system.CtrRigidity.X.ToString("0.00") + ", " + Calculator._wall_system.CtrRigidity.Y.ToString("0.00") + ")";
+        }
+
+        #region Creating objects for the UI
+        /// <summary>
+        /// Function that creates the appropriate previewe shap for inputting the point selections
+        /// -- wall point selection creates a line
+        /// -- diaphragm point selection creates a rectangle
+        /// </summary>
+        /// <exception cref="NotImplementedException"></exception>
         public void CreatePreviewShape()
         {
             Shape shape = null;
@@ -248,8 +289,8 @@ namespace ShearWallVisualizer
                     // add marker at first point
                     // marker for center of the rectangle -- center of area / mass
                     centerCircle = new Ellipse { Width = 6, Height = 6, Fill = Brushes.Green, Opacity = 0.4f };
-                    Canvas.SetLeft(centerCircle, P1.X - centerCircle.Width / 2.0f);
-                    Canvas.SetTop(centerCircle, P1.Y - centerCircle.Height / 2.0f);
+                    Canvas.SetLeft(centerCircle, first_pt.X - centerCircle.Width / 2.0f);
+                    Canvas.SetTop(centerCircle, first_pt.Y - centerCircle.Height / 2.0f);
                     PreviewObjects.Add(centerCircle);
 
                     // Add dimension text
@@ -296,54 +337,6 @@ namespace ShearWallVisualizer
         }
 
         /// <summary>
-        /// Draw the bounding box of the elements on the canvas
-        /// </summary>
-        private void DrawBoundingBox()
-        {
-            // if no calculator defined, cancel this operation
-            if (Calculator == null)
-            {
-                return;
-            }
-
-            // retrieve the bounding box points fro the calculator (in World Coordinates_
-            // --bb_min_pt is the lower left
-            // --bb_max_pt is the upper right
-            System.Windows.Point bb_min_pt = Calculator.Boundary_Min_Point;
-            System.Windows.Point bb_max_pt = Calculator.Boundary_Max_Point;
-
-            // convert the bounding box points to screen coordinates
-            System.Windows.Point screen_bb_min_pt = WorldCoord_ToScreen(bb_min_pt);
-            System.Windows.Point screen_bb_max_pt = WorldCoord_ToScreen(bb_max_pt);
-
-            // retrieve the min and max values for the x and y coordinates of the bounding box
-            float screen_bb_left   = (float)screen_bb_min_pt.X;  // x-min
-            float screen_bb_top    = (float)screen_bb_max_pt.Y;  // y-max
-            float screen_bb_right  = (float)screen_bb_max_pt.X;  // x-max
-            float screen_bb_bottom = (float)screen_bb_min_pt.Y;  // y- max
-
-            if (Calculator._diaphragm_system._diaphragms.Count > 0 || Calculator._wall_system._walls.Count > 0)
-            {
-                Line topLine = new Line { X1 = screen_bb_left, Y1 = screen_bb_top, X2 = screen_bb_right, Y2 = screen_bb_top, Stroke = Brushes.Black, StrokeThickness = 2 * rect_boundary_line_thickness, StrokeDashArray = new DoubleCollection { 1, 1 } };
-                Line bottomLine = new Line { X1 = screen_bb_left, Y1 = screen_bb_bottom, X2 = screen_bb_right, Y2 = screen_bb_bottom, Stroke = Brushes.Black, StrokeThickness = 2 * rect_boundary_line_thickness, StrokeDashArray = new DoubleCollection { 1, 1 } };
-                Line leftLine = new Line { X1 = screen_bb_left, Y1 = screen_bb_top, X2 = screen_bb_left, Y2 = screen_bb_bottom, Stroke = Brushes.Black, StrokeThickness = 2 * rect_boundary_line_thickness, StrokeDashArray = new DoubleCollection { 1, 1 } };
-                Line rightLine = new Line { X1 = screen_bb_right, Y1 = screen_bb_top, X2 = screen_bb_right, Y2 = screen_bb_bottom, Stroke = Brushes.Black, StrokeThickness = 2 * rect_boundary_line_thickness, StrokeDashArray = new DoubleCollection { 1, 1 } };
-
-                // add the lines to the canvas control
-                cnvMainCanvas.Children.Add(topLine);
-                cnvMainCanvas.Children.Add(bottomLine);
-                cnvMainCanvas.Children.Add(leftLine);
-                cnvMainCanvas.Children.Add(rightLine);
-
-                // update the bounding box limits display on the UI
-                lblXMin.Content = screen_bb_left.ToString("0.00");
-                lblYMin.Content = screen_bb_bottom.ToString("0.00");
-                lblXMax.Content = screen_bb_right.ToString("0.00");
-                lblYMax.Content = screen_bb_top.ToString("0.00");
-            }
-        }
-
-        /// <summary>
         /// Function to handle drawing minor and major gridlines on our canvas
         /// </summary>
         private void CreateGridLines()
@@ -374,7 +367,6 @@ namespace ShearWallVisualizer
                 CanvasDetailsObjects.Add(horizontalLine);
             }
         }
-
 
         /// <summary>
         /// Create the drawing objects (in canvas screen coordinates) from the structural model objects in world coordinates
@@ -469,7 +461,9 @@ namespace ShearWallVisualizer
                 }
             }
         }
+        #endregion
 
+        #region Drawing functions
         /// <summary>
         /// Adds a circular markers at specified point
         /// </summary>
@@ -486,132 +480,52 @@ namespace ShearWallVisualizer
             StructuralObjects.Add(centerCircle);
         }
 
-        private float DistanceBetweenPoints(Point p1, Point p2)
+        /// <summary>
+        /// Draw the bounding box of the elements on the canvas
+        /// </summary>
+        private void DrawBoundingBox()
         {
-            float x1 = (float)p1.X;
-            float y1 = (float)p1.Y;
-            float x2 = (float)p2.X;
-            float y2 = (float)p2.Y;
-            return (float)(Math.Sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2)));
-        }
-
-        private bool PointIsWithinRange(Point pt1, Point pt2, float range)
-        {
-            if(DistanceBetweenPoints(pt1, pt2) <= range)
+            // if no calculator defined, cancel this operation
+            if (Calculator == null)
             {
-                return true;
-            }
-            return false;
-        }
-
-        private Point FindNearestSnapPoint(Point src_pt, out bool result)
-        {
-            Point pt = new Point(float.MaxValue, float.MaxValue);
-            result = false;
-            float dist = float.MaxValue;
-
-            bool wall_Result = false;
-            bool diaphragm_Result = false;
-
-            Point wall_pt = FindNearestWallEndPoint(src_pt, out wall_Result);
-            Point diaphragm_pt = FindNearestDiaphragmCornerPoint(src_pt, out diaphragm_Result);
-
-            if (wall_Result == true && diaphragm_Result == true)
-            {
-                if (DistanceBetweenPoints(wall_pt, src_pt) <= DistanceBetweenPoints(diaphragm_pt, src_pt))
-                {
-                    dist = DistanceBetweenPoints(wall_pt, src_pt);
-                    pt = wall_pt;
-                    result = true;
-                }
-                else
-                {
-                    dist = DistanceBetweenPoints(diaphragm_pt, src_pt);
-                    pt = diaphragm_pt;
-                    result = true;
-                }
-            }
-            else if (wall_Result == true)
-            {
-                dist = DistanceBetweenPoints(wall_pt, src_pt);
-                pt = wall_pt;
-                result = true;
-            }
-            else if (diaphragm_Result == true)
-            {
-                dist = DistanceBetweenPoints(diaphragm_pt, src_pt);
-                pt = diaphragm_pt;
-                result = true;
-            }
-            return pt;
-        }
-
-        private Point FindNearestWallEndPoint(Point src_pt, out bool result)
-        {
-            Point pt = new Point(float.MaxValue, float.MaxValue);
-            result = false;
-            float dist = float.MaxValue;
-            foreach (var wall in Calculator._wall_system._walls)
-            {
-                float p1_dist = DistanceBetweenPoints(wall.Value.Start, src_pt);
-                float p2_dist = DistanceBetweenPoints(wall.Value.End, src_pt);
-
-                if (p1_dist <= dist)
-                {
-                    dist = p1_dist;
-                    pt = wall.Value.Start;
-                    result = true;
-                }
-                if (p2_dist <= dist)
-                {
-                    dist = p2_dist;
-                    pt = wall.Value.End;
-                    result = true;
-                }
-            }
-            return pt;
-        }
-
-        private Point FindNearestDiaphragmCornerPoint(Point src_pt, out bool result)
-        {
-            Point pt = new Point(0, 0);
-            float dist = float.MaxValue;
-            result = false;
-
-            foreach (var diaphragm in Calculator._diaphragm_system._diaphragms)
-            {
-                float p1_dist = DistanceBetweenPoints(diaphragm.Value.P1, src_pt);
-                float p2_dist = DistanceBetweenPoints(diaphragm.Value.P2, src_pt);
-                float p3_dist = DistanceBetweenPoints(diaphragm.Value.P3, src_pt);
-                float p4_dist = DistanceBetweenPoints(diaphragm.Value.P4, src_pt);
-
-                if (p1_dist <= dist) {
-                    dist = p1_dist;
-                    pt = diaphragm.Value.P1;
-                    result = true;
-                } 
-                if(p2_dist <= dist)
-                {
-                    dist = p2_dist;
-                    pt = diaphragm.Value.P2;
-                    result = true;
-
-                }
-                if (p3_dist <= dist)
-                {
-                    dist = p3_dist;
-                    pt = diaphragm.Value.P3;
-                    result = true;
-                }
-                if (p4_dist <= dist)
-                {
-                    dist = p4_dist;
-                    pt = diaphragm.Value.P4;
-                    result = true;
-                }
+                return;
             }
 
-            return pt;
+            // retrieve the bounding box points fro the calculator (in World Coordinates_
+            // --bb_min_pt is the lower left
+            // --bb_max_pt is the upper right
+            System.Windows.Point bb_min_pt = Calculator.Boundary_Min_Point;
+            System.Windows.Point bb_max_pt = Calculator.Boundary_Max_Point;
+
+            // convert the bounding box points to screen coordinates
+            System.Windows.Point screen_bb_min_pt = WorldCoord_ToScreen(bb_min_pt);
+            System.Windows.Point screen_bb_max_pt = WorldCoord_ToScreen(bb_max_pt);
+
+            // retrieve the min and max values for the x and y coordinates of the bounding box
+            float screen_bb_left = (float)screen_bb_min_pt.X;  // x-min
+            float screen_bb_top = (float)screen_bb_max_pt.Y;  // y-max
+            float screen_bb_right = (float)screen_bb_max_pt.X;  // x-max
+            float screen_bb_bottom = (float)screen_bb_min_pt.Y;  // y- max
+
+            if (Calculator._diaphragm_system._diaphragms.Count > 0 || Calculator._wall_system._walls.Count > 0)
+            {
+                Line topLine = new Line { X1 = screen_bb_left, Y1 = screen_bb_top, X2 = screen_bb_right, Y2 = screen_bb_top, Stroke = Brushes.Black, StrokeThickness = 2 * rect_boundary_line_thickness, StrokeDashArray = new DoubleCollection { 1, 1 } };
+                Line bottomLine = new Line { X1 = screen_bb_left, Y1 = screen_bb_bottom, X2 = screen_bb_right, Y2 = screen_bb_bottom, Stroke = Brushes.Black, StrokeThickness = 2 * rect_boundary_line_thickness, StrokeDashArray = new DoubleCollection { 1, 1 } };
+                Line leftLine = new Line { X1 = screen_bb_left, Y1 = screen_bb_top, X2 = screen_bb_left, Y2 = screen_bb_bottom, Stroke = Brushes.Black, StrokeThickness = 2 * rect_boundary_line_thickness, StrokeDashArray = new DoubleCollection { 1, 1 } };
+                Line rightLine = new Line { X1 = screen_bb_right, Y1 = screen_bb_top, X2 = screen_bb_right, Y2 = screen_bb_bottom, Stroke = Brushes.Black, StrokeThickness = 2 * rect_boundary_line_thickness, StrokeDashArray = new DoubleCollection { 1, 1 } };
+
+                // add the lines to the canvas control
+                cnvMainCanvas.Children.Add(topLine);
+                cnvMainCanvas.Children.Add(bottomLine);
+                cnvMainCanvas.Children.Add(leftLine);
+                cnvMainCanvas.Children.Add(rightLine);
+
+                // update the bounding box limits display on the UI
+                lblXMin.Content = screen_bb_left.ToString("0.00");
+                lblYMin.Content = screen_bb_bottom.ToString("0.00");
+                lblXMax.Content = screen_bb_right.ToString("0.00");
+                lblYMax.Content = screen_bb_top.ToString("0.00");
+            }
         }
 
         /// <summary>
@@ -1033,65 +947,213 @@ namespace ShearWallVisualizer
                     );
             }
         }
+        #endregion
 
-        private void OnDiaphragmDeleted(object sender, DiaphragmDataControl.DeleteDiaphragmEventArgs e)
+        #region Helper and Utility Functions
+        /// <summary>
+        /// converts coordinates from the screen (canvas) to the world coordinates
+        /// </summary>
+        /// <param name="p"></param>
+        /// <returns></returns>
+        private Point ScreenCoord_ToWorld(Point p)
         {
-            if (Calculator._diaphragm_system._diaphragms.ContainsKey(e.Id) == true)
-            {
-                Calculator._diaphragm_system._diaphragms.Remove(e.Id);
-
-                MessageBox.Show(e.Id.ToString() + " has been deleted");
-            }
-            else
-            {
-                MessageBox.Show(e.Id.ToString() + " does not exist in Walls");
-            }
-
-            Update();
+            return new Point(p.X / (float)SCALE_X, (cnvMainCanvas.Height - p.Y) / (float)SCALE_Y);
         }
 
-        private void OnWallDeleted(object sender, ShearWallDataControl.DeleteWallEventArgs e)
+        /// <summary>
+        /// converts coordinates from the world to the screen coordinates (canvas) system
+        /// </summary>
+        /// <param name="p"></param>
+        /// <returns></returns>
+        private Point WorldCoord_ToScreen(Point p)
         {
-            if (Calculator._wall_system._walls.ContainsKey(e.Id) == true)
-            {
-                Calculator._wall_system._walls.Remove(e.Id);
-
-                MessageBox.Show(e.Id.ToString() + " has been deleted");
-            }
-            else
-            {
-                MessageBox.Show(e.Id.ToString() + " does not exist in Walls");
-            }
-
-            Update();
+            return new Point(p.X * (float)SCALE_X, cnvMainCanvas.Height - (p.Y * (float)SCALE_Y));
         }
 
-        private void Update()
+        /// <summary>
+        /// Function to determine if a line object is more horizontal than vertical by comparing the x and y distances between the start and end points
+        /// </summary>
+        /// <param name="line"></param>
+        /// <returns></returns>
+        private bool LineIsHorizontal(Line line)
         {
-            // Update the new calculator
-            Calculator.Update();
+            if (line == null) return false;
 
-            cnvMainCanvas.Children.Clear(); // clear the canvas 
-
-            // Recompute the structural objects to be drawn
-            StructuralObjects.Clear();
-            CreateStructuralObjects();
-
-            // Update the crosshairs
-            _crosshairVertical.X1 = _currentMousePosition.X;
-            _crosshairVertical.X2 = _currentMousePosition.X;
-
-            _crosshairHorizontal.Y1 = _currentMousePosition.Y;
-            _crosshairHorizontal.Y2 = _currentMousePosition.Y;
-
-            CreatePreviewShape();
-
-            DrawResults();
-
-            CenterOfMass.Content = "(" + Calculator._diaphragm_system.CtrMass.X.ToString("0.00") + ", " + Calculator._diaphragm_system.CtrMass.Y.ToString("0.00") + ")";
-            CenterOfRigidity.Content = "(" + Calculator._wall_system.CtrRigidity.X.ToString("0.00") + ", " + Calculator._wall_system.CtrRigidity.Y.ToString("0.00") + ")";
+            return (Math.Abs(line.X1 - line.X2) > Math.Abs(line.Y1 - line.Y2));
         }
 
+        private float DistanceBetweenPoints(Point p1, Point p2)
+        {
+            float x1 = (float)p1.X;
+            float y1 = (float)p1.Y;
+            float x2 = (float)p2.X;
+            float y2 = (float)p2.Y;
+            return (float)(Math.Sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2)));
+        }
+
+        private bool PointIsWithinRange(Point pt1, Point pt2, float range)
+        {
+            if (DistanceBetweenPoints(pt1, pt2) <= range)
+            {
+                return true;
+            }
+            return false;
+        }
+
+        private Point FindNearestSnapPoint(Point src_pt, out bool result)
+        {
+            Point pt = new Point(float.MaxValue, float.MaxValue);
+            result = false;
+            float dist = float.MaxValue;
+
+            bool wall_Result = false;
+            bool diaphragm_Result = false;
+
+            Point wall_pt = FindNearestWallEndPoint(src_pt, out wall_Result);
+            Point diaphragm_pt = FindNearestDiaphragmCornerPoint(src_pt, out diaphragm_Result);
+
+            if (wall_Result == true && diaphragm_Result == true)
+            {
+                if (DistanceBetweenPoints(wall_pt, src_pt) <= DistanceBetweenPoints(diaphragm_pt, src_pt))
+                {
+                    dist = DistanceBetweenPoints(wall_pt, src_pt);
+                    pt = wall_pt;
+                    result = true;
+                }
+                else
+                {
+                    dist = DistanceBetweenPoints(diaphragm_pt, src_pt);
+                    pt = diaphragm_pt;
+                    result = true;
+                }
+            }
+            else if (wall_Result == true)
+            {
+                dist = DistanceBetweenPoints(wall_pt, src_pt);
+                pt = wall_pt;
+                result = true;
+            }
+            else if (diaphragm_Result == true)
+            {
+                dist = DistanceBetweenPoints(diaphragm_pt, src_pt);
+                pt = diaphragm_pt;
+                result = true;
+            }
+            return pt;
+        }
+
+        private Point FindNearestWallEndPoint(Point src_pt, out bool result)
+        {
+            Point pt = new Point(float.MaxValue, float.MaxValue);
+            result = false;
+            float dist = float.MaxValue;
+            foreach (var wall in Calculator._wall_system._walls)
+            {
+                float p1_dist = DistanceBetweenPoints(wall.Value.Start, src_pt);
+                float p2_dist = DistanceBetweenPoints(wall.Value.End, src_pt);
+
+                if (p1_dist <= dist)
+                {
+                    dist = p1_dist;
+                    pt = wall.Value.Start;
+                    result = true;
+                }
+                if (p2_dist <= dist)
+                {
+                    dist = p2_dist;
+                    pt = wall.Value.End;
+                    result = true;
+                }
+            }
+            return pt;
+        }
+
+        private Point FindNearestDiaphragmCornerPoint(Point src_pt, out bool result)
+        {
+            Point pt = new Point(0, 0);
+            float dist = float.MaxValue;
+            result = false;
+
+            foreach (var diaphragm in Calculator._diaphragm_system._diaphragms)
+            {
+                float p1_dist = DistanceBetweenPoints(diaphragm.Value.P1, src_pt);
+                float p2_dist = DistanceBetweenPoints(diaphragm.Value.P2, src_pt);
+                float p3_dist = DistanceBetweenPoints(diaphragm.Value.P3, src_pt);
+                float p4_dist = DistanceBetweenPoints(diaphragm.Value.P4, src_pt);
+
+                if (p1_dist <= dist)
+                {
+                    dist = p1_dist;
+                    pt = diaphragm.Value.P1;
+                    result = true;
+                }
+                if (p2_dist <= dist)
+                {
+                    dist = p2_dist;
+                    pt = diaphragm.Value.P2;
+                    result = true;
+
+                }
+                if (p3_dist <= dist)
+                {
+                    dist = p3_dist;
+                    pt = diaphragm.Value.P3;
+                    result = true;
+                }
+                if (p4_dist <= dist)
+                {
+                    dist = p4_dist;
+                    pt = diaphragm.Value.P4;
+                    result = true;
+                }
+            }
+
+            return pt;
+        }
+        #endregion
+
+        #region Controls
+        private void HideAllDataControls()
+        {
+            spCalcResultsControls.Visibility = Visibility.Collapsed;
+            spWallDataControls.Visibility = Visibility.Collapsed;
+            spDiaphragmDataControls.Visibility = Visibility.Collapsed;
+        }
+
+        private void ShowAllDataControls()
+        {
+            spCalcResultsControls.Visibility = Visibility.Visible;
+            spWallDataControls.Visibility = Visibility.Visible;
+            spDiaphragmDataControls.Visibility = Visibility.Visible;
+        }
+
+        private void ClearCoordinateDisplayData()
+        {
+            lblScreenEndCoord.Content = "";
+            lblScreenStartCoord.Content = "";
+            lblWorldEndCoord.Content = "";
+            lblWorldStartCoord.Content = "";
+        }
+        /// <summary>
+        /// Function to handle clearing point and cursor input variables
+        /// </summary>
+        private void ResetPointInputInfo()
+        {
+            _startClickSet = false;
+            _endClickSet = false;
+            CurrentStartPoint = new Point();
+            CurrentEndPoint = new Point();
+            _currentPreviewLine = null;
+
+            // update the infor labels
+            lblScreenEndCoord.Content = "";
+            lblScreenStartCoord.Content = "";
+            lblWorldEndCoord.Content = "";
+            lblWorldStartCoord.Content = "";
+        }
+        #endregion 
+
+        #region Mouse and Window Events
         /// <summary>
         /// What happens when the middle mouse wheel is scrolled
         /// </summary>
@@ -1148,7 +1210,7 @@ namespace ShearWallVisualizer
                     _nearestDiaphragmCornerPoint = FindNearestSnapPoint(wp, out snap_result);  // world coords
 
                     float dist = DistanceBetweenPoints(wp, _nearestDiaphragmCornerPoint);
-                    lblSnap1st.Content  = "(" + _nearestDiaphragmCornerPoint.X.ToString("0.00") + ", " + _nearestDiaphragmCornerPoint.Y.ToString("0.00") + ")";
+                    lblSnap1st.Content = "(" + _nearestDiaphragmCornerPoint.X.ToString("0.00") + ", " + _nearestDiaphragmCornerPoint.Y.ToString("0.00") + ")";
                     lblSnap2nd.Content = "(" + dist.ToString("0.00") + ")";
 
                     // The first click
@@ -1213,7 +1275,7 @@ namespace ShearWallVisualizer
 
                         // If second point is same as the CurrentStartPoint, then it isn't valid, so just return;
                         // TODO:  Should this be handled in a different way?
-                        if(p == CurrentStartPoint)
+                        if (p == CurrentStartPoint)
                         {
                             return;
                         }
@@ -1275,7 +1337,7 @@ namespace ShearWallVisualizer
                             Point world_p2 = ScreenCoord_ToWorld(adj_end_x);
 
                             // Add to the list of wall segments
-                            Calculator._wall_system.AddWall(new WallData(DEFAULT_WALL_HT, 
+                            Calculator._wall_system.AddWall(new WallData(DEFAULT_WALL_HT,
                                 (float)world_p1.X, (float)world_p1.Y, (float)world_p2.X, (float)world_p2.Y, dir));
 
                             _currentPreviewLine = null;  // clear the preview line
@@ -1353,7 +1415,7 @@ namespace ShearWallVisualizer
                     _currentPreviewLine.Y2 = p.Y;
 
                     // for wall entry mode, force the preview lines to be horizontal or vertical from the first point clicked
-                    if(CurrentInputMode == InputModes.Rigidity)
+                    if (CurrentInputMode == InputModes.Rigidity)
                     {
                         // force the line to be horizontal or vertical only
                         if (LineIsHorizontal(_currentPreviewLine))
@@ -1380,12 +1442,6 @@ namespace ShearWallVisualizer
         /// </summary>
         /// <param name="line"></param>
         /// <returns></returns>
-        private bool LineIsHorizontal(Line line)
-        {
-            if (line == null) return false;
-
-            return (Math.Abs(line.X1 - line.X2) > Math.Abs(line.Y1 - line.Y2));
-        }
 
         /// <summary>
         /// What happens when a mouse button is released
@@ -1422,11 +1478,11 @@ namespace ShearWallVisualizer
                     ResetPointInputInfo();
                     break;
                 case Key.C:
-                    if(CurrentInputMode == InputModes.Rigidity)
+                    if (CurrentInputMode == InputModes.Rigidity)
                     {
                         Calculator._wall_system._walls.Clear();
                     }
-                    if(CurrentInputMode == InputModes.Mass)
+                    if (CurrentInputMode == InputModes.Mass)
                     {
                         Calculator._diaphragm_system._diaphragms.Clear();
                     }
@@ -1447,71 +1503,45 @@ namespace ShearWallVisualizer
             Update();
         }
 
+        private void OnDiaphragmDeleted(object sender, DiaphragmDataControl.DeleteDiaphragmEventArgs e)
+        {
+            if (Calculator._diaphragm_system._diaphragms.ContainsKey(e.Id) == true)
+            {
+                Calculator._diaphragm_system._diaphragms.Remove(e.Id);
+
+                MessageBox.Show(e.Id.ToString() + " has been deleted");
+            }
+            else
+            {
+                MessageBox.Show(e.Id.ToString() + " does not exist in Walls");
+            }
+
+            Update();
+        }
+
+        private void OnWallDeleted(object sender, ShearWallDataControl.DeleteWallEventArgs e)
+        {
+            if (Calculator._wall_system._walls.ContainsKey(e.Id) == true)
+            {
+                Calculator._wall_system._walls.Remove(e.Id);
+
+                MessageBox.Show(e.Id.ToString() + " has been deleted");
+            }
+            else
+            {
+                MessageBox.Show(e.Id.ToString() + " does not exist in Walls");
+            }
+
+            Update();
+        }
+        #endregion
+
+        #region Controls and Button Clicks
         /// <summary>
-        /// Function to handle clearing point and cursor input variables
+        /// The SNAP MODE button
         /// </summary>
-        private void ResetPointInputInfo()
-        {
-            _startClickSet = false;
-            _endClickSet = false;
-            CurrentStartPoint = new Point();
-            CurrentEndPoint = new Point();
-            _currentPreviewLine = null;
-
-            // update the infor labels
-            lblScreenEndCoord.Content = "";
-            lblScreenStartCoord.Content = "";
-            lblWorldEndCoord.Content = "";
-            lblWorldStartCoord.Content = "";
-        }
-
-        /// <summary>
-        /// converts coordinates from the screen (canvas) to the world coordinates
-        /// </summary>
-        /// <param name="p"></param>
-        /// <returns></returns>
-        private Point ScreenCoord_ToWorld(Point p)
-        {
-            return new Point(p.X / (float)SCALE_X, (cnvMainCanvas.Height - p.Y) / (float)SCALE_Y);
-        }
-
-        /// <summary>
-        /// converts coordinates from the world to the screen coordinates (canvas) system
-        /// </summary>
-        /// <param name="p"></param>
-        /// <returns></returns>
-        private Point WorldCoord_ToScreen(Point p)
-        {
-            return new Point(p.X * (float)SCALE_X, cnvMainCanvas.Height - (p.Y * (float)SCALE_Y));
-        }
-
-        private void HideAllDataControls()
-        {
-            spCalcResultsControls.Visibility = Visibility.Collapsed;
-            spWallDataControls.Visibility = Visibility.Collapsed;
-            spDiaphragmDataControls.Visibility = Visibility.Collapsed;
-        }
-
-        private void ShowAllDataControls()
-        {
-            spCalcResultsControls.Visibility = Visibility.Visible;
-            spWallDataControls.Visibility = Visibility.Visible;
-            spDiaphragmDataControls.Visibility = Visibility.Visible;
-        }
-
-        private void ClearCoordinateDisplayData()
-        {
-            lblScreenEndCoord.Content = "";
-            lblScreenStartCoord.Content = "";
-            lblWorldEndCoord.Content = "";
-            lblWorldStartCoord.Content = "";
-        }
-
-
-
-
-
-
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void btnSnapToNearest_Click(object sender, RoutedEventArgs e)
         {
             _shouldSnapToNearest = !_shouldSnapToNearest;
@@ -1536,6 +1566,11 @@ namespace ShearWallVisualizer
             Update();
         }
 
+        /// <summary>
+        /// Rigidity (wall) input mode
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void btnRigidityMode_Click(object sender, RoutedEventArgs e)
         {
             CurrentInputMode = InputModes.Rigidity;
@@ -1543,11 +1578,17 @@ namespace ShearWallVisualizer
             Update();
         }
 
+        /// <summary>
+        /// Mass (diaphragm) input mode
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void btnMassMode_Click(object sender, RoutedEventArgs e)
         {
             CurrentInputMode = InputModes.Mass;
             CurrentMode.Content = "DIAPHRAGM ENTRY (MASS MODE)";
             Update();
         }
+        #endregion
     }
 }

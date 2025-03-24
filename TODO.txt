@@ -16,7 +16,7 @@ TODO:
 
 -- Snap to corners of diaphragm or end points of walls 
 
-
+BRACE WALL LINES DETERMINATION
 
 REFACTOR!
 

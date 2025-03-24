@@ -15,12 +15,6 @@ namespace calculator
 
         public const string FILENAME = "results.txt";
 
-        /// <summary>
-        /// Loads and eccentricty values 
-        /// Uses Cartesian coordinate and right-hand rule -- x+ right, y+ up, rot+ = CCW
-        /// </summary>
-        public float V_x { get; set; } = 40; // x direction load (kips) acting at center of mass
-        public float V_y { get; set; } = 0;  // y direction load (kips) acting at center of mass
 
         /// <summary>
         /// eccentricities
@@ -43,27 +37,17 @@ namespace calculator
         // dictionary containing the total shear acting on a wall -- resistance at nase pf diaphragm at top of walls
         public Dictionary<int, float> TotalWallShear { get; set; } = new Dictionary<int, float>();
 
-
-
-
-
         /// <summary>
         /// default constructor
         /// </summary>
         public ShearWallCalculator_RigidDiaphragm()
         {
-            //// Sample data for testing
-            //LoadTestWallData();
-            //LoadTestWallData2();
-
             //update calculations once data is loaded
             Update();
         }
 
         public ShearWallCalculator_RigidDiaphragm(WallSystem walls, DiaphragmSystem diaphragm) : base(walls, diaphragm)
         {
-//            DiaphragmPoints = diaphagm_pts;
-
             // update the calculations
             Update();
         }
@@ -83,6 +67,11 @@ namespace calculator
             // Update calculations if necessary for the diaphragm and the wall system            
             _diaphragm_system.Update();
             _wall_system.Update();
+
+            BracedWallLine bracedWallLine = new BracedWallLine(5.0); // Set tolerance
+            bracedWallLine.RunTestCase();
+
+            // TODO:  CODE requires minimum of 5% of largest dimension of building as a minimum for the eccentricity
             Console.WriteLine("Center of Mass -- xr: " + _diaphragm_system.CtrMass.X + " ft.  yr: " + _diaphragm_system.CtrMass.Y + " ft.");
             Console.WriteLine("Center of Rigidity -- xr: " + _wall_system.CtrRigidity.X + " ft.  yr: " + _wall_system.CtrRigidity.Y + " ft.");
 
