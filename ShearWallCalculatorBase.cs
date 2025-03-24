@@ -98,7 +98,6 @@ namespace ShearWallCalculator
             _wall_system = wall_system;
 
             BracedWallLine bracedWallLine = new BracedWallLine(5.0);
-            bracedWallLine.RunTestCase();
 //            LoadTestWallData();
 //            LoadTestWallData2();
         }

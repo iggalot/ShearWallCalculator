@@ -13,6 +13,8 @@ namespace ShearWallCalculator
     /// </summary>
     public class WallSystem
     {
+        private float DEFAULT_ALLOWABLE_BRACEDLINE_OFFSET = 8.0f;  // the minimum offset allowed for groupings of braced wall lines IRC requires 4ft max.
+
         // A collection of all walls defined in the system
         public Dictionary<int, WallData> _walls { get; set; } = new Dictionary<int, WallData>(); // collection of walls>
 
@@ -24,9 +26,8 @@ namespace ShearWallCalculator
         public Dictionary<int, WallData> NS_Walls { get; set; } = new Dictionary<int, WallData>();
 
         // braced wall line groups
-        public Dictionary<int, BracedWallLine> BracedWallGroups_EW { get; set; } = new Dictionary<int, BracedWallLine>();
-        public Dictionary<int, BracedWallLine> BracedWallGroups_NS { get; set; } = new Dictionary<int, BracedWallLine>();
-
+        BracedWallLine BracedWallGroups_EW { get; set; }
+        BracedWallLine BracedWallGroups_NS { get; set; }
 
         // distance from center of wall to center of rigidity in y-direction
         public Dictionary<int, float> Y_bar_walls { get; set; } = new Dictionary<int, float>();
@@ -142,7 +143,9 @@ namespace ShearWallCalculator
         /// <param name="walls"></param>
         public WallSystem()
         {
-
+            // Create the braced wall line groups for this wall system
+            BracedWallGroups_EW = new BracedWallLine(DEFAULT_ALLOWABLE_BRACEDLINE_OFFSET);
+            BracedWallGroups_NS = new BracedWallLine(DEFAULT_ALLOWABLE_BRACEDLINE_OFFSET);
         }
 
         public void Update()
@@ -150,6 +153,8 @@ namespace ShearWallCalculator
             // clear the current calculator
             EW_Walls.Clear();
             NS_Walls.Clear();
+            BracedWallGroups_EW.Clear();
+            BracedWallGroups_NS.Clear();
 
             // sort through the list of walls and assign to appropriate dictionary
             foreach (var wall in _walls)
@@ -157,12 +162,24 @@ namespace ShearWallCalculator
                 if (wall.Value.WallDir == WallDirs.EastWest)
                 {
                     EW_Walls.Add(wall.Key, wall.Value);
+                    BracedWallGroups_EW.AddValue(wall.Value.Center.Y); // add horizontal walls to the braced wall lines groups
                 }
                 else
                 {
                     NS_Walls.Add(wall.Key, wall.Value);
+                    BracedWallGroups_NS.AddValue(wall.Value.Center.X); // add vertical walls to the braced wall lines
                 }
             }
+
+            // update braced wall line calculations
+            BracedWallGroups_EW.Update(); 
+            BracedWallGroups_NS.Update();
+
+            Console.WriteLine("\nEW Wall Groups: ");
+            BracedWallGroups_EW.PrintGroups();
+
+            Console.WriteLine("\nNS Wall Groups: ");
+            BracedWallGroups_NS.PrintGroups();
 
             // recompute the center of rigidity for the system
             ComputeCenterOfRigidity();
@@ -197,6 +214,7 @@ namespace ShearWallCalculator
             // compute inertia of walls
             ComputeInertia();
             Console.WriteLine("Inertia -- XX: " + InertiaXX + " ft.  YY: " + InertiaYY + " ft.   J = " + InertiaPolar + " ft^4");
+
 
         }
 

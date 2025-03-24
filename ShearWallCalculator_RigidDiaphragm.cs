@@ -68,9 +68,6 @@ namespace calculator
             _diaphragm_system.Update();
             _wall_system.Update();
 
-            BracedWallLine bracedWallLine = new BracedWallLine(5.0); // Set tolerance
-            bracedWallLine.RunTestCase();
-
             // TODO:  CODE requires minimum of 5% of largest dimension of building as a minimum for the eccentricity
             Console.WriteLine("Center of Mass -- xr: " + _diaphragm_system.CtrMass.X + " ft.  yr: " + _diaphragm_system.CtrMass.Y + " ft.");
             Console.WriteLine("Center of Rigidity -- xr: " + _wall_system.CtrRigidity.X + " ft.  yr: " + _wall_system.CtrRigidity.Y + " ft.");

@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ShearWallCalculator
 {
@@ -30,6 +27,18 @@ namespace ShearWallCalculator
         public void RemoveValue(double value)
         {
             values.Remove(value);
+            RecomputeGroups();
+        }
+
+        // Clears all the list values for this braced wall line group
+        public void Clear()
+        {
+            values.Clear();
+            groupedValues.Clear();
+        }
+
+        public void Update()
+        {
             RecomputeGroups();
         }
 
@@ -82,23 +91,23 @@ namespace ShearWallCalculator
             }
         }
 
-        public void RunTestCase()
-        {
-            BracedWallLine bracedWallLine = new BracedWallLine(5.0); // Set tolerance
+        //public void RunTestCase()
+        //{
+        //    BracedWallLine bracedWallLine = new BracedWallLine(5.0); // Set tolerance
 
-            // Initial values with modifications
-            bracedWallLine.AddValue(10);
-            bracedWallLine.AddValue(13);
-            bracedWallLine.AddValue(15);  // Changed from 17
-            bracedWallLine.AddValue(22);  // Changed from 18
-            bracedWallLine.AddValue(27);
-            bracedWallLine.AddValue(35);
-            bracedWallLine.AddValue(37);
-            bracedWallLine.AddValue(45);
+        //    // Initial values with modifications
+        //    bracedWallLine.AddValue(10);
+        //    bracedWallLine.AddValue(13);
+        //    bracedWallLine.AddValue(15);  // Changed from 17
+        //    bracedWallLine.AddValue(22);  // Changed from 18
+        //    bracedWallLine.AddValue(27);
+        //    bracedWallLine.AddValue(35);
+        //    bracedWallLine.AddValue(37);
+        //    bracedWallLine.AddValue(45);
 
-            // Print results
-            Console.WriteLine("After Changing 17 → 15 and 18 → 22:");
-            bracedWallLine.PrintGroups();
-        }
+        //    // Print results
+        //    Console.WriteLine("After Changing 17 → 15 and 18 → 22:");
+        //    bracedWallLine.PrintGroups();
+        //}
     }
 }
