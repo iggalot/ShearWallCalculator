@@ -595,6 +595,57 @@ namespace ShearWallVisualizer
             }
         }
 
+        public void DrawBracedWallLines()
+        {
+            // if no wall system, then don't draw anything
+            if (Calculator._wall_system == null || Calculator._wall_system._walls.Count == 0)
+            {
+                return;
+            }
+
+            // Draw the east west braced wall lines
+            if ((Calculator._wall_system.BracedWallGroups_EW != null) && (Calculator._wall_system.BracedWallGroups_EW.groupedValues != null)
+                && (Calculator._wall_system.BracedWallGroups_EW.groupedValues.Count > 0))
+            {
+                foreach (var wall in Calculator._wall_system.BracedWallGroups_EW.groupedValues)
+                {
+
+                    // draw a line at the center of all of the values in this group
+                    float first = (float)wall[0];
+                    float last = (float)wall[wall.Count - 1];
+                    float center = (first + last) / 2;
+                    Point p1_world = new Point(-3000, center);
+                    Point p2_world = new Point(3000, center);
+                    Point p1_screen = WorldCoord_ToScreen(p1_world);
+                    Point p2_screen = WorldCoord_ToScreen(p2_world);
+
+                    Line line = new Line { X1 = p1_screen.X, Y1 = p1_screen.Y, X2 = p2_screen.X, Y2 = p2_screen.Y, Stroke = Brushes.Red, StrokeDashArray = new DoubleCollection { 4, 2 }, StrokeThickness = 0.5 };
+                    cnvMainCanvas.Children.Add(line);
+                }
+            }
+
+            // Draw the east west braced wall lines
+            if ((Calculator._wall_system.BracedWallGroups_NS != null) && (Calculator._wall_system.BracedWallGroups_NS.groupedValues != null)
+                && (Calculator._wall_system.BracedWallGroups_NS.groupedValues.Count > 0))
+            {
+                foreach (var wall in Calculator._wall_system.BracedWallGroups_NS.groupedValues)
+                {
+
+                    // draw a line at the center of all of the values in this group
+                    float first = (float)wall[0];
+                    float last = (float)wall[wall.Count - 1];
+                    float center = (first + last) / 2;
+                    Point p1_world = new Point(center, -3000);
+                    Point p2_world = new Point(center, 3000);
+                    Point p1_screen = WorldCoord_ToScreen(p1_world);
+                    Point p2_screen = WorldCoord_ToScreen(p2_world);
+
+                    Line line = new Line { X1 = p1_screen.X, Y1 = p1_screen.Y, X2 = p2_screen.X, Y2 = p2_screen.Y, Stroke = Brushes.Red, StrokeDashArray = new DoubleCollection { 4, 2 }, StrokeThickness = 0.5 };
+                    cnvMainCanvas.Children.Add(line);
+                }
+            }
+        }
+
         /// <summary>
         /// The primary draw functions for items on the canvas and the summary controls
         /// </summary>
@@ -635,6 +686,9 @@ namespace ShearWallVisualizer
 
             // Draw center of mass and center of rigidity
             DrawCOMandCOR();
+
+            // Draw the braced wall line data.
+            DrawBracedWallLines();
 
             // Draw crosshairs
             cnvMainCanvas.Children.Add(_crosshairVertical);

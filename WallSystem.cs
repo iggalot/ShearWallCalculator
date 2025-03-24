@@ -26,8 +26,8 @@ namespace ShearWallCalculator
         public Dictionary<int, WallData> NS_Walls { get; set; } = new Dictionary<int, WallData>();
 
         // braced wall line groups
-        BracedWallLine BracedWallGroups_EW { get; set; }
-        BracedWallLine BracedWallGroups_NS { get; set; }
+        public BracedWallLine BracedWallGroups_EW { get; set; }
+        public BracedWallLine BracedWallGroups_NS { get; set; }
 
         // distance from center of wall to center of rigidity in y-direction
         public Dictionary<int, float> Y_bar_walls { get; set; } = new Dictionary<int, float>();

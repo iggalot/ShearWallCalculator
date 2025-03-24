@@ -7,7 +7,7 @@ namespace ShearWallCalculator
     {
         private List<double> values; // Stores the wall positions
         private double tolerance; // Max allowed grouping distance
-        private List<List<double>> groupedValues; // Stores computed groups
+        public List<List<double>> groupedValues; // Stores computed groups
 
         public BracedWallLine(double tolerance)
         {
