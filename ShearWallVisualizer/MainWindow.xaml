@@ -22,13 +22,14 @@
                     <Label Width="30" Height="25"  FontWeight="Bold" Content="C.R."/>
                     <Label Name="CenterOfRigidity" Width="100" Height="25" FontWeight="Bold" Content="value"/>
                 </StackPanel>
-                <ScrollViewer Name="CanvasScrollViewer" Width="450" Height="450" 
+                <ScrollViewer Name="CanvasScrollViewer" 
                               HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-                    <Canvas Name="cnvMainCanvas" Width="400" Height="400" Background="White"
+                    <Canvas Name="cnvMainCanvas" Background="White"
                             MouseWheel = "MainCanvas_MouseWheel"
                             MouseDown = "MainCanvas_MouseDown"
                             MouseMove = "MainCanvas_MouseMove"
                             MouseUp = "MainCanvas_MouseUp"
+                            ClipToBounds="True"
                             />
                 </ScrollViewer>
                 <Label Name="CurrentMode" Background ="LightBlue" FontWeight="Bold"  Margin="0 0 0 0" Height="25" Content="SELECT EDIT MODE (M for MASS and R for RIGIDITY and C to CLEAR CURRENT) "/>

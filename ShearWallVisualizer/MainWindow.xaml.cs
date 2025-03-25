@@ -2,16 +2,11 @@
 using ShearWallCalculator;
 using ShearWallVisualizer.Controls;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.IO.Ports;
-using System.Security.Cryptography;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Media3D;
-using System.Windows.Media.TextFormatting;
 using System.Windows.Shapes;
 
 namespace ShearWallVisualizer
@@ -27,16 +22,27 @@ namespace ShearWallVisualizer
     /// </summary>
     public partial class MainWindow : Window
     {
+        // constants for default values
         private float DEFAULT_WALL_HT = 9;  // ft
+        private float DEFAULT_GRIDLINE_SPACING_MAJOR = 10;  // the spacing of the major gridlines -- measured in feet
+        private float DEFAULT_GRIDLINE_SPACING_MINOR = 5;  // the spacing of the minor gridlines -- measured in feet
+
+        // constants for canvas dimensions
+        private float DEFAULT_CANVAS_WIDTH = 400; // width of the canvas in pixels
+        private float DEFAULT_CANVAS_HEIGHT = 400; // height of the canvas in pixels
+
+        private float DEFAULT_MODEL_EXITENTS_HORIZONTAL = 100; // the horizontal extents of the model in feet
+        private float DEFAULT_MODEL_EXITENTS_VERTICAL = 100; // the vertical extents of the model in feet
+
+        private float _canvas_width = 1;
+        private float _canvas_height = 1;
+
 
         // Containers for Canvas drawing objects
         private List<Shape> StructuralObjects = new List<Shape>(); // a list of the structural (non-canvas drawing details) objects
         private List<Shape> CanvasDetailsObjects = new List<Shape>(); // a list of objects drawn on the canvas but not needed to be recomputed frequently.
         private List<Shape> PreviewObjects = new List<Shape>(); // a list of objects containing any temporary preview objects to be drawn tocanvas
 
-        // constants for gridlines
-        private float default_gridline_spacing_major = 10;  // the spacing of the major gridlines -- measured in feet
-        private float default_gridline_spacing_minor = 5;  // the spacing of the minor gridlines -- measured in feet
 
         // constants for properties of drawing objects on canvas
         private const double rect_boundary_line_thickness = 0.5;
@@ -53,16 +59,17 @@ namespace ShearWallVisualizer
         private Line _crosshairVertical = null;
         private Line _crosshairHorizontal = null;
 
-
         // variables for controlling canvas zooming and panning
         private ScaleTransform _scaleTransform;
-        private double _zoomFactor = 1.1;  // amount of zoom when middle mouse button is scrolled
+        private double _zoomFactor = 1.025;  // amount of zoom when middle mouse button is scrolled
         private Point _lastMousePosition; // last mouse position in canvas coords -- used for panning
         private bool _isPanning; // flag for panning state
         private TransformGroup _transformGroup;
         private TranslateTransform _translateTransform;
-        private const double SCALE_X = 1;  // scale factor for x-dir
-        private const double SCALE_Y = 1;  // scale factor for y-dir
+        private double SCALE_X = 1;  // scale factor for x-dir
+        private double SCALE_Y = 1;  // scale factor for y-dir
+        private double TRANS_X = 0;  // translation offset for x-dir
+        private double TRANS_Y = 0;  // translation offset for y-dir
 
         // variables for handling input
         private InputModes CurrentInputMode { get; set; } = InputModes.None;
@@ -91,23 +98,36 @@ namespace ShearWallVisualizer
             // TODO: This will need to be switchable between RigidDiaphragm and FlexibileDiaphragm or both
             Calculator = new ShearWallCalculator_RigidDiaphragm();
 
-            // set up scaling parameters associated with the canvas
-            _scaleTransform = new ScaleTransform(SCALE_X, SCALE_Y);
-            _translateTransform = new TranslateTransform();
-            _transformGroup = new TransformGroup();
-            _transformGroup.Children.Add(_scaleTransform);
-            _transformGroup.Children.Add(_translateTransform);
-            cnvMainCanvas.RenderTransform = _transformGroup;
+            // setup the canvas
+            SetCanvasDimensions(DEFAULT_CANVAS_WIDTH, DEFAULT_CANVAS_HEIGHT);
+
+            // set scroll viewer dimensions to intially be slight larger than the canvas
+            CanvasScrollViewer.Width = DEFAULT_CANVAS_WIDTH + 50.0f;
+            CanvasScrollViewer.Height = DEFAULT_CANVAS_HEIGHT + 50.0f;
+
+            // setup the initial canvas scaling
+            SetupViewScaling(1.0f, 1.0f); // scale it the first time to 1:1
+            if (cnvMainCanvas.Width / DEFAULT_MODEL_EXITENTS_HORIZONTAL != SCALE_X || cnvMainCanvas.Height / DEFAULT_MODEL_EXITENTS_VERTICAL != SCALE_Y)
+            {
+                SCALE_X = cnvMainCanvas.Width / DEFAULT_MODEL_EXITENTS_HORIZONTAL;
+                SCALE_Y = cnvMainCanvas.Height / DEFAULT_MODEL_EXITENTS_VERTICAL;
+                SetupViewScaling((float)SCALE_X, (float)SCALE_Y); // apply the view scaling
+            }
+
 
             // create the gridlines
             CreateGridLines();
 
             // creates the crosshairs for point selection
-            _crosshairVertical = new Line { 
-                X1 = _currentMousePosition.X, 
-                Y1 = 0, 
-                X2 = _currentMousePosition.X, 
-                Y2 = cnvMainCanvas.Height, Stroke = Brushes.Black, StrokeThickness = 0.25 };
+            _crosshairVertical = new Line
+            {
+                X1 = _currentMousePosition.X,
+                Y1 = 0,
+                X2 = _currentMousePosition.X,
+                Y2 = cnvMainCanvas.Height,
+                Stroke = Brushes.Black,
+                StrokeThickness = 0.25
+            };
 
             // creates the crosshairs for point selection
             _crosshairHorizontal = new Line
@@ -126,6 +146,27 @@ namespace ShearWallVisualizer
             //            Calculator._diaphragm_system.AddDiaphragm(new DiaphragmData_Rectangular(new Point(100, 100), new Point(40, 60)));
 
             Update();
+        }
+
+        private void SetCanvasDimensions(float width, float height)
+        {
+            _canvas_width = width;
+            _canvas_height = height;
+
+            // set the size on the screen
+            cnvMainCanvas.Width = width;
+            cnvMainCanvas.Height = height;
+        }
+
+        private void SetupViewScaling(float scale_x, float scale_y, float trans_x = 0, float trans_y = 0)
+        {
+            // set up scaling parameters associated with the canvas
+            _scaleTransform = new ScaleTransform(scale_x, scale_y);
+            _translateTransform = new TranslateTransform(-trans_x, -trans_y);
+            _transformGroup = new TransformGroup();
+            _transformGroup.Children.Add(_scaleTransform);
+            _transformGroup.Children.Add(_translateTransform);
+            cnvMainCanvas.RenderTransform = _transformGroup;
         }
 
         /// <summary>
@@ -341,29 +382,79 @@ namespace ShearWallVisualizer
         /// </summary>
         private void CreateGridLines()
         {
-            // for the major gridlines
-            for (int i = (int)-cnvMainCanvas.Width; i < (int)cnvMainCanvas.Width; i += (int)default_gridline_spacing_major) // Large arbitrary bounds
+            // limits of the drawing in model space
+            System.Windows.Point bb_min_pt = new System.Windows.Point(-0.5 * DEFAULT_MODEL_EXITENTS_HORIZONTAL, -0.5 * DEFAULT_MODEL_EXITENTS_VERTICAL);
+            System.Windows.Point bb_max_pt = new System.Windows.Point(1.5 * DEFAULT_MODEL_EXITENTS_HORIZONTAL, 1.5 * DEFAULT_MODEL_EXITENTS_VERTICAL);
+
+            //if (Calculator != null)
+            //{
+            //    bb_min_pt = Calculator.Boundary_Min_Point;
+            //    bb_max_pt = Calculator.Boundary_Max_Point;
+            //}
+
+            // for the vertical major gridlines
+            for (int i = (int)bb_min_pt.Y; i < (int)bb_max_pt.Y; i += (int)DEFAULT_GRIDLINE_SPACING_MAJOR) // Large arbitrary bounds
             {
-                // draw the major gridlines
-                Line verticalLine = new Line { X1 = i, Y1 = 0, X2 = i, Y2 = cnvMainCanvas.Height, Stroke = Brushes.DarkGray, StrokeDashArray = new DoubleCollection { 2, 2 }, StrokeThickness = 0.4 };
-                Line horizontalLine = new Line { X1 = 0, Y1 = i, X2 = cnvMainCanvas.Width, Y2 = i, Stroke = Brushes.DarkGray, StrokeDashArray = new DoubleCollection { 2, 2 }, StrokeThickness = 0.4 };
+                Point p1 = new Point(i, 0);
+                Point p2 = new Point(i, bb_max_pt.Y);
+                Point scr_p1 = WorldCoord_ToScreen(p1);
+                Point scr_p2 = WorldCoord_ToScreen(p2);
+
+                // create the vertical major gridlines in screen coords
+                Line verticalLine = new Line { X1 = p1.X, Y1 = p1.Y, X2 = p2.X, Y2 = p2.Y, Stroke = Brushes.DarkGray, StrokeDashArray = new DoubleCollection { 2, 2 }, StrokeThickness = 0.2 };
                 CanvasDetailsObjects.Add(verticalLine);
-                CanvasDetailsObjects.Add(horizontalLine);
             }
 
-            // for the minor gridlines
-            for (int i = (int)-cnvMainCanvas.Width; i < (int)cnvMainCanvas.Width; i += (int)default_gridline_spacing_minor) // Large arbitrary bounds
+            // for the vertical minor gridlines
+            for (int i = (int)bb_min_pt.Y; i < (int)bb_max_pt.Y; i += (int)DEFAULT_GRIDLINE_SPACING_MINOR) // Large arbitrary bounds
             {
+                Point p1 = new Point(i, 0);
+                Point p2 = new Point(i, bb_max_pt.Y);
+                Point scr_p1 = WorldCoord_ToScreen(p1);
+                Point scr_p2 = WorldCoord_ToScreen(p2);
+
                 // check if we already have a major gridline by detemining if i is a multiple of the major gridline spacing
-                if(i % default_gridline_spacing_major == 0)
+                if (i % DEFAULT_GRIDLINE_SPACING_MAJOR == 0)
                 {
                     continue;
                 }
 
                 // draw the minor gridlines
-                Line verticalLine = new Line { X1 = i, Y1 = 0, X2 = i, Y2 = cnvMainCanvas.Height, Stroke = Brushes.LightGray, StrokeDashArray = new DoubleCollection { 2, 2 }, StrokeThickness = 0.2 };
-                Line horizontalLine = new Line { X1 = 0, Y1 = i, X2 = cnvMainCanvas.Width, Y2 = i, Stroke = Brushes.LightGray, StrokeDashArray = new DoubleCollection { 2, 2 }, StrokeThickness = 0.2 };
+                Line verticalLine = new Line { X1 = p1.X, Y1 = p1.Y, X2 = p2.X, Y2 = p2.Y, Stroke = Brushes.DarkGray, StrokeDashArray = new DoubleCollection { 2, 2 }, StrokeThickness = 0.1 };
                 CanvasDetailsObjects.Add(verticalLine);
+            }
+
+            // for the horizontal major gridlines
+            for (int i = (int)bb_min_pt.X; i < (int)bb_max_pt.X; i += (int)DEFAULT_GRIDLINE_SPACING_MAJOR) // Large arbitrary bounds
+            {
+                Point p1 = new Point(0, i);
+                Point p2 = new Point(bb_max_pt.X, i);
+                Point scr_p1 = WorldCoord_ToScreen(p1);
+                Point scr_p2 = WorldCoord_ToScreen(p2);
+
+                // draw the major gridlines
+                Line horizontalLine = new Line { X1 = p1.X, Y1 = p1.Y, X2 = p2.X, Y2 = p2.Y, Stroke = Brushes.DarkGray, StrokeDashArray = new DoubleCollection { 2, 2 }, StrokeThickness = 0.2 };
+
+                CanvasDetailsObjects.Add(horizontalLine);
+            }
+
+            // for the horizontal minor gridlines
+            for (int i = (int)bb_min_pt.X; i < (int)bb_max_pt.X; i += (int)DEFAULT_GRIDLINE_SPACING_MINOR) // Large arbitrary bounds
+            {
+
+                // check if we already have a major gridline by detemining if i is a multiple of the major gridline spacing
+                if (i % DEFAULT_GRIDLINE_SPACING_MAJOR == 0)
+                {
+                    continue;
+                }
+
+                Point p1 = new Point(0, i);
+                Point p2 = new Point(bb_max_pt.X, i);
+                Point scr_p1 = WorldCoord_ToScreen(p1);
+                Point scr_p2 = WorldCoord_ToScreen(p2);
+
+                // draw the minor gridlines
+                Line horizontalLine = new Line { X1 = p1.X, Y1 = p1.Y, X2 = p2.X, Y2 = p2.Y, Stroke = Brushes.DarkGray, StrokeDashArray = new DoubleCollection { 2, 2 }, StrokeThickness = 0.1 };
                 CanvasDetailsObjects.Add(horizontalLine);
             }
         }
@@ -1215,16 +1306,29 @@ namespace ShearWallVisualizer
         /// <param name="e"></param>
         private void MainCanvas_MouseWheel(object sender, MouseWheelEventArgs e)
         {
-            //MessageBox.Show("MouseWheel");
             Point mousePosition = e.GetPosition(cnvMainCanvas);
             double zoomDelta = e.Delta > 0 ? _zoomFactor : 1 / _zoomFactor;
             double oldScaleX = _scaleTransform.ScaleX;
-            double oldScaleY = _scaleTransform.ScaleY; _scaleTransform.ScaleX *= zoomDelta;
-            _scaleTransform.ScaleY *= zoomDelta;
+            double oldScaleY = _scaleTransform.ScaleY;
+
+            SCALE_X = _scaleTransform.ScaleX * zoomDelta;
+            SCALE_Y =_scaleTransform.ScaleY * zoomDelta;
             double scaleChangeX = _scaleTransform.ScaleX - oldScaleX;
             double scaleChangeY = _scaleTransform.ScaleY - oldScaleY;
-            _translateTransform.X -= (mousePosition.X * scaleChangeX);
+            TRANS_X =(float)(_translateTransform.X - (mousePosition.X * scaleChangeX));
+            TRANS_Y = (float)(_translateTransform.Y - (mousePosition.Y * scaleChangeY));
             _translateTransform.Y -= (mousePosition.Y * scaleChangeY);
+
+            SetupViewScaling((float)SCALE_X, (float)SCALE_Y, (float)TRANS_X, (float)TRANS_Y);
+
+            //_scaleTransform.ScaleX *= zoomDelta;
+            //_scaleTransform.ScaleY *= zoomDelta;
+            //double scaleChangeX = _scaleTransform.ScaleX - oldScaleX;
+            //double scaleChangeY = _scaleTransform.ScaleY - oldScaleY;
+            //_translateTransform.X -= (mousePosition.X * scaleChangeX);
+            //_translateTransform.Y -= (mousePosition.Y * scaleChangeY);
+
+            Update();
         }
 
         /// <summary>
@@ -1428,6 +1532,7 @@ namespace ShearWallVisualizer
                     lblStatus.Content = status;
                 }
             }
+            Update();
         }
 
         /// <summary>
@@ -1448,15 +1553,19 @@ namespace ShearWallVisualizer
                 CanvasScrollViewer.ScrollToHorizontalOffset(CanvasScrollViewer.HorizontalOffset + offsetX);
                 CanvasScrollViewer.ScrollToVerticalOffset(CanvasScrollViewer.VerticalOffset + offsetY);
 
-                foreach (UIElement element in cnvMainCanvas.Children)
-                {
-                    if (element is FrameworkElement fe)
-                    {
-                        fe.RenderTransform = new TranslateTransform(offsetX + fe.RenderTransform.Value.OffsetX, offsetY + fe.RenderTransform.Value.OffsetY);
-                    }
-                }
+                cnvMainCanvas.RenderTransform = new TranslateTransform(offsetX + cnvMainCanvas.RenderTransform.Value.OffsetX, offsetY + cnvMainCanvas.RenderTransform.Value.OffsetY);
+
+
+                //foreach (UIElement element in cnvMainCanvas.Children)
+                //{
+                //    if (element is FrameworkElement fe)
+                //    {
+                //        fe.RenderTransform = new TranslateTransform(offsetX + fe.RenderTransform.Value.OffsetX, offsetY + fe.RenderTransform.Value.OffsetY);
+                //    }
+                //}
 
                 _lastMousePosition = currentPosition;
+                Update();
             }
 
             else
@@ -1486,8 +1595,8 @@ namespace ShearWallVisualizer
                 // Update the mouse position label
                 MousePosition.Content = "(" + _currentMousePosition.X.ToString("0.00") + ", " + _currentMousePosition.Y.ToString("0.00") + ")";
 
-                Update();
             }
+            Update();
 
         }
 
