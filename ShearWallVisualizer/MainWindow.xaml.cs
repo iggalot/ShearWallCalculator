@@ -8,6 +8,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using ShearWallVisualizer.Helpers;
 
 namespace ShearWallVisualizer
 {
@@ -22,6 +23,8 @@ namespace ShearWallVisualizer
     /// </summary>
     public partial class MainWindow : Window
     {
+        private CanvasDrawer _canvas_drawer;
+
         // constants for default values
         private float DEFAULT_WALL_HT = 9;  // ft
         private float DEFAULT_GRIDLINE_SPACING_MAJOR = 10;  // the spacing of the major gridlines -- measured in feet
@@ -34,18 +37,16 @@ namespace ShearWallVisualizer
         private float DEFAULT_MODEL_EXITENTS_HORIZONTAL = 100; // the horizontal extents of the model in feet
         private float DEFAULT_MODEL_EXITENTS_VERTICAL = 100; // the vertical extents of the model in feet
 
-        private float _canvas_width = 1;
-        private float _canvas_height = 1;
-
-
         // Containers for Canvas drawing objects
         private List<Shape> StructuralObjects = new List<Shape>(); // a list of the structural (non-canvas drawing details) objects
+
         private List<Shape> CanvasDetailsObjects = new List<Shape>(); // a list of objects drawn on the canvas but not needed to be recomputed frequently.
         private List<Shape> PreviewObjects = new List<Shape>(); // a list of objects containing any temporary preview objects to be drawn tocanvas
 
+        private double _canvas_height = 1.0;
+        private double _canvas_width = 1.0;
 
-        // constants for properties of drawing objects on canvas
-        private const double rect_boundary_line_thickness = 0.5;
+
 
         private Shape _PreviewShape = null;
         private Line _currentPreviewLine = null; // contains the points for first and second selection -- stored as a line object
@@ -92,7 +93,7 @@ namespace ShearWallVisualizer
         /// </summary>
         public MainWindow()
         {
-            InitializeComponent();
+            InitializeComponent(); 
 
             // create our Calculator object 
             // TODO: This will need to be switchable between RigidDiaphragm and FlexibileDiaphragm or both
@@ -114,6 +115,8 @@ namespace ShearWallVisualizer
                 SetupViewScaling((float)SCALE_X, (float)SCALE_Y); // apply the view scaling
             }
 
+            // Setup the canvas drawer helper
+            _canvas_drawer = new CanvasDrawer(cnvMainCanvas, SCALE_X, SCALE_Y);
 
             // create the gridlines
             CreateGridLines();
@@ -139,11 +142,6 @@ namespace ShearWallVisualizer
                 Stroke = Brushes.Black,
                 StrokeThickness = 0.25
             };
-
-
-            // Create a some test data
-            // Calculator._diaphragm_system.AddDiaphragm(new DiaphragmData_Rectangular(new Point(50, 50), new Point(100, 100)));
-            //            Calculator._diaphragm_system.AddDiaphragm(new DiaphragmData_Rectangular(new Point(100, 100), new Point(40, 60)));
 
             Update();
         }
@@ -180,8 +178,8 @@ namespace ShearWallVisualizer
             cnvMainCanvas.Children.Clear(); // clear the canvas 
 
             // Recompute the structural objects to be drawn
-            StructuralObjects.Clear();
-            CreateStructuralObjects();
+//            StructuralObjects.Clear();
+//            CreateStructuralObjects();
 
             // Update the crosshairs
             _crosshairVertical.X1 = _currentMousePosition.X;
@@ -196,6 +194,281 @@ namespace ShearWallVisualizer
 
             CenterOfMass.Content = "(" + Calculator._diaphragm_system.CtrMass.X.ToString("0.00") + ", " + Calculator._diaphragm_system.CtrMass.Y.ToString("0.00") + ")";
             CenterOfRigidity.Content = "(" + Calculator._wall_system.CtrRigidity.X.ToString("0.00") + ", " + Calculator._wall_system.CtrRigidity.Y.ToString("0.00") + ")";
+        }
+
+        /// <summary>
+        /// The primary draw functions for items on the canvas and the summary controls
+        /// </summary>
+        /// <exception cref="Exception"></exception>
+        /// <exception cref="NotImplementedException"></exception>
+        public void DrawResults()
+        {
+            // No calculator?  Nothing to draw so return
+            if (Calculator == null)
+            {
+                return;
+            }
+
+            //// Clear the MainCanvas before redrawing.
+            cnvMainCanvas.Children.Clear();
+
+            // Draw the gridlines and other non-model objects on the canvas
+            _canvas_drawer.DrawCanvasDetails(CanvasDetailsObjects);
+
+            // draw the structural model objects for the diaphragms -- do this before any added details and highlights
+            foreach (var diaphragm in Calculator._diaphragm_system._diaphragms)
+            {
+                _canvas_drawer.DrawDiaphragm(diaphragm.Value);
+            }
+
+            if (Calculator._diaphragm_system != null && Calculator._diaphragm_system._diaphragms.Count > 0)
+            {
+                // Draw extra information for diaphragms -- label numbers etc.
+                _canvas_drawer.DrawDiaphragmsInfo(Calculator._diaphragm_system);
+            }
+
+            // draw the structural model objects for the walls -- do this before any added details and highlights
+            foreach (var wall in Calculator._wall_system._walls)
+            {
+                _canvas_drawer.DrawWall(wall.Value);
+            }
+
+            // draw extra information for walls -- label numbers etc.
+            if (Calculator._wall_system != null && Calculator._wall_system._walls.Count > 0)
+            {
+                _canvas_drawer.DrawWallsInfo(Calculator._wall_system);
+            }
+
+            //// draw the bounding box around all structural model objects
+            //_canvas_drawer.DrawBoundingBox(Calculator.Boundary_Min_Point, Calculator.Boundary_Max_Point);
+
+            // Draw the preview object (line or rectangle)
+            if (_currentPreviewLine != null)
+            {
+                CreatePreviewShape();
+            }
+
+            //if(PreviewObjects.Count > 0)
+            //{
+            //    _canvas_drawer.DrawPreviewObjects(PreviewObjects);
+            //}
+
+            //if (Calculator._wall_system != null && Calculator._wall_system._walls.Count > 0)
+            //{
+            //    // Draw extra information for walls -- label numbers etc.
+            //    _canvas_drawer.DrawWallsInfo(Calculator._wall_system);
+            //}
+
+
+
+            //// Draw center of mass and center of rigidity markers
+            //_canvas_drawer.DrawCOM(Calculator._diaphragm_system);
+            //_canvas_drawer.DrawCOR(Calculator._wall_system);
+
+
+            ////// Draw the braced wall line data.
+            ////_canvas_drawer.DrawBracedWallLines(Calculator._wall_system);
+
+            //// Draw crosshairs
+            //cnvMainCanvas.Children.Add(_crosshairVertical);
+            //cnvMainCanvas.Children.Add(_crosshairHorizontal);
+
+            //// If snapping mode is enabled, draw the extra markers and change the cross hair appearance
+            //Point crosshair_intersection = new Point(_crosshairVertical.X1, _crosshairHorizontal.Y1);
+            //if (_shouldSnapToNearest is true)
+            //{
+            //    // add marker at cross hair intersection point
+            //    // marker for center of the rectangle -- center of area / mass
+            //    Ellipse snapCircle = new Ellipse
+            //    {
+            //        Width = _snapDistance,
+            //        Height = _snapDistance,
+            //        StrokeThickness = 1.5f,
+            //        Stroke = Brushes.Red,
+            //        Fill = Brushes.Transparent,
+            //        IsHitTestVisible = false
+            //    };
+            //    Canvas.SetLeft(snapCircle, crosshair_intersection.X - snapCircle.Width / 2.0f);
+            //    Canvas.SetTop(snapCircle, crosshair_intersection.Y - snapCircle.Height / 2.0f);
+            //    cnvMainCanvas.Children.Add(snapCircle);
+
+            //    // Draw the markers for the diaphragm corners and wall end points
+            //    foreach (DiaphragmData_Rectangular d in Calculator._diaphragm_system._diaphragms.Values)
+            //    {
+            //        Point p1 = MathHelpers.WorldCoord_ToScreen(cnvMainCanvas.Height, d.P1, SCALE_X, SCALE_Y);
+            //        Point p2 = MathHelpers.WorldCoord_ToScreen(cnvMainCanvas.Height, d.P2, SCALE_X, SCALE_Y);
+            //        Point p3 = MathHelpers.WorldCoord_ToScreen(cnvMainCanvas.Height, d.P3, SCALE_X, SCALE_Y);
+            //        Point p4 = MathHelpers.WorldCoord_ToScreen(cnvMainCanvas.Height, d.P4, SCALE_X, SCALE_Y);
+
+            //        _canvas_drawer.DrawCircles(p1, 2.0f, Brushes.Red);
+            //        _canvas_drawer.DrawCircles(p2, 2.0f, Brushes.Red);
+            //        _canvas_drawer.DrawCircles(p3, 2.0f, Brushes.Red);
+            //        _canvas_drawer.DrawCircles(p4, 2.0f, Brushes.Red);
+            //    }
+
+            //    // Draw the markers for the wall end points
+            //    foreach (WallData d in Calculator._wall_system._walls.Values)
+            //    {
+            //        Point start = MathHelpers.WorldCoord_ToScreen(cnvMainCanvas.Height, d.Start, SCALE_X, SCALE_Y);
+            //        Point end = MathHelpers.WorldCoord_ToScreen(cnvMainCanvas.Height, d.End, SCALE_X, SCALE_Y);
+            //        _canvas_drawer.DrawCircles(start, 2.0f, Brushes.Blue);
+            //        _canvas_drawer.DrawCircles(end, 2.0f, Brushes.Blue);
+            //    }
+            //}
+
+
+
+
+
+
+            //// Draw the Loads
+            //if (Calculator.V_x != 0)
+            //{
+            //    ArrowDirections dir = Calculator.V_x < 0 ? ArrowDirections.ARROW_LEFT : ArrowDirections.ARROW_RIGHT;
+            //    DrawingHelpersLibrary.DrawingHelpers.DrawArrow(
+            //        MainCanvas,
+            //        Calculator.CtrRigidity.X * SCALE_X,
+            //        MainCanvas.Height - Calculator.CtrRigidity.Y * SCALE_Y,
+            //        System.Windows.Media.Brushes.Black,
+            //        System.Windows.Media.Brushes.Black,
+            //        dir,
+            //        4
+            //        );
+            //}
+
+            //if (Calculator.V_y != 0)
+            //{
+            //    ArrowDirections dir = Calculator.V_y < 0 ? ArrowDirections.ARROW_DOWN : ArrowDirections.ARROW_UP;
+            //    DrawingHelpersLibrary.DrawingHelpers.DrawArrow(
+            //        MainCanvas,
+            //        Calculator.CtrRigidity.X * SCALE_X,
+            //        MainCanvas.Height - Calculator.CtrRigidity.Y * SCALE_Y,
+            //        System.Windows.Media.Brushes.Black,
+            //        System.Windows.Media.Brushes.Black,
+            //        dir,
+            //        4
+            //        );
+            //}
+
+
+
+            // Draw the moment arrow
+            //if (calculator.Mt_comb != 0)
+            //{
+            //    ArrowDirections dir = calculator.Mt_comb < 0 ? ArrowDirections.ARROW_CLOCKWISE : ArrowDirections.ARROW_COUNTERCLOCKWISE;
+            //    DrawingHelpersLibrary.DrawingHelpers.DrawCircularArrow(
+            //        MainCanvas,
+            //        calculator.CtrRigidity.X * SCALE_X + MARGIN,
+            //        MainCanvas.Height - calculator.CtrRigidity.Y * SCALE_Y - MARGIN,
+            //        System.Windows.Media.Brushes.Black,
+            //        System.Windows.Media.Brushes.Black,
+            //        dir,
+            //        3,
+            //        32 * SCALE_X,
+            //        Math.PI / 2.0,
+            //        (-1) * Math.PI / 2.0,
+            //        8
+            //        );
+            //}
+
+            //// hide the results controls
+            //HideAllDataControls();
+
+            // Create the diaphragm data controls
+            if (Calculator._diaphragm_system._diaphragms.Count > 0)
+            {
+                // turn on the controls stackpanel visibility
+                spDiaphragmDataControls.Visibility = Visibility.Visible;
+
+                DiaphragmData.Children.Clear();  // clear the stack panel controls for the diaphragm data
+                foreach (var diaphragm in Calculator._diaphragm_system._diaphragms)
+                {
+                    int id = diaphragm.Key;
+                    DiaphragmData_Rectangular dia = diaphragm.Value;
+
+                    DiaphragmDataControl control = new DiaphragmDataControl(id, dia);
+
+                    DiaphragmData.Children.Add(control);
+
+                    control.DeleteDiaphragm += OnDiaphragmDeleted;
+                }
+            }
+
+            ////// Create Table of Results
+            //if (Calculator._wall_system._walls.Count > 0)
+            //{
+            //    // turn on the results and wall data controls visibility
+            //    spWallDataControls.Visibility = Visibility.Visible;
+            //    spCalcResultsControls.Visibility = Visibility.Visible;
+
+            //    if (Calculator.GetType() == typeof(ShearWallCalculator_RigidDiaphragm))
+            //    {
+
+            //        // Create Table of Wall Data
+            //        ShearWallData_EW.Children.Clear(); // clear the stack panel controls for the wall data
+            //        ShearWallData_NS.Children.Clear(); // clear the stack panel controls for the wall data
+            //        ShearWallResults.Children.Clear(); // clear the stack panel controls for the calculation results data
+
+            //        foreach (var result in ((ShearWallCalculator_RigidDiaphragm)Calculator).TotalWallShear)
+            //        {
+            //            int id = result.Key;
+            //            float rigidity = ((ShearWallCalculator_RigidDiaphragm)Calculator)._wall_system.EW_Walls.ContainsKey(id) ? ((ShearWallCalculator_RigidDiaphragm)Calculator)._wall_system.EW_Walls[id].WallRigidity : Calculator._wall_system.NS_Walls[id].WallRigidity;
+            //            float direct_shear_x = ((ShearWallCalculator_RigidDiaphragm)Calculator).DirectShear_X.ContainsKey(id) ? ((ShearWallCalculator_RigidDiaphragm)Calculator).DirectShear_X[id] : 0.0f;
+            //            float direct_shear_y = ((ShearWallCalculator_RigidDiaphragm)Calculator).DirectShear_Y.ContainsKey(id) ? ((ShearWallCalculator_RigidDiaphragm)Calculator).DirectShear_Y[id] : 0.0f;
+            //            float eccentric_shear = ((ShearWallCalculator_RigidDiaphragm)Calculator).EccentricShear.ContainsKey(id) ? ((ShearWallCalculator_RigidDiaphragm)Calculator).EccentricShear[id] : 0.0f;
+            //            float total_shear = ((ShearWallCalculator_RigidDiaphragm)Calculator).TotalWallShear.ContainsKey(id) ? ((ShearWallCalculator_RigidDiaphragm)Calculator).TotalWallShear[id] : 0.0f;
+
+            //            ShearWallResultsControl control = new ShearWallResultsControl(
+            //                id,
+            //                rigidity,
+            //                Calculator._wall_system.X_bar_walls[id],
+            //                Calculator._wall_system.Y_bar_walls[id],
+            //                direct_shear_x,
+            //                direct_shear_y,
+            //                eccentric_shear,
+            //                total_shear
+            //                );
+
+            //            ShearWallResults.Children.Add(control);
+            //        }
+
+            //        /// Create the shearwall data controls
+            //        foreach (var result in ((ShearWallCalculator_RigidDiaphragm)Calculator).TotalWallShear)
+            //        {
+            //            int id = result.Key;
+            //            WallData wall = Calculator._wall_system.EW_Walls.ContainsKey(id) ? Calculator._wall_system.EW_Walls[id] : Calculator._wall_system.NS_Walls[id];
+            //            ShearWallDataControl control = new ShearWallDataControl(id, wall);
+
+            //            if (wall.WallDir == WallDirs.EastWest)
+            //            {
+            //                ShearWallData_EW.Children.Add(control);
+            //            }
+            //            else if (wall.WallDir == WallDirs.NorthSouth)
+            //            {
+            //                ShearWallData_NS.Children.Add(control);
+            //            }
+            //            else
+            //            {
+            //                throw new Exception("Invalid wall direction " + wall.WallDir.ToString() + " in wall #" + id.ToString());
+            //            }
+
+            //            control.DeleteWall += OnWallDeleted;
+            //        }
+            //    }
+            //    else if (Calculator.GetType() == typeof(ShearWallCalculator_FlexibleDiaphragm))
+            //    {
+            //        // Create Table of Wall Data
+            //        ShearWallData_EW.Children.Clear();
+            //        ShearWallData_NS.Children.Clear();
+            //        ShearWallResults.Children.Clear();
+
+            //        throw new NotImplementedException("\nFlexible Diaphragms Calculator not implemented yet.");
+            //    }
+            //    else
+            //    {
+            //        throw new NotImplementedException("\nInvalid Calaculator type received.");
+            //    }
+            //}
         }
 
         #region Creating objects for the UI
@@ -231,7 +504,7 @@ namespace ShearWallVisualizer
 
                     // Add dimension text
                     TextBlock text = new TextBlock();
-                    if (LineIsHorizontal(_currentPreviewLine))
+                    if (MathHelpers.LineIsHorizontal(_currentPreviewLine))
                     {
                         text.Text = $"{Math.Abs(end.X - start.X):0.0} ft";
                     } else
@@ -320,7 +593,7 @@ namespace ShearWallVisualizer
                         Height = Math.Abs(P4.Y-P1.Y),
                         Fill = Brushes.Green,
                         Stroke = Brushes.Green,
-                        StrokeThickness = rect_boundary_line_thickness,
+                        StrokeThickness = _canvas_drawer.rect_boundary_line_thickness,
                         Opacity = 0.3f
                     };
                     Canvas.SetLeft(shape, P4.X);
@@ -363,7 +636,7 @@ namespace ShearWallVisualizer
                 Height = height,
                 Fill = fill,
                 Stroke = fill,
-                StrokeThickness = rect_boundary_line_thickness,
+                StrokeThickness = _canvas_drawer.rect_boundary_line_thickness,
                 Opacity = opacity
             };
             Canvas.SetLeft(rect, left);
@@ -397,8 +670,8 @@ namespace ShearWallVisualizer
             {
                 Point p1 = new Point(i, 0);
                 Point p2 = new Point(i, bb_max_pt.Y);
-                Point scr_p1 = WorldCoord_ToScreen(p1);
-                Point scr_p2 = WorldCoord_ToScreen(p2);
+                Point scr_p1 = MathHelpers.WorldCoord_ToScreen(cnvMainCanvas.Height, p1, SCALE_X, SCALE_Y);
+                Point scr_p2 = MathHelpers.WorldCoord_ToScreen(cnvMainCanvas.Height, p2, SCALE_X, SCALE_Y);
 
                 // create the vertical major gridlines in screen coords
                 Line verticalLine = new Line { X1 = p1.X, Y1 = p1.Y, X2 = p2.X, Y2 = p2.Y, Stroke = Brushes.DarkGray, StrokeDashArray = new DoubleCollection { 2, 2 }, StrokeThickness = 0.2 };
@@ -410,8 +683,8 @@ namespace ShearWallVisualizer
             {
                 Point p1 = new Point(i, 0);
                 Point p2 = new Point(i, bb_max_pt.Y);
-                Point scr_p1 = WorldCoord_ToScreen(p1);
-                Point scr_p2 = WorldCoord_ToScreen(p2);
+                Point scr_p1 = MathHelpers.WorldCoord_ToScreen(cnvMainCanvas.Height, p1, SCALE_X, SCALE_Y);
+                Point scr_p2 = MathHelpers.WorldCoord_ToScreen(cnvMainCanvas.Height, p2, SCALE_X, SCALE_Y);
 
                 // check if we already have a major gridline by detemining if i is a multiple of the major gridline spacing
                 if (i % DEFAULT_GRIDLINE_SPACING_MAJOR == 0)
@@ -429,8 +702,8 @@ namespace ShearWallVisualizer
             {
                 Point p1 = new Point(0, i);
                 Point p2 = new Point(bb_max_pt.X, i);
-                Point scr_p1 = WorldCoord_ToScreen(p1);
-                Point scr_p2 = WorldCoord_ToScreen(p2);
+                Point scr_p1 = MathHelpers.WorldCoord_ToScreen(cnvMainCanvas.Height, p1, SCALE_X, SCALE_Y);
+                Point scr_p2 = MathHelpers.WorldCoord_ToScreen(cnvMainCanvas.Height, p2, SCALE_X, SCALE_Y);
 
                 // draw the major gridlines
                 Line horizontalLine = new Line { X1 = p1.X, Y1 = p1.Y, X2 = p2.X, Y2 = p2.Y, Stroke = Brushes.DarkGray, StrokeDashArray = new DoubleCollection { 2, 2 }, StrokeThickness = 0.2 };
@@ -450,8 +723,8 @@ namespace ShearWallVisualizer
 
                 Point p1 = new Point(0, i);
                 Point p2 = new Point(bb_max_pt.X, i);
-                Point scr_p1 = WorldCoord_ToScreen(p1);
-                Point scr_p2 = WorldCoord_ToScreen(p2);
+                Point scr_p1 = MathHelpers.WorldCoord_ToScreen(cnvMainCanvas.Height, p1, SCALE_X, SCALE_Y);
+                Point scr_p2 = MathHelpers.WorldCoord_ToScreen(cnvMainCanvas.Height, p2, SCALE_X, SCALE_Y);
 
                 // draw the minor gridlines
                 Line horizontalLine = new Line { X1 = p1.X, Y1 = p1.Y, X2 = p2.X, Y2 = p2.Y, Stroke = Brushes.DarkGray, StrokeDashArray = new DoubleCollection { 2, 2 }, StrokeThickness = 0.1 };
@@ -459,802 +732,6 @@ namespace ShearWallVisualizer
             }
         }
 
-        /// <summary>
-        /// Create the drawing objects (in canvas screen coordinates) from the structural model objects in world coordinates
-        /// </summary>
-        public void CreateStructuralObjects()
-        {
-            // Loop through the wall system in the model and create drawing objects for the UI in screen coordinates
-            foreach (var item in Calculator._wall_system._walls)
-            {
-                WallDirs walldir = item.Value.WallDir;
-
-                // Get the screen coords based on the world coords in the model
-                Point canvas_start_pt = WorldCoord_ToScreen(item.Value.Start);
-                Point canvas_end_pt = WorldCoord_ToScreen(item.Value.End);
-
-                float canvas_height = (float)(canvas_end_pt.Y - canvas_start_pt.Y);
-                float canvas_width = (float)(canvas_end_pt.X - canvas_start_pt.X);
-
-                // for hoirzontal walls
-                if(walldir == WallDirs.EastWest)
-                {
-                    // if the width measures as negative, swap the start and end points for drawing
-                    if (canvas_width < 0)
-                    {
-                        Point temp = canvas_start_pt;
-                        canvas_start_pt = canvas_end_pt;
-                        canvas_end_pt = temp;
-                    }
-                }
-
-                // for vertical walls
-                if (walldir == WallDirs.NorthSouth)
-                {
-                    // if the height measures as negative, swap the start and end points for drawing
-                    if (canvas_height < 0)
-                    {
-                        Point temp = canvas_start_pt;
-                        canvas_start_pt = canvas_end_pt;
-                        canvas_end_pt = temp;
-                    }
-                }
-
-                // set the width and height for the drawing object
-                float width = (walldir == WallDirs.EastWest ? (float)Math.Abs(canvas_width) : 1.0f);
-                float height = (walldir == WallDirs.NorthSouth ? (float)Math.Abs(canvas_height) : 1.0f);
-
-                // add the drawing objects to the Canvas
-                AddRectangleWithBorderAndCenter(
-                    canvas_start_pt.X,
-                    canvas_start_pt.Y,
-                    width,
-                    height,
-                    Brushes.Blue,
-                    1.0f);
-
-                if (_shouldSnapToNearest == true)
-                {
-                    DrawCircles(canvas_start_pt, 4, Brushes.Blue);
-                    DrawCircles(canvas_end_pt, 4, Brushes.Blue);
-                }
-            }
-
-            // Loop through the diaphragm system in the model and create drawing objects for the UI
-            foreach (var item in Calculator._diaphragm_system._diaphragms)
-            {
-                // P3 (upper right) and P1 (lower left) are opposite corners of the diaphragm definition
-                // Get the screen coords based on the world coords of the model
-                Point p1_canvas_pt = WorldCoord_ToScreen(item.Value.P1);
-                Point p2_canvas_pt = WorldCoord_ToScreen(item.Value.P2);
-                Point p3_canvas_pt = WorldCoord_ToScreen(item.Value.P3);
-                Point p4_canvas_pt = WorldCoord_ToScreen(item.Value.P4);
-
-                // calculate the width and height of the diaphragm
-                float canvas_height = Math.Abs((float)(p3_canvas_pt.Y - p1_canvas_pt.Y));
-                float canvas_width = Math.Abs((float)(p3_canvas_pt.X - p1_canvas_pt.X));
-
-                // add the rectangle using P4 (upper left) since rectangles are drawn by default from the upper left
-                AddRectangleWithBorderAndCenter(
-                    p4_canvas_pt.X,
-                    p4_canvas_pt.Y,
-                    canvas_width,
-                    canvas_height,
-                    Brushes.Red,
-                    0.5f);
-
-                if (_shouldSnapToNearest == true)
-                {
-                    DrawCircles(p1_canvas_pt, 4, Brushes.Red);
-                    DrawCircles(p2_canvas_pt, 4, Brushes.Red);
-                    DrawCircles(p3_canvas_pt, 4, Brushes.Red);
-                    DrawCircles(p4_canvas_pt, 4, Brushes.Red);
-                }
-            }
-        }
-        #endregion
-
-        #region Drawing functions
-        /// <summary>
-        /// Adds a circular markers at specified point
-        /// </summary>
-        /// <param name="p1"></param>
-        /// <param name="p2"></param>
-        /// <param name="p3"></param>
-        /// <param name="p4"></param>
-        private void DrawCircles(Point p1, float dia, Brush color, float opacity = 1.0f)
-        {
-            // marker for P1 of the rectangle -- center of area / mass
-            Ellipse centerCircle = new Ellipse { Width = dia, Height = dia, Fill = color, Opacity = opacity };
-            Canvas.SetLeft(centerCircle, p1.X - 2.0);
-            Canvas.SetTop(centerCircle, p1.Y - 2.0);
-            StructuralObjects.Add(centerCircle);
-        }
-
-        /// <summary>
-        /// Draw the bounding box of the elements on the canvas
-        /// </summary>
-        private void DrawBoundingBox()
-        {
-            // if no calculator defined, cancel this operation
-            if (Calculator == null)
-            {
-                return;
-            }
-
-            // retrieve the bounding box points fro the calculator (in World Coordinates_
-            // --bb_min_pt is the lower left
-            // --bb_max_pt is the upper right
-            System.Windows.Point bb_min_pt = Calculator.Boundary_Min_Point;
-            System.Windows.Point bb_max_pt = Calculator.Boundary_Max_Point;
-
-            // convert the bounding box points to screen coordinates
-            System.Windows.Point screen_bb_min_pt = WorldCoord_ToScreen(bb_min_pt);
-            System.Windows.Point screen_bb_max_pt = WorldCoord_ToScreen(bb_max_pt);
-
-            // retrieve the min and max values for the x and y coordinates of the bounding box
-            float screen_bb_left = (float)screen_bb_min_pt.X;  // x-min
-            float screen_bb_top = (float)screen_bb_max_pt.Y;  // y-max
-            float screen_bb_right = (float)screen_bb_max_pt.X;  // x-max
-            float screen_bb_bottom = (float)screen_bb_min_pt.Y;  // y- max
-
-            if (Calculator._diaphragm_system._diaphragms.Count > 0 || Calculator._wall_system._walls.Count > 0)
-            {
-                Line topLine = new Line { X1 = screen_bb_left, Y1 = screen_bb_top, X2 = screen_bb_right, Y2 = screen_bb_top, Stroke = Brushes.Black, StrokeThickness = 2 * rect_boundary_line_thickness, StrokeDashArray = new DoubleCollection { 1, 1 } };
-                Line bottomLine = new Line { X1 = screen_bb_left, Y1 = screen_bb_bottom, X2 = screen_bb_right, Y2 = screen_bb_bottom, Stroke = Brushes.Black, StrokeThickness = 2 * rect_boundary_line_thickness, StrokeDashArray = new DoubleCollection { 1, 1 } };
-                Line leftLine = new Line { X1 = screen_bb_left, Y1 = screen_bb_top, X2 = screen_bb_left, Y2 = screen_bb_bottom, Stroke = Brushes.Black, StrokeThickness = 2 * rect_boundary_line_thickness, StrokeDashArray = new DoubleCollection { 1, 1 } };
-                Line rightLine = new Line { X1 = screen_bb_right, Y1 = screen_bb_top, X2 = screen_bb_right, Y2 = screen_bb_bottom, Stroke = Brushes.Black, StrokeThickness = 2 * rect_boundary_line_thickness, StrokeDashArray = new DoubleCollection { 1, 1 } };
-
-                // add the lines to the canvas control
-                cnvMainCanvas.Children.Add(topLine);
-                cnvMainCanvas.Children.Add(bottomLine);
-                cnvMainCanvas.Children.Add(leftLine);
-                cnvMainCanvas.Children.Add(rightLine);
-
-                // update the bounding box limits display on the UI
-                lblXMin.Content = screen_bb_left.ToString("0.00");
-                lblYMin.Content = screen_bb_bottom.ToString("0.00");
-                lblXMax.Content = screen_bb_right.ToString("0.00");
-                lblYMax.Content = screen_bb_top.ToString("0.00");
-            }
-        }
-
-        /// <summary>
-        /// Draw the non model canvas details 
-        /// Use the function to add precalculated items to the canvas -- eliminates continuous recalculation
-        /// -- gridlines
-        /// </summary>
-        public void DrawCanvasDetails()
-        {
-            if (CanvasDetailsObjects == null || CanvasDetailsObjects.Count == 0)
-            {
-                return;
-            }
-            foreach (var item in CanvasDetailsObjects)
-            {
-                if (item == null) continue;
-
-                if (cnvMainCanvas.Children.Contains(item) != true)
-                {
-                    cnvMainCanvas.Children.Add(item);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Draw the structural model objects
-        /// Use this function to add structural model objects to the canvas
-        /// -- walls and wall system
-        /// -- diaphragms and diaphragm system
-        /// </summary>
-        public void DrawStructuralObjects()
-        {
-            if (StructuralObjects == null || StructuralObjects.Count == 0)
-            {
-                return;
-            }
-            foreach (var item in StructuralObjects)
-            {
-                if (item == null) continue;
-
-                if (cnvMainCanvas.Children.Contains(item) != true)
-                {
-                    cnvMainCanvas.Children.Add(item);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Draw the preview shapes for point collection
-        /// -- preview cursor image
-        /// </summary>
-        public void DrawPreviewObjects()
-        {
-            if(PreviewObjects == null || PreviewObjects.Count == 0)
-            {
-                return;
-            }
-
-            foreach (Shape item in PreviewObjects)
-            {
-                if (item == null) continue;
-
-                if(cnvMainCanvas.Children.Contains(item) != true)
-                {
-                    cnvMainCanvas.Children.Add(item);
-                }
-            }
-        }
-
-        public void DrawBracedWallLines()
-        {
-            // if no wall system, then don't draw anything
-            if (Calculator._wall_system == null || Calculator._wall_system._walls.Count == 0)
-            {
-                return;
-            }
-
-            // Draw the east west braced wall lines
-            if ((Calculator._wall_system.BracedWallGroups_EW != null) && (Calculator._wall_system.BracedWallGroups_EW.groupedValues != null)
-                && (Calculator._wall_system.BracedWallGroups_EW.groupedValues.Count > 0))
-            {
-                foreach (var wall in Calculator._wall_system.BracedWallGroups_EW.groupedValues)
-                {
-
-                    // draw a line at the center of all of the values in this group
-                    float first = (float)wall[0];
-                    float last = (float)wall[wall.Count - 1];
-                    float center = (first + last) / 2;
-                    Point p1_world = new Point(-3000, center);
-                    Point p2_world = new Point(3000, center);
-                    Point p1_screen = WorldCoord_ToScreen(p1_world);
-                    Point p2_screen = WorldCoord_ToScreen(p2_world);
-
-                    Line line = new Line { X1 = p1_screen.X, Y1 = p1_screen.Y, X2 = p2_screen.X, Y2 = p2_screen.Y, Stroke = Brushes.Red, StrokeDashArray = new DoubleCollection { 4, 2 }, StrokeThickness = 0.5 };
-                    cnvMainCanvas.Children.Add(line);
-                }
-            }
-
-            // Draw the east west braced wall lines
-            if ((Calculator._wall_system.BracedWallGroups_NS != null) && (Calculator._wall_system.BracedWallGroups_NS.groupedValues != null)
-                && (Calculator._wall_system.BracedWallGroups_NS.groupedValues.Count > 0))
-            {
-                foreach (var wall in Calculator._wall_system.BracedWallGroups_NS.groupedValues)
-                {
-
-                    // draw a line at the center of all of the values in this group
-                    float first = (float)wall[0];
-                    float last = (float)wall[wall.Count - 1];
-                    float center = (first + last) / 2;
-                    Point p1_world = new Point(center, -3000);
-                    Point p2_world = new Point(center, 3000);
-                    Point p1_screen = WorldCoord_ToScreen(p1_world);
-                    Point p2_screen = WorldCoord_ToScreen(p2_world);
-
-                    Line line = new Line { X1 = p1_screen.X, Y1 = p1_screen.Y, X2 = p2_screen.X, Y2 = p2_screen.Y, Stroke = Brushes.Red, StrokeDashArray = new DoubleCollection { 4, 2 }, StrokeThickness = 0.5 };
-                    cnvMainCanvas.Children.Add(line);
-                }
-            }
-        }
-
-        /// <summary>
-        /// The primary draw functions for items on the canvas and the summary controls
-        /// </summary>
-        /// <exception cref="Exception"></exception>
-        /// <exception cref="NotImplementedException"></exception>
-        private void DrawResults()
-        {
-            // No calculator?  Nothing to draw so return
-            if (Calculator == null)
-            {
-                return;
-            }
-
-            //// Clear the MainCanvas before redrawing.
-            cnvMainCanvas.Children.Clear();
-
-            // Draw the gridlines and other non-model objects on the canvas
-            DrawCanvasDetails();
-
-            // draw the structural model objects -- do this before any added details and highlights
-            DrawStructuralObjects();
-
-            // draw the bounding box around all structural model objects
-            DrawBoundingBox();
-
-            // Draw the preview object (line or rectangle)
-            if (_currentPreviewLine != null)
-            {
-                CreatePreviewShape();
-            }
-            DrawPreviewObjects();
-
-            // Draw extra information for walls -- label numbers etc.
-            DrawWallsInfo();
-
-            // Draw extra information for diaphragms -- label numbers etc.
-            DrawDiaphragmsInfo();
-
-            // Draw center of mass and center of rigidity
-            DrawCOMandCOR();
-
-            // Draw the braced wall line data.
-            DrawBracedWallLines();
-
-            // Draw crosshairs
-            cnvMainCanvas.Children.Add(_crosshairVertical);
-            cnvMainCanvas.Children.Add(_crosshairHorizontal);
-            Point crosshair_intersection = new Point(_crosshairVertical.X1, _crosshairHorizontal.Y1);
-
-            if (_shouldSnapToNearest is true)
-            {
-                // add marker at cross hair intersection point
-                // marker for center of the rectangle -- center of area / mass
-                Ellipse snapCircle = new Ellipse
-                {
-                    Width = _snapDistance * 2.0f,
-                    Height = _snapDistance * 2.0f,
-                    StrokeThickness = 2.0f,
-                    Stroke = Brushes.Red,
-                    Fill = Brushes.Transparent,
-                    IsHitTestVisible = false
-                };
-                Canvas.SetLeft(snapCircle, crosshair_intersection.X - snapCircle.Width / 2.0f);
-                Canvas.SetTop(snapCircle, crosshair_intersection.Y - snapCircle.Height / 2.0f);
-                cnvMainCanvas.Children.Add(snapCircle);
-            }
-
-
-
-
-
-
-            //// Draw the Loads
-            //if (Calculator.V_x != 0)
-            //{
-            //    ArrowDirections dir = Calculator.V_x < 0 ? ArrowDirections.ARROW_LEFT : ArrowDirections.ARROW_RIGHT;
-            //    DrawingHelpersLibrary.DrawingHelpers.DrawArrow(
-            //        MainCanvas,
-            //        Calculator.CtrRigidity.X * SCALE_X,
-            //        MainCanvas.Height - Calculator.CtrRigidity.Y * SCALE_Y,
-            //        System.Windows.Media.Brushes.Black,
-            //        System.Windows.Media.Brushes.Black,
-            //        dir,
-            //        4
-            //        );
-            //}
-
-            //if (Calculator.V_y != 0)
-            //{
-            //    ArrowDirections dir = Calculator.V_y < 0 ? ArrowDirections.ARROW_DOWN : ArrowDirections.ARROW_UP;
-            //    DrawingHelpersLibrary.DrawingHelpers.DrawArrow(
-            //        MainCanvas,
-            //        Calculator.CtrRigidity.X * SCALE_X,
-            //        MainCanvas.Height - Calculator.CtrRigidity.Y * SCALE_Y,
-            //        System.Windows.Media.Brushes.Black,
-            //        System.Windows.Media.Brushes.Black,
-            //        dir,
-            //        4
-            //        );
-            //}
-
-
-
-            // Draw the moment arrow
-            //if (calculator.Mt_comb != 0)
-            //{
-            //    ArrowDirections dir = calculator.Mt_comb < 0 ? ArrowDirections.ARROW_CLOCKWISE : ArrowDirections.ARROW_COUNTERCLOCKWISE;
-            //    DrawingHelpersLibrary.DrawingHelpers.DrawCircularArrow(
-            //        MainCanvas,
-            //        calculator.CtrRigidity.X * SCALE_X + MARGIN,
-            //        MainCanvas.Height - calculator.CtrRigidity.Y * SCALE_Y - MARGIN,
-            //        System.Windows.Media.Brushes.Black,
-            //        System.Windows.Media.Brushes.Black,
-            //        dir,
-            //        3,
-            //        32 * SCALE_X,
-            //        Math.PI / 2.0,
-            //        (-1) * Math.PI / 2.0,
-            //        8
-            //        );
-            //}
-
-            // hide the results controls
-            HideAllDataControls();
-
-            // Create the diaphragm data controls
-            if (Calculator._diaphragm_system._diaphragms.Count > 0)
-            {
-                // turn on the controls stackpanel visibility
-                spDiaphragmDataControls.Visibility = Visibility.Visible;
-
-                DiaphragmData.Children.Clear();  // clear the stack panel controls for the diaphragm data
-                foreach (var diaphragm in Calculator._diaphragm_system._diaphragms)
-                {
-                    int id = diaphragm.Key;
-                    DiaphragmData_Rectangular dia = diaphragm.Value;
-
-                    DiaphragmDataControl control = new DiaphragmDataControl(id, dia);
-
-                    DiaphragmData.Children.Add(control);
-
-                    control.DeleteDiaphragm += OnDiaphragmDeleted;
-
-                }
-            }
-
-            //// Create Table of Results
-            if(Calculator._wall_system._walls.Count > 0)
-            {
-                // turn on the results and wall data controls visibility
-                spWallDataControls.Visibility = Visibility.Visible;
-                spCalcResultsControls.Visibility = Visibility.Visible;
-
-                if (Calculator.GetType() == typeof(ShearWallCalculator_RigidDiaphragm))
-                {
-
-                    // Create Table of Wall Data
-                    ShearWallData_EW.Children.Clear(); // clear the stack panel controls for the wall data
-                    ShearWallData_NS.Children.Clear(); // clear the stack panel controls for the wall data
-                    ShearWallResults.Children.Clear(); // clear the stack panel controls for the calculation results data
-
-                    foreach (var result in ((ShearWallCalculator_RigidDiaphragm)Calculator).TotalWallShear)
-                    {
-                        int id = result.Key;
-                        float rigidity = ((ShearWallCalculator_RigidDiaphragm)Calculator)._wall_system.EW_Walls.ContainsKey(id) ? ((ShearWallCalculator_RigidDiaphragm)Calculator)._wall_system.EW_Walls[id].WallRigidity : Calculator._wall_system.NS_Walls[id].WallRigidity;
-                        float direct_shear_x = ((ShearWallCalculator_RigidDiaphragm)Calculator).DirectShear_X.ContainsKey(id) ? ((ShearWallCalculator_RigidDiaphragm)Calculator).DirectShear_X[id] : 0.0f;
-                        float direct_shear_y = ((ShearWallCalculator_RigidDiaphragm)Calculator).DirectShear_Y.ContainsKey(id) ? ((ShearWallCalculator_RigidDiaphragm)Calculator).DirectShear_Y[id] : 0.0f;
-                        float eccentric_shear = ((ShearWallCalculator_RigidDiaphragm)Calculator).EccentricShear.ContainsKey(id) ? ((ShearWallCalculator_RigidDiaphragm)Calculator).EccentricShear[id] : 0.0f;
-                        float total_shear = ((ShearWallCalculator_RigidDiaphragm)Calculator).TotalWallShear.ContainsKey(id) ? ((ShearWallCalculator_RigidDiaphragm)Calculator).TotalWallShear[id] : 0.0f;
-
-                        ShearWallResultsControl control = new ShearWallResultsControl(
-                            id,
-                            rigidity,
-                            Calculator._wall_system.X_bar_walls[id],
-                            Calculator._wall_system.Y_bar_walls[id],
-                            direct_shear_x,
-                            direct_shear_y,
-                            eccentric_shear,
-                            total_shear
-                            );
-
-                        ShearWallResults.Children.Add(control);
-                    }
-
-                    /// Create the shearwall data controls
-                    foreach (var result in ((ShearWallCalculator_RigidDiaphragm)Calculator).TotalWallShear)
-                    {
-                        int id = result.Key;
-                        WallData wall = Calculator._wall_system.EW_Walls.ContainsKey(id) ? Calculator._wall_system.EW_Walls[id] : Calculator._wall_system.NS_Walls[id];
-                        ShearWallDataControl control = new ShearWallDataControl(id, wall);
-
-                        if (wall.WallDir == WallDirs.EastWest)
-                        {
-                            ShearWallData_EW.Children.Add(control);
-                        }
-                        else if (wall.WallDir == WallDirs.NorthSouth)
-                        {
-                            ShearWallData_NS.Children.Add(control);
-                        }
-                        else
-                        {
-                            throw new Exception("Invalid wall direction " + wall.WallDir.ToString() + " in wall #" + id.ToString());
-                        }
-
-                        control.DeleteWall += OnWallDeleted;
-                    }
-                }
-                else if (Calculator.GetType() == typeof(ShearWallCalculator_FlexibleDiaphragm))
-                {
-                    // Create Table of Wall Data
-                    ShearWallData_EW.Children.Clear();
-                    ShearWallData_NS.Children.Clear();
-                    ShearWallResults.Children.Clear();
-
-                    throw new NotImplementedException("\nFlexible Diaphragms Calculator not implemented yet.");
-                }
-                else
-                {
-                    throw new NotImplementedException("\nInvalid Calaculator type received.");
-                }
-            }
-        }
-
-        /// <summary>
-        /// For drawing text labels and other info for walls
-        /// </summary>
-        private void DrawWallsInfo()
-        {
-            //Draw the additional wall info including labels for the center point
-            if (Calculator._wall_system != null)
-            {
-                // East-West walls
-                if (Calculator._wall_system.EW_Walls.Count > 0)
-                {
-                    foreach (var wall in Calculator._wall_system.EW_Walls)
-                    {
-                        System.Windows.Point cp = WorldCoord_ToScreen(wall.Value.Center);
-
-                        // number label for the wall ID
-                        DrawingHelpersLibrary.DrawingHelpers.DrawText
-                            (
-                            cnvMainCanvas,
-                            cp.X + 1,
-                            cp.Y + 1,
-                            0,
-                            wall.Key.ToString(),
-                            System.Windows.Media.Brushes.Black,
-                            6
-                            );
-                    }
-                }
-                //North-South walls
-                if (Calculator._wall_system.NS_Walls.Count > 0)
-                {
-                    foreach (var wall in Calculator._wall_system.NS_Walls)
-                    {
-                        System.Windows.Point cp = WorldCoord_ToScreen(wall.Value.Center);
-
-                        DrawingHelpersLibrary.DrawingHelpers.DrawText
-                            (
-                            cnvMainCanvas,
-                            cp.X + 1,
-                            cp.Y + 1,
-                            0,
-                            wall.Key.ToString(),
-                            System.Windows.Media.Brushes.Black,
-                            6
-                            );
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// For drawing text labels and other info for walls
-        /// </summary>
-        private void DrawDiaphragmsInfo()
-        {
-            //Draw the additional wall info including labels for the center point
-            if (Calculator._diaphragm_system != null)
-            {
-                // East-West walls
-                if (Calculator._diaphragm_system._diaphragms.Count > 0)
-                {
-                    foreach (var diaphragm in Calculator._diaphragm_system._diaphragms)
-                    {
-                        System.Windows.Point cp = WorldCoord_ToScreen(diaphragm.Value.Centroid);
-
-                        // number label for the wall ID
-                        DrawingHelpersLibrary.DrawingHelpers.DrawText
-                            (
-                            cnvMainCanvas,
-                            cp.X + 1,
-                            cp.Y + 1,
-                            0,
-                            diaphragm.Key.ToString(),
-                            System.Windows.Media.Brushes.Red,
-                            6
-                            );
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// Handles drawing the Center of Mass and Center of Rigidity points
-        /// </summary>
-        private void DrawCOMandCOR()
-        {
-            // Draw the Center of Rigiidity Point
-            System.Windows.Point cor_pt = WorldCoord_ToScreen(Calculator._wall_system.CtrRigidity);
-            if (Calculator._wall_system != null)
-            {
-                DrawingHelpersLibrary.DrawingHelpers.DrawCircle(
-                    cnvMainCanvas,
-                    cor_pt.X,
-                    cor_pt.Y,
-                    System.Windows.Media.Brushes.Blue,
-                    System.Windows.Media.Brushes.Blue,
-                    7,
-                    0.5);
-                DrawingHelpersLibrary.DrawingHelpers.DrawText(
-                    cnvMainCanvas,
-                    cor_pt.X + 1.5,
-                    cor_pt.Y - 10,
-                    0,
-                    "C.R",
-                    System.Windows.Media.Brushes.Black,
-                    6
-                    );
-            }
-
-            // if we have a defined diaphragm, draw the centroid in screen coords
-            System.Windows.Point p1 = WorldCoord_ToScreen(Calculator._diaphragm_system.CtrMass);
-            if (Calculator._diaphragm_system != null)
-            {
-                // Draw the Center of Rigidity Point
-                DrawingHelpersLibrary.DrawingHelpers.DrawCircle(
-                    cnvMainCanvas,
-                    p1.X, p1.Y,
-                    System.Windows.Media.Brushes.Red,
-                    System.Windows.Media.Brushes.Red,
-                    7,
-                    1);
-                DrawingHelpersLibrary.DrawingHelpers.DrawText(
-                    cnvMainCanvas,
-                    p1.X + 1.5,
-                    p1.Y + 2,
-                    0,
-                    "C.M",
-                    System.Windows.Media.Brushes.Black,
-                    6
-                    );
-            }
-        }
-        #endregion
-
-        #region Helper and Utility Functions
-        /// <summary>
-        /// converts coordinates from the screen (canvas) to the world coordinates
-        /// </summary>
-        /// <param name="p"></param>
-        /// <returns></returns>
-        private Point ScreenCoord_ToWorld(Point p)
-        {
-            return new Point(p.X / (float)SCALE_X, (cnvMainCanvas.Height - p.Y) / (float)SCALE_Y);
-        }
-
-        /// <summary>
-        /// converts coordinates from the world to the screen coordinates (canvas) system
-        /// </summary>
-        /// <param name="p"></param>
-        /// <returns></returns>
-        private Point WorldCoord_ToScreen(Point p)
-        {
-            return new Point(p.X * (float)SCALE_X, cnvMainCanvas.Height - (p.Y * (float)SCALE_Y));
-        }
-
-        /// <summary>
-        /// Function to determine if a line object is more horizontal than vertical by comparing the x and y distances between the start and end points
-        /// </summary>
-        /// <param name="line"></param>
-        /// <returns></returns>
-        private bool LineIsHorizontal(Line line)
-        {
-            if (line == null) return false;
-
-            return (Math.Abs(line.X1 - line.X2) > Math.Abs(line.Y1 - line.Y2));
-        }
-
-        private float DistanceBetweenPoints(Point p1, Point p2)
-        {
-            float x1 = (float)p1.X;
-            float y1 = (float)p1.Y;
-            float x2 = (float)p2.X;
-            float y2 = (float)p2.Y;
-            return (float)(Math.Sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2)));
-        }
-
-        private bool PointIsWithinRange(Point pt1, Point pt2, float range)
-        {
-            if (DistanceBetweenPoints(pt1, pt2) <= range)
-            {
-                return true;
-            }
-            return false;
-        }
-
-        private Point FindNearestSnapPoint(Point src_pt, out bool result)
-        {
-            Point pt = new Point(float.MaxValue, float.MaxValue);
-            result = false;
-            float dist = float.MaxValue;
-
-            bool wall_Result = false;
-            bool diaphragm_Result = false;
-
-            Point wall_pt = FindNearestWallEndPoint(src_pt, out wall_Result);
-            Point diaphragm_pt = FindNearestDiaphragmCornerPoint(src_pt, out diaphragm_Result);
-
-            if (wall_Result == true && diaphragm_Result == true)
-            {
-                if (DistanceBetweenPoints(wall_pt, src_pt) <= DistanceBetweenPoints(diaphragm_pt, src_pt))
-                {
-                    dist = DistanceBetweenPoints(wall_pt, src_pt);
-                    pt = wall_pt;
-                    result = true;
-                }
-                else
-                {
-                    dist = DistanceBetweenPoints(diaphragm_pt, src_pt);
-                    pt = diaphragm_pt;
-                    result = true;
-                }
-            }
-            else if (wall_Result == true)
-            {
-                dist = DistanceBetweenPoints(wall_pt, src_pt);
-                pt = wall_pt;
-                result = true;
-            }
-            else if (diaphragm_Result == true)
-            {
-                dist = DistanceBetweenPoints(diaphragm_pt, src_pt);
-                pt = diaphragm_pt;
-                result = true;
-            }
-            return pt;
-        }
-
-        private Point FindNearestWallEndPoint(Point src_pt, out bool result)
-        {
-            Point pt = new Point(float.MaxValue, float.MaxValue);
-            result = false;
-            float dist = float.MaxValue;
-            foreach (var wall in Calculator._wall_system._walls)
-            {
-                float p1_dist = DistanceBetweenPoints(wall.Value.Start, src_pt);
-                float p2_dist = DistanceBetweenPoints(wall.Value.End, src_pt);
-
-                if (p1_dist <= dist)
-                {
-                    dist = p1_dist;
-                    pt = wall.Value.Start;
-                    result = true;
-                }
-                if (p2_dist <= dist)
-                {
-                    dist = p2_dist;
-                    pt = wall.Value.End;
-                    result = true;
-                }
-            }
-            return pt;
-        }
-
-        private Point FindNearestDiaphragmCornerPoint(Point src_pt, out bool result)
-        {
-            Point pt = new Point(0, 0);
-            float dist = float.MaxValue;
-            result = false;
-
-            foreach (var diaphragm in Calculator._diaphragm_system._diaphragms)
-            {
-                float p1_dist = DistanceBetweenPoints(diaphragm.Value.P1, src_pt);
-                float p2_dist = DistanceBetweenPoints(diaphragm.Value.P2, src_pt);
-                float p3_dist = DistanceBetweenPoints(diaphragm.Value.P3, src_pt);
-                float p4_dist = DistanceBetweenPoints(diaphragm.Value.P4, src_pt);
-
-                if (p1_dist <= dist)
-                {
-                    dist = p1_dist;
-                    pt = diaphragm.Value.P1;
-                    result = true;
-                }
-                if (p2_dist <= dist)
-                {
-                    dist = p2_dist;
-                    pt = diaphragm.Value.P2;
-                    result = true;
-
-                }
-                if (p3_dist <= dist)
-                {
-                    dist = p3_dist;
-                    pt = diaphragm.Value.P3;
-                    result = true;
-                }
-                if (p4_dist <= dist)
-                {
-                    dist = p4_dist;
-                    pt = diaphragm.Value.P4;
-                    result = true;
-                }
-            }
-
-            return pt;
-        }
         #endregion
 
         #region Controls
@@ -1321,12 +798,8 @@ namespace ShearWallVisualizer
 
             SetupViewScaling((float)SCALE_X, (float)SCALE_Y, (float)TRANS_X, (float)TRANS_Y);
 
-            //_scaleTransform.ScaleX *= zoomDelta;
-            //_scaleTransform.ScaleY *= zoomDelta;
-            //double scaleChangeX = _scaleTransform.ScaleX - oldScaleX;
-            //double scaleChangeY = _scaleTransform.ScaleY - oldScaleY;
-            //_translateTransform.X -= (mousePosition.X * scaleChangeX);
-            //_translateTransform.Y -= (mousePosition.Y * scaleChangeY);
+            // recreate the canvas drawer with the new zoom factor
+            _canvas_drawer = new CanvasDrawer(cnvMainCanvas, SCALE_X, SCALE_Y);
 
             Update();
         }
@@ -1338,8 +811,6 @@ namespace ShearWallVisualizer
         /// <param name="e"></param>
         private void MainCanvas_MouseDown(object sender, MouseButtonEventArgs e)
         {
-
-
             // Right button click to CANCEL
             if (e.RightButton == MouseButtonState.Pressed)
             {
@@ -1348,7 +819,7 @@ namespace ShearWallVisualizer
                 return;
             }
 
-            // Middle mouse button
+            // Middle mouse button fro zooming
             if (e.MiddleButton == MouseButtonState.Pressed)
             {
                 _isPanning = true;
@@ -1361,13 +832,13 @@ namespace ShearWallVisualizer
                 if ((CurrentInputMode == InputModes.Rigidity) || (CurrentInputMode == InputModes.Mass))
                 {
                     System.Windows.Point p = Mouse.GetPosition(cnvMainCanvas);  // screen coords
-                    System.Windows.Point wp = ScreenCoord_ToWorld(Mouse.GetPosition(cnvMainCanvas));  // world coords
+                    System.Windows.Point wp = MathHelpers.ScreenCoord_ToWorld(cnvMainCanvas.Height,Mouse.GetPosition(cnvMainCanvas), SCALE_X, SCALE_Y);  // world coords
 
                     // Find the nearest corner point on a diaphragm andreturn that point
                     bool snap_result = false;
-                    _nearestDiaphragmCornerPoint = FindNearestSnapPoint(wp, out snap_result);  // world coords
+                    _nearestDiaphragmCornerPoint = MathHelpers.FindNearestSnapPoint(Calculator._wall_system, Calculator._diaphragm_system, wp, out snap_result);  // world coords
 
-                    float dist = DistanceBetweenPoints(wp, _nearestDiaphragmCornerPoint);
+                    double dist = MathHelpers.DistanceBetweenPoints(wp, _nearestDiaphragmCornerPoint);
                     lblSnap1st.Content = "(" + _nearestDiaphragmCornerPoint.X.ToString("0.00") + ", " + _nearestDiaphragmCornerPoint.Y.ToString("0.00") + ")";
                     lblSnap2nd.Content = "(" + dist.ToString("0.00") + ")";
 
@@ -1386,10 +857,10 @@ namespace ShearWallVisualizer
                                 return;
                             }
                             Point world_temp = _nearestDiaphragmCornerPoint;
-                            if (PointIsWithinRange(wp, world_temp, _snapDistance) is true)
+                            if (MathHelpers.PointIsWithinRange(wp, world_temp, _snapDistance) is true)
                             {
                                 // convert back to screen coords
-                                p = WorldCoord_ToScreen(world_temp);
+                                p = MathHelpers.WorldCoord_ToScreen(cnvMainCanvas.Height, world_temp, SCALE_X, SCALE_Y);
                             }
                         }
 
@@ -1421,10 +892,10 @@ namespace ShearWallVisualizer
                             }
 
                             Point world_temp = _nearestDiaphragmCornerPoint;
-                            if (PointIsWithinRange(wp, world_temp, _snapDistance) is true)
+                            if (MathHelpers.PointIsWithinRange(wp, world_temp, _snapDistance) is true)
                             {
                                 // convert back to screen coords
-                                p = WorldCoord_ToScreen(world_temp);
+                                p = MathHelpers.WorldCoord_ToScreen(cnvMainCanvas.Height, world_temp, SCALE_X, SCALE_Y);
                             }
                         }
 
@@ -1471,7 +942,7 @@ namespace ShearWallVisualizer
                             //  -- larger Y direction = vertical
                             // this function draws the corresponding line through the center point of the actual line
                             WallDirs dir = WallDirs.EastWest;
-                            if (LineIsHorizontal(_currentPreviewLine))
+                            if (MathHelpers.LineIsHorizontal(_currentPreviewLine))
                             {
                                 dir = WallDirs.EastWest;
 
@@ -1491,8 +962,8 @@ namespace ShearWallVisualizer
                             Point adj_end_x = new Point(end_x, end_y);
 
                             // convert screen coords to world coords to make the true wall structure
-                            Point world_p1 = ScreenCoord_ToWorld(adj_start_x);
-                            Point world_p2 = ScreenCoord_ToWorld(adj_end_x);
+                            Point world_p1 = MathHelpers.ScreenCoord_ToWorld(cnvMainCanvas.Height, adj_start_x, SCALE_X, SCALE_Y);
+                            Point world_p2 = MathHelpers.ScreenCoord_ToWorld(cnvMainCanvas.Height,adj_end_x, SCALE_X, SCALE_Y);
 
                             // Add to the list of wall segments
                             Calculator._wall_system.AddWall(new WallData(DEFAULT_WALL_HT,
@@ -1507,11 +978,11 @@ namespace ShearWallVisualizer
                         else if (CurrentInputMode == InputModes.Mass)
                         {
                             // Create a diaphragm section by dragging opposite corners of a rectangular region
-                            Point world_p1 = ScreenCoord_ToWorld(CurrentStartPoint);
-                            Point world_p2 = ScreenCoord_ToWorld(CurrentEndPoint);
+                            Point world_p1 = MathHelpers.ScreenCoord_ToWorld(cnvMainCanvas.Height, CurrentStartPoint, SCALE_X, SCALE_Y);
+                            Point world_p2 = MathHelpers.ScreenCoord_ToWorld(cnvMainCanvas.Height, CurrentEndPoint, SCALE_X, SCALE_Y);
 
                             // Add to the list of diaphragm segments
-                            Calculator._diaphragm_system.AddDiaphragm(new DiaphragmData_Rectangular(world_p1, world_p2));
+                            Calculator._diaphragm_system.AddDiaphragm(new DiaphragmData_Rectangular(world_p2, world_p1));
                             _currentPreviewLine = null;  // clear the preview line
                             ClearCoordinateDisplayData();
                             status = "Diaphragm added";
@@ -1581,7 +1052,7 @@ namespace ShearWallVisualizer
                     if (CurrentInputMode == InputModes.Rigidity)
                     {
                         // force the line to be horizontal or vertical only
-                        if (LineIsHorizontal(_currentPreviewLine))
+                        if (MathHelpers.LineIsHorizontal(_currentPreviewLine))
                         {
                             _currentPreviewLine.Y2 = _currentPreviewLine.Y1;
                         }

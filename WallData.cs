@@ -55,9 +55,35 @@ namespace calculator
         /// <exception cref="ArgumentException"></exception>
         public WallData(float ht, float sx, float sy, float ex, float ey, WallDirs wallDir)
         {
+            // sort the points so START is always on the left of a horizontal line
+            if(wallDir == WallDirs.EastWest)
+            {
+                if(sx < ex)
+                {
+                    Start = new System.Windows.Point(sx, sy);
+                    End = new System.Windows.Point(ex, ey);
+                } else
+                {
+                    Start = new System.Windows.Point(ex, ey);
+                    End = new System.Windows.Point(sx, sy);
+                }
+            }
+
+            if (wallDir == WallDirs.NorthSouth)
+            {
+                if (sy < ey)
+                {
+                    Start = new System.Windows.Point(sx, sy);
+                    End = new System.Windows.Point(ex, ey);
+                }
+                else
+                {
+                    Start = new System.Windows.Point(ex, ey);
+                    End = new System.Windows.Point(sx, sy);
+                }
+            }
+
             WallHeight = ht;
-            Start = new System.Windows.Point(sx, sy);
-            End = new System.Windows.Point(ex, ey);
             WallDir = wallDir;
 
             //TODO:: resolve this exceptions so that they return null -- and then remember to handle this in the functions that created the object.
