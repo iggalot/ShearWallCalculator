@@ -47,6 +47,7 @@ namespace ShearWallVisualizer
         private double _canvas_width = 1.0;
 
 
+        Brush _crosshair_color { get; set; } = new SolidColorBrush(Colors.Black);
 
         private Shape _PreviewShape = null;
         private Line _currentPreviewLine = null; // contains the points for first and second selection -- stored as a line object
@@ -55,10 +56,6 @@ namespace ShearWallVisualizer
 
         // current mouse position
         private Point _currentMousePosition = new Point();
-
-        // cross hairs
-        private Line _crosshairVertical = null;
-        private Line _crosshairHorizontal = null;
 
         // variables for controlling canvas zooming and panning
         private ScaleTransform _scaleTransform;
@@ -121,28 +118,6 @@ namespace ShearWallVisualizer
             // create the gridlines
             CreateGridLines();
 
-            // creates the crosshairs for point selection
-            _crosshairVertical = new Line
-            {
-                X1 = _currentMousePosition.X,
-                Y1 = 0,
-                X2 = _currentMousePosition.X,
-                Y2 = cnvMainCanvas.Height,
-                Stroke = Brushes.Black,
-                StrokeThickness = 0.25
-            };
-
-            // creates the crosshairs for point selection
-            _crosshairHorizontal = new Line
-            {
-                Y1 = _currentMousePosition.Y,
-                X1 = 0,
-                Y2 = _currentMousePosition.Y,
-                X2 = cnvMainCanvas.Width,
-                Stroke = Brushes.Black,
-                StrokeThickness = 0.25
-            };
-
             Update();
         }
 
@@ -175,25 +150,7 @@ namespace ShearWallVisualizer
             // Update the new calculator
             Calculator.Update();
 
-            cnvMainCanvas.Children.Clear(); // clear the canvas 
-
-            // Recompute the structural objects to be drawn
-//            StructuralObjects.Clear();
-//            CreateStructuralObjects();
-
-            // Update the crosshairs
-            _crosshairVertical.X1 = _currentMousePosition.X;
-            _crosshairVertical.X2 = _currentMousePosition.X;
-
-            _crosshairHorizontal.Y1 = _currentMousePosition.Y;
-            _crosshairHorizontal.Y2 = _currentMousePosition.Y;
-
-            CreatePreviewShape();
-
-            DrawResults();
-
-            CenterOfMass.Content = "(" + Calculator._diaphragm_system.CtrMass.X.ToString("0.00") + ", " + Calculator._diaphragm_system.CtrMass.Y.ToString("0.00") + ")";
-            CenterOfRigidity.Content = "(" + Calculator._wall_system.CtrRigidity.X.ToString("0.00") + ", " + Calculator._wall_system.CtrRigidity.Y.ToString("0.00") + ")";
+            DrawCanvas();
         }
 
         /// <summary>
@@ -201,7 +158,7 @@ namespace ShearWallVisualizer
         /// </summary>
         /// <exception cref="Exception"></exception>
         /// <exception cref="NotImplementedException"></exception>
-        public void DrawResults()
+        public void DrawCanvas()
         {
             // No calculator?  Nothing to draw so return
             if (Calculator == null)
@@ -245,76 +202,73 @@ namespace ShearWallVisualizer
             // Draw the preview object (line or rectangle)
             if (_currentPreviewLine != null)
             {
-                CreatePreviewShape();
+                DrawPreviewShape();
             }
 
-            //if(PreviewObjects.Count > 0)
-            //{
-            //    _canvas_drawer.DrawPreviewObjects(PreviewObjects);
-            //}
 
-            //if (Calculator._wall_system != null && Calculator._wall_system._walls.Count > 0)
-            //{
-            //    // Draw extra information for walls -- label numbers etc.
-            //    _canvas_drawer.DrawWallsInfo(Calculator._wall_system);
-            //}
+            CenterOfMass.Content = "(" + Calculator._diaphragm_system.CtrMass.X.ToString("0.00") + ", " + Calculator._diaphragm_system.CtrMass.Y.ToString("0.00") + ")";
+            CenterOfRigidity.Content = "(" + Calculator._wall_system.CtrRigidity.X.ToString("0.00") + ", " + Calculator._wall_system.CtrRigidity.Y.ToString("0.00") + ")";
 
-
-
-            //// Draw center of mass and center of rigidity markers
-            //_canvas_drawer.DrawCOM(Calculator._diaphragm_system);
-            //_canvas_drawer.DrawCOR(Calculator._wall_system);
+            // Draw center of mass and center of rigidity markers
+            _canvas_drawer.DrawCOM(Calculator._diaphragm_system);
+            _canvas_drawer.DrawCOR(Calculator._wall_system);
 
 
             ////// Draw the braced wall line data.
             ////_canvas_drawer.DrawBracedWallLines(Calculator._wall_system);
 
-            //// Draw crosshairs
-            //cnvMainCanvas.Children.Add(_crosshairVertical);
-            //cnvMainCanvas.Children.Add(_crosshairHorizontal);
+            // Draw crosshairs
+            _canvas_drawer.DrawCrosshairs(
+                new Point(
+                    Mouse.GetPosition(cnvMainCanvas).X,
+                    Mouse.GetPosition(cnvMainCanvas).Y
+                ),
+                _crosshair_color
+                );
 
-            //// If snapping mode is enabled, draw the extra markers and change the cross hair appearance
-            //Point crosshair_intersection = new Point(_crosshairVertical.X1, _crosshairHorizontal.Y1);
-            //if (_shouldSnapToNearest is true)
-            //{
-            //    // add marker at cross hair intersection point
-            //    // marker for center of the rectangle -- center of area / mass
-            //    Ellipse snapCircle = new Ellipse
-            //    {
-            //        Width = _snapDistance,
-            //        Height = _snapDistance,
-            //        StrokeThickness = 1.5f,
-            //        Stroke = Brushes.Red,
-            //        Fill = Brushes.Transparent,
-            //        IsHitTestVisible = false
-            //    };
-            //    Canvas.SetLeft(snapCircle, crosshair_intersection.X - snapCircle.Width / 2.0f);
-            //    Canvas.SetTop(snapCircle, crosshair_intersection.Y - snapCircle.Height / 2.0f);
-            //    cnvMainCanvas.Children.Add(snapCircle);
+            // If snapping mode is enabled, draw the extra markers
+            if (_shouldSnapToNearest is true)
+            {
+                Point crosshair_intersection = new Point(Mouse.GetPosition(cnvMainCanvas).X, Mouse.GetPosition(cnvMainCanvas).Y);
 
-            //    // Draw the markers for the diaphragm corners and wall end points
-            //    foreach (DiaphragmData_Rectangular d in Calculator._diaphragm_system._diaphragms.Values)
-            //    {
-            //        Point p1 = MathHelpers.WorldCoord_ToScreen(cnvMainCanvas.Height, d.P1, SCALE_X, SCALE_Y);
-            //        Point p2 = MathHelpers.WorldCoord_ToScreen(cnvMainCanvas.Height, d.P2, SCALE_X, SCALE_Y);
-            //        Point p3 = MathHelpers.WorldCoord_ToScreen(cnvMainCanvas.Height, d.P3, SCALE_X, SCALE_Y);
-            //        Point p4 = MathHelpers.WorldCoord_ToScreen(cnvMainCanvas.Height, d.P4, SCALE_X, SCALE_Y);
+                // add marker at cross hair intersection point
+                // marker for center of the rectangle -- center of area / mass
+                Ellipse snapCircle = new Ellipse
+                {
+                    Width = _snapDistance,
+                    Height = _snapDistance,
+                    StrokeThickness = 1.5f,
+                    Stroke = Brushes.Red,
+                    Fill = Brushes.Transparent,
+                    IsHitTestVisible = false
+                };
+                Canvas.SetLeft(snapCircle, crosshair_intersection.X - snapCircle.Width / 2.0f);
+                Canvas.SetTop(snapCircle, crosshair_intersection.Y - snapCircle.Height / 2.0f);
+                cnvMainCanvas.Children.Add(snapCircle);
 
-            //        _canvas_drawer.DrawCircles(p1, 2.0f, Brushes.Red);
-            //        _canvas_drawer.DrawCircles(p2, 2.0f, Brushes.Red);
-            //        _canvas_drawer.DrawCircles(p3, 2.0f, Brushes.Red);
-            //        _canvas_drawer.DrawCircles(p4, 2.0f, Brushes.Red);
-            //    }
+                // Draw the markers for the diaphragm corners and wall end points
+                foreach (DiaphragmData_Rectangular d in Calculator._diaphragm_system._diaphragms.Values)
+                {
+                    Point p1 = MathHelpers.WorldCoord_ToScreen(cnvMainCanvas.Height, d.P1, SCALE_X, SCALE_Y);
+                    Point p2 = MathHelpers.WorldCoord_ToScreen(cnvMainCanvas.Height, d.P2, SCALE_X, SCALE_Y);
+                    Point p3 = MathHelpers.WorldCoord_ToScreen(cnvMainCanvas.Height, d.P3, SCALE_X, SCALE_Y);
+                    Point p4 = MathHelpers.WorldCoord_ToScreen(cnvMainCanvas.Height, d.P4, SCALE_X, SCALE_Y);
 
-            //    // Draw the markers for the wall end points
-            //    foreach (WallData d in Calculator._wall_system._walls.Values)
-            //    {
-            //        Point start = MathHelpers.WorldCoord_ToScreen(cnvMainCanvas.Height, d.Start, SCALE_X, SCALE_Y);
-            //        Point end = MathHelpers.WorldCoord_ToScreen(cnvMainCanvas.Height, d.End, SCALE_X, SCALE_Y);
-            //        _canvas_drawer.DrawCircles(start, 2.0f, Brushes.Blue);
-            //        _canvas_drawer.DrawCircles(end, 2.0f, Brushes.Blue);
-            //    }
-            //}
+                    _canvas_drawer.DrawCircles(p1, 2.0f, Brushes.Red);
+                    _canvas_drawer.DrawCircles(p2, 2.0f, Brushes.Red);
+                    _canvas_drawer.DrawCircles(p3, 2.0f, Brushes.Red);
+                    _canvas_drawer.DrawCircles(p4, 2.0f, Brushes.Red);
+                }
+
+                // Draw the markers for the wall end points
+                foreach (WallData d in Calculator._wall_system._walls.Values)
+                {
+                    Point start = MathHelpers.WorldCoord_ToScreen(cnvMainCanvas.Height, d.Start, SCALE_X, SCALE_Y);
+                    Point end = MathHelpers.WorldCoord_ToScreen(cnvMainCanvas.Height, d.End, SCALE_X, SCALE_Y);
+                    _canvas_drawer.DrawCircles(start, 2.0f, Brushes.Blue);
+                    _canvas_drawer.DrawCircles(end, 2.0f, Brushes.Blue);
+                }
+            }
 
 
 
@@ -478,7 +432,7 @@ namespace ShearWallVisualizer
         /// -- diaphragm point selection creates a rectangle
         /// </summary>
         /// <exception cref="NotImplementedException"></exception>
-        public void CreatePreviewShape()
+        public void DrawPreviewShape()
         {
             Shape shape = null;
             PreviewObjects.Clear();
@@ -520,7 +474,7 @@ namespace ShearWallVisualizer
                     Ellipse centerCircle = new Ellipse { Width = 6, Height = 6, Fill = Brushes.Green, Opacity = 0.4f };
                     Canvas.SetLeft(centerCircle, start.X - centerCircle.Width / 2.0f);
                     Canvas.SetTop(centerCircle, start.Y - centerCircle.Height / 2.0f);
-                    PreviewObjects.Add(centerCircle);
+                    cnvMainCanvas.Children.Add(centerCircle);
                     break;
                 case InputModes.Mass:
                     float x1 = (float)_currentPreviewLine.X1;
@@ -589,33 +543,35 @@ namespace ShearWallVisualizer
                     // the rectangular region object
                     shape = new Rectangle
                     {
-                        Width = Math.Abs(P2.X-P1.X),
-                        Height = Math.Abs(P4.Y-P1.Y),
+                        Width = Math.Abs(P2.X - P1.X),
+                        Height = Math.Abs(P4.Y - P1.Y),
                         Fill = Brushes.Green,
                         Stroke = Brushes.Green,
                         StrokeThickness = _canvas_drawer.rect_boundary_line_thickness,
-                        Opacity = 0.3f
+                        Opacity = 0.3f,
+                        IsHitTestVisible = false
                     };
                     Canvas.SetLeft(shape, P4.X);
                     Canvas.SetTop(shape, P4.Y);
-                    PreviewObjects.Add(shape);
+                    cnvMainCanvas.Children.Add(shape);
 
                     // add marker at first point
                     // marker for center of the rectangle -- center of area / mass
-                    centerCircle = new Ellipse { Width = 6, Height = 6, Fill = Brushes.Green, Opacity = 0.4f };
+                    centerCircle = new Ellipse { Width = 6, Height = 6, Fill = Brushes.Green, Opacity = 0.4f, IsHitTestVisible = false };
                     Canvas.SetLeft(centerCircle, first_pt.X - centerCircle.Width / 2.0f);
                     Canvas.SetTop(centerCircle, first_pt.Y - centerCircle.Height / 2.0f);
-                    PreviewObjects.Add(centerCircle);
+                    cnvMainCanvas.Children.Add(centerCircle);
 
                     // Add dimension text
                     TextBlock text2 = new TextBlock();
                     text2.Text = $"{Math.Abs(P2.X - P1.X):0.0} x {Math.Abs(P4.Y - P1.Y):0.0} ft";
+                    text2.IsHitTestVisible = false;
                     Canvas.SetTop(text2, (P1.X + P3.X) / 2.0);
                     Canvas.SetTop(text2, (P1.Y + P3.Y) / 2.0);
                     cnvMainCanvas.Children.Add(text2);
                     break;
                 default:
-                    throw new NotImplementedException("Unknown input mode in CreatePreviewShape: " + CurrentInputMode.ToString());
+                    throw new NotImplementedException("Unknown input mode in DrawPreviewShape: " + CurrentInputMode.ToString());
             }
         }
 
@@ -815,196 +771,108 @@ namespace ShearWallVisualizer
             if (e.RightButton == MouseButtonState.Pressed)
             {
                 ResetPointInputInfo();
-                Update();
+                DrawCanvas();
                 return;
             }
 
-            // Middle mouse button fro zooming
+            // Middle mouse button for panning and zooming
             if (e.MiddleButton == MouseButtonState.Pressed)
             {
                 _isPanning = true;
                 _lastMousePosition = e.GetPosition(CanvasScrollViewer);
                 cnvMainCanvas.Cursor = Cursors.Hand;
+                return;
             }
-            else
-            {
-                string status = "";
-                if ((CurrentInputMode == InputModes.Rigidity) || (CurrentInputMode == InputModes.Mass))
-                {
-                    System.Windows.Point p = Mouse.GetPosition(cnvMainCanvas);  // screen coords
-                    System.Windows.Point wp = MathHelpers.ScreenCoord_ToWorld(cnvMainCanvas.Height,Mouse.GetPosition(cnvMainCanvas), SCALE_X, SCALE_Y);  // world coords
 
-                    // Find the nearest corner point on a diaphragm andreturn that point
-                    bool snap_result = false;
-                    _nearestDiaphragmCornerPoint = MathHelpers.FindNearestSnapPoint(Calculator._wall_system, Calculator._diaphragm_system, wp, out snap_result);  // world coords
-
-                    double dist = MathHelpers.DistanceBetweenPoints(wp, _nearestDiaphragmCornerPoint);
-                    lblSnap1st.Content = "(" + _nearestDiaphragmCornerPoint.X.ToString("0.00") + ", " + _nearestDiaphragmCornerPoint.Y.ToString("0.00") + ")";
-                    lblSnap2nd.Content = "(" + dist.ToString("0.00") + ")";
-
-                    // The first click
-                    if (_startClickSet == false)
-                    {
-                        _currentPreviewLine = new Line() { Stroke = Brushes.Green };
-
-                        // find nearest corner point on a diaphragm andreturn that point
-                        if (_shouldSnapToNearest is true)
-                        {
-                            // if there are no snap points, return without setting the point
-                            if (snap_result is false)
-                            {
-                                MessageBox.Show("No snap points found.  Try disabling SNAP MODE.");
-                                return;
-                            }
-                            Point world_temp = _nearestDiaphragmCornerPoint;
-                            if (MathHelpers.PointIsWithinRange(wp, world_temp, _snapDistance) is true)
-                            {
-                                // convert back to screen coords
-                                p = MathHelpers.WorldCoord_ToScreen(cnvMainCanvas.Height, world_temp, SCALE_X, SCALE_Y);
-                            }
-                        }
-
-                        lblScreenStartCoord.Content = "(" + p.X.ToString("0.00") + ", " + p.Y.ToString("0.00") + ")";
-                        lblWorldStartCoord.Content = "(" + wp.X.ToString("0.00") + ", " + wp.Y.ToString("0.00") + ")";
-
-                        CurrentStartPoint = p;
-                        _startClickSet = true;
-                        _currentPreviewLine.X1 = CurrentStartPoint.X;
-                        _currentPreviewLine.Y1 = CurrentStartPoint.Y;
-                        _currentPreviewLine.X2 = CurrentStartPoint.X;
-                        _currentPreviewLine.Y2 = CurrentStartPoint.Y;
-
-                        status = "First point selected";
-                        return;
-                    }
-
-                    // This is the second click
-                    else
-                    {
-                        // find nearest corner point on a diaphragm andreturn that point
-                        if (_shouldSnapToNearest is true)
-                        {
-                            // if there are no snap points, return without doing anything else
-                            if (snap_result is false)
-                            {
-                                MessageBox.Show("No snap points found.  Try disabling SNAP MODE.");
-                                return;
-                            }
-
-                            Point world_temp = _nearestDiaphragmCornerPoint;
-                            if (MathHelpers.PointIsWithinRange(wp, world_temp, _snapDistance) is true)
-                            {
-                                // convert back to screen coords
-                                p = MathHelpers.WorldCoord_ToScreen(cnvMainCanvas.Height, world_temp, SCALE_X, SCALE_Y);
-                            }
-                        }
-
-                        lblScreenEndCoord.Content = "(" + p.X.ToString("0.00") + ", " + p.Y.ToString("0.00") + ")";
-                        lblWorldEndCoord.Content = "(" + wp.X.ToString("0.00") + ", " + wp.Y.ToString("0.00") + ")";
-
-                        // If second point is same as the CurrentStartPoint, then it isn't valid, so just return;
-                        // TODO:  Should this be handled in a different way?
-                        if (p == CurrentStartPoint)
-                        {
-                            return;
-                        }
-
-                        CurrentEndPoint = p;
-                        _endClickSet = true;
-                        _currentPreviewLine.X2 = CurrentEndPoint.X;
-                        _currentPreviewLine.Y2 = CurrentEndPoint.Y;
-                        status = "Second point selected";
-                    }
-
-                    lblStatus.Content = status;
-
-
-                    // Both points have been clicked
-                    if (_startClickSet && _endClickSet)
-                    {
-                        // process the canvas screen coords clicked
-                        float start_x = ((float)CurrentStartPoint.X);
-                        float start_y = ((float)CurrentStartPoint.Y);
-                        float end_x = ((float)CurrentEndPoint.X);
-                        float end_y = ((float)CurrentEndPoint.Y);
-
-                        // Set the preview line values
-                        _currentPreviewLine.X1 = start_x;
-                        _currentPreviewLine.Y1 = start_y;
-                        _currentPreviewLine.X2 = end_x;
-                        _currentPreviewLine.Y2 = end_y;
-
-                        if (CurrentInputMode == InputModes.Rigidity)
-                        {
-                            // Determine if this wall segment should be horizontal or vertical by looking at the difference between the x
-                            // and y coordinates of the start and end points.  Whichever difference is larger will be the direction
-                            //  -- larger X direction = horizontal
-                            //  -- larger Y direction = vertical
-                            // this function draws the corresponding line through the center point of the actual line
-                            WallDirs dir = WallDirs.EastWest;
-                            if (MathHelpers.LineIsHorizontal(_currentPreviewLine))
-                            {
-                                dir = WallDirs.EastWest;
-
-                                // move the y-coords of the end points to make the line horizontal
-                                end_y = start_y;
-                            }
-                            else
-                            {
-                                dir = WallDirs.NorthSouth;
-
-                                // move the end point to make the line vertical
-                                end_x = start_x;
-                            }
-
-                            // create adjusted start and end points based on the new center point location
-                            Point adj_start_x = new Point(start_x, start_y);
-                            Point adj_end_x = new Point(end_x, end_y);
-
-                            // convert screen coords to world coords to make the true wall structure
-                            Point world_p1 = MathHelpers.ScreenCoord_ToWorld(cnvMainCanvas.Height, adj_start_x, SCALE_X, SCALE_Y);
-                            Point world_p2 = MathHelpers.ScreenCoord_ToWorld(cnvMainCanvas.Height,adj_end_x, SCALE_X, SCALE_Y);
-
-                            // Add to the list of wall segments
-                            Calculator._wall_system.AddWall(new WallData(DEFAULT_WALL_HT,
-                                (float)world_p1.X, (float)world_p1.Y, (float)world_p2.X, (float)world_p2.Y, dir));
-
-                            _currentPreviewLine = null;  // clear the preview line
-                            ClearCoordinateDisplayData();
-
-                            status = "Wall added";
-                            Update();
-                        }
-                        else if (CurrentInputMode == InputModes.Mass)
-                        {
-                            // Create a diaphragm section by dragging opposite corners of a rectangular region
-                            Point world_p1 = MathHelpers.ScreenCoord_ToWorld(cnvMainCanvas.Height, CurrentStartPoint, SCALE_X, SCALE_Y);
-                            Point world_p2 = MathHelpers.ScreenCoord_ToWorld(cnvMainCanvas.Height, CurrentEndPoint, SCALE_X, SCALE_Y);
-
-                            // Add to the list of diaphragm segments
-                            Calculator._diaphragm_system.AddDiaphragm(new DiaphragmData_Rectangular(world_p2, world_p1));
-                            _currentPreviewLine = null;  // clear the preview line
-                            ClearCoordinateDisplayData();
-                            status = "Diaphragm added";
-                            Update();
-                        }
-                        else
-                        {
-                            throw new Exception("Invalid input mode -- should be rigidity or mass mode.");
-                        }
-
-                        // then clear the variables.
-                        _startClickSet = false;
-                        _endClickSet = false;
-                        CurrentStartPoint = new Point();
-                        CurrentEndPoint = new Point();
-                    }
-
-                    lblStatus.Content = status;
-                }
-            }
-            Update();
+            HandleLeftClick(e);
+            DrawCanvas();
         }
+
+        private void HandleLeftClick(MouseButtonEventArgs e)
+        {
+            if(CurrentInputMode != InputModes.Mass && CurrentInputMode != InputModes.Rigidity)
+            {
+                MessageBox.Show("Please select the 'Mass' or 'Rigidity' input mode.");
+                return;
+            }
+
+            Point screenPoint = e.GetPosition(cnvMainCanvas);
+            Point worldPoint = MathHelpers.ScreenCoord_ToWorld(cnvMainCanvas.Height, screenPoint, SCALE_X, SCALE_Y);
+
+            bool snapResult;
+            Point nearestPoint = MathHelpers.FindNearestSnapPoint(Calculator._wall_system, Calculator._diaphragm_system,
+                worldPoint, out snapResult);
+
+            if (!_startClickSet)
+            {
+                _currentPreviewLine = new Line { Stroke = Brushes.Green };
+
+                if (_shouldSnapToNearest && snapResult && MathHelpers.PointIsWithinRange(worldPoint, nearestPoint, _snapDistance))
+                {
+                    screenPoint = MathHelpers.WorldCoord_ToScreen(cnvMainCanvas.Height, nearestPoint, SCALE_X, SCALE_Y);
+                }
+
+                CurrentStartPoint = screenPoint;
+                _startClickSet = true;
+                _canvas_drawer.DrawPreviewLine(_currentPreviewLine, CurrentStartPoint, CurrentStartPoint);
+                return;
+            }
+
+            if (_shouldSnapToNearest && snapResult && MathHelpers.PointIsWithinRange(worldPoint, nearestPoint, _snapDistance))
+            {
+                screenPoint = MathHelpers.WorldCoord_ToScreen(cnvMainCanvas.Height, nearestPoint, SCALE_X, SCALE_Y);
+            }
+
+            if (screenPoint == CurrentStartPoint)
+            {
+                return;
+            }
+
+            CurrentEndPoint = screenPoint;
+            _endClickSet = true;
+            _canvas_drawer.DrawPreviewLine(_currentPreviewLine, CurrentStartPoint, CurrentEndPoint);
+
+            ProcessFinalInput();
+        }
+
+        private void ProcessFinalInput()
+        {
+            if (_startClickSet && _endClickSet)
+            {
+                float startX = (float)CurrentStartPoint.X;
+                float startY = (float)CurrentStartPoint.Y;
+                float endX = (float)CurrentEndPoint.X;
+                float endY = (float)CurrentEndPoint.Y;
+
+                if (CurrentInputMode == InputModes.Rigidity)
+                {
+                    WallDirs dir = MathHelpers.LineIsHorizontal(_currentPreviewLine) ? WallDirs.EastWest : WallDirs.NorthSouth;
+
+                    if (dir == WallDirs.EastWest) endY = startY;
+                    else endX = startX;
+
+                    Point worldStart = MathHelpers.ScreenCoord_ToWorld(cnvMainCanvas.Height, new Point(startX, startY), SCALE_X, SCALE_Y);
+                    Point worldEnd = MathHelpers.ScreenCoord_ToWorld(cnvMainCanvas.Height, new Point(endX, endY),SCALE_X, SCALE_Y);
+
+                    Calculator._wall_system.AddWall(new WallData(DEFAULT_WALL_HT,
+                        (float)worldStart.X, (float)worldStart.Y, (float)worldEnd.X, (float)worldEnd.Y, dir));
+
+                    _currentPreviewLine = null;
+                }
+                else if (CurrentInputMode == InputModes.Mass)
+                {
+                    Point worldStart = MathHelpers.ScreenCoord_ToWorld(cnvMainCanvas.Height, CurrentStartPoint, SCALE_X, SCALE_Y);
+                    Point worldEnd = MathHelpers.ScreenCoord_ToWorld(cnvMainCanvas.Height, CurrentEndPoint, SCALE_X, SCALE_Y);
+
+                    Calculator._diaphragm_system.AddDiaphragm(new DiaphragmData_Rectangular(worldStart, worldEnd));
+
+                    _currentPreviewLine = null;
+                }
+
+                ResetPointInputInfo();
+            }
+        }
+
 
         /// <summary>
         /// What happens when the mouse is moved
@@ -1185,16 +1053,14 @@ namespace ShearWallVisualizer
                 btnSnapToNearest.BorderBrush = Brushes.Black;
                 btnSnapToNearest.BorderThickness = new Thickness(3);
 
-                _crosshairVertical.Stroke = Brushes.Red;
-                _crosshairHorizontal.Stroke = Brushes.Red;
+                _crosshair_color = new SolidColorBrush(Colors.Red); // change the cross hair colors
             }
             else
             {
                 btnSnapToNearest.BorderBrush = Brushes.Transparent;
                 btnSnapToNearest.BorderThickness = new Thickness(0);
 
-                _crosshairVertical.Stroke = Brushes.Black;
-                _crosshairHorizontal.Stroke = Brushes.Black;
+                _crosshair_color = new SolidColorBrush(Colors.Black);  // change the cross hair colors
             }
 
             Update();

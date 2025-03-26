@@ -31,7 +31,6 @@ namespace ShearWallVisualizer
         }
 
         #region Drawing functions
-
         /// <summary>
         /// Draws a wall object on a wpf canvas
         /// </summary>
@@ -100,7 +99,8 @@ namespace ShearWallVisualizer
                 Fill = Brushes.Red,
                 Stroke = Brushes.Red,
                 StrokeThickness = rect_boundary_line_thickness,
-                Opacity = 0.5f
+                Opacity = 0.5f,
+                IsHitTestVisible = false
             };
             Canvas.SetLeft(rect, p4_canvas_pt.X);
             Canvas.SetTop(rect, p4_canvas_pt.Y);
@@ -396,6 +396,38 @@ namespace ShearWallVisualizer
             previewLine.Y1 = start.Y;
             previewLine.X2 = end.X;
             previewLine.Y2 = end.Y;
+
+            _canvas.Children.Add(previewLine);
+        }
+
+        public void DrawCrosshairs(Point point, Brush color)
+        {
+            // creates the crosshairs for point selection
+            Line _crosshairVertical = new Line
+            {
+                X1 = point.X,
+                Y1 = 0,
+                X2 = point.X,
+                Y2 = _canvas.Height,
+                Stroke = color,
+                StrokeThickness = 0.25,
+                IsHitTestVisible = false
+            };
+
+            // creates the crosshairs for point selection
+            Line _crosshairHorizontal = new Line
+            {
+                Y1 = point.Y,
+                X1 = 0,
+                Y2 = point.Y,
+                X2 = _canvas.Width,
+                Stroke = Brushes.Black,
+                StrokeThickness = 0.25,
+                IsHitTestVisible = false
+            };
+
+            _canvas.Children.Add(_crosshairVertical);
+            _canvas.Children.Add(_crosshairHorizontal);
         }
     }
 }
