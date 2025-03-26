@@ -332,7 +332,7 @@ namespace ShearWallVisualizer
         }
 
         /// <summary>
-        /// Handles drawing the Center of Mass and Center of Rigidity points
+        /// Handles drawing the Center of Wall and Center of Diaphragm points
         /// </summary>
         public void DrawCOR(WallSystem wall_system)
         {
@@ -361,7 +361,7 @@ namespace ShearWallVisualizer
         }
 
         /// <summary>
-        /// Handles drawing the Center of Mass and Center of Rigidity points
+        /// Handles drawing the Center of Wall and Center of Diaphragm points
         /// </summary>
         public void DrawCOM(DiaphragmSystem diaphragm_system)
         {
@@ -369,7 +369,7 @@ namespace ShearWallVisualizer
             System.Windows.Point p1 = MathHelpers.WorldCoord_ToScreen(_canvas.Height, diaphragm_system.CtrMass, SCALE_X, SCALE_Y);
             if (diaphragm_system != null)
             {
-                // Draw the Center of Rigidity Point
+                // Draw the Center of Diaphragm Point
                 DrawingHelpersLibrary.DrawingHelpers.DrawCircle(
                     _canvas,
                     p1.X, p1.Y,
@@ -421,7 +421,7 @@ namespace ShearWallVisualizer
                 X1 = 0,
                 Y2 = point.Y,
                 X2 = _canvas.Width,
-                Stroke = Brushes.Black,
+                Stroke = color,
                 StrokeThickness = 0.25,
                 IsHitTestVisible = false
             };
