@@ -11,8 +11,8 @@ namespace ShearWallVisualizer
 
     public partial class MainWindow : Window
     {
-        private enum DrawMode { Line, Rectangle }
-        private DrawMode currentMode = DrawMode.Line;
+        private enum DrawMode { None, Line, Rectangle }
+        private DrawMode currentMode = DrawMode.None;
         private bool snapMode = false;
         private double snapThreshold = 10; // Pixels
 
@@ -30,6 +30,8 @@ namespace ShearWallVisualizer
         private double worldWidth = 100;
         private double worldHeight = 100;
 
+        private int shapeCounter = 1; // Unique ID for each shape
+
         public MainWindow()
         {
             InitializeComponent();
@@ -45,12 +47,76 @@ namespace ShearWallVisualizer
             this.MouseDown += Canvas_MouseDown;
             this.MouseUp += Canvas_MouseUp;
 
+            myCanvas.SizeChanged += Canvas_SizeChanged; // Handle canvas size changes
+            myCanvas.MouseRightButtonDown += Canvas_MouseRightButtonDown;  // Right-click to cancel drawing
+
+
+            // Set focus and canvas background
             this.Focusable = true;
             this.Focus();
+            myCanvas.Background = Brushes.White;
+
+            // Draw the grid immediately on startup
+            DrawGrid();
+        }
+
+        private void SetLineMode()
+        {
+            currentMode = DrawMode.Line;  // Set to Line drawing mode
+            MessageBox.Show("Line mode activated.");
+            Console.WriteLine("Line mode activated.");
+        }
+
+        private void SetRectangleMode()
+        {
+            currentMode = DrawMode.Rectangle;  // Set to Rectangle drawing mode
+            MessageBox.Show("Rectangle mode activated.");
+            Console.WriteLine("Rectangle mode activated.");
+        }
+
+        private void Canvas_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            // Only cancel if currently in drawing mode (Line or Rectangle)
+            if (currentMode == DrawMode.Line || currentMode == DrawMode.Rectangle)
+            {
+                // Clear any preview shape that may be drawn
+                if (previewShape != null)
+                {
+                    myCanvas.Children.Remove(previewShape);
+                    previewShape = null;
+                }
+
+                // Reset the start point for drawing
+                startPoint = null;
+
+                // Optionally, reset the current drawing mode if desired
+                currentMode = DrawMode.None;  // Stop drawing mode
+
+                // Log to indicate cancellation
+                Console.WriteLine("Drawing canceled.");
+            }
+            else
+            {
+                // If not in drawing mode, don't perform any action
+                Console.WriteLine("No drawing operation to cancel.");
+            }
+        }
+
+        private void Canvas_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            // Redraw the grid when the canvas size changes
+            DrawGrid();
         }
 
         private void Canvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
+            // Ensure the mode is set before proceeding with any drawing
+            if (currentMode == DrawMode.None)
+            {
+                // If no drawing mode is set, do nothing and exit
+                return;
+            }
+
             Point screenPoint = e.GetPosition(myCanvas);
             Point worldPoint = ScreenToWorld(screenPoint);
 
@@ -78,6 +144,9 @@ namespace ShearWallVisualizer
                 translateTransform.X += newPanPoint.X - lastPanPoint.X;
                 translateTransform.Y += newPanPoint.Y - lastPanPoint.Y;
                 lastPanPoint = newPanPoint;
+
+                DrawGrid();  // Redraw the grid
+                DrawShapes(); // Redraw the shapes
             }
 
             if (startPoint != null && previewShape != null)
@@ -99,6 +168,69 @@ namespace ShearWallVisualizer
             double zoomFactor = (e.Delta > 0) ? 1.1 : 0.9;
             scaleTransform.ScaleX *= zoomFactor;
             scaleTransform.ScaleY *= zoomFactor;
+
+            DrawGrid();  // Redraw the grid
+            DrawShapes(); // Redraw the shapes
+        }
+
+        private void DrawShapes()
+        {
+            // Clear previous shapes
+            myCanvas.Children.Clear();
+
+            // Redraw grid (again, to keep it consistent with zoom/pan)
+            DrawGrid();
+
+            // Redraw all the shapes in world coordinates
+            foreach (var shape in worldShapes)
+            {
+                Shape shapeToDraw = null;
+                Ellipse centerPoint = null;
+                TextBlock idLabel = null;
+
+                if (shape is WorldLine line)
+                {
+                    shapeToDraw = new Line
+                    {
+                        X1 = WorldToScreenX(line.Start.X),
+                        Y1 = WorldToScreenY(line.Start.Y),
+                        X2 = WorldToScreenX(line.End.X),
+                        Y2 = WorldToScreenY(line.End.Y),
+                        Stroke = Brushes.Blue,
+                        StrokeThickness = 2
+                    };
+
+                    Point center = new Point((line.Start.X + line.End.X) / 2, (line.Start.Y + line.End.Y) / 2);
+                    centerPoint = CreateCenterPoint(center);
+                    idLabel = CreateIdLabel(center, shapeCounter);
+                }
+                else if (shape is WorldRectangle rect)
+                {
+                    shapeToDraw = new Rectangle
+                    {
+                        Width = Math.Abs(WorldToScreenX(rect.TopRight.X) - WorldToScreenX(rect.BottomLeft.X)),
+                        Height = Math.Abs(WorldToScreenY(rect.TopRight.Y) - WorldToScreenY(rect.BottomLeft.Y)),
+                        Stroke = Brushes.Black,
+                        StrokeThickness = 2,
+                        Fill = new SolidColorBrush(Color.FromArgb(128, 255, 0, 0)) // Red with 50% opacity
+                    };
+
+                    Canvas.SetLeft(shapeToDraw, Math.Min(WorldToScreenX(rect.BottomLeft.X), WorldToScreenX(rect.TopRight.X)));
+                    Canvas.SetTop(shapeToDraw, Math.Min(WorldToScreenY(rect.BottomLeft.Y), WorldToScreenY(rect.TopRight.Y)));
+
+                    Point center = new Point((rect.BottomLeft.X + rect.TopRight.X) / 2, (rect.BottomLeft.Y + rect.TopRight.Y) / 2);
+                    centerPoint = CreateCenterPoint(center);
+                    idLabel = CreateIdLabel(center, shapeCounter);
+                }
+
+                if (shapeToDraw != null)
+                {
+                    myCanvas.Children.Add(shapeToDraw);
+                    myCanvas.Children.Add(centerPoint);
+                    myCanvas.Children.Add(idLabel);
+                    shapeCounter++;
+                }
+            }
         }
 
         private void Canvas_MouseDown(object sender, MouseButtonEventArgs e)
@@ -126,19 +258,23 @@ namespace ShearWallVisualizer
 
             if (e.Key == Key.L)
             {
-                currentMode = DrawMode.Line;
-                Console.WriteLine("Mode set to Line");
+                SetLineMode();
             }
             else if (e.Key == Key.R)
             {
-                currentMode = DrawMode.Rectangle;
-                Console.WriteLine("Mode set to Rectangle");
+                SetRectangleMode();
             }
             else if (e.Key == Key.S)
             {
-                snapMode = !snapMode;
-                Console.WriteLine($"Snap Mode: {(snapMode ? "Enabled" : "Disabled")}");
+                SetSnapMode();
             }
+        }
+
+        private void SetSnapMode()
+        {
+            snapMode = !snapMode;
+            MessageBox.Show($"Snap Mode {(snapMode ? "Enabled" : "Disabled")}");
+            Console.WriteLine($"Snap Mode: {(snapMode ? "Enabled" : "Disabled")}");
         }
 
         private void CreatePreviewShape()
@@ -170,10 +306,11 @@ namespace ShearWallVisualizer
                 Canvas.SetTop(rect, y);
             }
         }
-
         private void FinalizeShape(Point worldPoint)
         {
             Shape finalShape = null;
+            Ellipse centerPoint = null;
+            TextBlock idLabel = null;
 
             if (currentMode == DrawMode.Line)
             {
@@ -186,9 +323,16 @@ namespace ShearWallVisualizer
                     Y1 = WorldToScreenY(worldLine.Start.Y),
                     X2 = WorldToScreenX(worldLine.End.X),
                     Y2 = WorldToScreenY(worldLine.End.Y),
-                    Stroke = Brushes.Black,
+                    Stroke = Brushes.Blue,
                     StrokeThickness = 2
                 };
+
+                // Calculate the center of the line
+                Point center = new Point((worldLine.Start.X + worldLine.End.X) / 2,
+                                         (worldLine.Start.Y + worldLine.End.Y) / 2);
+
+                centerPoint = CreateCenterPoint(center);
+                idLabel = CreateIdLabel(center, shapeCounter);
             }
             else if (currentMode == DrawMode.Rectangle)
             {
@@ -201,26 +345,27 @@ namespace ShearWallVisualizer
                     Height = Math.Abs(WorldToScreenY(worldRect.TopRight.Y) - WorldToScreenY(worldRect.BottomLeft.Y)),
                     Stroke = Brushes.Black,
                     StrokeThickness = 2,
-                    Fill = Brushes.Transparent
+                    Fill = new SolidColorBrush(Color.FromArgb(128, 255, 0, 0)) // Red with 50% opacity
                 };
 
                 Canvas.SetLeft(finalShape, Math.Min(WorldToScreenX(worldRect.BottomLeft.X), WorldToScreenX(worldRect.TopRight.X)));
                 Canvas.SetTop(finalShape, Math.Min(WorldToScreenY(worldRect.BottomLeft.Y), WorldToScreenY(worldRect.TopRight.Y)));
+
+                // Calculate the center of the rectangle
+                Point center = new Point((worldRect.BottomLeft.X + worldRect.TopRight.X) / 2,
+                                         (worldRect.BottomLeft.Y + worldRect.TopRight.Y) / 2);
+
+                centerPoint = CreateCenterPoint(center);
+                idLabel = CreateIdLabel(center, shapeCounter);
             }
 
             if (finalShape != null)
             {
-                Console.WriteLine($"Total objects: {worldShapes.Count}");
-                foreach (var shape in worldShapes)
-                {
-                    if (shape is WorldLine line)
-                        Console.WriteLine($"Line from {line.Start} to {line.End}");
-                    else if (shape is WorldRectangle rect)
-                        Console.WriteLine($"Rectangle from {rect.BottomLeft} to {rect.TopRight}");
-                }
-
                 myCanvas.Children.Add(finalShape);
-                Console.WriteLine("Final shape drawn!");
+                myCanvas.Children.Add(centerPoint);
+                myCanvas.Children.Add(idLabel);
+                Console.WriteLine($"Final shape drawn with ID: {shapeCounter}");
+                shapeCounter++; // Increment shape counter
             }
 
             myCanvas.Children.Remove(previewShape);
@@ -264,16 +409,89 @@ namespace ShearWallVisualizer
 
         private double WorldToScreenX(double worldX)
         {
-            return worldX * (myCanvas.ActualWidth / worldWidth) * scaleTransform.ScaleX + translateTransform.X;
+            // Apply scaling and translation based on the current zoom and pan
+            return (worldX * (myCanvas.ActualWidth / worldWidth)) * scaleTransform.ScaleX + translateTransform.X;
         }
 
         private double WorldToScreenY(double worldY)
         {
-            return myCanvas.ActualHeight - (worldY * (myCanvas.ActualHeight / worldHeight) * scaleTransform.ScaleY + translateTransform.Y);
+            // Apply scaling and translation based on the current zoom and pan
+            return myCanvas.ActualHeight - (worldY * (myCanvas.ActualHeight / worldHeight)) * scaleTransform.ScaleY + translateTransform.Y;
         }
+
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             this.Focus();
+        }
+
+        private Ellipse CreateCenterPoint(Point worldCenter)
+        {
+            Ellipse ellipse = new Ellipse
+            {
+                Width = 6,
+                Height = 6,
+                Fill = Brushes.Black
+            };
+
+            Canvas.SetLeft(ellipse, WorldToScreenX(worldCenter.X) - 3);
+            Canvas.SetTop(ellipse, WorldToScreenY(worldCenter.Y) - 3);
+            return ellipse;
+        }
+
+        private TextBlock CreateIdLabel(Point worldCenter, int id)
+        {
+            TextBlock label = new TextBlock
+            {
+                Text = id.ToString(),
+                Foreground = Brushes.Black,
+                FontSize = 12,
+                FontWeight = FontWeights.Bold
+            };
+
+            Canvas.SetLeft(label, WorldToScreenX(worldCenter.X) + 5);
+            Canvas.SetTop(label, WorldToScreenY(worldCenter.Y) - 5);
+            return label;
+        }
+
+        private void DrawGrid()
+        {
+            myCanvas.Children.Clear(); // Clear previous gridlines
+
+            double majorGridSpacing = 5.0;  // Major grid lines every 5 world units
+            double minorGridSpacing = 2.0;  // Minor grid lines every 2 world units
+
+            double canvasWidth = myCanvas.ActualWidth;
+            double canvasHeight = myCanvas.ActualHeight;
+
+            // Draw vertical grid lines (major and minor)
+            for (double x = 0; x <= worldWidth; x += minorGridSpacing)
+            {
+                Line gridLine = new Line
+                {
+                    X1 = WorldToScreenX(x),
+                    Y1 = 0,
+                    X2 = WorldToScreenX(x),
+                    Y2 = canvasHeight,
+                    Stroke = (x % majorGridSpacing == 0) ? Brushes.Black : Brushes.Gray,
+                    StrokeThickness = (x % majorGridSpacing == 0) ? 1.5 : 0.5
+                };
+                myCanvas.Children.Add(gridLine);
+            }
+
+            // Draw horizontal grid lines (major and minor)
+            for (double y = 0; y <= worldHeight; y += minorGridSpacing)
+            {
+                Line gridLine = new Line
+                {
+                    X1 = 0,
+                    Y1 = WorldToScreenY(y),
+                    X2 = canvasWidth,
+                    Y2 = WorldToScreenY(y),
+                    Stroke = (y % majorGridSpacing == 0) ? Brushes.Black : Brushes.Gray,
+                    StrokeThickness = (y % majorGridSpacing == 0) ? 1.5 : 0.5
+                };
+                myCanvas.Children.Add(gridLine);
+            }
         }
     }
 
@@ -307,6 +525,7 @@ namespace ShearWallVisualizer
             return new List<Point> { BottomLeft, TopRight };
         }
     }
+}
 
 
 
@@ -338,7 +557,6 @@ namespace ShearWallVisualizer
         //CreateGridLines();
 
         //Update();
-    }
 
     //    private void SetCanvasDimensions(float width, float height)
     //    {
