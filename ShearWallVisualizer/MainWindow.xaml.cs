@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -23,8 +24,14 @@ namespace ShearWallVisualizer
         private TranslateTransform translateTransform = new TranslateTransform();
         private TransformGroup transformGroup = new TransformGroup();
 
+        private double zoomFactorX = 1.0;
+        private double zoomFactorY = 1.0;
+        private double panOffsetX = 0.0;
+        private double panOffsetY = 0.0;
+
         private Shape previewShape = null;
         private TextBlock previewLengthLabel = null;
+        private TextBlock previewCoordinateLabel = null;
         private Point lastPanPoint;
         private bool isPanning = false;
 
@@ -143,6 +150,11 @@ namespace ShearWallVisualizer
                 Point newPanPoint = e.GetPosition(this);
                 translateTransform.X += newPanPoint.X - lastPanPoint.X;
                 translateTransform.Y += newPanPoint.Y - lastPanPoint.Y;
+
+                // store the pan off set amounts
+                panOffsetX = translateTransform.X;
+                panOffsetY = translateTransform.Y;
+
                 lastPanPoint = newPanPoint;
 
                 DrawGrid();  // Redraw the grid
@@ -161,6 +173,21 @@ namespace ShearWallVisualizer
 
                 UpdatePreviewShape(worldPoint);
             }
+
+            
+            if(previewCoordinateLabel != null)
+            {
+                myCanvas.Children.Remove(previewCoordinateLabel);
+            }
+            previewCoordinateLabel = CreateCoordinateLabel(ScreenToWorld(e.GetPosition(this)));
+            myCanvas.Children.Add(previewCoordinateLabel);
+
+            // Display current parameters
+            tbPan.Text = "Pan: (" + panOffsetX.ToString("F2") + ", " + panOffsetY.ToString("F2") + ")";
+            tbZoom.Text = "Zoom: (" + zoomFactorX.ToString("F2") + ", " + zoomFactorY.ToString("F2") + ")";
+            tbWorldCoords.Text = "World Coords: (" + ScreenToWorld(e.GetPosition(this));
+            tbScreenCoords.Text = "Screen Coords: (" + e.GetPosition(this).X + ", " + e.GetPosition(this).Y + ")";
+
         }
 
         private void Canvas_MouseWheel(object sender, MouseWheelEventArgs e)
@@ -169,8 +196,18 @@ namespace ShearWallVisualizer
             scaleTransform.ScaleX *= zoomFactor;
             scaleTransform.ScaleY *= zoomFactor;
 
+            // store the current zoom scale factors
+            zoomFactorX = scaleTransform.ScaleX;
+            zoomFactorY = scaleTransform.ScaleY;
+
             DrawGrid();  // Redraw the grid
             DrawShapes(); // Redraw the shapes
+
+            // Display current parameters
+            tbPan.Text = "Pan: (" + panOffsetX.ToString("F2") + ", " + panOffsetY.ToString("F2") + ")";
+            tbZoom.Text = "Zoom: (" + zoomFactorX.ToString("F2") + ", " + zoomFactorY.ToString("F2") + ")";
+            tbWorldCoords.Text = "World Coords: (" + ScreenToWorld(e.GetPosition(this));
+            tbScreenCoords.Text = "Screen Coords: (" + e.GetPosition(this).X + ", " + e.GetPosition(this).Y + ")";
         }
 
         private void DrawShapes()
@@ -235,6 +272,8 @@ namespace ShearWallVisualizer
 
         private void Canvas_MouseDown(object sender, MouseButtonEventArgs e)
         {
+
+
             if (e.MiddleButton == MouseButtonState.Pressed)
             {
                 isPanning = true;
@@ -309,8 +348,11 @@ namespace ShearWallVisualizer
                 line.Y2 = WorldToScreenY(worldPoint.Y);
 
                 // Calculate the length of the line
-                double length = Math.Sqrt(Math.Pow(worldPoint.X - startPoint.Value.X, 2) + Math.Pow(worldPoint.Y - startPoint.Value.Y, 2));
-                previewLengthLabel.Text = $"Length: {length:F2}";  // Display length with 2 decimal places
+
+                double world_length = Math.Sqrt(Math.Pow(worldPoint.X - startPoint.Value.X, 2) + Math.Pow(worldPoint.Y - startPoint.Value.Y, 2));
+
+//                double length = Math.Sqrt(Math.Pow(worldPoint.X - ScreenToWorldX(startPoint.Value.X), 2) + Math.Pow(worldPoint.Y - ScreenToWorldY(startPoint.Value.Y), 2));
+                previewLengthLabel.Text = $"Length: {world_length:F2}";  // Display length with 2 decimal places
 
                 // Position the label in the middle of the line
                 double labelX = (line.X1 + line.X2) / 2;
@@ -328,9 +370,10 @@ namespace ShearWallVisualizer
                 Canvas.SetTop(rect, y);
 
                 // Calculate the width and height of the rectangle
-                double width = rect.Width;
-                double height = rect.Height;
-                previewLengthLabel.Text = $"Width: {width:F2}, Height: {height:F2}";  // Display width and height with 2 decimal places
+                double world_width = Math.Abs(worldPoint.X - startPoint.Value.X);
+                double world_height = Math.Abs(worldPoint.Y - startPoint.Value.Y);
+
+                previewLengthLabel.Text = $"Width: {world_width:F2}, Height: {world_height:F2}";  // Display width and height with 2 decimal places
 
                 // Position the label in the center of the rectangle
                 double labelX = x + rect.Width / 2;
@@ -481,15 +524,28 @@ namespace ShearWallVisualizer
 
         private double WorldToScreenX(double worldX)
         {
-            // Apply scaling and translation based on the current zoom and pan
-            return (worldX * (myCanvas.ActualWidth / worldWidth)) * scaleTransform.ScaleX + translateTransform.X;
+            // Apply scaling based on zoom and pan
+            return (worldX * scaleTransform.ScaleX * (myCanvas.ActualWidth / worldWidth)) + translateTransform.X;
         }
 
         private double WorldToScreenY(double worldY)
         {
-            // Apply scaling and translation based on the current zoom and pan
-            return myCanvas.ActualHeight - (worldY * (myCanvas.ActualHeight / worldHeight)) * scaleTransform.ScaleY + translateTransform.Y;
+            // Apply scaling based on zoom and pan
+            return (myCanvas.ActualHeight - (worldY * scaleTransform.ScaleY * (myCanvas.ActualHeight / worldHeight))) + translateTransform.Y;
         }
+
+        private double ScreenToWorldX(double screenX)
+        {
+            // Reverse translation, then reverse scaling
+            return ((screenX - translateTransform.X) / scaleTransform.ScaleX) / (myCanvas.ActualWidth / worldWidth);
+        }
+
+        private double ScreenToWorldY(double screenY)
+        {
+            // Reverse translation and flip the Y-axis transformation
+            return ((myCanvas.ActualHeight - (screenY - translateTransform.Y)) / scaleTransform.ScaleY) / (myCanvas.ActualHeight / worldHeight);
+        }
+
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
@@ -508,6 +564,22 @@ namespace ShearWallVisualizer
             Canvas.SetLeft(ellipse, WorldToScreenX(worldCenter.X) - 3);
             Canvas.SetTop(ellipse, WorldToScreenY(worldCenter.Y) - 3);
             return ellipse;
+        }
+
+        private TextBlock CreateCoordinateLabel(Point worldPoint)
+        {
+            TextBlock label = new TextBlock
+            {
+                Text = $"X: {worldPoint.X}, Y: {worldPoint.Y}",
+                Foreground = Brushes.Black,
+                FontSize = 12,
+                FontWeight = FontWeights.Bold,
+                IsHitTestVisible = false
+            };
+
+            Canvas.SetLeft(label, WorldToScreenX(worldPoint.X) + 5);
+            Canvas.SetTop(label, WorldToScreenY(worldPoint.Y) - 5);
+            return label;
         }
 
         private TextBlock CreateIdLabel(Point worldCenter, int id)
@@ -630,6 +702,30 @@ namespace ShearWallVisualizer
             Start = start;
             End = end;
         }
+
+        public Line ToScreenLine(double scale, Point worldOrigin)
+        {
+            var startScreen = WorldToScreen(Start, scale, worldOrigin);
+            var endScreen = WorldToScreen(End, scale, worldOrigin);
+
+            var line = new Line
+            {
+                X1 = startScreen.X,
+                Y1 = startScreen.Y,
+                X2 = endScreen.X,
+                Y2 = endScreen.Y,
+                Stroke = Brushes.Black
+            };
+
+            return line;
+        }
+
+        private Point WorldToScreen(Point worldPoint, double scale, Point worldOrigin)
+        {
+            var screenX = (worldPoint.X - worldOrigin.X) * scale;
+            var screenY = (worldPoint.Y - worldOrigin.Y) * scale;
+            return new Point(screenX, screenY);
+        }
     }
 
     public class WorldRectangle : WorldShape
@@ -650,6 +746,30 @@ namespace ShearWallVisualizer
             yield return new Point(BottomLeft.X, TopRight.Y);  // Top Left
             yield return new Point(TopRight.X, BottomLeft.Y);  // Bottom Right
             yield return TopRight;
+        }
+
+        public List<Rect> ToScreenRectangles(double scale, Point worldOrigin)
+        {
+            List<Rect> rectangles = new List<Rect>();
+            var corners = GetCorners().ToList();
+
+            // Transform all corners to screen space
+            var bottomLeftScreen = WorldToScreen(corners[0], scale, worldOrigin);
+            var topRightScreen = WorldToScreen(corners[3], scale, worldOrigin);
+
+            var rect = new Rect(bottomLeftScreen.X, bottomLeftScreen.Y,
+                                topRightScreen.X - bottomLeftScreen.X,
+                                topRightScreen.Y - bottomLeftScreen.Y);
+            rectangles.Add(rect);
+
+            return rectangles;
+        }
+
+        private Point WorldToScreen(Point worldPoint, double scale, Point worldOrigin)
+        {
+            var screenX = (worldPoint.X - worldOrigin.X) * scale;
+            var screenY = (worldPoint.Y - worldOrigin.Y) * scale;
+            return new Point(screenX, screenY);
         }
     }
 }

@@ -12,6 +12,12 @@
     <Grid>
         <!-- Drawing Canvas -->
         <Canvas Name="myCanvas" Background="White"/>
+        <StackPanel Orientation="Vertical" Margin="10">
+            <TextBlock Name="tbZoom" Text="Zoom"/>
+            <TextBlock Name="tbPan" Text="Pan"/>
+            <TextBlock Name="tbWorldCoords" Text="World Coords"/>
+            <TextBlock Name="tbScreenCoords" Text="Screen Coords"/>
+        </StackPanel>
     </Grid>
 
     <!--<StackPanel Orientation="Horizontal" Margin="3">
