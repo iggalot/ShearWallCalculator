@@ -16,6 +16,7 @@ namespace ShearWallVisualizer
         private DrawMode currentMode = DrawMode.None;
         private bool snapMode = false;
         private double snapThreshold = 10; // Pixels
+        private bool debugMode = false;
 
         private Point? startPoint = null;
         private List<WorldShape> worldShapes = new List<WorldShape>();
@@ -240,6 +241,22 @@ namespace ShearWallVisualizer
                     Point center = new Point((line.Start.X + line.End.X) / 2, (line.Start.Y + line.End.Y) / 2);
                     centerPoint = CreateCenterPoint(center);
                     idLabel = CreateIdLabel(center, shape.Id);
+
+                    if(debugMode is true)
+                    {
+                        // draw markers and coordinate date at end points
+                        Ellipse startMarker = CreateCenterPoint(line.Start);
+                        Ellipse endMarker = CreateCenterPoint(line.End);
+                        myCanvas.Children.Add(startMarker);
+                        myCanvas.Children.Add(endMarker);
+
+                        TextBlock startCoord = CreateCoordinateLabel(line.Start);
+                        TextBlock endCoord = CreateCoordinateLabel(line.End);
+                        myCanvas.Children.Add(startCoord);
+                        myCanvas.Children.Add(endCoord);
+
+                    }
+
                 }
                 else if (shape is WorldRectangle rect)
                 {
@@ -258,6 +275,21 @@ namespace ShearWallVisualizer
                     Point center = new Point((rect.BottomLeft.X + rect.TopRight.X) / 2, (rect.BottomLeft.Y + rect.TopRight.Y) / 2);
                     centerPoint = CreateCenterPoint(center);
                     idLabel = CreateIdLabel(center, shape.Id);
+
+                    if (debugMode is true)
+                    {
+                        // draw markers and coordinate date at end points
+                        Ellipse startMarker = CreateCenterPoint(rect.BottomLeft);
+                        Ellipse endMarker = CreateCenterPoint(rect.TopRight);
+                        myCanvas.Children.Add(startMarker);
+                        myCanvas.Children.Add(endMarker);
+
+                        TextBlock startCoord = CreateCoordinateLabel(rect.BottomLeft);
+                        TextBlock endCoord = CreateCoordinateLabel(rect.TopRight);
+                        myCanvas.Children.Add(startCoord);
+                        myCanvas.Children.Add(endCoord);
+
+                    }
                 }
 
                 if (shapeToDraw != null)
@@ -307,6 +339,19 @@ namespace ShearWallVisualizer
             {
                 SetSnapMode();
             }
+            else if (e.Key == Key.D)
+            {
+                SetDebugMode();
+            }
+            
+        }
+
+        private void SetDebugMode()
+        {
+            debugMode = !debugMode;
+            MessageBox.Show($"Debug Mode {(debugMode ? "Enabled" : "Disabled")}");
+            Console.WriteLine($"Debug Mode: {(debugMode ? "Enabled" : "Disabled")}");
+            DrawShapes();
         }
 
         private void SetSnapMode()
