@@ -24,6 +24,7 @@ namespace ShearWallVisualizer
         private TransformGroup transformGroup = new TransformGroup();
 
         private Shape previewShape = null;
+        private TextBlock previewLengthLabel = null;
         private Point lastPanPoint;
         private bool isPanning = false;
 
@@ -284,6 +285,15 @@ namespace ShearWallVisualizer
                 previewShape = new Rectangle { Stroke = Brushes.Gray, StrokeThickness = 2, Fill = Brushes.Transparent };
 
             myCanvas.Children.Add(previewShape);
+
+            // Add a TextBlock to display the length/width
+            previewLengthLabel = new TextBlock
+            {
+                Foreground = Brushes.Black,
+                FontSize = 12,
+                FontWeight = FontWeights.Bold
+            };
+            myCanvas.Children.Add(previewLengthLabel);
         }
 
         private void UpdatePreviewShape(Point worldPoint)
@@ -297,6 +307,16 @@ namespace ShearWallVisualizer
                 line.Y1 = WorldToScreenY(startPoint.Value.Y);
                 line.X2 = WorldToScreenX(worldPoint.X);
                 line.Y2 = WorldToScreenY(worldPoint.Y);
+
+                // Calculate the length of the line
+                double length = Math.Sqrt(Math.Pow(worldPoint.X - startPoint.Value.X, 2) + Math.Pow(worldPoint.Y - startPoint.Value.Y, 2));
+                previewLengthLabel.Text = $"Length: {length:F2}";  // Display length with 2 decimal places
+
+                // Position the label in the middle of the line
+                double labelX = (line.X1 + line.X2) / 2;
+                double labelY = (line.Y1 + line.Y2) / 2;
+                Canvas.SetLeft(previewLengthLabel, labelX + 5);
+                Canvas.SetTop(previewLengthLabel, labelY - 20);
             }
             else if (previewShape is Rectangle rect)
             {
@@ -306,6 +326,17 @@ namespace ShearWallVisualizer
                 rect.Height = Math.Abs(WorldToScreenY(worldPoint.Y) - WorldToScreenY(startPoint.Value.Y));
                 Canvas.SetLeft(rect, x);
                 Canvas.SetTop(rect, y);
+
+                // Calculate the width and height of the rectangle
+                double width = rect.Width;
+                double height = rect.Height;
+                previewLengthLabel.Text = $"Width: {width:F2}, Height: {height:F2}";  // Display width and height with 2 decimal places
+
+                // Position the label in the center of the rectangle
+                double labelX = x + rect.Width / 2;
+                double labelY = y + rect.Height / 2;
+                Canvas.SetLeft(previewLengthLabel, labelX + 5);
+                Canvas.SetTop(previewLengthLabel, labelY - 20);
             }
         }
         private void FinalizeShape(Point worldPoint)
@@ -377,6 +408,13 @@ namespace ShearWallVisualizer
             myCanvas.Children.Remove(previewShape);
             previewShape = null;
             startPoint = null;
+
+            // Remove the preview label after finalizing the shape
+            if (previewLengthLabel != null)
+            {
+                myCanvas.Children.Remove(previewLengthLabel);
+                previewLengthLabel = null;
+            }
         }
 
         private int GetNextAvailableID()
