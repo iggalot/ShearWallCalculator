@@ -256,7 +256,6 @@ namespace ShearWallVisualizer
                         myCanvas.Children.Add(endCoord);
 
                     }
-
                 }
                 else if (shape is WorldRectangle rect)
                 {
@@ -323,8 +322,18 @@ namespace ShearWallVisualizer
             }
         }
 
+
+        private void ResetInputMode()
+        {
+            // cancel the input by setting the start point to null
+            startPoint = null;
+            previewShape = null;
+        }
+
         private void MainWindow_KeyDown(object sender, KeyEventArgs e)
         {
+            ResetInputMode();
+
             Console.WriteLine($"Key Pressed: {e.Key}");
 
             if (e.Key == Key.L)
@@ -343,6 +352,8 @@ namespace ShearWallVisualizer
             {
                 SetDebugMode();
             }
+
+            DrawShapes();
             
         }
 
@@ -351,7 +362,6 @@ namespace ShearWallVisualizer
             debugMode = !debugMode;
             MessageBox.Show($"Debug Mode {(debugMode ? "Enabled" : "Disabled")}");
             Console.WriteLine($"Debug Mode: {(debugMode ? "Enabled" : "Disabled")}");
-            DrawShapes();
         }
 
         private void SetSnapMode()
@@ -396,7 +406,6 @@ namespace ShearWallVisualizer
 
                 double world_length = Math.Sqrt(Math.Pow(worldPoint.X - startPoint.Value.X, 2) + Math.Pow(worldPoint.Y - startPoint.Value.Y, 2));
 
-//                double length = Math.Sqrt(Math.Pow(worldPoint.X - ScreenToWorldX(startPoint.Value.X), 2) + Math.Pow(worldPoint.Y - ScreenToWorldY(startPoint.Value.Y), 2));
                 previewLengthLabel.Text = $"Length: {world_length:F2}";  // Display length with 2 decimal places
 
                 // Position the label in the middle of the line
@@ -662,7 +671,9 @@ namespace ShearWallVisualizer
                     X2 = WorldToScreenX(x),
                     Y2 = canvasHeight,
                     Stroke = (x % majorGridSpacing == 0) ? Brushes.Black : Brushes.Gray,
-                    StrokeThickness = (x % majorGridSpacing == 0) ? 1.5 : 0.5
+                    StrokeThickness = (x % majorGridSpacing == 0) ? 1.5 : 0.75,
+                    StrokeDashArray = (x % majorGridSpacing == 0) ? new DoubleCollection { 3, 3 } : new DoubleCollection { 1, 1 },
+                    Opacity = 0.5f
                 };
                 myCanvas.Children.Add(gridLine);
             }
@@ -677,7 +688,9 @@ namespace ShearWallVisualizer
                     X2 = canvasWidth,
                     Y2 = WorldToScreenY(y),
                     Stroke = (y % majorGridSpacing == 0) ? Brushes.Black : Brushes.Gray,
-                    StrokeThickness = (y % majorGridSpacing == 0) ? 1.5 : 0.5
+                    StrokeThickness = (y % majorGridSpacing == 0) ? 1.5 : 0.75,
+                    StrokeDashArray = (y % majorGridSpacing == 0) ? new DoubleCollection { 3, 3 } : new DoubleCollection { 1, 1 },
+                    Opacity = 0.5f
                 };
                 myCanvas.Children.Add(gridLine);
             }
