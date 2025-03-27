@@ -7,7 +7,6 @@
         mc:Ignorable="d"
         Title="Rigid Diaphragm Shear Wall Calculator v0.1" Height="800" Width="1200"
         Background="LightGray"
-        Loaded="Window_Loaded"
         >
 
     <Grid>

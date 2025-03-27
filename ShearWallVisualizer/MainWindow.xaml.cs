@@ -110,6 +110,12 @@ namespace ShearWallVisualizer
 
         private void Canvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
+            if (currentMode == DrawMode.None)
+            {
+                MessageBox.Show("No drawing mode selected.  Try selecting L (line mode) or R (rectangle) mode first.");
+                return;  // Ignore if not in drawing mode
+            }
+
             Point screenPoint = e.GetPosition(myCanvas);
             Point worldPoint = ScreenToWorld(screenPoint);
 
