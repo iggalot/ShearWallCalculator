@@ -201,7 +201,7 @@ namespace ShearWallVisualizer
 
                     Point center = new Point((line.Start.X + line.End.X) / 2, (line.Start.Y + line.End.Y) / 2);
                     centerPoint = CreateCenterPoint(center);
-                    idLabel = CreateIdLabel(center, shapeCounter);
+                    idLabel = CreateIdLabel(center, shape.Id);
                 }
                 else if (shape is WorldRectangle rect)
                 {
@@ -219,7 +219,7 @@ namespace ShearWallVisualizer
 
                     Point center = new Point((rect.BottomLeft.X + rect.TopRight.X) / 2, (rect.BottomLeft.Y + rect.TopRight.Y) / 2);
                     centerPoint = CreateCenterPoint(center);
-                    idLabel = CreateIdLabel(center, shapeCounter);
+                    idLabel = CreateIdLabel(center, shape.Id);
                 }
 
                 if (shapeToDraw != null)
@@ -314,12 +314,14 @@ namespace ShearWallVisualizer
             Ellipse centerPoint = null;
             TextBlock idLabel = null;
 
+            int newId = GetNextAvailableID();  // Increment and use as unique ID for each shape
+
             if (currentMode == DrawMode.Line)
             {
-                // for the line to be horizontal or vertical only
+                // For the line to be horizontal or vertical only
                 worldPoint = GetConstrainedPoint(worldPoint, startPoint.Value); // Ensure alignment
 
-                WorldLine worldLine = new WorldLine(startPoint.Value, worldPoint);
+                WorldLine worldLine = new WorldLine(newId, startPoint.Value, worldPoint);
                 worldShapes.Add(worldLine);
 
                 finalShape = new Line
@@ -337,11 +339,11 @@ namespace ShearWallVisualizer
                                          (worldLine.Start.Y + worldLine.End.Y) / 2);
 
                 centerPoint = CreateCenterPoint(center);
-                idLabel = CreateIdLabel(center, shapeCounter);
+                idLabel = CreateIdLabel(center, newId);
             }
             else if (currentMode == DrawMode.Rectangle)
             {
-                WorldRectangle worldRect = new WorldRectangle(startPoint.Value, worldPoint);
+                WorldRectangle worldRect = new WorldRectangle(newId, startPoint.Value, worldPoint);
                 worldShapes.Add(worldRect);
 
                 finalShape = new Rectangle
@@ -361,7 +363,7 @@ namespace ShearWallVisualizer
                                          (worldRect.BottomLeft.Y + worldRect.TopRight.Y) / 2);
 
                 centerPoint = CreateCenterPoint(center);
-                idLabel = CreateIdLabel(center, shapeCounter);
+                idLabel = CreateIdLabel(center, newId);
             }
 
             if (finalShape != null)
@@ -369,13 +371,40 @@ namespace ShearWallVisualizer
                 myCanvas.Children.Add(finalShape);
                 myCanvas.Children.Add(centerPoint);
                 myCanvas.Children.Add(idLabel);
-                Console.WriteLine($"Final shape drawn with ID: {shapeCounter}");
-                shapeCounter++; // Increment shape counter
+                Console.WriteLine($"Final shape drawn with ID: {newId}");
             }
 
             myCanvas.Children.Remove(previewShape);
             previewShape = null;
             startPoint = null;
+        }
+
+        private int GetNextAvailableID()
+        {
+            int shapeCount = 0;
+
+            while (true)
+            {
+                bool idExists = false;
+
+                // loop throgh all the existing shapes
+                foreach (var shape in worldShapes)
+                {
+                    if (shape.Id == shapeCount)
+                    {
+                        idExists = true;
+                    }
+                }
+
+                // no match found
+                if (idExists is false)
+                {
+                    return shapeCount;
+                }
+                else { 
+                    shapeCount++;
+                }
+            }
         }
 
         private Point GetSnappedPoint(Point worldPoint)
@@ -447,7 +476,7 @@ namespace ShearWallVisualizer
         {
             TextBlock label = new TextBlock
             {
-                Text = id.ToString(),
+                Text = $"ID: {id}",
                 Foreground = Brushes.Black,
                 FontSize = 12,
                 FontWeight = FontWeights.Bold
@@ -516,14 +545,21 @@ namespace ShearWallVisualizer
         }
     }
 
-    public abstract class WorldShape { }
+    public class WorldShape
+    {
+        public int Id { get; }
+        public WorldShape(int id)
+        {
+            Id = id;
+        }
+    }
 
     public class WorldLine : WorldShape
     {
         public Point Start { get; }
         public Point End { get; }
 
-        public WorldLine(Point start, Point end)
+        public WorldLine(int id, Point start, Point end) : base(id)
         {
             Start = start;
             End = end;
@@ -535,15 +571,19 @@ namespace ShearWallVisualizer
         public Point BottomLeft { get; }
         public Point TopRight { get; }
 
-        public WorldRectangle(Point bottomLeft, Point topRight)
+        public WorldRectangle(int id, Point bottomLeft, Point topRight) : base(id)
         {
             BottomLeft = bottomLeft;
             TopRight = topRight;
         }
 
-        public List<Point> GetCorners()
+        // Method to return the rectangle corners for snapping
+        public IEnumerable<Point> GetCorners()
         {
-            return new List<Point> { BottomLeft, TopRight };
+            yield return BottomLeft;
+            yield return new Point(BottomLeft.X, TopRight.Y);  // Top Left
+            yield return new Point(TopRight.X, BottomLeft.Y);  // Bottom Right
+            yield return TopRight;
         }
     }
 }
