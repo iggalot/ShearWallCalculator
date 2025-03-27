@@ -564,6 +564,9 @@ namespace ShearWallVisualizer
                 };
                 myCanvas.Children.Add(gridLine);
             }
+
+            // Draw the origin marker at (0, 0)
+            DrawOriginMarker();
         }
         private Point GetConstrainedPoint(Point endPoint, Point startPoint)
         {
@@ -580,6 +583,31 @@ namespace ShearWallVisualizer
                 // Snap to vertical
                 return new Point(startPoint.X, endPoint.Y);
             }
+        }
+
+        private void DrawOriginMarker()
+        {
+            // Define the marker's size and appearance
+            double markerSize = 8;
+            Ellipse originMarker = new Ellipse
+            {
+                Width = markerSize,
+                Height = markerSize,
+                Fill = Brushes.Red,  // Red color for visibility
+                Stroke = Brushes.Black,
+                StrokeThickness = 2
+            };
+
+            // Convert world coordinates (0, 0) to screen coordinates
+            double screenX = WorldToScreenX(0);
+            double screenY = WorldToScreenY(0);
+
+            // Position the marker at the origin on the canvas
+            Canvas.SetLeft(originMarker, screenX - markerSize / 2);
+            Canvas.SetTop(originMarker, screenY - markerSize / 2);
+
+            // Add the origin marker to the canvas
+            myCanvas.Children.Add(originMarker);
         }
     }
 
