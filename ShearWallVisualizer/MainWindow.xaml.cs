@@ -110,13 +110,6 @@ namespace ShearWallVisualizer
 
         private void Canvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            // Ensure the mode is set before proceeding with any drawing
-            if (currentMode == DrawMode.None)
-            {
-                // If no drawing mode is set, do nothing and exit
-                return;
-            }
-
             Point screenPoint = e.GetPosition(myCanvas);
             Point worldPoint = ScreenToWorld(screenPoint);
 
@@ -291,6 +284,9 @@ namespace ShearWallVisualizer
         {
             if (previewShape is Line line)
             {
+                // force the wall line to be horizontal or vertical only
+                worldPoint = GetConstrainedPoint(worldPoint, startPoint.Value);
+
                 line.X1 = WorldToScreenX(startPoint.Value.X);
                 line.Y1 = WorldToScreenY(startPoint.Value.Y);
                 line.X2 = WorldToScreenX(worldPoint.X);
@@ -314,6 +310,9 @@ namespace ShearWallVisualizer
 
             if (currentMode == DrawMode.Line)
             {
+                // for the line to be horizontal or vertical only
+                worldPoint = GetConstrainedPoint(worldPoint, startPoint.Value); // Ensure alignment
+
                 WorldLine worldLine = new WorldLine(startPoint.Value, worldPoint);
                 worldShapes.Add(worldLine);
 
@@ -491,6 +490,22 @@ namespace ShearWallVisualizer
                     StrokeThickness = (y % majorGridSpacing == 0) ? 1.5 : 0.5
                 };
                 myCanvas.Children.Add(gridLine);
+            }
+        }
+        private Point GetConstrainedPoint(Point endPoint, Point startPoint)
+        {
+            double dx = Math.Abs(endPoint.X - startPoint.X);
+            double dy = Math.Abs(endPoint.Y - startPoint.Y);
+
+            if (dx > dy)
+            {
+                // Snap to horizontal
+                return new Point(endPoint.X, startPoint.Y);
+            }
+            else
+            {
+                // Snap to vertical
+                return new Point(startPoint.X, endPoint.Y);
             }
         }
     }
