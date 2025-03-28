@@ -9,9 +9,9 @@
         Background="LightGray"
         >
 
-    <Grid>
+    <Grid ClipToBounds="true">
         <!-- Drawing Canvas -->
-        <Canvas Name="myCanvas" Background="White"/>
+        <Canvas Name="myCanvas" Background="White" Width="600" Height="600"  ClipToBounds="true"/>
         <StackPanel Orientation="Vertical" Margin="10">
             <TextBlock Name="tbZoom" Text="Zoom"/>
             <TextBlock Name="tbPan" Text="Pan"/>

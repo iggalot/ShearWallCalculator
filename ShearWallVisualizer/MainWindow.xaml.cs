@@ -36,8 +36,8 @@ namespace ShearWallVisualizer
         private Point lastPanPoint;
         private bool isPanning = false;
 
-        private double worldWidth = 100;
-        private double worldHeight = 100;
+        private double worldWidth = 200;
+        private double worldHeight = 200;
 
         private int shapeCounter = 1; // Unique ID for each shape
 
@@ -148,7 +148,8 @@ namespace ShearWallVisualizer
         {
             if (isPanning)
             {
-                Point newPanPoint = e.GetPosition(this);
+                Point newPanPoint = e.GetPosition(myCanvas);
+ // changed this one
                 translateTransform.X += newPanPoint.X - lastPanPoint.X;
                 translateTransform.Y += newPanPoint.Y - lastPanPoint.Y;
 
@@ -180,35 +181,66 @@ namespace ShearWallVisualizer
             {
                 myCanvas.Children.Remove(previewCoordinateLabel);
             }
-            previewCoordinateLabel = CreateCoordinateLabel(ScreenToWorld(e.GetPosition(this)));
+            previewCoordinateLabel = CreateCoordinateLabel(ScreenToWorld(e.GetPosition(myCanvas)));  // changed this one too
             myCanvas.Children.Add(previewCoordinateLabel);
 
             // Display current parameters
             tbPan.Text = "Pan: (" + panOffsetX.ToString("F2") + ", " + panOffsetY.ToString("F2") + ")";
             tbZoom.Text = "Zoom: (" + zoomFactorX.ToString("F2") + ", " + zoomFactorY.ToString("F2") + ")";
-            tbWorldCoords.Text = "World Coords: (" + ScreenToWorld(e.GetPosition(this));
-            tbScreenCoords.Text = "Screen Coords: (" + e.GetPosition(this).X + ", " + e.GetPosition(this).Y + ")";
-
+            tbWorldCoords.Text = "World Coords: (" + ScreenToWorld(e.GetPosition(myCanvas)); // changed this one too
+            tbScreenCoords.Text = "Screen Coords: (" + e.GetPosition(myCanvas).X + ", " + e.GetPosition(myCanvas).Y + ")"; // changed this one too
         }
 
         private void Canvas_MouseWheel(object sender, MouseWheelEventArgs e)
         {
+            // OLD CODE
+            //double zoomFactor = (e.Delta > 0) ? 1.1 : 0.9;
+            //scaleTransform.ScaleX *= zoomFactor;
+            //scaleTransform.ScaleY *= zoomFactor;
+
+            //// store the current zoom scale factors
+            //zoomFactorX = scaleTransform.ScaleX;
+            //zoomFactorY = scaleTransform.ScaleY;
+
+            //DrawGrid();  // Redraw the grid
+            //DrawShapes(); // Redraw the shapes
+
+
+            // NEW CODE
+            // Determine the zoom factor
             double zoomFactor = (e.Delta > 0) ? 1.1 : 0.9;
+
+            // Get the mouse position relative to the canvas
+            Point mousePosition = e.GetPosition(myCanvas);
+
+            // Transform the mouse position to world coordinates before zooming
+            Point beforeZoom = ScreenToWorld(mousePosition);
+
+            // Apply zoom
             scaleTransform.ScaleX *= zoomFactor;
             scaleTransform.ScaleY *= zoomFactor;
 
-            // store the current zoom scale factors
+            // Transform the mouse position to world coordinates after zooming
+            Point afterZoom = ScreenToWorld(mousePosition);
+
+            // Adjust pan offset to keep the mouse position centered
+            panOffsetX -= (afterZoom.X - beforeZoom.X);
+            panOffsetY -= (afterZoom.Y - beforeZoom.Y);
+
+            // Store the current zoom scale factors
             zoomFactorX = scaleTransform.ScaleX;
             zoomFactorY = scaleTransform.ScaleY;
 
-            DrawGrid();  // Redraw the grid
-            DrawShapes(); // Redraw the shapes
+            // Redraw
+            DrawGrid();
+            DrawShapes();
+
 
             // Display current parameters
             tbPan.Text = "Pan: (" + panOffsetX.ToString("F2") + ", " + panOffsetY.ToString("F2") + ")";
             tbZoom.Text = "Zoom: (" + zoomFactorX.ToString("F2") + ", " + zoomFactorY.ToString("F2") + ")";
-            tbWorldCoords.Text = "World Coords: (" + ScreenToWorld(e.GetPosition(this));
-            tbScreenCoords.Text = "Screen Coords: (" + e.GetPosition(this).X + ", " + e.GetPosition(this).Y + ")";
+            tbWorldCoords.Text = "World Coords: (" + ScreenToWorld(e.GetPosition(myCanvas));  // changed this one too
+            tbScreenCoords.Text = "Screen Coords: (" + e.GetPosition(myCanvas).X + ", " + e.GetPosition(myCanvas).Y + ")"; // changed this one too
         }
 
         private void DrawShapes()
@@ -308,7 +340,7 @@ namespace ShearWallVisualizer
             if (e.MiddleButton == MouseButtonState.Pressed)
             {
                 isPanning = true;
-                lastPanPoint = e.GetPosition(this);
+                lastPanPoint = e.GetPosition(myCanvas); // changed this one too
                 myCanvas.Cursor = Cursors.Hand;
             }
         }
@@ -374,9 +406,9 @@ namespace ShearWallVisualizer
         private void CreatePreviewShape()
         {
             if (currentMode == DrawMode.Line)
-                previewShape = new Line { Stroke = Brushes.Gray, StrokeThickness = 2 };
+                previewShape = new Line { Stroke = Brushes.DarkGreen, StrokeThickness = 2 };
             else if (currentMode == DrawMode.Rectangle)
-                previewShape = new Rectangle { Stroke = Brushes.Gray, StrokeThickness = 2, Fill = Brushes.Transparent };
+                previewShape = new Rectangle { Stroke = Brushes.DarkGreen, StrokeThickness = 2, Fill = Brushes.Transparent };
 
             myCanvas.Children.Add(previewShape);
 
@@ -502,11 +534,12 @@ namespace ShearWallVisualizer
                 Console.WriteLine($"Final shape drawn with ID: {newId}");
             }
 
+            // Clear the preview shape from the screen.
             myCanvas.Children.Remove(previewShape);
             previewShape = null;
             startPoint = null;
 
-            // Remove the preview label after finalizing the shape
+            // Remove the preview dimension label after finalizing the shape
             if (previewLengthLabel != null)
             {
                 myCanvas.Children.Remove(previewLengthLabel);
@@ -624,7 +657,7 @@ namespace ShearWallVisualizer
         {
             TextBlock label = new TextBlock
             {
-                Text = $"X: {worldPoint.X}, Y: {worldPoint.Y}",
+                Text = $"X: {worldPoint.X.ToString("F2")}, Y: {worldPoint.Y.ToString("F2")}",
                 Foreground = Brushes.Black,
                 FontSize = 12,
                 FontWeight = FontWeights.Bold,
