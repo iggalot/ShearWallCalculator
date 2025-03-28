@@ -15,7 +15,7 @@ namespace ShearWallVisualizer
         private enum DrawMode { None, Line, Rectangle }
         private DrawMode currentMode = DrawMode.None;
         private bool snapMode = false;
-        private double snapThreshold = 10; // Pixels
+        private double snapThreshold = 50; // Pixels
         private bool debugMode = false;
 
         private Point? startPoint_world = null;  // the first click in world coordinates
@@ -27,6 +27,8 @@ namespace ShearWallVisualizer
         private double panOffsetY = 0.0;
 
         private Shape previewShape = null;
+        private Shape cursorShape = null;
+
         private TextBlock previewLengthLabel = null;
         private TextBlock previewCoordinateLabel = null;
         private Point lastPanPoint;
@@ -36,6 +38,8 @@ namespace ShearWallVisualizer
         private double worldHeight = 200;
 
         private int shapeCounter = 1; // Unique ID for each shape
+
+        private Point currentMousePosition = new Point(0, 0);
 
         public MainWindow()
         {
@@ -137,6 +141,9 @@ namespace ShearWallVisualizer
 
         private void Canvas_MouseMove(object sender, MouseEventArgs e)
         {
+            // update the current mouse position
+            currentMousePosition = e.GetPosition(myCanvas);
+
             // Get new mouse position_screen
             if (isPanning)
             {
@@ -245,15 +252,17 @@ namespace ShearWallVisualizer
 
                 if (shape is WorldLine line)
                 {
-                    Point p1 = WorldToScreen(new Point(line.Start.X, line.Start.Y));
-                    Point p2 = WorldToScreen(new Point(line.End.X, line.End.Y));
+                    Point p1_world = line.Start;
+                    Point p2_world = line.End;
+                    Point p1_screen = WorldToScreen(p1_world);
+                    Point p2_screen = WorldToScreen(p2_world);
 
                     shapeToDraw = new Line
                     {
-                        X1 = p1.X,
-                        Y1 = p1.Y,
-                        X2 = p2.X,
-                        Y2 = p2.Y,
+                        X1 = p1_screen.X,
+                        Y1 = p1_screen.Y,
+                        X2 = p2_screen.X,
+                        Y2 = p2_screen.Y,
                         Stroke = Brushes.Blue,
                         StrokeThickness = 2
                     };
@@ -279,7 +288,8 @@ namespace ShearWallVisualizer
                         } 
                         // line is horizontal
                         else
-                        {   // the  center marker
+                        {   
+                            // the  center marker
                             Canvas.SetLeft(centerPointMarker, center_screen.X - centerPointMarker.Width / 2);
                             Canvas.SetTop(centerPointMarker, center_screen.Y - centerPointMarker.Height / 2);
 
@@ -298,94 +308,114 @@ namespace ShearWallVisualizer
                         {
                             // draw markers and coordinate data at end points
                             Ellipse startMarker = CreateCircularMarker();
-                            Point p1_world = line.Start;
-                            Point p2_world = line.End;
-                            Point p1_screen = WorldToScreen(p1_world);
-                            Point p2_screen = WorldToScreen(p2_world);
-
-                            Canvas.SetLeft(startMarker, p1.X);
-                            Canvas.SetTop(startMarker, p1.Y);
+                            Canvas.SetLeft(startMarker, p1_screen.X);
+                            Canvas.SetTop(startMarker, p1_screen.Y);
                             myCanvas.Children.Add(startMarker);
 
                             Ellipse endMarker = CreateCircularMarker();
-                            Canvas.SetLeft(endMarker, p2.X);
-                            Canvas.SetTop(endMarker, p2.Y);
+                            Canvas.SetLeft(endMarker, p2_screen.X);
+                            Canvas.SetTop(endMarker, p2_screen.Y);
                             myCanvas.Children.Add(endMarker);
 
                             TextBlock startCoord = CreateCoordinateLabel(line.Start);
-                            Canvas.SetLeft(startCoord, p1.X + 6);
-                            Canvas.SetTop(startCoord, p1.Y + 6);
+                            Canvas.SetLeft(startCoord, p1_screen.X + 3);
+                            Canvas.SetTop(startCoord, p1_screen.Y + 3);
                             myCanvas.Children.Add(startCoord);
 
                             TextBlock endCoord = CreateCoordinateLabel(line.End);
-                            Canvas.SetLeft(endCoord, p2.X + 6);
-                            Canvas.SetTop(endCoord, p2.Y + 6);
+                            Canvas.SetLeft(endCoord, p2_screen.X + 3);
+                            Canvas.SetTop(endCoord, p2_screen.Y + 3);
                             myCanvas.Children.Add(endCoord);
                         }
                     }
-
-
                 }
                 else if (shape is WorldRectangle rect)
                 {
-                    //shapeToDraw = new Rectangle
-                    //{
-                    //    Width = Math.Abs(WorldToScreenX(rect.TopRight.X) - WorldToScreenX(rect.BottomLeft.X)),
-                    //    Height = Math.Abs(WorldToScreenY(rect.TopRight.Y) - WorldToScreenY(rect.BottomLeft.Y)),
-                    //    Stroke = Brushes.Black,
-                    //    StrokeThickness = 2,
-                    //    Fill = new SolidColorBrush(Color.FromArgb(128, 255, 0, 0)) // Red with 50% opacity
-                    //};
+                    Point p1_world = rect.BottomLeft;
+                    Point p2_world = rect.TopRight;
+                    Point p1_screen = WorldToScreen(p1_world);
+                    Point p2_screen = WorldToScreen(p2_world);
 
-                    //Canvas.SetLeft(shapeToDraw, Math.Min(WorldToScreenX(rect.BottomLeft.X), WorldToScreenX(rect.TopRight.X)) + offsetX);
-                    //Canvas.SetTop(shapeToDraw, Math.Min(WorldToScreenY(rect.BottomLeft.Y), WorldToScreenY(rect.TopRight.Y)) + offsetY);
+                    shapeToDraw = new Rectangle
+                    {
+                        Width = Math.Abs(p2_screen.X - p1_screen.X),
+                        Height = Math.Abs(p2_screen.Y - p1_screen.Y),
+                        Stroke = Brushes.Black,
+                        StrokeThickness = 2,
+                        Fill = new SolidColorBrush(Color.FromArgb(128, 255, 0, 0)) // Red with 50% opacity
+                    };
 
-                    //Point center = new Point((rect.BottomLeft.X + rect.TopRight.X) / 2, (rect.BottomLeft.Y + rect.TopRight.Y) / 2);
-                    //centerPoint = CreateCircularMarker(center);
-                    //idLabel = CreateIdLabel(center, shape.Id);
+                    Canvas.SetLeft(shapeToDraw, Math.Min(p1_screen.X, p2_screen.X));
+                    Canvas.SetTop(shapeToDraw, Math.Min(p1_screen.Y, p2_screen.Y));
 
-                    //if (debugMode is true)
-                    //{
-                    //    // draw markers and coordinate date at end points
-                    //    Ellipse startMarker = CreateCircularMarker(rect.BottomLeft);
-                    //    Ellipse endMarker = CreateCircularMarker(rect.TopRight);
-                    //    Canvas.SetLeft(startMarker, WorldToScreenX(rect.BottomLeft.X) + offsetX);
-                    //    Canvas.SetTop(startMarker, WorldToScreenY(rect.BottomLeft.Y) + offsetY);
-                    //    myCanvas.Children.Add(startMarker);
-
-                    //    Canvas.SetLeft(endMarker, WorldToScreenX(rect.TopRight.X) + offsetX);
-                    //    Canvas.SetTop(endMarker, WorldToScreenY(rect.TopRight.Y) + offsetY);
-                    //    myCanvas.Children.Add(endMarker);
-
-                    //    TextBlock startCoord = CreateCoordinateLabel(rect.BottomLeft);
-                    //    Canvas.SetLeft(startCoord, WorldToScreenX(rect.BottomLeft.X) + offsetX);
-                    //    Canvas.SetTop(startCoord, WorldToScreenY(rect.BottomLeft.Y) + offsetY);
-                    //    myCanvas.Children.Add(startCoord);
-
-                    //    TextBlock endCoord = CreateCoordinateLabel(rect.TopRight);
-                    //    Canvas.SetLeft(endCoord, WorldToScreenX(rect.TopRight.X) + offsetX);
-                    //    Canvas.SetTop(endCoord, WorldToScreenY(rect.TopRight.Y) + offsetY);
-                    //    myCanvas.Children.Add(endCoord);
-
-                    //}
+                    Point center_world = new Point((p1_world.X + p2_world.X) / 2, (p1_world.Y + p2_world.Y) / 2);
+                    Point center_screen = WorldToScreen(center_world);
 
                     if (shapeToDraw != null)
                     {
                         myCanvas.Children.Add(shapeToDraw);
+
+                        centerPointMarker = CreateCircularMarker();
+
+                        // the  center marker
+                        Canvas.SetLeft(centerPointMarker, center_screen.X - centerPointMarker.Width / 2);
+                        Canvas.SetTop(centerPointMarker, center_screen.Y - centerPointMarker.Height / 2);
                         myCanvas.Children.Add(centerPointMarker);
+
+                        // the id label
+                        idLabel = CreateIdLabel(shape.Id);
+                        Canvas.SetLeft(idLabel, center_screen.X);
+                        Canvas.SetTop(idLabel, center_screen.Y);
                         myCanvas.Children.Add(idLabel);
-                        shapeCounter++;
+
+                        if (debugMode is true)
+                        {
+                            // draw markers and coordinate date at end points
+                            Ellipse startMarker = CreateCircularMarker();
+                            Canvas.SetLeft(startMarker, p1_screen.X - startMarker.Width / 2);
+                            Canvas.SetTop(startMarker, p1_screen.Y - startMarker.Height / 2);
+                            myCanvas.Children.Add(startMarker);
+
+                            Ellipse endMarker = CreateCircularMarker();
+                            Canvas.SetLeft(endMarker, p2_screen.X - endMarker.Width / 2);
+                            Canvas.SetTop(endMarker, p2_screen.Y - endMarker.Height / 2);
+                            myCanvas.Children.Add(endMarker);
+
+                            TextBlock startCoord = CreateCoordinateLabel(rect.BottomLeft);
+                            Canvas.SetLeft(startCoord, p1_screen.X + 3);
+                            Canvas.SetTop(startCoord, p1_screen.Y + 3);
+                            myCanvas.Children.Add(startCoord);
+
+                            TextBlock endCoord = CreateCoordinateLabel(rect.TopRight);
+                            Canvas.SetLeft(endCoord, p2_screen.X + 3);
+                            Canvas.SetTop(endCoord, p2_screen.Y + 3);
+                            myCanvas.Children.Add(endCoord);
+
+                        }
                     }
                 }
-
-
             }
+        }
+
+        private void DrawCursor()
+        {
+            if ((snapMode is true) )
+            {
+                // draw markers and coordinate data at end points
+                Ellipse cursor = CreateCircularMarker(10);
+                cursor.Stroke = Brushes.Red;
+                cursor.StrokeThickness = 2;
+                cursor.Fill = Brushes.Transparent;
+                cursor.IsHitTestVisible = false;
+                Canvas.SetLeft(cursor, currentMousePosition.X - cursor.Width / 2);
+                Canvas.SetTop(cursor, currentMousePosition.Y - cursor.Height / 2);
+                myCanvas.Children.Add(cursor);
+            }
+
         }
 
         private void Canvas_MouseDown(object sender, MouseButtonEventArgs e)
         {
-
-
             if (e.MiddleButton == MouseButtonState.Pressed)
             {
                 isPanning = true;
@@ -478,16 +508,17 @@ namespace ShearWallVisualizer
                 // force the wall line to be horizontal or vertical only
                 worldPoint = GetConstrainedPoint(worldPoint, startPoint_world.Value);
 
-                Point p1 = WorldToScreen(startPoint_world.Value);
-                Point p2 = WorldToScreen(worldPoint);
+                Point p1_world = startPoint_world.Value;
+                Point p2_world = worldPoint;
+                Point p1_screen = WorldToScreen(p1_world);
+                Point p2_screen = WorldToScreen(p2_world);
 
-                line.X1 = p1.X;
-                line.Y1 = p1.Y;
-                line.X2 = p2.X;
-                line.Y2 = p2.Y;
+                line.X1 = p1_screen.X;
+                line.Y1 = p1_screen.Y;
+                line.X2 = p2_screen.X;
+                line.Y2 = p2_screen.Y;
 
                 // Calculate the length of the line
-
                 double world_length = Math.Sqrt(Math.Pow(worldPoint.X - startPoint_world.Value.X, 2) + Math.Pow(worldPoint.Y - startPoint_world.Value.Y, 2));
 
                 previewLengthLabel.Text = $"Length: {world_length:F2}";  // Display length with 2 decimal places
@@ -500,32 +531,34 @@ namespace ShearWallVisualizer
             }
             else if (previewShape is Rectangle rect)
             {
-                //double x = Math.Min(WorldToScreenX(startPoint_world.Value.X), WorldToScreenX(worldPoint.X));
-                //double y = Math.Min(WorldToScreenY(startPoint_world.Value.Y), WorldToScreenY(worldPoint.Y));
-                //rect.Width = Math.Abs(WorldToScreenX(worldPoint.X) - WorldToScreenX(startPoint_world.Value.X));
-                //rect.Height = Math.Abs(WorldToScreenY(worldPoint.Y) - WorldToScreenY(startPoint_world.Value.Y));
-                //Canvas.SetLeft(rect, x);
-                //Canvas.SetTop(rect, y);
+                Point p1_world = startPoint_world.Value;
+                Point p2_world = worldPoint;
+                Point p1_screen = WorldToScreen(p1_world);
+                Point p2_screen = WorldToScreen(p2_world);
 
-                //// Calculate the width and height of the rectangle
-                //double world_width = Math.Abs(worldPoint.X - startPoint_world.Value.X);
-                //double world_height = Math.Abs(worldPoint.Y - startPoint_world.Value.Y);
+                double x_min = Math.Min(p1_screen.X, p2_screen.X);
+                double y_min = Math.Min(p1_screen.Y, p2_screen.Y);
+                rect.Width = Math.Abs(p2_screen.X - p1_screen.X);
+                rect.Height = Math.Abs(p2_screen.Y - p1_screen.Y);
+                Canvas.SetLeft(rect, x_min);
+                Canvas.SetTop(rect, y_min);
 
-                //previewLengthLabel.Text = $"Width: {world_width:F2}, Height: {world_height:F2}";  // Display width and height with 2 decimal places
+                // Calculate the width and height of the rectangle in world coordinates
+                double world_width = Math.Abs(p2_world.X - p1_world.X);
+                double world_height = Math.Abs(p2_world.Y - p1_world.Y);
 
-                //// Position the label in the center_world of the rectangle
-                //double labelX = x + rect.Width / 2;
-                //double labelY = y + rect.Height / 2;
-                //Canvas.SetLeft(previewLengthLabel, labelX + 5);
-                //Canvas.SetTop(previewLengthLabel, labelY - 20);
+                // Display width and height with 2 decimal places
+                previewLengthLabel.Text = $"Width: {world_width:F2}, Height: {world_height:F2}";  
+
+                // Position the label in the center_world of the rectangle
+                double labelX = x_min + rect.Width / 2;
+                double labelY = y_min + rect.Height / 2;
+                Canvas.SetLeft(previewLengthLabel, labelX + 5);
+                Canvas.SetTop(previewLengthLabel, labelY - 20);
             }
         }
         private void FinalizeShape(Point worldPoint)
         {
-            Shape finalShape = null;
-            Ellipse centerPoint = null;
-            TextBlock idLabel = null;
-
             int newId = GetNextAvailableID();  // Increment and use as unique ID for each shape
 
             if (currentMode == DrawMode.Line)
@@ -536,78 +569,14 @@ namespace ShearWallVisualizer
                 // Create the line in world space and store it in the worldShapes list
                 WorldLine worldLine = new WorldLine(newId, startPoint_world.Value, worldPoint);
                 worldShapes.Add(worldLine);
-
-                //// convert screen coordinates
-                //Point p1_screen = WorldToScreen(startPoint_world.Value);
-                //Point p2_screen = WorldToScreen(worldPoint);
-
-                //// draw the final shape in screen space
-                //finalShape = new Line
-                //{
-                //    X1 = p1_screen.X,
-                //    Y1 = p1_screen.Y,
-                //    X2 = p2_screen.X,
-                //    Y2 = p2_screen.Y,
-                //    Stroke = Brushes.Blue,
-                //    StrokeThickness = 2
-                //};
-
-                //// Calculate the center_world of the line
-                //Point center_world = new Point(0.5*(startPoint_world.Value.X + worldPoint.X), 0.5*(startPoint_world.Value.Y + worldPoint.Y));
-                //Point center_screen = WorldToScreen(center_world);
-
-                //centerPoint = CreateCircularMarker();
-                //Canvas.SetLeft(centerPoint, center_screen.X);
-                //Canvas.SetTop(centerPoint, center_screen.Y);
-
-                //idLabel = CreateIdLabel(center_world, newId);
-                //Canvas.SetLeft(idLabel, center_screen.X);
-                //Canvas.SetTop(idLabel, center_screen.Y - 15);
-
-                //if (finalShape != null)
-                //{
-                //    myCanvas.Children.Add(finalShape);
-                //    myCanvas.Children.Add(centerPoint);
-                //    myCanvas.Children.Add(idLabel);
-                //    Console.WriteLine($"Final shape drawn with ID: {newId}");
-                //}
             }
             else if (currentMode == DrawMode.Rectangle)
             {
-                //WorldRectangle worldRect = new WorldRectangle(newId, startPoint_world.Value, worldPoint);
-                //worldShapes.Add(worldRect);
-
-                //finalShape = new Rectangle
-                //{
-                //    Width = Math.Abs(WorldToScreenX(worldRect.TopRight.X) - WorldToScreenX(worldRect.BottomLeft.X)),
-                //    Height = Math.Abs(WorldToScreenY(worldRect.TopRight.Y) - WorldToScreenY(worldRect.BottomLeft.Y)),
-                //    Stroke = Brushes.Black,
-                //    StrokeThickness = 2,
-                //    Fill = new SolidColorBrush(Color.FromArgb(128, 255, 0, 0)) // Red with 50% opacity
-                //};
-
-                //Canvas.SetLeft(finalShape, Math.Min(WorldToScreenX(worldRect.BottomLeft.X), WorldToScreenX(worldRect.TopRight.X)));
-                //Canvas.SetTop(finalShape, Math.Min(WorldToScreenY(worldRect.BottomLeft.Y), WorldToScreenY(worldRect.TopRight.Y)));
-
-                //// Calculate the center_world of the rectangle
-                //Point center_world = new Point((worldRect.BottomLeft.X + worldRect.TopRight.X) / 2,
-                //                         (worldRect.BottomLeft.Y + worldRect.TopRight.Y) / 2);
-
-                //centerPoint = CreateCircularMarker(center_world, panOffsetX, panOffsetY);
-                //idLabel = CreateIdLabel(center_world, newId, panOffsetX, panOffsetY);
-
-                //if (finalShape != null)
-                //{
-                //    myCanvas.Children.Add(finalShape);
-                //    myCanvas.Children.Add(centerPoint);
-                //    myCanvas.Children.Add(idLabel);
-                //    Console.WriteLine($"Final shape drawn with ID: {newId}");
-                //}
+                WorldRectangle worldRect = new WorldRectangle(newId, startPoint_world.Value, worldPoint);
+                worldShapes.Add(worldRect);
             }
 
             DrawShapes(); // Redraw the shapes on the canvas
-
-
 
             // Clear the preview shape from the screen.
             myCanvas.Children.Remove(previewShape);
@@ -677,13 +646,6 @@ namespace ShearWallVisualizer
             return Math.Sqrt(dx * dx + dy * dy) <= snapThreshold * (worldWidth / myCanvas.ActualWidth);
         }
 
-        //private Point ScreenToWorld(Point screenPoint, double offset_x=0, double offset_y=0)
-        //{
-        //    double x = (screenPoint.X - offset_x - translateTransform.X) / scaleTransform.ScaleX;
-        //    double y = ((myCanvas.ActualHeight - screenPoint.Y - offset_y) - translateTransform.Y) / scaleTransform.ScaleY;
-        //    return new Point(x * (worldWidth / myCanvas.ActualWidth), y * (worldHeight / myCanvas.ActualHeight));
-        //}
-
         private Point WorldToScreen(Point p)
         {
             // Convert world coordinates to screen coordinates
@@ -702,48 +664,17 @@ namespace ShearWallVisualizer
             return new Point(x, y);
         }
 
-
-
-
-        //private double WorldToScreenX(double worldX, double offset_x=0, double offset_y=0)
-        //{
-        //    // Apply scaling based on zoom and pan
-        //    return ((worldX - offset_x) * scaleTransform.ScaleX * (myCanvas.ActualWidth / worldWidth)) + translateTransform.X;
-        //}
-
-        //private double WorldToScreenY(double worldY, double offset_x=0, double offset_y=0)
-        //{
-        //    // Adjust for panning (offset) and apply zoom (scale)
-        //    double screenY = (worldY - offset_y) * scaleTransform.ScaleY + translateTransform.Y;
-
-        //    // Invert Y-axis if needed (assuming origin at bottom left)
-        //    return myCanvas.ActualHeight - screenY;
-        //}
-
-        //private double ScreenToWorldX(double screenX)
-        //{
-        //    // Reverse translation, then reverse scaling
-        //    return ((screenX - panOffsetX) / scaleTransform.ScaleX) / (myCanvas.ActualWidth / worldWidth);
-        //}
-
-        //private double ScreenToWorldY(double screenY)
-        //{
-        //    // Reverse translation and flip the Y-axis transformation
-        //    return ((myCanvas.ActualHeight - (screenY - translateTransform.Y)) / scaleTransform.ScaleY) / (myCanvas.ActualHeight / worldHeight);
-        //}
-
-
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             this.Focus();
         }
 
-        private Ellipse CreateCircularMarker()
+        private Ellipse CreateCircularMarker(double dia = 6)
         {
             Ellipse ellipse = new Ellipse
             {
-                Width = 6,
-                Height = 6,
+                Width = dia,
+                Height = dia,
                 Fill = Brushes.Black
             };
 
