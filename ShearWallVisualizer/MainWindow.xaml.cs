@@ -21,8 +21,8 @@ namespace ShearWallVisualizer
         private Point? startPoint_world = null;  // the first click in world coordinates
         private List<WorldShape> worldShapes = new List<WorldShape>();
 
-        private double zoomFactorX = 1.0;
-        private double zoomFactorY = 1.0;
+        private double zoomFactorX = 0.5;
+        private double zoomFactorY = 0.5;
         private double panOffsetX = 0.0;
         private double panOffsetY = 0.0;
 
@@ -36,8 +36,6 @@ namespace ShearWallVisualizer
 
         private double worldWidth = 200;
         private double worldHeight = 200;
-
-        private int shapeCounter = 1; // Unique ID for each shape
 
         private Point currentMousePosition = new Point(0, 0);
 
@@ -64,6 +62,7 @@ namespace ShearWallVisualizer
             DrawGrid();
         }
 
+        #region MODE setters
         private void SetLineMode()
         {
             currentMode = DrawMode.Line;  // Set to Line drawing mode
@@ -77,6 +76,22 @@ namespace ShearWallVisualizer
             MessageBox.Show("Rectangle mode activated.");
             Console.WriteLine("Rectangle mode activated.");
         }
+
+        private void SetDebugMode()
+        {
+            debugMode = !debugMode;
+            MessageBox.Show($"Debug Mode {(debugMode ? "Enabled" : "Disabled")}");
+            Console.WriteLine($"Debug Mode: {(debugMode ? "Enabled" : "Disabled")}");
+        }
+        private void SetSnapMode()
+        {
+            snapMode = !snapMode;
+            MessageBox.Show($"Snap Mode {(snapMode ? "Enabled" : "Disabled")}");
+            Console.WriteLine($"Snap Mode: {(snapMode ? "Enabled" : "Disabled")}");
+        }
+        #endregion
+
+        #region Canvas Event Handlers
 
         private void Canvas_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
         {
@@ -235,6 +250,30 @@ namespace ShearWallVisualizer
             tbScreenCoords.Text = "Screen Coords: (" + position_screen.X + ", " + position_screen.Y + ")"; // changed this one too
         }
 
+        private void Canvas_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.MiddleButton == MouseButtonState.Pressed)
+            {
+                isPanning = true;
+                lastPanPoint = e.GetPosition(myCanvas); // changed this one too
+                myCanvas.Cursor = Cursors.Hand;
+            }
+        }
+
+        private void Canvas_MouseUp(object sender, MouseButtonEventArgs e)
+        {
+            if (e.MiddleButton == MouseButtonState.Released)
+            {
+                isPanning = false;
+                myCanvas.Cursor = Cursors.Arrow;
+            }
+        }
+
+        #endregion
+
+        /// <summary>
+        /// The primary routine to draw all the world shapes
+        /// </summary>
         private void DrawShapes()
         {
             // Clear previous shapes
@@ -411,27 +450,64 @@ namespace ShearWallVisualizer
                 Canvas.SetTop(cursor, currentMousePosition.Y - cursor.Height / 2);
                 myCanvas.Children.Add(cursor);
             }
-
         }
 
-        private void Canvas_MouseDown(object sender, MouseButtonEventArgs e)
+        private void DrawGrid()
         {
-            if (e.MiddleButton == MouseButtonState.Pressed)
+            myCanvas.Children.Clear(); // Clear previous gridlines
+
+            double majorGridSpacing = 5.0;  // Major grid lines every 5 world units
+            double minorGridSpacing = 2.0;  // Minor grid lines every 2 world units
+
+            double canvasWidth = myCanvas.ActualWidth;
+            double canvasHeight = myCanvas.ActualHeight;
+
+            // Draw vertical grid lines (major and minor) in world coordinates
+            for (double x = 0; x <= worldWidth; x += minorGridSpacing)
             {
-                isPanning = true;
-                lastPanPoint = e.GetPosition(myCanvas); // changed this one too
-                myCanvas.Cursor = Cursors.Hand;
+                Point p1 = WorldToScreen(new Point(x, 0));
+                Point p2 = WorldToScreen(new Point(x, canvasHeight));
+                Line gridLine = new Line
+                {
+                    X1 = p1.X,
+                    Y1 = p1.Y,
+                    X2 = p2.X,
+                    Y2 = p2.Y,
+                    Stroke = (x % majorGridSpacing == 0) ? Brushes.Black : Brushes.Gray,
+                    StrokeThickness = (x % majorGridSpacing == 0) ? 1.0 : 0.75,
+                    StrokeDashArray = (x % majorGridSpacing == 0) ? new DoubleCollection { 3, 3 } : new DoubleCollection { 1, 1 },
+                    Opacity = 0.5f,
+                    IsHitTestVisible = false
+                };
+                myCanvas.Children.Add(gridLine);
             }
+
+            // Draw horizontal grid lines (major and minor)
+            for (double y = 0; y <= worldHeight; y += minorGridSpacing)
+            {
+                Point p1 = WorldToScreen(new Point(0, y));
+                Point p2 = WorldToScreen(new Point(canvasWidth, y));
+
+                Line gridLine = new Line
+                {
+                    X1 = p1.X,
+                    Y1 = p1.Y,
+                    X2 = p2.X,
+                    Y2 = p2.Y,
+                    Stroke = (y % majorGridSpacing == 0) ? Brushes.Black : Brushes.Gray,
+                    StrokeThickness = (y % majorGridSpacing == 0) ? 1.0 : 0.75,
+                    StrokeDashArray = (y % majorGridSpacing == 0) ? new DoubleCollection { 3, 3 } : new DoubleCollection { 1, 1 },
+                    Opacity = 0.5f,
+                    IsHitTestVisible = false
+                };
+                myCanvas.Children.Add(gridLine);
+            }
+
+            // Draw the origin marker at world (0, 0)
+            DrawWorldOriginMarker();
         }
 
-        private void Canvas_MouseUp(object sender, MouseButtonEventArgs e)
-        {
-            if (e.MiddleButton == MouseButtonState.Released)
-            {
-                isPanning = false;
-                myCanvas.Cursor = Cursors.Arrow;
-            }
-        }
+
 
 
         private void ResetInputMode()
@@ -466,20 +542,6 @@ namespace ShearWallVisualizer
 
             DrawShapes();
             
-        }
-
-        private void SetDebugMode()
-        {
-            debugMode = !debugMode;
-            MessageBox.Show($"Debug Mode {(debugMode ? "Enabled" : "Disabled")}");
-            Console.WriteLine($"Debug Mode: {(debugMode ? "Enabled" : "Disabled")}");
-        }
-
-        private void SetSnapMode()
-        {
-            snapMode = !snapMode;
-            MessageBox.Show($"Snap Mode {(snapMode ? "Enabled" : "Disabled")}");
-            Console.WriteLine($"Snap Mode: {(snapMode ? "Enabled" : "Disabled")}");
         }
 
         private void CreatePreviewShape()
@@ -707,60 +769,7 @@ namespace ShearWallVisualizer
             return label;
         }
 
-        private void DrawGrid()
-        {
-            myCanvas.Children.Clear(); // Clear previous gridlines
 
-            double majorGridSpacing = 5.0;  // Major grid lines every 5 world units
-            double minorGridSpacing = 2.0;  // Minor grid lines every 2 world units
-
-            double canvasWidth = myCanvas.ActualWidth;
-            double canvasHeight = myCanvas.ActualHeight;
-
-            // Draw vertical grid lines (major and minor) in world coordinates
-            for (double x = 0; x <= worldWidth; x += minorGridSpacing)
-            {
-                Point p1 = WorldToScreen(new Point(x, 0));
-                Point p2 = WorldToScreen(new Point(x, canvasHeight));
-                Line gridLine = new Line
-                {
-                    X1 = p1.X,
-                    Y1 = p1.Y,
-                    X2 = p2.X,
-                    Y2 = p2.Y,
-                    Stroke = (x % majorGridSpacing == 0) ? Brushes.Black : Brushes.Gray,
-                    StrokeThickness = (x % majorGridSpacing == 0) ? 1.0 : 0.75,
-                    StrokeDashArray = (x % majorGridSpacing == 0) ? new DoubleCollection { 3, 3 } : new DoubleCollection { 1, 1 },
-                    Opacity = 0.5f,
-                    IsHitTestVisible = false
-                };
-                myCanvas.Children.Add(gridLine);
-            }
-
-            // Draw horizontal grid lines (major and minor)
-            for (double y = 0; y <= worldHeight; y += minorGridSpacing)
-            {
-                Point p1 = WorldToScreen(new Point(0, y));
-                Point p2 = WorldToScreen(new Point(canvasWidth, y));
-
-                Line gridLine = new Line
-                {
-                    X1 = p1.X,
-                    Y1 = p1.Y,
-                    X2 = p2.X,
-                    Y2 = p2.Y,
-                    Stroke = (y % majorGridSpacing == 0) ? Brushes.Black : Brushes.Gray,
-                    StrokeThickness = (y % majorGridSpacing == 0) ? 1.0 : 0.75,
-                    StrokeDashArray = (y % majorGridSpacing == 0) ? new DoubleCollection { 3, 3 } : new DoubleCollection { 1, 1 },
-                    Opacity = 0.5f,
-                    IsHitTestVisible = false
-                };
-                myCanvas.Children.Add(gridLine);
-            }
-
-            // Draw the origin marker at world (0, 0)
-            DrawWorldOriginMarker();
-        }
         private Point GetConstrainedPoint(Point endPoint, Point startPoint)
         {
             double dx = Math.Abs(endPoint.X - startPoint.X);
@@ -798,8 +807,6 @@ namespace ShearWallVisualizer
 
             // Convert world coordinates (0, 0) to screen coordinates
             Point origin_screen = WorldToScreen(new Point(world_x, world_y));
-            //double screenX = WorldToScreenX(0);
-            //double screenY = WorldToScreenY(0);
 
             // Position the marker at the origin on the canvas
             Canvas.SetLeft(originMarker, origin_screen.X - markerSize / 2);
