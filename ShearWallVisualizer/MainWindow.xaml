@@ -5,13 +5,43 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ShearWallVisualizer"
         mc:Ignorable="d"
-        Title="Rigid Diaphragm Shear Wall Calculator v0.1" Height="800" Width="1200"
+        Title="Rigid Diaphragm Shear Wall Calculator v0.1" Height="900" Width="1200"
         Background="LightGray"
+        Loaded="OnLoaded"
         >
 
-    <Grid ClipToBounds="true">
+    <StackPanel Orientation="Vertical">
+        <StackPanel Orientation="Vertical" Margin="10">
+            <StackPanel Orientation="Horizontal">
+                <Button Content="Hide Text" Click="btnHideText_Click" Width="70" Height="25" HorizontalAlignment="Left"></Button>
+                <Button Content="Hide Grid" Click="btnHideGrid_Click" Width="70" Height="25" HorizontalAlignment="Left"></Button>
+                <Button Name="btnRigidityMode" Background="Blue" Margin="2" Opacity="0.75" FontWeight="Bold" Content="Wall" Width="25" Height="25" Click="btnRectangleMode_Click" />
+                <Button Name="btnMassMode" Background="Red" Margin="2" Opacity="0.75" FontWeight="Bold" Content="Diaphragm" Width="25" Height="25" Click="btnLineMode_Click" />
+                <Button Name="btnSnapToNearest" Background="Red" Margin="2" Opacity="0.75" Content="Snap" Width="100" Height="25" Click="btnSnapMode_Click" />
+
+            </StackPanel>
+            <StackPanel Orientation="Vertical">
+                <TextBlock Width="Auto" Height="20" Name="tbZoom" Text="Zoom"/>
+                <TextBlock Width="Auto" Height="20" Name="tbPan" Text="Pan"/>
+                <TextBlock Width="Auto" Height="20" Name="tbWorldCoords" Text="World Coords"/>
+                <TextBlock Width="Auto" Height="20" Name="tbScreenCoords" Text="Screen Coords"/>
+            </StackPanel>
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" Margin="10">
+            <DockPanel x:Name="dockpanel" LastChildFill="true" Width="750" Height="600">
+
+                <local:LayerManager x:Name="m_layers" DockPanel.Dock="Left" 
+                            PreviewMouseDown="m_layers_PreviewMouseDown" 
+                            PreviewMouseMove="m_layers_PreviewMouseMove"
+                            PreviewMouseWheel="m_layers_PreviewMouseWheel"></local:LayerManager>
+            </DockPanel>
+            <TextBlock Name="m_log" Height ="600" DockPanel.Dock="Right" Width="150"/>
+            <ScrollBar Name="m_scroll" MaxHeight="600" DockPanel.Dock="Right" Scroll="OnScroll" />
+        </StackPanel>
+
         <!-- Drawing Canvas -->
-        <Canvas Name="myCanvas" Background="White" Width="600" Height="600"  ClipToBounds="true">
+        <Canvas Visibility="Collapsed" Name="myCanvas" Background="White" Width="600" Height="600"  ClipToBounds="true">
             <!--<Canvas.RenderTransform>
                 <TransformGroup>
                     <ScaleTransform x:Name="scaleTransform" ScaleX="1" ScaleY="1"/>
@@ -19,13 +49,7 @@
                 </TransformGroup>
             </Canvas.RenderTransform>-->
         </Canvas>
-        <StackPanel Orientation="Vertical" Margin="10">
-            <TextBlock Name="tbZoom" Text="Zoom"/>
-            <TextBlock Name="tbPan" Text="Pan"/>
-            <TextBlock Name="tbWorldCoords" Text="World Coords"/>
-            <TextBlock Name="tbScreenCoords" Text="Screen Coords"/>
-        </StackPanel>
-    </Grid>
+    </StackPanel>
 
     <!--<StackPanel Orientation="Horizontal" Margin="3">
             <StackPanel Orientation="Vertical" Width="450">

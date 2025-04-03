@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.Net;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
@@ -12,6 +15,9 @@ namespace ShearWallVisualizer
 
     public partial class MainWindow : Window
     {
+        bool hide_Text = false;
+        bool hide_Grid = false;
+
         private enum DrawMode { None, Line, Rectangle }
         private DrawMode currentMode = DrawMode.None;
         private bool snapMode = false;
@@ -19,10 +25,11 @@ namespace ShearWallVisualizer
         private bool debugMode = false;
 
         private Point? startPoint_world = null;  // the first click in world coordinates
+        private Point? endPoint_world = null;    // the second click in world coordinates
         private List<WorldShape> worldShapes = new List<WorldShape>();
 
-        private double zoomFactorX = 0.5;
-        private double zoomFactorY = 0.5;
+        private double zoomFactorX = 2.0;
+        private double zoomFactorY = 2.0;
         private double panOffsetX = 0.0;
         private double panOffsetY = 0.0;
 
@@ -37,15 +44,17 @@ namespace ShearWallVisualizer
         private double worldWidth = 200;
         private double worldHeight = 200;
 
-        private Point currentMousePosition = new Point(0, 0);
+        private Point currentMouseScreenPosition = new Point(0, 0);
 
         public MainWindow()
         {
             InitializeComponent();
 
             this.KeyDown += MainWindow_KeyDown;
-            this.MouseLeftButtonDown += Canvas_MouseLeftButtonDown;
-            this.MouseMove += Canvas_MouseMove;
+
+
+ //           this.MouseLeftButtonDown += Canvas_MouseLeftButtonDown;
+ //           this.MouseMove += Canvas_MouseMove;
             this.MouseWheel += Canvas_MouseWheel;
             this.MouseDown += Canvas_MouseDown;
             this.MouseUp += Canvas_MouseUp;
@@ -58,8 +67,8 @@ namespace ShearWallVisualizer
             this.Focus();
             myCanvas.Background = Brushes.White;
 
-            // Draw the grid immediately on startup
-            DrawGrid();
+            //// Draw the grid immediately on startup
+            //DrawGrid();
         }
 
         #region MODE setters
@@ -129,35 +138,35 @@ namespace ShearWallVisualizer
 
         private void Canvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            if (currentMode == DrawMode.None)
-            {
-                MessageBox.Show("No drawing mode selected.  Try selecting L (line mode) or R (rectangle) mode first.");
-                return;  // Ignore if not in drawing mode
-            }
+            //if (currentMode == DrawMode.None)
+            //{
+            //    MessageBox.Show("No drawing mode selected.  Try selecting L (line mode) or R (rectangle) mode first.");
+            //    return;  // Ignore if not in drawing mode
+            //}
 
-            Point screenPoint = e.GetPosition(myCanvas);
-            Point worldPoint = ScreenToWorld(screenPoint);
+            //Point screenPoint = e.GetPosition(myCanvas);
+            //Point worldPoint = ScreenToWorld(screenPoint, myCanvas);
 
-            if (snapMode)
-            {
-                worldPoint = GetSnappedPoint(worldPoint);
-            }
+            //if (snapMode)
+            //{
+            //    worldPoint = GetSnappedPoint(worldPoint);
+            //}
 
-            if (startPoint_world == null)
-            {
-                startPoint_world = worldPoint;
-                CreatePreviewShape();
-            }
-            else
-            {
-                FinalizeShape(worldPoint);
-            }
+            //if (startPoint_world == null)
+            //{
+            //    startPoint_world = worldPoint;
+            //    CreatePreviewShape();
+            //}
+            //else
+            //{
+            //    FinalizeShape(worldPoint);
+            //}
         }
 
         private void Canvas_MouseMove(object sender, MouseEventArgs e)
         {
             // update the current mouse position
-            currentMousePosition = e.GetPosition(myCanvas);
+            currentMouseScreenPosition = e.GetPosition(myCanvas);
 
             // Get new mouse position_screen
             if (isPanning)
@@ -184,7 +193,7 @@ namespace ShearWallVisualizer
             if (startPoint_world != null && previewShape != null)
             {
                 Point screenPoint = e.GetPosition(myCanvas);
-                Point worldPoint = ScreenToWorld(screenPoint);
+                Point worldPoint = ScreenToWorld(screenPoint, myCanvas);
 
                 if (snapMode)
                 {
@@ -194,16 +203,16 @@ namespace ShearWallVisualizer
                 UpdatePreviewShape(worldPoint);
             }
 
-            
-            if(previewCoordinateLabel != null)
+
+            if (previewCoordinateLabel != null)
             {
                 myCanvas.Children.Remove(previewCoordinateLabel);
             }
 
             // create the current mouse position_screen world coords on screen
             Point position = e.GetPosition(myCanvas);  // screen
-            Point previewCoordPoint = new Point (position.X - panOffsetX, position.Y - panOffsetY);
-            previewCoordinateLabel = CreateCoordinateLabel(ScreenToWorld(position));  // changed this one too
+            Point previewCoordPoint = new Point(position.X - panOffsetX, position.Y - panOffsetY);
+            previewCoordinateLabel = CreateCoordinateLabel(ScreenToWorld(position, myCanvas));  // changed this one too
             Canvas.SetLeft(previewCoordinateLabel, previewCoordPoint.X + panOffsetX);
             Canvas.SetTop(previewCoordinateLabel, previewCoordPoint.Y + panOffsetY);
             myCanvas.Children.Add(previewCoordinateLabel);
@@ -211,7 +220,7 @@ namespace ShearWallVisualizer
             // Display current parameters
             tbPan.Text = "Pan: (" + panOffsetX.ToString("F2") + ", " + panOffsetY.ToString("F2") + ")";
             tbZoom.Text = "Zoom: (" + zoomFactorX.ToString("F2") + ", " + zoomFactorY.ToString("F2") + ")";
-            tbWorldCoords.Text = "World Coords: (" + ScreenToWorld(e.GetPosition(myCanvas)); // changed this one too
+            tbWorldCoords.Text = "World Coords: (" + ScreenToWorld(e.GetPosition(myCanvas), myCanvas); // changed this one too
             tbScreenCoords.Text = "Screen Coords: (" + e.GetPosition(myCanvas).X + ", " + e.GetPosition(myCanvas).Y + ")"; // changed this one too
         }
 
@@ -224,14 +233,14 @@ namespace ShearWallVisualizer
             Point mousePosition = e.GetPosition(myCanvas);
 
             // Transform the mouse position_screen to world coordinates before zooming
-            Point beforeZoom = ScreenToWorld(mousePosition);
+            Point beforeZoom = ScreenToWorld(mousePosition, myCanvas);
 
             // Apply zoom
             zoomFactorX *= zoomFactor;
             zoomFactorY *= zoomFactor;
 
             // Transform the mouse position_screen to world coordinates after zooming
-            Point afterZoom = ScreenToWorld(mousePosition);
+            Point afterZoom = ScreenToWorld(mousePosition, myCanvas);
 
             // Adjust pan offset to keep the mouse position_screen centered
             panOffsetX -= (afterZoom.X - beforeZoom.X);
@@ -246,7 +255,7 @@ namespace ShearWallVisualizer
             tbPan.Text = "Pan: (" + panOffsetX.ToString("F2") + ", " + panOffsetY.ToString("F2") + ")";
             tbZoom.Text = "Zoom: (" + zoomFactorX.ToString("F2") + ", " + zoomFactorY.ToString("F2") + ")";
             Point position_screen = e.GetPosition(myCanvas);
-            tbWorldCoords.Text = "World Coords: (" + ScreenToWorld(position_screen);  // changed this one too
+            tbWorldCoords.Text = "World Coords: (" + ScreenToWorld(position_screen, myCanvas);  // changed this one too
             tbScreenCoords.Text = "Screen Coords: (" + position_screen.X + ", " + position_screen.Y + ")"; // changed this one too
         }
 
@@ -293,8 +302,8 @@ namespace ShearWallVisualizer
                 {
                     Point p1_world = line.Start;
                     Point p2_world = line.End;
-                    Point p1_screen = WorldToScreen(p1_world);
-                    Point p2_screen = WorldToScreen(p2_world);
+                    Point p1_screen = WorldToScreen(p1_world, myCanvas);
+                    Point p2_screen = WorldToScreen(p2_world, myCanvas);
 
                     shapeToDraw = new Line
                     {
@@ -307,7 +316,7 @@ namespace ShearWallVisualizer
                     };
 
                     Point center_world = new Point((line.Start.X + line.End.X) / 2, (line.Start.Y + line.End.Y) / 2);
-                    Point center_screen = WorldToScreen(center_world);
+                    Point center_screen = WorldToScreen(center_world, myCanvas);
 
                     if (shapeToDraw != null)
                     {
@@ -324,10 +333,10 @@ namespace ShearWallVisualizer
                             // the id label
                             Canvas.SetLeft(idLabel, center_screen.X);
                             Canvas.SetTop(idLabel, center_screen.Y);
-                        } 
+                        }
                         // line is horizontal
                         else
-                        {   
+                        {
                             // the  center marker
                             Canvas.SetLeft(centerPointMarker, center_screen.X - centerPointMarker.Width / 2);
                             Canvas.SetTop(centerPointMarker, center_screen.Y - centerPointMarker.Height / 2);
@@ -372,8 +381,8 @@ namespace ShearWallVisualizer
                 {
                     Point p1_world = rect.BottomLeft;
                     Point p2_world = rect.TopRight;
-                    Point p1_screen = WorldToScreen(p1_world);
-                    Point p2_screen = WorldToScreen(p2_world);
+                    Point p1_screen = WorldToScreen(p1_world, myCanvas);
+                    Point p2_screen = WorldToScreen(p2_world, myCanvas);
 
                     shapeToDraw = new Rectangle
                     {
@@ -388,7 +397,7 @@ namespace ShearWallVisualizer
                     Canvas.SetTop(shapeToDraw, Math.Min(p1_screen.Y, p2_screen.Y));
 
                     Point center_world = new Point((p1_world.X + p2_world.X) / 2, (p1_world.Y + p2_world.Y) / 2);
-                    Point center_screen = WorldToScreen(center_world);
+                    Point center_screen = WorldToScreen(center_world, myCanvas);
 
                     if (shapeToDraw != null)
                     {
@@ -436,21 +445,21 @@ namespace ShearWallVisualizer
             }
         }
 
-        private void DrawCursor()
-        {
-            if ((snapMode is true) )
-            {
-                // draw markers and coordinate data at end points
-                Ellipse cursor = CreateCircularMarker(10);
-                cursor.Stroke = Brushes.Red;
-                cursor.StrokeThickness = 2;
-                cursor.Fill = Brushes.Transparent;
-                cursor.IsHitTestVisible = false;
-                Canvas.SetLeft(cursor, currentMousePosition.X - cursor.Width / 2);
-                Canvas.SetTop(cursor, currentMousePosition.Y - cursor.Height / 2);
-                myCanvas.Children.Add(cursor);
-            }
-        }
+        //private void DrawCursor()
+        //{
+        //    if ((snapMode is true))
+        //    {
+        //        // draw markers and coordinate data at end points
+        //        Ellipse cursor = CreateCircularMarker(10);
+        //        cursor.Stroke = Brushes.Red;
+        //        cursor.StrokeThickness = 2;
+        //        cursor.Fill = Brushes.Transparent;
+        //        cursor.IsHitTestVisible = false;
+        //        Canvas.SetLeft(cursor, currentMouseScreenPosition.X - cursor.Width / 2);
+        //        Canvas.SetTop(cursor, currentMouseScreenPosition.Y - cursor.Height / 2);
+        //        myCanvas.Children.Add(cursor);
+        //    }
+        //}
 
         private void DrawGrid()
         {
@@ -465,8 +474,8 @@ namespace ShearWallVisualizer
             // Draw vertical grid lines (major and minor) in world coordinates
             for (double x = 0; x <= worldWidth; x += minorGridSpacing)
             {
-                Point p1 = WorldToScreen(new Point(x, 0));
-                Point p2 = WorldToScreen(new Point(x, canvasHeight));
+                Point p1 = WorldToScreen(new Point(x, 0), myCanvas);
+                Point p2 = WorldToScreen(new Point(x, canvasHeight), myCanvas);
                 Line gridLine = new Line
                 {
                     X1 = p1.X,
@@ -485,8 +494,8 @@ namespace ShearWallVisualizer
             // Draw horizontal grid lines (major and minor)
             for (double y = 0; y <= worldHeight; y += minorGridSpacing)
             {
-                Point p1 = WorldToScreen(new Point(0, y));
-                Point p2 = WorldToScreen(new Point(canvasWidth, y));
+                Point p1 = WorldToScreen(new Point(0, y), myCanvas);
+                Point p2 = WorldToScreen(new Point(canvasWidth, y), myCanvas);
 
                 Line gridLine = new Line
                 {
@@ -540,9 +549,13 @@ namespace ShearWallVisualizer
                 SetDebugMode();
             }
 
-            DrawShapes();
-            
+            Draw(ChangeType.Redraw);
         }
+
+
+
+
+
 
         private void CreatePreviewShape()
         {
@@ -563,95 +576,95 @@ namespace ShearWallVisualizer
             myCanvas.Children.Add(previewLengthLabel);
         }
 
-        private void UpdatePreviewShape(Point worldPoint)
-        {
-            if (previewShape is Line line)
-            {
-                // force the wall line to be horizontal or vertical only
-                worldPoint = GetConstrainedPoint(worldPoint, startPoint_world.Value);
+        //private void UpdatePreviewShape(Point worldPoint)
+        //{
+        //    if (previewShape is Line line)
+        //    {
+        //        // force the wall line to be horizontal or vertical only
+        //        worldPoint = GetConstrainedPoint(worldPoint, startPoint_world.Value);
 
-                Point p1_world = startPoint_world.Value;
-                Point p2_world = worldPoint;
-                Point p1_screen = WorldToScreen(p1_world);
-                Point p2_screen = WorldToScreen(p2_world);
+        //        Point p1_world = startPoint_world.Value;
+        //        Point p2_world = worldPoint;
+        //        Point p1_screen = WorldToScreen(p1_world, myCanvas);
+        //        Point p2_screen = WorldToScreen(p2_world, myCanvas);
 
-                line.X1 = p1_screen.X;
-                line.Y1 = p1_screen.Y;
-                line.X2 = p2_screen.X;
-                line.Y2 = p2_screen.Y;
+        //        line.X1 = p1_screen.X;
+        //        line.Y1 = p1_screen.Y;
+        //        line.X2 = p2_screen.X;
+        //        line.Y2 = p2_screen.Y;
 
-                // Calculate the length of the line
-                double world_length = Math.Sqrt(Math.Pow(worldPoint.X - startPoint_world.Value.X, 2) + Math.Pow(worldPoint.Y - startPoint_world.Value.Y, 2));
+        //        // Calculate the length of the line
+        //        double world_length = Math.Sqrt(Math.Pow(worldPoint.X - startPoint_world.Value.X, 2) + Math.Pow(worldPoint.Y - startPoint_world.Value.Y, 2));
 
-                previewLengthLabel.Text = $"Length: {world_length:F2}";  // Display length with 2 decimal places
+        //        previewLengthLabel.Text = $"Length: {world_length:F2}";  // Display length with 2 decimal places
 
-                // Position the label in the middle of the line
-                double labelX = (line.X1 + line.X2) / 2;
-                double labelY = (line.Y1 + line.Y2) / 2;
-                Canvas.SetLeft(previewLengthLabel, labelX + 5);
-                Canvas.SetTop(previewLengthLabel, labelY - 20);
-            }
-            else if (previewShape is Rectangle rect)
-            {
-                Point p1_world = startPoint_world.Value;
-                Point p2_world = worldPoint;
-                Point p1_screen = WorldToScreen(p1_world);
-                Point p2_screen = WorldToScreen(p2_world);
+        //        // Position the label in the middle of the line
+        //        double labelX = (line.X1 + line.X2) / 2;
+        //        double labelY = (line.Y1 + line.Y2) / 2;
+        //        Canvas.SetLeft(previewLengthLabel, labelX + 5);
+        //        Canvas.SetTop(previewLengthLabel, labelY - 20);
+        //    }
+        //    else if (previewShape is Rectangle rect)
+        //    {
+        //        Point p1_world = startPoint_world.Value;
+        //        Point p2_world = worldPoint;
+        //        Point p1_screen = WorldToScreen(p1_world, myCanvas);
+        //        Point p2_screen = WorldToScreen(p2_world, myCanvas);
 
-                double x_min = Math.Min(p1_screen.X, p2_screen.X);
-                double y_min = Math.Min(p1_screen.Y, p2_screen.Y);
-                rect.Width = Math.Abs(p2_screen.X - p1_screen.X);
-                rect.Height = Math.Abs(p2_screen.Y - p1_screen.Y);
-                Canvas.SetLeft(rect, x_min);
-                Canvas.SetTop(rect, y_min);
+        //        double x_min = Math.Min(p1_screen.X, p2_screen.X);
+        //        double y_min = Math.Min(p1_screen.Y, p2_screen.Y);
+        //        rect.Width = Math.Abs(p2_screen.X - p1_screen.X);
+        //        rect.Height = Math.Abs(p2_screen.Y - p1_screen.Y);
+        //        Canvas.SetLeft(rect, x_min);
+        //        Canvas.SetTop(rect, y_min);
 
-                // Calculate the width and height of the rectangle in world coordinates
-                double world_width = Math.Abs(p2_world.X - p1_world.X);
-                double world_height = Math.Abs(p2_world.Y - p1_world.Y);
+        //        // Calculate the width and height of the rectangle in world coordinates
+        //        double world_width = Math.Abs(p2_world.X - p1_world.X);
+        //        double world_height = Math.Abs(p2_world.Y - p1_world.Y);
 
-                // Display width and height with 2 decimal places
-                previewLengthLabel.Text = $"Width: {world_width:F2}, Height: {world_height:F2}";  
+        //        // Display width and height with 2 decimal places
+        //        previewLengthLabel.Text = $"Width: {world_width:F2}, Height: {world_height:F2}";
 
-                // Position the label in the center_world of the rectangle
-                double labelX = x_min + rect.Width / 2;
-                double labelY = y_min + rect.Height / 2;
-                Canvas.SetLeft(previewLengthLabel, labelX + 5);
-                Canvas.SetTop(previewLengthLabel, labelY - 20);
-            }
-        }
-        private void FinalizeShape(Point worldPoint)
-        {
-            int newId = GetNextAvailableID();  // Increment and use as unique ID for each shape
+        //        // Position the label in the center_world of the rectangle
+        //        double labelX = x_min + rect.Width / 2;
+        //        double labelY = y_min + rect.Height / 2;
+        //        Canvas.SetLeft(previewLengthLabel, labelX + 5);
+        //        Canvas.SetTop(previewLengthLabel, labelY - 20);
+        //    }
+        //}
+        //private void FinalizeShape(Point worldPoint)
+        //{
+        //    int newId = GetNextAvailableID();  // Increment and use as unique ID for each shape
 
-            if (currentMode == DrawMode.Line)
-            {
-                // For the line to be horizontal or vertical only
-                worldPoint = GetConstrainedPoint(worldPoint, startPoint_world.Value); // Ensure alignment
+        //    if (currentMode == DrawMode.Line)
+        //    {
+        //        // For the line to be horizontal or vertical only
+        //        worldPoint = GetConstrainedPoint(worldPoint, startPoint_world.Value); // Ensure alignment
 
-                // Create the line in world space and store it in the worldShapes list
-                WorldLine worldLine = new WorldLine(newId, startPoint_world.Value, worldPoint);
-                worldShapes.Add(worldLine);
-            }
-            else if (currentMode == DrawMode.Rectangle)
-            {
-                WorldRectangle worldRect = new WorldRectangle(newId, startPoint_world.Value, worldPoint);
-                worldShapes.Add(worldRect);
-            }
+        //        // Create the line in world space and store it in the worldShapes list
+        //        WorldLine worldLine = new WorldLine(newId, startPoint_world.Value, worldPoint);
+        //        worldShapes.Add(worldLine);
+        //    }
+        //    else if (currentMode == DrawMode.Rectangle)
+        //    {
+        //        WorldRectangle worldRect = new WorldRectangle(newId, startPoint_world.Value, worldPoint);
+        //        worldShapes.Add(worldRect);
+        //    }
 
-            DrawShapes(); // Redraw the shapes on the canvas
+        //    DrawShapes(); // Redraw the shapes on the canvas
 
-            // Clear the preview shape from the screen.
-            myCanvas.Children.Remove(previewShape);
-            previewShape = null;
-            startPoint_world = null;
+        //    // Clear the preview shape from the screen.
+        //    myCanvas.Children.Remove(previewShape);
+        //    previewShape = null;
+        //    startPoint_world = null;
 
-            // Remove the preview dimension label after finalizing the shape
-            if (previewLengthLabel != null)
-            {
-                myCanvas.Children.Remove(previewLengthLabel);
-                previewLengthLabel = null;
-            }
-        }
+        //    // Remove the preview dimension label after finalizing the shape
+        //    if (previewLengthLabel != null)
+        //    {
+        //        myCanvas.Children.Remove(previewLengthLabel);
+        //        previewLengthLabel = null;
+        //    }
+        //}
 
         private int GetNextAvailableID()
         {
@@ -675,7 +688,8 @@ namespace ShearWallVisualizer
                 {
                     return shapeCount;
                 }
-                else { 
+                else
+                {
                     shapeCount++;
                 }
             }
@@ -708,20 +722,20 @@ namespace ShearWallVisualizer
             return Math.Sqrt(dx * dx + dy * dy) <= snapThreshold * (worldWidth / myCanvas.ActualWidth);
         }
 
-        private Point WorldToScreen(Point p)
+        private Point WorldToScreen(Point p, FrameworkElement element)
         {
             // Convert world coordinates to screen coordinates
             double u = (p.X - panOffsetX) * zoomFactorX;
-            double v = (myCanvas.ActualHeight - (p.Y - panOffsetY)) * zoomFactorY; // Invert Y for screen space
+            double v = (element.ActualHeight - (p.Y - panOffsetY)) * zoomFactorY; // Invert Y for screen space
 
             return new Point(u, v);
         }
 
-        private Point ScreenToWorld(Point p)
+        private Point ScreenToWorld(Point p, FrameworkElement element)
         {
             // Convert screen coordinates to world coordinates
             double x = (p.X / zoomFactorX) + panOffsetX;
-            double y = ((myCanvas.ActualHeight - (p.Y / zoomFactorY)) + panOffsetY);
+            double y = ((element.ActualHeight - (p.Y / zoomFactorY)) + panOffsetY);
 
             return new Point(x, y);
         }
@@ -792,7 +806,7 @@ namespace ShearWallVisualizer
         /// </summary>
         /// <param name="world_x"></param>
         /// <param name="world_y"></param>
-        private void DrawWorldOriginMarker(double world_x=0, double world_y=0)
+        private void DrawWorldOriginMarker(double world_x = 0, double world_y = 0)
         {
             // Define the marker's size and appearance
             double markerSize = 8;
@@ -806,7 +820,7 @@ namespace ShearWallVisualizer
             };
 
             // Convert world coordinates (0, 0) to screen coordinates
-            Point origin_screen = WorldToScreen(new Point(world_x, world_y));
+            Point origin_screen = WorldToScreen(new Point(world_x, world_y), myCanvas);
 
             // Position the marker at the origin on the canvas
             Canvas.SetLeft(originMarker, origin_screen.X - markerSize / 2);
@@ -815,7 +829,491 @@ namespace ShearWallVisualizer
             // Add the origin marker to the canvas
             myCanvas.Children.Add(originMarker);
         }
+
+
+
+        #region LayerManager Test stuff
+        private void DrawText(DrawingContext ctx)
+        {
+            //if (hide_Text) return;
+
+            //var pen = new Pen(Brushes.Black, 1);
+            //var rect = new Rect(20, m_scroll.Value, 15, 25);
+            //ctx.DrawRectangle(Brushes.Teal, pen, rect);
+
+            //var txt = new FormattedText(
+            //    "qazwsxedcrfvtgbyhnujmik,ol.p;/[']\r\nqwertyuiop\r\n\r\nasdfghjkl\r\nzxcvbnm\r\n0987654321",
+            //    CultureInfo.GetCultureInfo("en-us"),
+            //    FlowDirection.LeftToRight,
+            //    new Typeface("Consolas"),
+            //    14,
+            //    Brushes.White);
+
+            //ctx.DrawText(txt, new Point(20, m_scroll.Value));
+
+            //Log("text");
+        }
+
+        private void DrawBackground(DrawingContext ctx)
+        {
+            var pen = new Pen(Brushes.Black, 1);
+            var rect = new Rect(0, 0, m_layers.ActualWidth, m_layers.ActualHeight);
+            ctx.DrawRoundedRectangle(Brushes.White, pen, rect, 0, 0);
+
+            Log("background");
+        }
+
+        private void DrawBackgroundBlock(DrawingContext ctx)
+        {
+            //var pen = new Pen(Brushes.DarkOliveGreen, 1);
+            //var rect = new Rect(20, 60, 200, 50);
+            //ctx.DrawRoundedRectangle(Brushes.DarkOliveGreen, pen, rect, 50, 50);
+
+            //Log("background block");
+        }
+
+
+        private void DrawForeground(DrawingContext ctx)
+        {
+            //var pen = new Pen(Brushes.Black, 1);
+            //var rect = new Rect(20, 20, 50, 55);
+            //ctx.DrawRectangle(Brushes.Red, pen, rect);
+
+            //Log("foreground");
+        }
+
+        private void DrawStaticForeground(DrawingContext ctx)
+        {
+            //var pen = new Pen(Brushes.Black, 1);
+            //var rect = new Rect(70, 20, 100, 100);
+            //ctx.DrawRectangle(Brushes.Blue, pen, rect);
+
+            //Log("foreground");
+        }
+
+        private void DrawVisualGrid(DrawingContext ctx)
+        {
+            if(hide_Grid is true)
+            {
+                return;
+            }
+
+            // thickness of the minor gridlines
+            Pen pen; 
+
+            double majorGridSpacing = 10.0;  // Major grid lines every 5 world units
+            double minorGridSpacing = 2.0;  // Minor grid lines every 2 world units
+
+            double layerWidth = dockpanel.Width;
+            double layerHeight = dockpanel.Height;
+
+            // Draw vertical grid lines (major and minor) in world coordinates
+            for (double x = 0; x <= worldWidth; x += minorGridSpacing)
+            {
+                // If its a major grid line, make it thicker
+                if(x % majorGridSpacing == 0)
+                {
+                    pen = new Pen(Brushes.Black, 1.0);
+                    pen.Thickness = 1;
+                    pen.DashStyle = new DashStyle(new double[] { 5, 5 }, 0);
+                } else
+                {
+                    pen = new Pen(Brushes.Black, 0.3);
+                    pen.Thickness = 0.5;
+                    pen.DashStyle = new DashStyle(new double[] { 5, 5 }, 0);
+
+                }
+
+                Point p1 = WorldToScreen(new Point(x, 0), m_layers);
+                Point p2 = WorldToScreen(new Point(x, layerHeight), m_layers);
+
+                // Check if line is outside of viewbox
+                if (p1.X < 0 || p1.X > layerWidth || p2.X < 0 || p2.X > layerWidth)
+                {
+                    continue;
+                }
+
+                // check if p1 point is outside of viewbox
+                if (p1.Y < 0)
+                {
+                    p1.Y = 0;
+                }
+                if (p1.Y > layerHeight)
+                {
+                    p1.Y = layerHeight;
+                }
+                if (p2.Y < 0)
+                {
+                    p2.Y = 0;
+                }
+                if (p2.Y > layerHeight)
+                {
+                    p2.Y = layerHeight;
+                }
+
+                ctx.DrawLine(pen, p1, p2);
+            }
+
+            // Draw horizontal grid lines (major and minor)
+            for (double y = 0; y <= worldHeight; y += minorGridSpacing)
+            {
+                // If its a major grid line, make it thicker
+                if (y % majorGridSpacing == 0)
+                {
+                    pen = new Pen(Brushes.Black, 1.0);
+                    pen.Thickness = 1;
+                    pen.DashStyle = new DashStyle(new double[] { 5, 5 }, 0);
+                }
+                else
+                {
+                    pen = new Pen(Brushes.Black, 0.3);
+                    pen.Thickness = 0.5;
+                    pen.DashStyle = new DashStyle(new double[] { 5, 5 }, 0);
+
+                }
+
+                Point p1 = WorldToScreen(new Point(0, y), m_layers);
+                Point p2 = WorldToScreen(new Point(layerWidth, y), m_layers);
+
+                // Check if line is outside of viewbox
+                if (p1.Y < 0 || p1.Y > layerHeight || p2.Y < 0 || p2.Y > layerHeight)
+                {
+                    continue;
+                }
+
+                // check if p1 point is outside of viewbox
+                if(p1.X < 0)
+                {
+                    p1.X = 0;
+                }
+                if(p1.X > layerWidth)
+                {
+                    p1.X = layerWidth;
+                }
+                if (p2.X < 0)
+                {
+                    p2.X = 0;
+                }
+                if (p2.X > layerWidth)
+                {
+                    p2.X = layerWidth;
+                }
+
+                ctx.DrawLine(pen, p1, p2); 
+
+            }
+
+            // Draw an origin marker
+            DrawMarkers(ctx, WorldToScreen(new Point(0, 0), m_layers), 5, new Pen(Brushes.Black, 1), Brushes.DarkRed);
+        }
+
+
+        private void DrawMarkers(DrawingContext ctx, Point p, double dia, Pen pen, Brush fill)
+        {
+            ctx.DrawEllipse(fill, pen, p, dia, dia);
+
+            return;
+        }
+
+        private void DrawCursor(DrawingContext ctx)
+        {
+            Point cross_pt = currentMouseScreenPosition;
+
+            if ((snapMode is true))
+            {
+                // draw markers and coordinate data at end points
+                ctx.DrawEllipse(Brushes.DarkRed, new Pen(Brushes.Black, 1), currentMouseScreenPosition, 5, 5);
+
+                ctx.DrawLine(new Pen(Brushes.Red, 1), cross_pt, new Point(0, cross_pt.Y));
+                ctx.DrawLine(new Pen(Brushes.Red, 1), cross_pt, new Point(dockpanel.Width, cross_pt.Y));
+                ctx.DrawLine(new Pen(Brushes.Red, 1), cross_pt, new Point(cross_pt.X, 0));
+                ctx.DrawLine(new Pen(Brushes.Red, 1), cross_pt, new Point(cross_pt.X, dockpanel.Height));
+            } else
+            {
+                ctx.DrawLine(new Pen(Brushes.Black, 1), cross_pt, new Point(0, cross_pt.Y));
+                ctx.DrawLine(new Pen(Brushes.Black, 1), cross_pt, new Point(dockpanel.Width, cross_pt.Y));
+                ctx.DrawLine(new Pen(Brushes.Black, 1), cross_pt, new Point(cross_pt.X, 0));
+                ctx.DrawLine(new Pen(Brushes.Black, 1), cross_pt, new Point(cross_pt.X, dockpanel.Height));
+            }
+        }
+
+        private void DrawPreview(DrawingContext ctx)
+        {
+            if(previewShape == null)
+            {
+                return;
+            }
+
+            if(previewShape is Line line)
+            {
+                SolidColorBrush lineStrokeBrush = new SolidColorBrush(Colors.Green);
+                lineStrokeBrush.Opacity = 0.5;
+                Pen pen = new Pen(lineStrokeBrush, 1);
+                Point p1 = WorldToScreen(startPoint_world.Value, m_layers);
+                Point p2 = WorldToScreen(endPoint_world.Value, m_layers);
+                ctx.DrawLine(pen, p1, p2);
+            } else if (previewShape is Rectangle rect)
+            {
+                SolidColorBrush rectFillBrush = new SolidColorBrush(Colors.Red);
+                rectFillBrush.Opacity = 0.5;
+
+                // find lower left corner point of rectangle bounded by startPoint_world and endPoint_world
+                Point insertPoint_world = new Point(Math.Min(startPoint_world.Value.X, endPoint_world.Value.X), Math.Min(startPoint_world.Value.Y, endPoint_world.Value.Y));
+                Point insertPoint_screen = WorldToScreen(insertPoint_world, m_layers);
+                double width = Math.Abs(startPoint_world.Value.X - endPoint_world.Value.X);
+                double height = Math.Abs(startPoint_world.Value.Y - endPoint_world.Value.Y);
+                ctx.DrawRectangle(rectFillBrush, new Pen(Brushes.Black, 1), new Rect(insertPoint_screen.X, insertPoint_world.Y, width, height));
+            }
+        }
+
+
+
+        protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
+        {
+            base.OnRenderSizeChanged(sizeInfo);
+
+            m_scroll.Minimum = 0;
+            m_scroll.Maximum = m_layers.ActualHeight - 70;
+            Draw(ChangeType.Resize);
+        }
+
+        private void OnScroll(object sender, ScrollEventArgs e)
+        {
+            Draw(ChangeType.Scroll);
+        }
+
+        private void Draw(ChangeType change)
+        {
+            m_layers.Draw(change);
+        }
+
+        private void btnHideText_Click(object sender, RoutedEventArgs e)
+        {
+            hide_Text = !hide_Text;
+            Draw(ChangeType.Redraw);
+        }
+
+        private void btnHideGrid_Click(object sender, RoutedEventArgs e)
+        {
+            hide_Grid = !hide_Grid;
+            Draw(ChangeType.Redraw);
+        }
+
+        private void Log(string text)
+        {
+            m_log.Text = text + "\r\n" + m_log.Text;
+
+            if (m_log.Text.Length > 1000)
+            {
+                m_log.Text = m_log.Text.Substring(0, 1000);
+            }
+        }
+
+
+        private void UpdatePreviewShape(Point worldPoint)
+        {
+            if (previewShape is Line line)
+            {
+                // force the wall line to be horizontal or vertical only
+                worldPoint = GetConstrainedPoint(worldPoint, startPoint_world.Value);
+
+                Point p1_world = startPoint_world.Value;
+                Point p2_world = worldPoint;
+                Point p1_screen = WorldToScreen(p1_world, myCanvas);
+                Point p2_screen = WorldToScreen(p2_world, myCanvas);
+
+                line.X1 = p1_screen.X;
+                line.Y1 = p1_screen.Y;
+                line.X2 = p2_screen.X;
+                line.Y2 = p2_screen.Y;
+
+                // Calculate the length of the line
+                double world_length = Math.Sqrt(Math.Pow(worldPoint.X - startPoint_world.Value.X, 2) + Math.Pow(worldPoint.Y - startPoint_world.Value.Y, 2));
+
+                previewLengthLabel.Text = $"Length: {world_length:F2}";  // Display length with 2 decimal places
+
+                // Position the label in the middle of the line
+                double labelX = (line.X1 + line.X2) / 2;
+                double labelY = (line.Y1 + line.Y2) / 2;
+                Canvas.SetLeft(previewLengthLabel, labelX + 5);
+                Canvas.SetTop(previewLengthLabel, labelY - 20);
+            }
+            else if (previewShape is Rectangle rect)
+            {
+                Point p1_world = startPoint_world.Value;
+                Point p2_world = worldPoint;
+                Point p1_screen = WorldToScreen(p1_world, myCanvas);
+                Point p2_screen = WorldToScreen(p2_world, myCanvas);
+
+                double x_min = Math.Min(p1_screen.X, p2_screen.X);
+                double y_min = Math.Min(p1_screen.Y, p2_screen.Y);
+                rect.Width = Math.Abs(p2_screen.X - p1_screen.X);
+                rect.Height = Math.Abs(p2_screen.Y - p1_screen.Y);
+                Canvas.SetLeft(rect, x_min);
+                Canvas.SetTop(rect, y_min);
+
+                // Calculate the width and height of the rectangle in world coordinates
+                double world_width = Math.Abs(p2_world.X - p1_world.X);
+                double world_height = Math.Abs(p2_world.Y - p1_world.Y);
+
+                // Display width and height with 2 decimal places
+                previewLengthLabel.Text = $"Width: {world_width:F2}, Height: {world_height:F2}";
+
+                // Position the label in the center_world of the rectangle
+                double labelX = x_min + rect.Width / 2;
+                double labelY = y_min + rect.Height / 2;
+                Canvas.SetLeft(previewLengthLabel, labelX + 5);
+                Canvas.SetTop(previewLengthLabel, labelY - 20);
+            }
+        }
+        private void FinalizeShape(Point worldPoint)
+        {
+            int newId = GetNextAvailableID();  // Increment and use as unique ID for each shape
+
+            if (currentMode == DrawMode.Line)
+            {
+                // For the line to be horizontal or vertical only
+                worldPoint = GetConstrainedPoint(worldPoint, startPoint_world.Value); // Ensure alignment
+
+                // Create the line in world space and store it in the worldShapes list
+                WorldLine worldLine = new WorldLine(newId, startPoint_world.Value, worldPoint);
+                worldShapes.Add(worldLine);
+            }
+            else if (currentMode == DrawMode.Rectangle)
+            {
+                WorldRectangle worldRect = new WorldRectangle(newId, startPoint_world.Value, worldPoint);
+                worldShapes.Add(worldRect);
+            }
+
+            DrawShapes(); // Redraw the shapes on the canvas
+
+            // Clear the preview shape from the screen.
+            myCanvas.Children.Remove(previewShape);
+            previewShape = null;
+            startPoint_world = null;
+
+            // Remove the preview dimension label after finalizing the shape
+            if (previewLengthLabel != null)
+            {
+                myCanvas.Children.Remove(previewLengthLabel);
+                previewLengthLabel = null;
+            }
+
+            Draw(ChangeType.Redraw);
+        }
+
+        // Create the layers
+        private void OnLoaded(object sender, RoutedEventArgs e)
+        {
+            m_layers.AddLayer(5, DrawBackground, ChangeType.Resize);
+            m_layers.AddLayer(11, DrawBackgroundBlock);
+
+            m_layers.AddLayer(20, DrawStaticForeground);
+            m_layers.AddLayer(21, DrawText, ChangeType.Scroll);
+
+            m_layers.AddLayer(30, DrawForeground);
+
+            m_layers.AddLayer(40, DrawVisualGrid);
+            m_layers.AddLayer(52, DrawCursor);
+            m_layers.AddLayer(51, DrawPreview);
+
+
+
+            Draw(ChangeType.Redraw);
+        }
+
+        #endregion
+
+        private void m_layers_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            MessageBox.Show("Drawing Visual Clicked at " + e.GetPosition(myCanvas).ToString());
+
+
+            if (currentMode == DrawMode.None)
+            {
+                MessageBox.Show("No drawing mode selected.  Try selecting L (line mode) or R (rectangle) mode first.");
+                return;  // Ignore if not in drawing mode
+            }
+
+            Point screenPoint = e.GetPosition(myCanvas);
+            Point worldPoint = ScreenToWorld(screenPoint, myCanvas);
+
+            if (snapMode)
+            {
+                worldPoint = GetSnappedPoint(worldPoint);
+            }
+
+            if (startPoint_world == null)
+            {
+                startPoint_world = worldPoint;
+                CreatePreviewShape();
+            }
+            else
+            {
+                endPoint_world = worldPoint;
+                FinalizeShape(worldPoint);
+            }
+        }
+
+
+
+        private void m_layers_PreviewMouseMove(object sender, MouseEventArgs e)
+        {
+            currentMouseScreenPosition = e.GetPosition(m_layers);
+
+            tbScreenCoords.Text = e.GetPosition(m_layers).ToString();
+
+            Draw(ChangeType.Redraw);
+        }
+
+        private void m_layers_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            // Determine the zoom factor
+            double zoomFactor = (e.Delta > 0) ? 1.1 : 0.9;
+
+            // Get the mouse position_screen relative to the canvas
+            Point mousePosition = e.GetPosition(m_layers);
+
+            // Transform the mouse position_screen to world coordinates before zooming
+            Point beforeZoom = ScreenToWorld(mousePosition, m_layers);
+
+            // Apply zoom
+            zoomFactorX *= zoomFactor;
+            zoomFactorY *= zoomFactor;
+
+            // Transform the mouse position_screen to world coordinates after zooming
+            Point afterZoom = ScreenToWorld(mousePosition, m_layers);
+
+            // Adjust pan offset to keep the mouse position_screen centered
+            panOffsetX -= (afterZoom.X - beforeZoom.X);
+            panOffsetY -= (afterZoom.Y - beforeZoom.Y);
+
+            // Display current parameters on screen
+            tbPan.Text = "Pan: (" + panOffsetX.ToString("F2") + ", " + panOffsetY.ToString("F2") + ")";
+            tbZoom.Text = "Zoom: (" + zoomFactorX.ToString("F2") + ", " + zoomFactorY.ToString("F2") + ")";
+            tbWorldCoords.Text = "World Coords: (" + afterZoom.X.ToString("F2") + ", " + afterZoom.Y.ToString("F2") + ")";  // changed this one too
+            tbScreenCoords.Text = "Screen Coords: (" + mousePosition.X.ToString("F2") + ", " + mousePosition.Y.ToString("F2") + ")"; // changed this one too
+
+            Draw(ChangeType.Redraw);
+        }
+
+        private void btnLineMode_Click(object sender, RoutedEventArgs e)
+        {
+            SetLineMode();
+        }
+
+        private void btnRectangleMode_Click(object sender, RoutedEventArgs e)
+        {
+            SetRectangleMode();
+        }
+
+        private void btnSnapMode_Click(object sender, RoutedEventArgs e)
+        {
+            SetSnapMode();
+        }
+
     }
+
 
     public class WorldShape
     {
