@@ -30,25 +30,16 @@
 
         <StackPanel Orientation="Horizontal" Margin="10">
             <DockPanel x:Name="dockpanel" LastChildFill="true" Width="750" Height="600">
-
+                <!--Our new drawing surface-->
                 <local:LayerManager x:Name="m_layers" DockPanel.Dock="Left" 
                             PreviewMouseDown="m_layers_PreviewMouseDown" 
                             PreviewMouseMove="m_layers_PreviewMouseMove"
-                            PreviewMouseWheel="m_layers_PreviewMouseWheel"></local:LayerManager>
+                            PreviewMouseWheel="m_layers_PreviewMouseWheel"
+                            PreviewMouseRightButtonDown="m_layers_PreviewMouseRightButtonDown"/>
             </DockPanel>
             <TextBlock Name="m_log" Height ="600" DockPanel.Dock="Right" Width="150"/>
             <ScrollBar Name="m_scroll" MaxHeight="600" DockPanel.Dock="Right" Scroll="OnScroll" />
         </StackPanel>
-
-        <!-- Drawing Canvas -->
-        <Canvas Visibility="Collapsed" Name="myCanvas" Background="White" Width="600" Height="600"  ClipToBounds="true">
-            <!--<Canvas.RenderTransform>
-                <TransformGroup>
-                    <ScaleTransform x:Name="scaleTransform" ScaleX="1" ScaleY="1"/>
-                    <TranslateTransform x:Name="translateTransform" X="0" Y="0"/>
-                </TransformGroup>
-            </Canvas.RenderTransform>-->
-        </Canvas>
     </StackPanel>
 
     <!--<StackPanel Orientation="Horizontal" Margin="3">
