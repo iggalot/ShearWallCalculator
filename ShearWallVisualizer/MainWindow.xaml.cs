@@ -2,13 +2,11 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Net;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Media3D;
 using System.Windows.Shapes;
 
 namespace ShearWallVisualizer
@@ -16,6 +14,8 @@ namespace ShearWallVisualizer
 
     public partial class MainWindow : Window
     {
+        private bool initialized = false;  // is the initial window setup complete?
+
         bool hide_Text = false;
         bool hide_Grid = false;
 
@@ -57,12 +57,41 @@ namespace ShearWallVisualizer
             this.Focusable = true;
             this.Focus();
 
-            Draw(ChangeType.Redraw);
+
+            this.Loaded += (s, e) =>
+            {
+                if (initialized) return;
+
+                initialized = true;
+
+                // Set zoom factors based on the visible area and world dimensions
+                zoomFactorX = dockpanel.ActualWidth / worldWidth;
+                zoomFactorY = dockpanel.ActualHeight / worldHeight;
+
+                // Set the scale factors so both are the same -- for square grids
+                zoomFactorX = Math.Min(zoomFactorX, zoomFactorY);
+                zoomFactorY = zoomFactorX;
+
+                // Compute current screen position of world (0,0)
+                Point screenOrigin = WorldToScreen(new Point(0, 0), dockpanel);
+
+                // Adjust pan offset so (0,0) appears in bottom-left corner (screen X=0, Y=height)
+                panOffsetX += screenOrigin.X / zoomFactorX;
+                panOffsetY += (dockpanel.ActualHeight - screenOrigin.Y) / zoomFactorY;
+
+                Draw(ChangeType.Redraw);
+            };
         }
 
         #region MODE setters
+
+
         private void SetLineMode()
         {
+            ResetUIButtons();
+            btnRigidityMode.BorderThickness = new Thickness(3);
+            btnRigidityMode.BorderBrush = new SolidColorBrush(Colors.Black);
+
             currentMode = DrawMode.Line;  // Set to Line drawing mode
             MessageBox.Show("Line mode activated.");
             Console.WriteLine("Line mode activated.");
@@ -70,6 +99,10 @@ namespace ShearWallVisualizer
 
         private void SetRectangleMode()
         {
+            ResetUIButtons();
+            btnMassMode.BorderThickness = new Thickness(3);
+            btnMassMode.BorderBrush = new SolidColorBrush(Colors.Black);
+
             currentMode = DrawMode.Rectangle;  // Set to Rectangle drawing mode
             MessageBox.Show("Rectangle mode activated.");
             Console.WriteLine("Rectangle mode activated.");
@@ -77,37 +110,66 @@ namespace ShearWallVisualizer
 
         private void SetDebugMode()
         {
+            ResetUIButtons();
+
             debugMode = !debugMode;
             MessageBox.Show($"Debug Mode {(debugMode ? "Enabled" : "Disabled")}");
             Console.WriteLine($"Debug Mode: {(debugMode ? "Enabled" : "Disabled")}");
         }
         private void SetSnapMode()
         {
+            ResetUIButtons();
+            btnSnapToNearest.BorderThickness = new Thickness(3);
+            btnSnapToNearest.BorderBrush = new SolidColorBrush(Colors.Black);
+
             snapMode = !snapMode;
             MessageBox.Show($"Snap Mode {(snapMode ? "Enabled" : "Disabled")}");
             Console.WriteLine($"Snap Mode: {(snapMode ? "Enabled" : "Disabled")}");
         }
-        #endregion
-                
+
+        /// <summary>
+        /// Cancels input mode and clears the previews
+        /// </summary>
         private void ResetInputMode()
         {
             // cancel the input by setting the start point to null
             startPoint_world = null;
+            endPoint_world = null;
             previewShape = null;
         }
 
+        private void ResetUIButtons()
+        {
+            btnRigidityMode.BorderThickness = new Thickness(0);
+            btnMassMode.BorderThickness = new Thickness(0);
+            btnSnapToNearest.BorderThickness = new Thickness(0);
+
+            if (snapMode is true)
+            {
+                btnSnapToNearest.BorderThickness = new Thickness(3);
+            }
+
+            if (debugMode is true)
+            {
+                // TODO:: how should the UI be set in debug mode?
+            }
+        }
+        #endregion
+
+
+
         private void MainWindow_KeyDown(object sender, KeyEventArgs e)
         {
-            ResetInputMode();
-
             Console.WriteLine($"Key Pressed: {e.Key}");
 
             if (e.Key == Key.L)
             {
+                ResetInputMode();
                 SetLineMode();
             }
             else if (e.Key == Key.R)
             {
+                ResetInputMode();
                 SetRectangleMode();
             }
             else if (e.Key == Key.S)
@@ -467,12 +529,11 @@ namespace ShearWallVisualizer
                 Point p2 = WorldToScreen(preview_endPoint_world, m_layers);
 
                 // find lower left corner point of rectangle bounded by startPoint_world and endPoint_world
-                Point insertPoint_world = new Point(Math.Min(p1.X, p2.X), Math.Min(p1.Y, p2.Y));
-                Point insertPoint_screen = WorldToScreen(insertPoint_world, m_layers);
+                Point insertPoint_screen = new Point(Math.Min(p1.X, p2.X), Math.Min(p1.Y, p2.Y));
                 
                 double width = Math.Abs(p2.X - p1.X);
                 double height = Math.Abs(p2.Y - p1.Y);
-                ctx.DrawRectangle(rectFillBrush, pen, new Rect(insertPoint_screen.X, insertPoint_world.Y, width, height));
+                ctx.DrawRectangle(rectFillBrush, pen, new Rect(insertPoint_screen.X, insertPoint_screen.Y, width, height));
             }
         }
 
@@ -714,9 +775,18 @@ namespace ShearWallVisualizer
 
         #endregion
 
+        #region Drawing Layer Events
+
         private void m_layers_PreviewMouseDown(object sender, MouseButtonEventArgs e)
         {
             //MessageBox.Show("Drawing Visual Clicked at " + e.GetPosition(m_layers).ToString());
+
+            if(e.RightButton == MouseButtonState.Pressed)
+            {
+                ResetInputMode();
+                Draw(ChangeType.Redraw);
+                return;
+            }
 
 
             if (currentMode == DrawMode.None)
@@ -752,8 +822,11 @@ namespace ShearWallVisualizer
         private void m_layers_PreviewMouseMove(object sender, MouseEventArgs e)
         {
             currentMouseScreenPosition = e.GetPosition(m_layers);
+            Point currentMouseWorldPosition = ScreenToWorld(currentMouseScreenPosition, m_layers);
 
             tbScreenCoords.Text = e.GetPosition(m_layers).ToString();
+            tbWorldCoords.Text = "World Coords: (" + currentMouseWorldPosition.X.ToString("F2") + ", " + currentMouseWorldPosition.Y.ToString("F2") + ")";  // changed this one too
+
 
             Draw(ChangeType.Redraw);
         }
@@ -789,6 +862,22 @@ namespace ShearWallVisualizer
             Draw(ChangeType.Redraw);
         }
 
+        private void m_layers_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            // Right button click to CANCEL
+            if (e.RightButton == MouseButtonState.Pressed)
+            {
+                ResetInputMode();
+                Draw(ChangeType.Redraw);
+
+                return;
+            }
+        }
+
+        #endregion
+
+        #region UI Events
+
         private void btnLineMode_Click(object sender, RoutedEventArgs e)
         {
             SetLineMode();
@@ -804,10 +893,7 @@ namespace ShearWallVisualizer
             SetSnapMode();
         }
 
-        private void m_layers_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
-        {
-
-        }
+        #endregion
     }
 
 
