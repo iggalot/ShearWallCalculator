@@ -698,31 +698,37 @@ namespace ShearWallVisualizer
                     Point p2_screen = WorldToScreen(p2_world, m_layers);
 
                     // START POINT
-                    ctx.DrawEllipse(Brushes.MediumBlue, new Pen(Brushes.Black, 1), p1_screen, 5, 5);
-                    string p1_text = "(" + p1_world.X.ToString("F2") + ", " + p1_world.Y.ToString("F2") + ")";
-                    idLabel = new FormattedText(
-                            $"({p1_world.X:F2}, {p1_world.Y:F2})",
-                            CultureInfo.GetCultureInfo("en-us"),
-                            FlowDirection.LeftToRight,
-                            new Typeface("Consolas"),
-                            14,
-                            Brushes.Black,
-                            VisualTreeHelper.GetDpi(this).PixelsPerDip);
+                    if (PointIsWithinBounds(p1_screen, dockpanel) is true)
+                    {
+                        ctx.DrawEllipse(Brushes.MediumBlue, new Pen(Brushes.Black, 1), p1_screen, 5, 5);
+                        string p1_text = "(" + p1_world.X.ToString("F2") + ", " + p1_world.Y.ToString("F2") + ")";
+                        idLabel = new FormattedText(
+                                $"({p1_world.X:F2}, {p1_world.Y:F2})",
+                                CultureInfo.GetCultureInfo("en-us"),
+                                FlowDirection.LeftToRight,
+                                new Typeface("Consolas"),
+                                14,
+                                Brushes.Black,
+                                VisualTreeHelper.GetDpi(this).PixelsPerDip);
 
-                    ctx.DrawText(idLabel, p1_screen);  // id label
+                        ctx.DrawText(idLabel, p1_screen);  // id label
+                    }
 
                     // END POINT
-                    ctx.DrawEllipse(Brushes.MediumBlue, new Pen(Brushes.Black, 1), p2_screen, 5, 5);
-                    string p2_text = "(" + p2_world.X.ToString("F2") + ", " + p2_world.Y.ToString("F2") + ")";
-                    idLabel = new FormattedText(
-                            $"({p2_world.X:F2}, {p2_world.Y:F2})",
-                            CultureInfo.GetCultureInfo("en-us"),
-                            FlowDirection.LeftToRight,
-                            new Typeface("Consolas"),
-                            14,
-                            Brushes.Black,
-                            VisualTreeHelper.GetDpi(this).PixelsPerDip);
-                    ctx.DrawText(idLabel, p2_screen);  // id label
+                    if (PointIsWithinBounds(p2_screen, dockpanel) is true)
+                    {
+                        ctx.DrawEllipse(Brushes.MediumBlue, new Pen(Brushes.Black, 1), p2_screen, 5, 5);
+                        string p2_text = "(" + p2_world.X.ToString("F2") + ", " + p2_world.Y.ToString("F2") + ")";
+                        idLabel = new FormattedText(
+                                $"({p2_world.X:F2}, {p2_world.Y:F2})",
+                                CultureInfo.GetCultureInfo("en-us"),
+                                FlowDirection.LeftToRight,
+                                new Typeface("Consolas"),
+                                14,
+                                Brushes.Black,
+                                VisualTreeHelper.GetDpi(this).PixelsPerDip);
+                        ctx.DrawText(idLabel, p2_screen);  // id label
+                    }
 
                 } else if (shape is WorldRectangle rect)
                 {
@@ -737,55 +743,67 @@ namespace ShearWallVisualizer
                     Point p4_screen = WorldToScreen(p4_world, m_layers);
 
                     // P1
-                    ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 1), p1_screen, 5, 5);
-                    idLabel = new FormattedText(
-                            $"({p1_world.X:F2}, {p1_world.Y:F2})",
-                            CultureInfo.GetCultureInfo("en-us"),
-                            FlowDirection.LeftToRight,
-                            new Typeface("Consolas"),
-                            14,
-                            Brushes.Black,
-                            VisualTreeHelper.GetDpi(this).PixelsPerDip);
+                    if (PointIsWithinBounds(p1_screen, dockpanel) is true)
+                    {
 
-                    ctx.DrawText(idLabel, p1_screen);  // id label
+                        ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 1), p1_screen, 5, 5);
+                        idLabel = new FormattedText(
+                                $"({p1_world.X:F2}, {p1_world.Y:F2})",
+                                CultureInfo.GetCultureInfo("en-us"),
+                                FlowDirection.LeftToRight,
+                                new Typeface("Consolas"),
+                                14,
+                                Brushes.Black,
+                                VisualTreeHelper.GetDpi(this).PixelsPerDip);
+
+                        ctx.DrawText(idLabel, p1_screen);  // id label
+                    }
 
                     // P2
-                    ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 1), p2_screen, 5, 5);
-                    idLabel = new FormattedText(
-                            $"({p2_world.X:F2}, {p2_world.Y:F2})",
-                            CultureInfo.GetCultureInfo("en-us"),
-                            FlowDirection.LeftToRight,
-                            new Typeface("Consolas"),
-                            14,
-                            Brushes.Black,
-                            VisualTreeHelper.GetDpi(this).PixelsPerDip);
-                    ctx.DrawText(idLabel, p2_screen);  // id label
+                    if (PointIsWithinBounds(p2_screen, dockpanel) is true)
+                    {
+                        ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 1), p2_screen, 5, 5);
+                        idLabel = new FormattedText(
+                                $"({p2_world.X:F2}, {p2_world.Y:F2})",
+                                CultureInfo.GetCultureInfo("en-us"),
+                                FlowDirection.LeftToRight,
+                                new Typeface("Consolas"),
+                                14,
+                                Brushes.Black,
+                                VisualTreeHelper.GetDpi(this).PixelsPerDip);
+                        ctx.DrawText(idLabel, p2_screen);  // id label
+                    }
 
                     // P3
-                    ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 1), p3_screen, 5, 5);
-                    idLabel = new FormattedText(
-                            $"({p3_world.X:F2}, {p3_world.Y:F2})",
-                            CultureInfo.GetCultureInfo("en-us"),
-                            FlowDirection.LeftToRight,
-                            new Typeface("Consolas"),
-                            14,
-                            Brushes.Black,
-                            VisualTreeHelper.GetDpi(this).PixelsPerDip);
-                    ctx.DrawText(idLabel, p3_screen);  // id label
-
+                    if (PointIsWithinBounds(p3_screen, dockpanel) is true)
+                    {
+                        ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 1), p3_screen, 5, 5);
+                        idLabel = new FormattedText(
+                                $"({p3_world.X:F2}, {p3_world.Y:F2})",
+                                CultureInfo.GetCultureInfo("en-us"),
+                                FlowDirection.LeftToRight,
+                                new Typeface("Consolas"),
+                                14,
+                                Brushes.Black,
+                                VisualTreeHelper.GetDpi(this).PixelsPerDip);
+                        ctx.DrawText(idLabel, p3_screen);  // id label
+                    }
 
                     // P4
-                    ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 1), p4_screen, 5, 5);
-                    idLabel = new FormattedText(
-                            $"({p4_world.X:F2}, {p4_world.Y:F2})",
-                            CultureInfo.GetCultureInfo("en-us"),
-                            FlowDirection.LeftToRight,
-                            new Typeface("Consolas"),
-                            14,
-                            Brushes.Black,
-                            VisualTreeHelper.GetDpi(this).PixelsPerDip);
+                    if (PointIsWithinBounds(p4_screen, dockpanel) is true)
+                    {
+                        ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 1), p4_screen, 5, 5);
+                        idLabel = new FormattedText(
+                                $"({p4_world.X:F2}, {p4_world.Y:F2})",
+                                CultureInfo.GetCultureInfo("en-us"),
+                                FlowDirection.LeftToRight,
+                                new Typeface("Consolas"),
+                                14,
+                                Brushes.Black,
+                                VisualTreeHelper.GetDpi(this).PixelsPerDip);
 
-                    ctx.DrawText(idLabel, p4_screen);  // id label
+                        ctx.DrawText(idLabel, p4_screen);  // id label
+                    }
                 }
             }
         }
