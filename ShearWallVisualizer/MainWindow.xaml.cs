@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Reflection.Emit;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -341,6 +342,9 @@ namespace ShearWallVisualizer
 
         private void DrawVisualGrid(DrawingContext ctx)
         {
+            double major_gridline_thickness = 0.5;
+            double minor_gridline_thickness = 0.25;
+
             if(hide_Grid is true)
             {
                 return;
@@ -362,12 +366,12 @@ namespace ShearWallVisualizer
                 if(x % majorGridSpacing == 0)
                 {
                     pen = new Pen(Brushes.Black, 1.0);
-                    pen.Thickness = 1;
+                    pen.Thickness = major_gridline_thickness;
                     pen.DashStyle = new DashStyle(new double[] { 5, 5 }, 0);
                 } else
                 {
                     pen = new Pen(Brushes.Black, 0.3);
-                    pen.Thickness = 0.5;
+                    pen.Thickness = minor_gridline_thickness;
                     pen.DashStyle = new DashStyle(new double[] { 5, 5 }, 0);
 
                 }
@@ -409,13 +413,13 @@ namespace ShearWallVisualizer
                 if (y % majorGridSpacing == 0)
                 {
                     pen = new Pen(Brushes.Black, 1.0);
-                    pen.Thickness = 1;
+                    pen.Thickness = major_gridline_thickness;
                     pen.DashStyle = new DashStyle(new double[] { 5, 5 }, 0);
                 }
                 else
                 {
                     pen = new Pen(Brushes.Black, 0.3);
-                    pen.Thickness = 0.5;
+                    pen.Thickness = minor_gridline_thickness;
                     pen.DashStyle = new DashStyle(new double[] { 5, 5 }, 0);
 
                 }
@@ -555,8 +559,12 @@ namespace ShearWallVisualizer
                 {
                     Point p1_world = line.Start;
                     Point p2_world = line.End;
-                    Point p1_screen = WorldToScreen(p1_world, m_layers);
-                    Point p2_screen = WorldToScreen(p2_world, m_layers);
+                    Point p1_screen = GetConstrainedScreenPoint(WorldToScreen(p1_world, m_layers), m_layers);
+                    Point p2_screen = GetConstrainedScreenPoint(WorldToScreen(p2_world, m_layers), m_layers);
+
+                    // If the points are the same, then the object was out of bounds and doesn't need to be drawn.
+                    if (p1_screen == p2_screen)
+                        continue;
 
                     shapeToDraw = new Line
                     {
@@ -578,6 +586,9 @@ namespace ShearWallVisualizer
 
                     if (shape != null)
                     {
+                        if (PointIsWithinBounds(center_screen, dockpanel) is false)
+                            continue;
+
                         Point centerPoint = new Point(center_screen.X,
                             center_screen.Y);
 
@@ -586,33 +597,6 @@ namespace ShearWallVisualizer
                         idLabel = new FormattedText(shape.Id.ToString(),
                             CultureInfo.GetCultureInfo("en-us"), FlowDirection.LeftToRight, new Typeface("Consolas"), 14, Brushes.Black);
                         ctx.DrawText(idLabel, center_screen);  // id label
-
-
-
-
-                        if (debugMode is true)
-                        {
-                            //// draw markers and coordinate data at end points
-                            //Ellipse startMarker = CreateCircularMarker();
-                            //Canvas.SetLeft(startMarker, p1_screen.X);
-                            //Canvas.SetTop(startMarker, p1_screen.Y);
-                            //myCanvas.Children.Add(startMarker);
-
-                            //Ellipse endMarker = CreateCircularMarker();
-                            //Canvas.SetLeft(endMarker, p2_screen.X);
-                            //Canvas.SetTop(endMarker, p2_screen.Y);
-                            //myCanvas.Children.Add(endMarker);
-
-                            //TextBlock startCoord = CreateCoordinateLabel(line.Start);
-                            //Canvas.SetLeft(startCoord, p1_screen.X + 3);
-                            //Canvas.SetTop(startCoord, p1_screen.Y + 3);
-                            //myCanvas.Children.Add(startCoord);
-
-                            //TextBlock endCoord = CreateCoordinateLabel(line.End);
-                            //Canvas.SetLeft(endCoord, p2_screen.X + 3);
-                            //Canvas.SetTop(endCoord, p2_screen.Y + 3);
-                            //myCanvas.Children.Add(endCoord);
-                        }
                     }
                 }
                 else if (shape is WorldRectangle rect)
@@ -624,8 +608,12 @@ namespace ShearWallVisualizer
 
                     Point p1_world = rect.BottomLeft;
                     Point p2_world = rect.TopRight;
-                    Point p1_screen = WorldToScreen(p1_world, m_layers);
-                    Point p2_screen = WorldToScreen(p2_world, m_layers);
+                    Point p1_screen = GetConstrainedScreenPoint(WorldToScreen(p1_world, m_layers), m_layers);
+                    Point p2_screen = GetConstrainedScreenPoint(WorldToScreen(p2_world, m_layers), m_layers);
+
+                    // If the points are the same, then the object was out of bounds and doesn't need to be drawn.
+                    if (p1_screen == p2_screen)
+                        continue;
 
                     SolidColorBrush rectFillBrush = new SolidColorBrush(Colors.Red);
                     rectFillBrush.Opacity = 0.5;
@@ -643,6 +631,9 @@ namespace ShearWallVisualizer
 
                     if (shape != null)
                     {
+                        if (PointIsWithinBounds(center_screen, dockpanel) is false)
+                            continue;
+
                         Point centerPoint = new Point(center_screen.X,
                             center_screen.Y);
 
@@ -652,31 +643,149 @@ namespace ShearWallVisualizer
                             CultureInfo.GetCultureInfo("en-us"), FlowDirection.LeftToRight, new Typeface("Consolas"), 14, Brushes.Black);
                         ctx.DrawText(idLabel, centerPoint);  // id label
                     }
+                }
+            }
+        }
 
-                        if (debugMode is true)
-                    {
-                        //// draw markers and coordinate date at end points
-                        //Ellipse startMarker = CreateCircularMarker();
-                        //Canvas.SetLeft(startMarker, p1_screen.X - startMarker.Width / 2);
-                        //Canvas.SetTop(startMarker, p1_screen.Y - startMarker.Height / 2);
-                        //myCanvas.Children.Add(startMarker);
+        /// <summary>
+        /// Returns a point that is bounded by the framework element -- used for when a point is out of bounds 
+        /// and needs to be shifted back to the elements boundary when drawing
+        /// </summary>
+        /// <param name="p1"></param>
+        /// <param name="element"></param>
+        /// <returns></returns>
+        private Point GetConstrainedScreenPoint(Point p1, FrameworkElement element)
+        {
+            Point temp = p1;
+            if(temp.X < 0)
+            {
+                temp.X = 0;
+            }
+            if (temp.X > element.ActualWidth)
+            {
+                temp.X = element.ActualWidth;
+            }
+            if (temp.Y < 0)
+            {
+                temp.Y = 0;
+            }
+            if (temp.Y > element.ActualHeight)
+            {
+                temp.Y = element.ActualHeight;
+            }
+            return temp;
+        } 
+        
+        private bool PointIsWithinBounds(Point p1, FrameworkElement element)
+        {
+            return (p1.X > 0 && p1.X < element.ActualWidth && p1.Y > 0 && p1.Y < element.ActualHeight); 
+        }
 
-                        //Ellipse endMarker = CreateCircularMarker();
-                        //Canvas.SetLeft(endMarker, p2_screen.X - endMarker.Width / 2);
-                        //Canvas.SetTop(endMarker, p2_screen.Y - endMarker.Height / 2);
-                        //myCanvas.Children.Add(endMarker);
+        private void DrawDebug(DrawingContext ctx)
+        {
+            if (debugMode == false)
+                return;
 
-                        //TextBlock startCoord = CreateCoordinateLabel(rect.BottomLeft);
-                        //Canvas.SetLeft(startCoord, p1_screen.X + 3);
-                        //Canvas.SetTop(startCoord, p1_screen.Y + 3);
-                        //myCanvas.Children.Add(startCoord);
+            // Redraw all the shapes in world coordinates
+            foreach (var shape in worldShapes)
+            {
+                FormattedText idLabel = null;
+                if (shape is WorldLine line)
+                {
+                    Point p1_world = line.Start;
+                    Point p2_world = line.End;
+                    Point p1_screen = WorldToScreen(p1_world, m_layers);
+                    Point p2_screen = WorldToScreen(p2_world, m_layers);
 
-                        //TextBlock endCoord = CreateCoordinateLabel(rect.TopRight);
-                        //Canvas.SetLeft(endCoord, p2_screen.X + 3);
-                        //Canvas.SetTop(endCoord, p2_screen.Y + 3);
-                        //myCanvas.Children.Add(endCoord);
+                    // START POINT
+                    ctx.DrawEllipse(Brushes.MediumBlue, new Pen(Brushes.Black, 1), p1_screen, 5, 5);
+                    string p1_text = "(" + p1_world.X.ToString("F2") + ", " + p1_world.Y.ToString("F2") + ")";
+                    idLabel = new FormattedText(
+                            $"({p1_world.X:F2}, {p1_world.Y:F2})",
+                            CultureInfo.GetCultureInfo("en-us"),
+                            FlowDirection.LeftToRight,
+                            new Typeface("Consolas"),
+                            14,
+                            Brushes.Black,
+                            VisualTreeHelper.GetDpi(this).PixelsPerDip);
 
-                    }
+                    ctx.DrawText(idLabel, p1_screen);  // id label
+
+                    // END POINT
+                    ctx.DrawEllipse(Brushes.MediumBlue, new Pen(Brushes.Black, 1), p2_screen, 5, 5);
+                    string p2_text = "(" + p2_world.X.ToString("F2") + ", " + p2_world.Y.ToString("F2") + ")";
+                    idLabel = new FormattedText(
+                            $"({p2_world.X:F2}, {p2_world.Y:F2})",
+                            CultureInfo.GetCultureInfo("en-us"),
+                            FlowDirection.LeftToRight,
+                            new Typeface("Consolas"),
+                            14,
+                            Brushes.Black,
+                            VisualTreeHelper.GetDpi(this).PixelsPerDip);
+                    ctx.DrawText(idLabel, p2_screen);  // id label
+
+                } else if (shape is WorldRectangle rect)
+                {
+                    Point p1_world = rect.BottomLeft;
+                    Point p2_world = new Point (rect.TopRight.X, rect.BottomLeft.Y);
+                    Point p3_world = rect.TopRight;
+                    Point p4_world = new Point(rect.BottomLeft.X, rect.TopRight.Y);
+
+                    Point p1_screen = WorldToScreen(p1_world, m_layers);
+                    Point p2_screen = WorldToScreen(p2_world, m_layers);
+                    Point p3_screen = WorldToScreen(p3_world, m_layers);
+                    Point p4_screen = WorldToScreen(p4_world, m_layers);
+
+                    // P1
+                    ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 1), p1_screen, 5, 5);
+                    idLabel = new FormattedText(
+                            $"({p1_world.X:F2}, {p1_world.Y:F2})",
+                            CultureInfo.GetCultureInfo("en-us"),
+                            FlowDirection.LeftToRight,
+                            new Typeface("Consolas"),
+                            14,
+                            Brushes.Black,
+                            VisualTreeHelper.GetDpi(this).PixelsPerDip);
+
+                    ctx.DrawText(idLabel, p1_screen);  // id label
+
+                    // P2
+                    ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 1), p2_screen, 5, 5);
+                    idLabel = new FormattedText(
+                            $"({p2_world.X:F2}, {p2_world.Y:F2})",
+                            CultureInfo.GetCultureInfo("en-us"),
+                            FlowDirection.LeftToRight,
+                            new Typeface("Consolas"),
+                            14,
+                            Brushes.Black,
+                            VisualTreeHelper.GetDpi(this).PixelsPerDip);
+                    ctx.DrawText(idLabel, p2_screen);  // id label
+
+                    // P3
+                    ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 1), p3_screen, 5, 5);
+                    idLabel = new FormattedText(
+                            $"({p3_world.X:F2}, {p3_world.Y:F2})",
+                            CultureInfo.GetCultureInfo("en-us"),
+                            FlowDirection.LeftToRight,
+                            new Typeface("Consolas"),
+                            14,
+                            Brushes.Black,
+                            VisualTreeHelper.GetDpi(this).PixelsPerDip);
+                    ctx.DrawText(idLabel, p3_screen);  // id label
+
+
+                    // P4
+                    ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 1), p4_screen, 5, 5);
+                    idLabel = new FormattedText(
+                            $"({p4_world.X:F2}, {p4_world.Y:F2})",
+                            CultureInfo.GetCultureInfo("en-us"),
+                            FlowDirection.LeftToRight,
+                            new Typeface("Consolas"),
+                            14,
+                            Brushes.Black,
+                            VisualTreeHelper.GetDpi(this).PixelsPerDip);
+
+                    ctx.DrawText(idLabel, p4_screen);  // id label
                 }
             }
         }
@@ -767,6 +876,7 @@ namespace ShearWallVisualizer
             m_layers.AddLayer(41, DrawShapes);
             m_layers.AddLayer(52, DrawCursor);
             m_layers.AddLayer(51, DrawPreview);
+            m_layers.AddLayer(42, DrawDebug);
 
 
 
