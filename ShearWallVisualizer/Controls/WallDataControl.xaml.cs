@@ -7,7 +7,7 @@ namespace ShearWallVisualizer.Controls
     /// <summary>
     /// Interaction logic for ShearWallData.xaml
     /// </summary>
-    public partial class ShearWallDataControl : UserControl
+    public partial class WallDataControl : UserControl
     {
         // events for other programs to connect to when a wall is deleted
         public event EventHandler<DeleteWallEventArgs> DeleteWall;
@@ -29,7 +29,7 @@ namespace ShearWallVisualizer.Controls
         public WallData Data { get; set; }
         public int Id { get; set; }
 
-        public ShearWallDataControl(int id, WallData wall)
+        public WallDataControl(int id, WallData wall)
         {
             InitializeComponent();
 

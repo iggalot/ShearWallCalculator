@@ -50,7 +50,19 @@
 
                 <!-- Dynamic Tabs -->
                 <TabControl x:Name="MainTabControl" Width="900" Height="600"
-                            TabStripPlacement="Top" Margin="10 0 0 0"/>
+                            TabStripPlacement="Top" Margin="10 0 0 0">
+                    <TabItem Header="Dimensions">
+                        <StackPanel Orientation="Vertical">
+                            <StackPanel Name="sp_DimPanel_Walls"></StackPanel>
+                            <StackPanel Name="sp_DimPanel_Diaphragms"></StackPanel>
+                        </StackPanel>
+                    </TabItem>
+                    <TabItem Header="Calculations">
+                        <StackPanel Orientation="Vertical">
+                            <StackPanel Name="sp_CalcPanel"></StackPanel>
+                        </StackPanel>
+                    </TabItem>
+                </TabControl>
 
                 <!-- Optional Logging + Scroll --><!--
                 <TextBlock Name="m_log" Height="600" Width="150" Margin="10 0 0 0"/>

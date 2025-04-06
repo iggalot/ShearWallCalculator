@@ -67,7 +67,6 @@ namespace ShearWallCalculator
             }
 
             /// Sort points so our region is a rectangle defined as
-            /// 
             /// P4 --- P3
             /// |       |
             /// P1 --- P2 

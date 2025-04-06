@@ -1,10 +1,8 @@
 ﻿using calculator;
 using ShearWallCalculator;
 using ShearWallVisualizer.Controls;
-using ShearWallVisualizer.Tabs;
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
@@ -13,17 +11,13 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using static ShearWallVisualizer.Controls.DiaphragmDataControl;
+using static ShearWallVisualizer.Controls.WallDataControl;
 
 namespace ShearWallVisualizer
 {
     public partial class MainWindow : Window
     {
         public EventHandler OnUpdated;  // the event that signals that the drawing has been updated -- controls will listen for this at the time they are created.
-
-        TabItem dimTab;
-        TabItem calcTab;
-
-        CalculationResultsTab calcResultsTab;
 
         private bool initialized = false;  // is the initial window setup complete?
 
@@ -86,16 +80,47 @@ namespace ShearWallVisualizer
 
             CreateTabs();
 
+            CreateWallDataControls();
             CreateDiaphragmDataControls();
+        }
+
+        private void CreateWallDataControls()
+        {
+            foreach (var wall_sys in wallSystems)
+            {
+                WallSystemControl sysControl = new WallSystemControl(this, wall_sys);
+                sp_DimPanel_Walls.Children.Add(sysControl);
+                sysControl.OnWallSubControlDeleted += WallDeleted;
+            }
+        }
+
+        private void WallDeleted(object sender, EventArgs e)
+        {
+            WallDataControl control = sender as WallDataControl;
+            DeleteWallEventArgs args = e as DeleteWallEventArgs;
+
+            foreach (WallSystem wall_sys in wallSystems)
+            {
+                foreach (var wall in wall_sys._walls)
+                {
+                    if (wall.Key == args.Id)
+                    {
+                        wall_sys._walls.Remove(wall.Key);
+                        //MessageBox.Show("Wall #" + args.Id + " deleted.");
+
+                        Update();
+                        return;
+                    }
+                }
+            }
         }
 
         private void CreateDiaphragmDataControls()
         {
-            
-            foreach(var dia_sys in diaphragmSystems)
+            foreach (var dia_sys in diaphragmSystems)
             {
                 DiaphragmSystemControl sysControl = new DiaphragmSystemControl(this, dia_sys);
-                dimTab.Content = sysControl;
+                sp_DimPanel_Diaphragms.Children.Add(sysControl);
                 sysControl.OnDiaphragmSubControlDeleted += DiaphragmDeleted;
             }
         }
@@ -123,14 +148,18 @@ namespace ShearWallVisualizer
 
         public void Update()
         {
-            dimTab.Content = null;  // clear the tabs
-            calcTab.Content = null;
+            // clear the tabs
+            sp_DimPanel_Diaphragms.Children.Clear();
+            sp_DimPanel_Walls.Children.Clear();
 
+            sp_CalcPanel.Children.Clear();
+
+            CreateWallDataControls();
             CreateDiaphragmDataControls();
             
             OnUpdated?.Invoke(this, EventArgs.Empty); // signal that the window has been updated -- so that subcontrols can refresh
 
-            Draw(ChangeType.Redraw);
+            Draw(ChangeType.Redraw);  // redraw
 
         }
 
@@ -154,29 +183,6 @@ namespace ShearWallVisualizer
 
         private void CreateTabs()
         {
-            MainTabControl.Items.Clear();
-
-            // Tab 1: Dimensions UserControl
-            var dimensionsTab = new TabItem
-            {
-                Header = "Dimensions",
-                Content = new DimensionsTab()
-            };
-
-            dimTab = dimensionsTab;
-
-            // Tab 2: Simple Calculation Tab
-            var calculationTab = new TabItem
-            {
-                Header = "Calculations",
-                Content = new CalculationResultsTab()
-            };
-
-            calcTab = calculationTab;
-
-            MainTabControl.Items.Add(dimensionsTab);
-            MainTabControl.Items.Add(calculationTab);
-
             MainTabControl.SelectedIndex = 0; // Show Dimensions by default
         }
 
@@ -573,9 +579,9 @@ namespace ShearWallVisualizer
         private void CreatePreviewShape()
         {
             if (currentMode == DrawMode.Line)
-                previewShape = new Line { Stroke = Brushes.DarkGreen, StrokeThickness = 2 };
+                previewShape = new Line { Stroke = Brushes.DarkGreen, StrokeThickness = 5 };
             else if (currentMode == DrawMode.Rectangle)
-                previewShape = new Rectangle { Stroke = Brushes.DarkGreen, StrokeThickness = 2, Fill = Brushes.Transparent };
+                previewShape = new Rectangle { Stroke = Brushes.DarkGreen, StrokeThickness = 5, Fill = Brushes.Transparent };
         }
 
         private void DrawPreview(DrawingContext ctx)
@@ -600,7 +606,7 @@ namespace ShearWallVisualizer
             {
                 SolidColorBrush lineStrokeBrush = new SolidColorBrush(Colors.Green);
                 lineStrokeBrush.Opacity = 0.5;
-                Pen pen = new Pen(lineStrokeBrush, 1);
+                Pen pen = new Pen(lineStrokeBrush, 4);
                 Point p1 = WorldToScreen(startPoint_world.Value, m_layers);
                 Point p2 = WorldToScreen(preview_endPoint_world, m_layers);
                 ctx.DrawLine(pen, p1, p2);
@@ -609,7 +615,7 @@ namespace ShearWallVisualizer
             {
                 SolidColorBrush rectFillBrush = new SolidColorBrush(Colors.Green);
                 rectFillBrush.Opacity = 0.5;
-                Pen pen = new Pen(rectFillBrush, 1);
+                Pen pen = new Pen(rectFillBrush, 4);
                 Point p1 = WorldToScreen(startPoint_world.Value, m_layers);
                 Point p2 = WorldToScreen(preview_endPoint_world, m_layers);
 
@@ -1194,7 +1200,7 @@ namespace ShearWallVisualizer
     //        //        {
     //        //            int id = result.Key;
     //        //            WallData wall = Calculator._wall_system.EW_Walls.ContainsKey(id) ? Calculator._wall_system.EW_Walls[id] : Calculator._wall_system.NS_Walls[id];
-    //        //            ShearWallDataControl control = new ShearWallDataControl(id, wall);
+    //        //            WallDataControl control = new WallDataControl(id, wall);
 
     //        //            if (wall.WallDir == WallDirs.EastWest)
     //        //            {
@@ -1560,7 +1566,7 @@ namespace ShearWallVisualizer
     //        Update();
     //    }
 
-    //    private void OnWallDeleted(object sender, ShearWallDataControl.DeleteWallEventArgs e)
+    //    private void OnWallDeleted(object sender, WallDataControl.DeleteWallEventArgs e)
     //    {
     //        if (Calculator._wall_system._walls.ContainsKey(e.Id) == true)
     //        {
