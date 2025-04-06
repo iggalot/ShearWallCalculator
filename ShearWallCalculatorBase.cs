@@ -114,15 +114,15 @@ namespace ShearWallCalculator
             _diaphragm_system.CtrMass = new System.Windows.Point(7.58f, 37.5f);
 
             // East / West Wall Segments
-            _wall_system.AddWall(new WallData(9, 0, 0, 20, 0, WallDirs.EastWest));
-            _wall_system.AddWall(new WallData(9, 20, 30, 30, 30, WallDirs.EastWest));
-            _wall_system.AddWall(new WallData(9, 20, 45, 30, 45, WallDirs.EastWest));
-            _wall_system.AddWall(new WallData(9, 0, 75, 20, 75, WallDirs.EastWest));
+            _wall_system.AddWall(new WallData(9, 0, 0, 20, 0));
+            _wall_system.AddWall(new WallData(9, 20, 30, 30, 30));
+            _wall_system.AddWall(new WallData(9, 20, 45, 30, 45));
+            _wall_system.AddWall(new WallData(9, 0, 75, 20, 75));
 
             // North / South Wall Segments
-            _wall_system.AddWall(new WallData(9, 0, 27.5f, 0, 47.5f, WallDirs.NorthSouth));
-            _wall_system.AddWall(new WallData(9, 20, 20, 20, 30, WallDirs.NorthSouth));
-            _wall_system.AddWall(new WallData(9, 20, 45, 20, 55, WallDirs.NorthSouth));
+            _wall_system.AddWall(new WallData(9, 0, 27.5f, 0, 47.5f));
+            _wall_system.AddWall(new WallData(9, 20, 20, 20, 30));
+            _wall_system.AddWall(new WallData(9, 20, 45, 20, 55));
 
             _wall_system.Update();
         }
@@ -139,12 +139,12 @@ namespace ShearWallCalculator
             _diaphragm_system.CtrMass = new System.Windows.Point(20, 40);
 
             // East / West Wall Segments
-            _wall_system.AddWall(new WallData(9, 15, 80, 25, 80, WallDirs.EastWest));
-            _wall_system.AddWall(new WallData(9, 15, 80, 25, 80, WallDirs.EastWest)); // this wall is 3x rigid as others
+            _wall_system.AddWall(new WallData(9, 15, 80, 25, 80));
+            _wall_system.AddWall(new WallData(9, 15, 80, 25, 80)); // this wall is 3x rigid as others
 
             // North / South Wall Segments
-            _wall_system.AddWall(new WallData(9, 0, 5, 0, 15, WallDirs.NorthSouth));
-            _wall_system.AddWall(new WallData(9, 40, 5, 40, 15, WallDirs.NorthSouth));
+            _wall_system.AddWall(new WallData(9, 0, 5, 0, 15));
+            _wall_system.AddWall(new WallData(9, 40, 5, 40, 15));
 
             _wall_system.Update();
         }

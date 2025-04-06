@@ -5,42 +5,66 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ShearWallVisualizer"
         mc:Ignorable="d"
-        Title="Rigid Diaphragm Shear Wall Calculator v0.1" Height="900" Width="1200"
+        Title="Rigid Diaphragm Shear Wall Calculator v0.1" Height="900" Width="1400"
         Background="LightGray"
         Loaded="OnLoaded"
         >
 
-    <StackPanel Orientation="Vertical">
-        <StackPanel Orientation="Vertical" Margin="10">
+    <DockPanel>
+
+        <!-- Menu Bar at the very top -->
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="_File">
+                <MenuItem Header="E_xit" Click="Exit_Click"/>
+            </MenuItem>
+            <MenuItem Header="_View">
+                <MenuItem Header="_Refresh" Click="Refresh_Click"/>
+            </MenuItem>
+        </Menu>
+
+        <!-- Main Content Area -->
+        <StackPanel Orientation="Vertical">
+
+            <!-- Top Toolbar with Buttons -->
+            <StackPanel Orientation="Vertical" Margin="10">
+                <StackPanel Orientation="Horizontal">
+                    <Button Content="Hide Text" Click="btnHideText_Click" Width="70" Height="25" HorizontalAlignment="Left"/>
+                    <Button Content="Hide Grid" Click="btnHideGrid_Click" Width="70" Height="25" HorizontalAlignment="Left"/>
+                    <Button Name="btnRigidityMode" Background="MediumBlue" Margin="2" Opacity="0.75" FontWeight="Bold" Content="Wall" Width="75" Height="25" Click="btnLineMode_Click"/>
+                    <Button Name="btnMassMode" Background="Red" Margin="2" Opacity="0.75" FontWeight="Bold" Content="Diaphragm" Width="75" Height="25" Click="btnRectangleMode_Click"/>
+                    <Button Name="btnSnapToNearest" Background="Red" Margin="2" Opacity="0.75" Content="Snap" Width="100" Height="25" Click="btnSnapMode_Click"/>
+                </StackPanel>
+            </StackPanel>
+
+            <!-- Main Drawing + Right-side Tabs -->
+            <StackPanel Orientation="Horizontal" Margin="10">
+
+                <!-- Drawing Area -->
+                <DockPanel x:Name="dockpanel" LastChildFill="True" Width="750" Height="600">
+                    <local:LayerManager x:Name="m_layers" DockPanel.Dock="Left" 
+                                PreviewMouseDown="m_layers_PreviewMouseDown" 
+                                PreviewMouseMove="m_layers_PreviewMouseMove"
+                                PreviewMouseWheel="m_layers_PreviewMouseWheel"
+                                PreviewMouseRightButtonDown="m_layers_PreviewMouseRightButtonDown"/>
+                </DockPanel>
+
+                <!-- Dynamic Tabs -->
+                <TabControl x:Name="MainTabControl" Width="600" Height="600"
+                            TabStripPlacement="Top" Margin="10 0 0 0"/>
+
+                <!-- Optional Logging + Scroll --><!--
+                <TextBlock Name="m_log" Height="600" Width="150" Margin="10 0 0 0"/>
+                <ScrollBar Name="m_scroll" MaxHeight="600" Scroll="OnScroll" Orientation="Vertical"/>-->
+            </StackPanel>
+            <!-- Info Labels -->
             <StackPanel Orientation="Horizontal">
-                <Button Content="Hide Text" Click="btnHideText_Click" Width="70" Height="25" HorizontalAlignment="Left"></Button>
-                <Button Content="Hide Grid" Click="btnHideGrid_Click" Width="70" Height="25" HorizontalAlignment="Left"></Button>
-                <Button Name="btnRigidityMode" Background="MediumBlue" Margin="2" Opacity="0.75" FontWeight="Bold" Content="Wall" Width="75" Height="25" Click="btnLineMode_Click" />
-                <Button Name="btnMassMode" Background="Red" Margin="2" Opacity="0.75" FontWeight="Bold" Content="Diaphragm" Width="75" Height="25" Click="btnRectangleMode_Click" />
-                <Button Name="btnSnapToNearest" Background="Red" Margin="2" Opacity="0.75" Content="Snap" Width="100" Height="25" Click="btnSnapMode_Click" />
-
-            </StackPanel>
-            <StackPanel Orientation="Vertical">
-                <TextBlock Width="Auto" Height="20" Name="tbZoom" Text="Zoom"/>
-                <TextBlock Width="Auto" Height="20" Name="tbPan" Text="Pan"/>
-                <TextBlock Width="Auto" Height="20" Name="tbWorldCoords" Text="World Coords"/>
-                <TextBlock Width="Auto" Height="20" Name="tbScreenCoords" Text="Screen Coords"/>
+                <TextBlock Width="Auto" Height="20" Margin="5" Name="tbZoom" Text="Zoom"/>
+                <TextBlock Width="Auto" Height="20" Margin="5" Name="tbPan" Text="Pan"/>
+                <TextBlock Width="Auto" Height="20" Margin="5" Name="tbWorldCoords" Text="World Coords"/>
+                <TextBlock Width="Auto" Height="20" Margin="5" Name="tbScreenCoords" Text="Screen Coords"/>
             </StackPanel>
         </StackPanel>
-
-        <StackPanel Orientation="Horizontal" Margin="10">
-            <DockPanel x:Name="dockpanel" LastChildFill="true" Width="750" Height="600">
-                <!--Our new drawing surface-->
-                <local:LayerManager x:Name="m_layers" DockPanel.Dock="Left" 
-                            PreviewMouseDown="m_layers_PreviewMouseDown" 
-                            PreviewMouseMove="m_layers_PreviewMouseMove"
-                            PreviewMouseWheel="m_layers_PreviewMouseWheel"
-                            PreviewMouseRightButtonDown="m_layers_PreviewMouseRightButtonDown"/>
-            </DockPanel>
-            <TextBlock Name="m_log" Height ="600" DockPanel.Dock="Right" Width="150"/>
-            <ScrollBar Name="m_scroll" MaxHeight="600" DockPanel.Dock="Right" Scroll="OnScroll" />
-        </StackPanel>
-    </StackPanel>
+    </DockPanel>
 
     <!--<StackPanel Orientation="Horizontal" Margin="3">
             <StackPanel Orientation="Vertical" Width="450">

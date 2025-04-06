@@ -30,22 +30,22 @@ namespace ShearWallCalculator
         public BracedWallLine BracedWallGroups_NS { get; set; }
 
         // distance from center of wall to center of rigidity in y-direction
-        public Dictionary<int, float> Y_bar_walls { get; set; } = new Dictionary<int, float>();
+        public Dictionary<int, double> Y_bar_walls { get; set; } = new Dictionary<int, double>();
 
         // distance from center of wall to center of rigidity in x-direction
-        public Dictionary<int, float> X_bar_walls { get; set; } = new Dictionary<int, float>();
+        public Dictionary<int, double> X_bar_walls { get; set; } = new Dictionary<int, double>();
 
 
-        public float TotalRigidity_X { get; set; } = 0;  // total rigidity in x-direction
-        public float TotalRigidity_Y { get; set; } = 0;  // total rigidity in y-direction
+        public double TotalRigidity_X { get; set; } = 0;  // total rigidity in x-direction
+        public double TotalRigidity_Y { get; set; } = 0;  // total rigidity in y-direction
 
         // center or rigidity
         public System.Windows.Point CtrRigidity { get; set; } = new System.Windows.Point(0, 0);
 
         // moments of inertia for the shear wall groups
-        public float InertiaXX { get; set; } // inertia of horizontal walls about center of rigidity
-        public float InertiaYY { get; set; } // inertia of vertical walls about center of rigidity
-        public float InertiaPolar { get; set; } // polar moment of all walls about center of rigidity
+        public double InertiaXX { get; set; } // inertia of horizontal walls about center of rigidity
+        public double InertiaYY { get; set; } // inertia of vertical walls about center of rigidity
+        public double InertiaPolar { get; set; } // polar moment of all walls about center of rigidity
 
 
         /// <summary>
@@ -251,9 +251,9 @@ namespace ShearWallCalculator
         public void ComputeCenterOfRigidity()
         {
             // Display the wall info
-            float horiz_sum = 0;
-            float horiz_rigidity_sum = 0;
-            float Ryr_sum = 0;
+            double horiz_sum = 0;
+            double horiz_rigidity_sum = 0;
+            double Ryr_sum = 0;
             //Console.WriteLine("\nHorizontal Walls");
             foreach (var wall in EW_Walls)
             {
@@ -264,9 +264,9 @@ namespace ShearWallCalculator
             }
             //Console.WriteLine("Sum Ry: " + horiz_rigidity_sum + "   Sum Ryr: " + Ryr_sum);
 
-            float vert_rigidity_sum = 0;
-            float vert_sum = 0;
-            float Rxr_sum = 0;
+            double vert_rigidity_sum = 0;
+            double vert_sum = 0;
+            double Rxr_sum = 0;
             //Console.WriteLine("\nVertical Walls");
             foreach (var wall in NS_Walls)
             {

@@ -20,22 +20,22 @@ namespace calculator
         /// eccentricities
         /// TODO:  CODE requires minimum of 5% of largest dimension of building as a minimum for the eccentricity
         /// </summary>
-        private float ecc_x = 0; // eccentricity in x direction (feet) measured from center of rigidity to center of mass
-        private float ecc_y = 0; // eccentricity in y direction (feet) measured from center of rigidity to center of mass
+        private double ecc_x = 0; // eccentricity in x direction (feet) measured from center of rigidity to center of mass
+        private double ecc_y = 0; // eccentricity in y direction (feet) measured from center of rigidity to center of mass
 
-        public float Mt_comb { get; set; } = 0; // moment due to eccentric loading  "+ = CCW, "-" = CW
+        public double Mt_comb { get; set; } = 0; // moment due to eccentric loading  "+ = CCW, "-" = CW
 
         // shear force from direct shear in X-direction -- resistance at base of diaphragm at top of walls
-        public Dictionary<int, float> DirectShear_X { get; set; } = new Dictionary<int, float>();
+        public Dictionary<int, double> DirectShear_X { get; set; } = new Dictionary<int, double>();
 
         // shear force from direct shear in Y-direction -- resistance at base of diaphragm at top of walls
-        public Dictionary<int, float> DirectShear_Y { get; set; } = new Dictionary<int, float>();
+        public Dictionary<int, double> DirectShear_Y { get; set; } = new Dictionary<int, double>();
 
         // shear force in line of wall from eccentric loading, Mr -- resistance at base of diaphragm at top of walls
-        public Dictionary<int, float> EccentricShear { get; set; } = new Dictionary<int, float>();
+        public Dictionary<int, double> EccentricShear { get; set; } = new Dictionary<int, double>();
 
         // dictionary containing the total shear acting on a wall -- resistance at nase pf diaphragm at top of walls
-        public Dictionary<int, float> TotalWallShear { get; set; } = new Dictionary<int, float>();
+        public Dictionary<int, double> TotalWallShear { get; set; } = new Dictionary<int, double>();
 
         /// <summary>
         /// default constructor
@@ -223,7 +223,7 @@ namespace calculator
                     }
                 }
 
-                float moment = Math.Abs(Mt_comb * _wall_system.Y_bar_walls[wall.Key]);
+                double moment = Math.Abs(Mt_comb * _wall_system.Y_bar_walls[wall.Key]);
                 EccentricShear.Add(wall.Key, (sign * moment * wall.Value.WallRigidity) / _wall_system.InertiaPolar);
             }
 
@@ -261,7 +261,7 @@ namespace calculator
                     }
                 }
 
-                float moment = Math.Abs(Mt_comb * _wall_system.X_bar_walls[wall.Key]);
+                double moment = Math.Abs(Mt_comb * _wall_system.X_bar_walls[wall.Key]);
                 EccentricShear.Add(wall.Key, (sign * moment * wall.Value.WallRigidity) / _wall_system.InertiaPolar);
             }
         }
