@@ -312,8 +312,8 @@ namespace ShearWallVisualizer
                 {
                     if (IsWithinSnapThreshold(worldPoint, dia.Value.P1)) return dia.Value.P1;
                     if (IsWithinSnapThreshold(worldPoint, dia.Value.P2)) return dia.Value.P2;
-                    if (IsWithinSnapThreshold(worldPoint, dia.Value.P3)) return dia.Value.P2;
-                    if (IsWithinSnapThreshold(worldPoint, dia.Value.P4)) return dia.Value.P2;
+                    if (IsWithinSnapThreshold(worldPoint, dia.Value.P3)) return dia.Value.P3;
+                    if (IsWithinSnapThreshold(worldPoint, dia.Value.P4)) return dia.Value.P4;
                 }
             }
 
@@ -604,6 +604,9 @@ namespace ShearWallVisualizer
 
             if (previewShape is Line line)
             {
+                // For the line to be horizontal or vertical only
+                preview_endPoint_world = GetConstrainedPoint(preview_endPoint_world, startPoint_world.Value); // Ensure alignment
+
                 SolidColorBrush lineStrokeBrush = new SolidColorBrush(Colors.Green);
                 lineStrokeBrush.Opacity = 0.5;
                 Pen pen = new Pen(lineStrokeBrush, 4);
