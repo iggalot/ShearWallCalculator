@@ -1,22 +1,30 @@
 ﻿using calculator;
 using ShearWallCalculator;
+using ShearWallVisualizer.Controls;
 using ShearWallVisualizer.Tabs;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Globalization;
-using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using static ShearWallVisualizer.Controls.DiaphragmDataControl;
 
 namespace ShearWallVisualizer
 {
-
     public partial class MainWindow : Window
     {
+        public EventHandler OnUpdated;  // the event that signals that the drawing has been updated -- controls will listen for this at the time they are created.
+
+        TabItem dimTab;
+        TabItem calcTab;
+
+        CalculationResultsTab calcResultsTab;
+
         private bool initialized = false;  // is the initial window setup complete?
 
         bool hide_Text = false;
@@ -32,7 +40,6 @@ namespace ShearWallVisualizer
 
         private Point? startPoint_world = null;  // the first click in world coordinates
         private Point? endPoint_world = null;    // the second click in world coordinates
-        private List<WorldShape> worldShapes = new List<WorldShape>();
 
         private List<DiaphragmSystem> diaphragmSystems = new List<DiaphragmSystem>();
         private List<WallSystem> wallSystems = new List<WallSystem>();
@@ -78,6 +85,53 @@ namespace ShearWallVisualizer
             };
 
             CreateTabs();
+
+            CreateDiaphragmDataControls();
+        }
+
+        private void CreateDiaphragmDataControls()
+        {
+            
+            foreach(var dia_sys in diaphragmSystems)
+            {
+                DiaphragmSystemControl sysControl = new DiaphragmSystemControl(this, dia_sys);
+                dimTab.Content = sysControl;
+                sysControl.OnDiaphragmSubControlDeleted += DiaphragmDeleted;
+            }
+        }
+
+        private void DiaphragmDeleted(object sender, EventArgs e)
+        {
+            DiaphragmDataControl control = sender as DiaphragmDataControl;
+            DeleteDiaphragmEventArgs args = e as DeleteDiaphragmEventArgs;
+
+            foreach (DiaphragmSystem dia_sys in diaphragmSystems)
+            {
+                foreach (var dia in dia_sys._diaphragms)
+                {
+                    if (dia.Key == args.Id)
+                    {
+                        dia_sys._diaphragms.Remove(dia.Key);
+                        //MessageBox.Show("Diaphragm #" + args.Id + " deleted.");
+
+                        Update();
+                        return;
+                    }
+                }
+            }
+        }
+
+        public void Update()
+        {
+            dimTab.Content = null;  // clear the tabs
+            calcTab.Content = null;
+
+            CreateDiaphragmDataControls();
+            
+            OnUpdated?.Invoke(this, EventArgs.Empty); // signal that the window has been updated -- so that subcontrols can refresh
+
+            Draw(ChangeType.Redraw);
+
         }
 
         private void ResetView()
@@ -109,15 +163,19 @@ namespace ShearWallVisualizer
                 Content = new DimensionsTab()
             };
 
+            dimTab = dimensionsTab;
+
             // Tab 2: Simple Calculation Tab
-            var calcTab = new TabItem
+            var calculationTab = new TabItem
             {
                 Header = "Calculations",
                 Content = new CalculationResultsTab()
             };
 
+            calcTab = calculationTab;
+
             MainTabControl.Items.Add(dimensionsTab);
-            MainTabControl.Items.Add(calcTab);
+            MainTabControl.Items.Add(calculationTab);
 
             MainTabControl.SelectedIndex = 0; // Show Dimensions by default
         }
@@ -700,13 +758,13 @@ namespace ShearWallVisualizer
                 return;
 
             // Redraw all the shapes in world coordinates
-            foreach (var shape in worldShapes)
+            FormattedText idLabel = null;
+            foreach (var wall_sys in wallSystems)
             {
-                FormattedText idLabel = null;
-                if (shape is WorldLine line)
+                foreach (var wall in wall_sys._walls)
                 {
-                    Point p1_world = line.Start;
-                    Point p2_world = line.End;
+                    Point p1_world = wall.Value.Start;
+                    Point p2_world = wall.Value.End;
                     Point p1_screen = WorldToScreen(p1_world, m_layers);
                     Point p2_screen = WorldToScreen(p2_world, m_layers);
 
@@ -740,15 +798,17 @@ namespace ShearWallVisualizer
                                 VisualTreeHelper.GetDpi(this).PixelsPerDip);
                         ctx.DrawText(idLabel, p2_screen);  // id label
                     }
-
                 }
-                else if (shape is WorldRectangle rect)
-                {
-                    Point p1_world = rect.BottomLeft;
-                    Point p2_world = new Point(rect.TopRight.X, rect.BottomLeft.Y);
-                    Point p3_world = rect.TopRight;
-                    Point p4_world = new Point(rect.BottomLeft.X, rect.TopRight.Y);
+            }
 
+            foreach (var dia_sys in diaphragmSystems)
+            {
+                foreach (var dia in dia_sys._diaphragms)
+                {
+                    Point p1_world = dia.Value.P1;
+                    Point p2_world = dia.Value.P2;
+                    Point p3_world = dia.Value.P3;
+                    Point p4_world = dia.Value.P4;
                     Point p1_screen = WorldToScreen(p1_world, m_layers);
                     Point p2_screen = WorldToScreen(p2_world, m_layers);
                     Point p3_screen = WorldToScreen(p3_world, m_layers);
@@ -816,6 +876,7 @@ namespace ShearWallVisualizer
 
                         ctx.DrawText(idLabel, p4_screen);  // id label
                     }
+
                 }
             }
         }
@@ -889,6 +950,7 @@ namespace ShearWallVisualizer
                 }
 
                 wallSystems[0].AddWall(new WallData(defaultWallHeight, startPoint.X, startPoint.Y, endPoint.X, endPoint.Y));
+                Update();
             }
             else if (currentMode == DrawMode.Rectangle)
             {
@@ -898,6 +960,7 @@ namespace ShearWallVisualizer
                 }
 
                 diaphragmSystems[0].AddDiaphragm(new DiaphragmData_Rectangular(startPoint_world.Value, endPoint_world.Value));
+                Update();
             }
 
             // Clear the preview shape from the screen.
@@ -1048,7 +1111,7 @@ namespace ShearWallVisualizer
 
         #endregion
 
-
+        #region Menu Events
         private void Exit_Click(object sender, RoutedEventArgs e)
         {
             Application.Current.Shutdown();
@@ -1059,96 +1122,7 @@ namespace ShearWallVisualizer
             // You can refresh your data-bound controls here.
             MessageBox.Show("Refresh triggered!", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
         }
-    }
-
-    public class WorldShape
-    {
-        public int Id { get; }
-        public WorldShape(int id)
-        {
-            Id = id;
-        }
-    }
-
-    public class WorldLine : WorldShape
-    {
-        public Point Start { get; }
-        public Point End { get; }
-
-        public WorldLine(int id, Point start, Point end) : base(id)
-        {
-            Start = start;
-            End = end;
-        }
-
-        public Line ToScreenLine(double scale, Point worldOrigin)
-        {
-            var startScreen = WorldToScreen(Start, scale, worldOrigin);
-            var endScreen = WorldToScreen(End, scale, worldOrigin);
-
-            var line = new Line
-            {
-                X1 = startScreen.X,
-                Y1 = startScreen.Y,
-                X2 = endScreen.X,
-                Y2 = endScreen.Y,
-                Stroke = Brushes.Black
-            };
-
-            return line;
-        }
-
-        private Point WorldToScreen(Point worldPoint, double scale, Point worldOrigin)
-        {
-            var screenX = (worldPoint.X - worldOrigin.X) * scale;
-            var screenY = (worldPoint.Y - worldOrigin.Y) * scale;
-            return new Point(screenX, screenY);
-        }
-    }
-
-    public class WorldRectangle : WorldShape
-    {
-        public Point BottomLeft { get; }
-        public Point TopRight { get; }
-
-        public WorldRectangle(int id, Point bottomLeft, Point topRight) : base(id)
-        {
-            BottomLeft = new Point(Math.Min(bottomLeft.X, topRight.X), Math.Min(bottomLeft.Y, topRight.Y));
-            TopRight = new Point(Math.Max(bottomLeft.X, topRight.X), Math.Max(bottomLeft.Y, topRight.Y));
-        }
-
-        // Method to return the rectangle corners for snapping
-        public IEnumerable<Point> GetCorners()
-        {
-            yield return BottomLeft;                            // p1
-            yield return new Point(TopRight.X, BottomLeft.Y);   // p2 : Bottom Right
-            yield return TopRight;                              // p3
-            yield return new Point(BottomLeft.X, TopRight.Y);   // p4 : Top Left
-        }
-
-        public List<Rect> ToScreenRectangles(double scale, Point worldOrigin)
-        {
-            List<Rect> rectangles = new List<Rect>();
-            var corners = GetCorners().ToList();
-
-            // Transform all corners to screen space
-            var bottomLeftScreen = WorldToScreen(corners[0], scale, worldOrigin);
-            var topRightScreen = WorldToScreen(corners[3], scale, worldOrigin);
-
-            var rect = new Rect(bottomLeftScreen.X, bottomLeftScreen.Y,
-                                topRightScreen.X - bottomLeftScreen.X,
-                                topRightScreen.Y - bottomLeftScreen.Y);
-            rectangles.Add(rect);
-
-            return rectangles;
-        }
-
-        private Point WorldToScreen(Point worldPoint, double scale, Point worldOrigin)
-        {
-            var screenX = (worldPoint.X - worldOrigin.X) * scale;
-            var screenY = (worldPoint.Y - worldOrigin.Y) * scale;
-            return new Point(screenX, screenY);
-        }
+        #endregion
     }
 }
 

@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ShearWallVisualizer"
         mc:Ignorable="d"
-        Title="Rigid Diaphragm Shear Wall Calculator v0.1" Height="900" Width="1400"
+        Title="Rigid Diaphragm Shear Wall Calculator v0.1" Height="900" Width="1500"
         Background="LightGray"
         Loaded="OnLoaded"
         >
@@ -49,7 +49,7 @@
                 </DockPanel>
 
                 <!-- Dynamic Tabs -->
-                <TabControl x:Name="MainTabControl" Width="600" Height="600"
+                <TabControl x:Name="MainTabControl" Width="900" Height="600"
                             TabStripPlacement="Top" Margin="10 0 0 0"/>
 
                 <!-- Optional Logging + Scroll --><!--

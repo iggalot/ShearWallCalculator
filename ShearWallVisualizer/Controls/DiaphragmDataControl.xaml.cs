@@ -27,6 +27,7 @@ namespace ShearWallVisualizer.Controls
         }
 
         public DiaphragmData_Rectangular Data { get; set; }
+
         public int Id { get; set; }
 
         public DiaphragmDataControl(int id, DiaphragmData_Rectangular diaphragm)

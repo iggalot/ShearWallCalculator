@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Windows;
 
 namespace ShearWallCalculator
 {
@@ -70,54 +71,15 @@ namespace ShearWallCalculator
             /// P4 --- P3
             /// |       |
             /// P1 --- P2 
-            
-            // first point is either P1 or P4
-            if (first_pt.X < second_pt.X)
-            {
-                // Cases:
-                // (A) first point is P1 and second point is P3
-                if (first_pt.Y < second_pt.Y)
-                {
-                    P1 = first_pt;
-                    P3 = second_pt;
+            double minX = Math.Min(first_pt.X, second_pt.X);
+            double maxX = Math.Max(first_pt.X, second_pt.X);
+            double minY = Math.Min(first_pt.Y, second_pt.Y);
+            double maxY = Math.Max(first_pt.Y, second_pt.Y);
 
-                    P2 = new System.Windows.Point(P3.X, P1.Y);
-                    P4 = new System.Windows.Point(P1.X, P3.Y);
-                }
-                // (B) first point is P4 and second point is P2
-                else
-                {
-                    P2 = second_pt;
-                    P4 = first_pt;
-
-                    P1 = new System.Windows.Point(P2.X, P4.Y);
-                    P3 = new System.Windows.Point(P4.X, P2.Y);
-                }
-            }
-
-            // first point is either P2 or P3
-            else
-            {
-                // Cases:
-                // (A) first point is P2 and second point is P4
-                if (first_pt.Y < second_pt.Y)
-                {
-                    P2 = first_pt;
-                    P4 = second_pt;
-
-                    P1 = new System.Windows.Point(P4.X, P2.Y);
-                    P3 = new System.Windows.Point(P2.X, P4.Y);
-                }
-                // (B) first point is P3 and second point is P1
-                else
-                {
-                    P1 = second_pt;
-                    P3 = first_pt;
-
-                    P2 = new System.Windows.Point(P3.X, P1.Y);
-                    P4 = new System.Windows.Point(P1.X, P3.Y);
-                }
-            }
+            P1 = new Point(minX, minY); // Lower Left
+            P2 = new Point(maxX, minY); // Lower Right
+            P3 = new Point(maxX, maxY); // Upper Right
+            P4 = new Point(minX, maxY); // Upper Left
 
             Update();  // Update the calculations
         }
