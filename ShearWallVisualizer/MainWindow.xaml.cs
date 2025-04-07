@@ -1023,10 +1023,48 @@ namespace ShearWallVisualizer
             m_layers.AddLayer(52, DrawCursor);
             m_layers.AddLayer(51, DrawPreview);
             m_layers.AddLayer(42, DrawDebug);
-            m_layers.AddLayer(43, DrawCOMandCOR);
+            m_layers.AddLayer(43, DrawSnapMarkers);
+            m_layers.AddLayer(44, DrawCOMandCOR);
 
             // Now draw everything
             Draw(ChangeType.Redraw);
+        }
+
+        private void DrawSnapMarkers(DrawingContext ctx)
+        {
+            if(snapMode == false)
+            {
+                return;
+            }
+
+            foreach (var wall in wallSystem._walls)
+            {
+                Point p1_world = wall.Value.Start;
+                Point p2_world = wall.Value.End;
+                Point p1_screen = WorldToScreen(p1_world, m_layers);
+                Point p2_screen = WorldToScreen(p2_world, m_layers);
+
+                ctx.DrawEllipse(Brushes.MediumBlue, new Pen(Brushes.MediumBlue, 1), p1_screen, 3, 3);
+                ctx.DrawEllipse(Brushes.MediumBlue, new Pen(Brushes.MediumBlue, 1), p2_screen, 3, 3);
+
+            }
+                foreach (var dia in diaphragmSystem._diaphragms)
+            {
+                Point p1_world = dia.Value.P1;
+                Point p2_world = dia.Value.P2;
+                Point p3_world = dia.Value.P3;
+                Point p4_world = dia.Value.P4;
+                Point p1_screen = WorldToScreen(p1_world, m_layers);
+                Point p2_screen = WorldToScreen(p2_world, m_layers);
+                Point p3_screen = WorldToScreen(p3_world, m_layers);
+                Point p4_screen = WorldToScreen(p4_world, m_layers);
+
+                ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Red, 1), p1_screen, 3, 3);
+                ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Red, 1), p2_screen, 3, 3);
+                ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Red, 1), p3_screen, 3, 3);
+                ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Red, 1), p4_screen, 3, 3);
+
+            }
         }
 
         private void DrawCOMandCOR(DrawingContext ctx)
