@@ -17,6 +17,9 @@ namespace ShearWallVisualizer
 {
     public partial class MainWindow : Window
     {
+        public ShearWallCalculator_RigidDiaphragm Calculator { get; set; } = new ShearWallCalculator_RigidDiaphragm();
+
+
         public EventHandler OnUpdated;  // the event that signals that the drawing has been updated -- controls will listen for this at the time they are created.
 
         private bool initialized = false;  // is the initial window setup complete?
@@ -35,8 +38,8 @@ namespace ShearWallVisualizer
         private Point? startPoint_world = null;  // the first click in world coordinates
         private Point? endPoint_world = null;    // the second click in world coordinates
 
-        private List<DiaphragmSystem> diaphragmSystems = new List<DiaphragmSystem>();
-        private List<WallSystem> wallSystems = new List<WallSystem>();
+        private DiaphragmSystem diaphragmSystem = new DiaphragmSystem();
+        private WallSystem wallSystem = new WallSystem();
 
         private double zoomFactorX = 1.0;
         private double zoomFactorY = 1.0;
@@ -82,16 +85,16 @@ namespace ShearWallVisualizer
 
             CreateWallDataControls();
             CreateDiaphragmDataControls();
+
+            // update the visualizer and the calculator
+            Update();
         }
 
         private void CreateWallDataControls()
         {
-            foreach (var wall_sys in wallSystems)
-            {
-                WallSystemControl sysControl = new WallSystemControl(this, wall_sys);
-                sp_DimPanel_Walls.Children.Add(sysControl);
-                sysControl.OnWallSubControlDeleted += WallDeleted;
-            }
+            WallSystemControl sysControl = new WallSystemControl(this, wallSystem);
+            sp_DimPanel_Walls.Children.Add(sysControl);
+            sysControl.OnWallSubControlDeleted += WallDeleted;
         }
 
         private void WallDeleted(object sender, EventArgs e)
@@ -99,30 +102,24 @@ namespace ShearWallVisualizer
             WallDataControl control = sender as WallDataControl;
             DeleteWallEventArgs args = e as DeleteWallEventArgs;
 
-            foreach (WallSystem wall_sys in wallSystems)
+            foreach (var wall in wallSystem._walls)
             {
-                foreach (var wall in wall_sys._walls)
+                if (wall.Key == args.Id)
                 {
-                    if (wall.Key == args.Id)
-                    {
-                        wall_sys._walls.Remove(wall.Key);
-                        //MessageBox.Show("Wall #" + args.Id + " deleted.");
+                    wallSystem._walls.Remove(wall.Key);
+                    //MessageBox.Show("Wall #" + args.Id + " deleted.");
 
-                        Update();
-                        return;
-                    }
+                    Update();
+                    return;
                 }
             }
         }
 
         private void CreateDiaphragmDataControls()
         {
-            foreach (var dia_sys in diaphragmSystems)
-            {
-                DiaphragmSystemControl sysControl = new DiaphragmSystemControl(this, dia_sys);
-                sp_DimPanel_Diaphragms.Children.Add(sysControl);
-                sysControl.OnDiaphragmSubControlDeleted += DiaphragmDeleted;
-            }
+            DiaphragmSystemControl sysControl = new DiaphragmSystemControl(this, diaphragmSystem);
+            sp_DimPanel_Diaphragms.Children.Add(sysControl);
+            sysControl.OnDiaphragmSubControlDeleted += DiaphragmDeleted;
         }
 
         private void DiaphragmDeleted(object sender, EventArgs e)
@@ -130,19 +127,55 @@ namespace ShearWallVisualizer
             DiaphragmDataControl control = sender as DiaphragmDataControl;
             DeleteDiaphragmEventArgs args = e as DeleteDiaphragmEventArgs;
 
-            foreach (DiaphragmSystem dia_sys in diaphragmSystems)
+            foreach (var dia in diaphragmSystem._diaphragms)
             {
-                foreach (var dia in dia_sys._diaphragms)
+                if (dia.Key == args.Id)
                 {
-                    if (dia.Key == args.Id)
-                    {
-                        dia_sys._diaphragms.Remove(dia.Key);
-                        //MessageBox.Show("Diaphragm #" + args.Id + " deleted.");
+                    diaphragmSystem._diaphragms.Remove(dia.Key);
+                    //MessageBox.Show("Diaphragm #" + args.Id + " deleted.");
 
-                        Update();
-                        return;
-                    }
+                    Update();
+                    return;
                 }
+            }
+        }
+
+        private void CreateCalculationResultsControls()
+        {
+            foreach (var wall in wallSystem._walls)
+            {
+                int id = wall.Key;
+                var rigidity = wall.Value.WallRigidity;
+                var xbar = Calculator._wall_system.X_bar_walls[id];
+                var ybar = Calculator._wall_system.Y_bar_walls[id];
+
+                // Must check validity of numbers since some walls may be in X direction and others in Y direction
+                double vi_x = double.NaN;
+                if(Calculator.DirectShear_X.ContainsKey(id) is true)
+                {
+                    vi_x = Calculator.DirectShear_X[id];
+                }
+
+                var vi_y = double.NaN;
+                if (Calculator.DirectShear_Y.ContainsKey(id) is true)
+                {
+                    vi_y = Calculator.DirectShear_Y[id];
+                }
+
+                var v_ecc = double.NaN;
+                if (Calculator.EccentricShear.ContainsKey(id) is true)
+                {
+                    v_ecc = Calculator.EccentricShear[id];
+                }
+
+                var v_tot = double.NaN;
+                if (Calculator.TotalWallShear.ContainsKey(id) is true)
+                {
+                    v_tot = Calculator.TotalWallShear[id];
+                }
+
+                ShearWallResultsControl control = new ShearWallResultsControl(id, rigidity, xbar, ybar, vi_x, vi_y, v_ecc, v_tot);
+                sp_CalcPanel.Children.Add(control);
             }
         }
 
@@ -151,14 +184,23 @@ namespace ShearWallVisualizer
             // clear the tabs
             sp_DimPanel_Diaphragms.Children.Clear();
             sp_DimPanel_Walls.Children.Clear();
-
             sp_CalcPanel.Children.Clear();
 
+            // recreate the data controls
             CreateWallDataControls();
             CreateDiaphragmDataControls();
-            
+
+            // update the calculator
+            Calculator = new ShearWallCalculator_RigidDiaphragm(wallSystem, diaphragmSystem);
+            if(Calculator.IsValidForCalculation is true)
+            { 
+                CreateCalculationResultsControls();
+            }
+
+            // notify controls that we have updated
             OnUpdated?.Invoke(this, EventArgs.Empty); // signal that the window has been updated -- so that subcontrols can refresh
 
+            // redraw the screen
             Draw(ChangeType.Redraw);  // redraw
 
         }
@@ -297,24 +339,18 @@ namespace ShearWallVisualizer
 
         private Point GetSnappedPoint(Point worldPoint)
         {
-            foreach (var wall_sys in wallSystems)
+            foreach (var wall in wallSystem._walls)
             {
-                foreach (var wall in wall_sys._walls)
-                {
-                    if (IsWithinSnapThreshold(worldPoint, wall.Value.Start)) return wall.Value.Start;
-                    if (IsWithinSnapThreshold(worldPoint, wall.Value.End)) return wall.Value.End;
-                }
+                if (IsWithinSnapThreshold(worldPoint, wall.Value.Start)) return wall.Value.Start;
+                if (IsWithinSnapThreshold(worldPoint, wall.Value.End)) return wall.Value.End;
             }
 
-            foreach (var dia_sys in diaphragmSystems)
+            foreach (var dia in diaphragmSystem._diaphragms)
             {
-                foreach (var dia in dia_sys._diaphragms)
-                {
-                    if (IsWithinSnapThreshold(worldPoint, dia.Value.P1)) return dia.Value.P1;
-                    if (IsWithinSnapThreshold(worldPoint, dia.Value.P2)) return dia.Value.P2;
-                    if (IsWithinSnapThreshold(worldPoint, dia.Value.P3)) return dia.Value.P3;
-                    if (IsWithinSnapThreshold(worldPoint, dia.Value.P4)) return dia.Value.P4;
-                }
+                if (IsWithinSnapThreshold(worldPoint, dia.Value.P1)) return dia.Value.P1;
+                if (IsWithinSnapThreshold(worldPoint, dia.Value.P2)) return dia.Value.P2;
+                if (IsWithinSnapThreshold(worldPoint, dia.Value.P3)) return dia.Value.P3;
+                if (IsWithinSnapThreshold(worldPoint, dia.Value.P4)) return dia.Value.P4;
             }
 
             return worldPoint;
@@ -639,95 +675,89 @@ namespace ShearWallVisualizer
             double center_pt_dia = 5;
 
             // Redraw all the shapes in world coordinates
-            foreach (var wall_sys in wallSystems)
+            foreach (var wall in wallSystem._walls)
             {
-                foreach (var wall in wall_sys._walls)
+                Shape shapeToDraw = null;
+                Ellipse centerPointMarker = null;
+                FormattedText idLabel = null;
+
+                Point p1_world = wall.Value.Start;
+                Point p2_world = wall.Value.End;
+                Point p1_screen = GetConstrainedScreenPoint(WorldToScreen(p1_world, m_layers), m_layers);
+                Point p2_screen = GetConstrainedScreenPoint(WorldToScreen(p2_world, m_layers), m_layers);
+
+                // If the points are the same, then the object was out of bounds and doesn't need to be drawn.
+                if (p1_screen == p2_screen)
+                    continue;
+
+                // Draw the line object
+                SolidColorBrush lineStrokeBrush = new SolidColorBrush(Colors.Blue);
+                Pen pen = new Pen(lineStrokeBrush, 2);
+                ctx.DrawLine(pen, p1_screen, p2_screen);
+
+                Point center_world = new Point((wall.Value.Start.X + wall.Value.End.X) / 2, (wall.Value.Start.Y + wall.Value.End.Y) / 2);
+                Point center_screen = WorldToScreen(center_world, m_layers);
+
+                // draw the center point and label
+                if (PointIsWithinBounds(center_screen, dockpanel) is false)
                 {
-                    Shape shapeToDraw = null;
-                    Ellipse centerPointMarker = null;
-                    FormattedText idLabel = null;
+                    continue;
+                }
+                else
+                {
+                    Point centerPoint = new Point(center_screen.X,
+                            center_screen.Y);
 
-                    Point p1_world = wall.Value.Start;
-                    Point p2_world = wall.Value.End;
-                    Point p1_screen = GetConstrainedScreenPoint(WorldToScreen(p1_world, m_layers), m_layers);
-                    Point p2_screen = GetConstrainedScreenPoint(WorldToScreen(p2_world, m_layers), m_layers);
+                    ctx.DrawEllipse(lineStrokeBrush, pen, centerPoint, center_pt_dia, center_pt_dia); // center point marker
 
-                    // If the points are the same, then the object was out of bounds and doesn't need to be drawn.
-                    if (p1_screen == p2_screen)
-                        continue;
-
-                    // Draw the line object
-                    SolidColorBrush lineStrokeBrush = new SolidColorBrush(Colors.Blue);
-                    Pen pen = new Pen(lineStrokeBrush, 2);
-                    ctx.DrawLine(pen, p1_screen, p2_screen);
-
-                    Point center_world = new Point((wall.Value.Start.X + wall.Value.End.X) / 2, (wall.Value.Start.Y + wall.Value.End.Y) / 2);
-                    Point center_screen = WorldToScreen(center_world, m_layers);
-
-                    // draw the center point and label
-                    if (PointIsWithinBounds(center_screen, dockpanel) is false)
-                    {
-                        continue;
-                    }
-                    else
-                    {
-                        Point centerPoint = new Point(center_screen.X,
-                                center_screen.Y);
-
-                        ctx.DrawEllipse(lineStrokeBrush, pen, centerPoint, center_pt_dia, center_pt_dia); // center point marker
-
-                        idLabel = new FormattedText(wall.Key.ToString(),
-                            CultureInfo.GetCultureInfo("en-us"), FlowDirection.LeftToRight, new Typeface("Consolas"), 14, Brushes.Black);
-                        ctx.DrawText(idLabel, center_screen);  // id label
-                    }
+                    idLabel = new FormattedText(wall.Key.ToString(),
+                        CultureInfo.GetCultureInfo("en-us"), FlowDirection.LeftToRight, new Typeface("Consolas"), 14, Brushes.Black);
+                    ctx.DrawText(idLabel, center_screen);  // id label
                 }
             }
 
             // Redraw all the shapes in world coordinates
-            foreach (var dia_sys in diaphragmSystems)
+            foreach (var rect in diaphragmSystem._diaphragms)
             {
-                foreach (var rect in dia_sys._diaphragms)
+                Shape shapeToDraw = null;
+                Ellipse centerPointMarker = null;
+                FormattedText idLabel = null;
+
+                Point p1_world = rect.Value.P1;
+                Point p3_world = rect.Value.P3;
+                Point p1_screen = GetConstrainedScreenPoint(WorldToScreen(p1_world, m_layers), m_layers);
+                Point p3_screen = GetConstrainedScreenPoint(WorldToScreen(p3_world, m_layers), m_layers);
+
+                // If the points are the same, then the object was out of bounds and doesn't need to be drawn.
+                if (p1_screen == p3_screen)
+                    continue;
+
+                SolidColorBrush rectFillBrush = new SolidColorBrush(Colors.Red);
+                rectFillBrush.Opacity = 0.5;
+                Pen pen = new Pen(rectFillBrush, 1);
+
+                Point insertPoint_screen = new Point(p1_screen.X, p3_screen.Y);  // TODO: Need a better way to get P4 point of rectangle
+
+                double width = Math.Abs(p3_screen.X - p1_screen.X);
+                double height = Math.Abs(p3_screen.Y - p1_screen.Y);
+                ctx.DrawRectangle(rectFillBrush, pen, new Rect(insertPoint_screen.X, insertPoint_screen.Y, width, height));
+
+                Point center_world = new Point((rect.Value.P1.X + rect.Value.P3.X) / 2, (rect.Value.P1.Y + rect.Value.P3.Y) / 2);
+                Point center_screen = WorldToScreen(center_world, m_layers);
+
+                // draw the center point and label
+                if (PointIsWithinBounds(center_screen, dockpanel) is false)
+                    continue;
+                else
                 {
-                    Shape shapeToDraw = null;
-                    Ellipse centerPointMarker = null;
-                    FormattedText idLabel = null;
+                    Point centerPoint = new Point(center_screen.X,
+                        center_screen.Y);
 
-                    Point p1_world = rect.Value.P1;
-                    Point p3_world = rect.Value.P3;
-                    Point p1_screen = GetConstrainedScreenPoint(WorldToScreen(p1_world, m_layers), m_layers);
-                    Point p3_screen = GetConstrainedScreenPoint(WorldToScreen(p3_world, m_layers), m_layers);
+                    ctx.DrawEllipse(rectFillBrush, pen, centerPoint, center_pt_dia, center_pt_dia); // center point marker
 
-                    // If the points are the same, then the object was out of bounds and doesn't need to be drawn.
-                    if (p1_screen == p3_screen)
-                        continue;
-
-                    SolidColorBrush rectFillBrush = new SolidColorBrush(Colors.Red);
-                    rectFillBrush.Opacity = 0.5;
-                    Pen pen = new Pen(rectFillBrush, 1);
-
-                    Point insertPoint_screen = new Point(p1_screen.X, p3_screen.Y);  // TODO: Need a better way to get P4 point of rectangle
-
-                    double width = Math.Abs(p3_screen.X - p1_screen.X);
-                    double height = Math.Abs(p3_screen.Y - p1_screen.Y);
-                    ctx.DrawRectangle(rectFillBrush, pen, new Rect(insertPoint_screen.X, insertPoint_screen.Y, width, height));
-
-                    Point center_world = new Point((rect.Value.P1.X + rect.Value.P3.X) / 2, (rect.Value.P1.Y + rect.Value.P3.Y) / 2);
-                    Point center_screen = WorldToScreen(center_world, m_layers);
-
-                    // draw the center point and label
-                    if (PointIsWithinBounds(center_screen, dockpanel) is false)
-                        continue;
-                    else
-                    {
-                        Point centerPoint = new Point(center_screen.X,
-                            center_screen.Y);
-
-                        ctx.DrawEllipse(rectFillBrush, pen, centerPoint, center_pt_dia, center_pt_dia); // center point marker
-
-                        idLabel = new FormattedText(rect.Key.ToString(),
-                            CultureInfo.GetCultureInfo("en-us"), FlowDirection.LeftToRight, new Typeface("Consolas"), 14, Brushes.Black);
-                        ctx.DrawText(idLabel, centerPoint);  // id label
-                    }
+                    idLabel = new FormattedText(rect.Key.ToString(),
+                        CultureInfo.GetCultureInfo("en-us"), FlowDirection.LeftToRight, new Typeface("Consolas"), 14, Brushes.Black);
+                    ctx.DrawText(idLabel, centerPoint);  // id label
                 }
             }
         }
@@ -768,125 +798,119 @@ namespace ShearWallVisualizer
 
             // Redraw all the shapes in world coordinates
             FormattedText idLabel = null;
-            foreach (var wall_sys in wallSystems)
+            foreach (var wall in wallSystem._walls)
             {
-                foreach (var wall in wall_sys._walls)
+                Point p1_world = wall.Value.Start;
+                Point p2_world = wall.Value.End;
+                Point p1_screen = WorldToScreen(p1_world, m_layers);
+                Point p2_screen = WorldToScreen(p2_world, m_layers);
+
+                // START POINT
+                if (PointIsWithinBounds(p1_screen, dockpanel) is true)
                 {
-                    Point p1_world = wall.Value.Start;
-                    Point p2_world = wall.Value.End;
-                    Point p1_screen = WorldToScreen(p1_world, m_layers);
-                    Point p2_screen = WorldToScreen(p2_world, m_layers);
+                    ctx.DrawEllipse(Brushes.MediumBlue, new Pen(Brushes.Black, 1), p1_screen, 5, 5);
+                    idLabel = new FormattedText(
+                            $"({p1_world.X:F2}, {p1_world.Y:F2})",
+                            CultureInfo.GetCultureInfo("en-us"),
+                            FlowDirection.LeftToRight,
+                            new Typeface("Consolas"),
+                            14,
+                            Brushes.Black,
+                            VisualTreeHelper.GetDpi(this).PixelsPerDip);
 
-                    // START POINT
-                    if (PointIsWithinBounds(p1_screen, dockpanel) is true)
-                    {
-                        ctx.DrawEllipse(Brushes.MediumBlue, new Pen(Brushes.Black, 1), p1_screen, 5, 5);
-                        idLabel = new FormattedText(
-                                $"({p1_world.X:F2}, {p1_world.Y:F2})",
-                                CultureInfo.GetCultureInfo("en-us"),
-                                FlowDirection.LeftToRight,
-                                new Typeface("Consolas"),
-                                14,
-                                Brushes.Black,
-                                VisualTreeHelper.GetDpi(this).PixelsPerDip);
+                    ctx.DrawText(idLabel, p1_screen);  // id label
+                }
 
-                        ctx.DrawText(idLabel, p1_screen);  // id label
-                    }
-
-                    // END POINT
-                    if (PointIsWithinBounds(p2_screen, dockpanel) is true)
-                    {
-                        ctx.DrawEllipse(Brushes.MediumBlue, new Pen(Brushes.Black, 1), p2_screen, 5, 5);
-                        idLabel = new FormattedText(
-                                $"({p2_world.X:F2}, {p2_world.Y:F2})",
-                                CultureInfo.GetCultureInfo("en-us"),
-                                FlowDirection.LeftToRight,
-                                new Typeface("Consolas"),
-                                14,
-                                Brushes.Black,
-                                VisualTreeHelper.GetDpi(this).PixelsPerDip);
-                        ctx.DrawText(idLabel, p2_screen);  // id label
-                    }
+                // END POINT
+                if (PointIsWithinBounds(p2_screen, dockpanel) is true)
+                {
+                    ctx.DrawEllipse(Brushes.MediumBlue, new Pen(Brushes.Black, 1), p2_screen, 5, 5);
+                    idLabel = new FormattedText(
+                            $"({p2_world.X:F2}, {p2_world.Y:F2})",
+                            CultureInfo.GetCultureInfo("en-us"),
+                            FlowDirection.LeftToRight,
+                            new Typeface("Consolas"),
+                            14,
+                            Brushes.Black,
+                            VisualTreeHelper.GetDpi(this).PixelsPerDip);
+                    ctx.DrawText(idLabel, p2_screen);  // id label
                 }
             }
 
-            foreach (var dia_sys in diaphragmSystems)
+            foreach (var dia in diaphragmSystem._diaphragms)
             {
-                foreach (var dia in dia_sys._diaphragms)
+                Point p1_world = dia.Value.P1;
+                Point p2_world = dia.Value.P2;
+                Point p3_world = dia.Value.P3;
+                Point p4_world = dia.Value.P4;
+                Point p1_screen = WorldToScreen(p1_world, m_layers);
+                Point p2_screen = WorldToScreen(p2_world, m_layers);
+                Point p3_screen = WorldToScreen(p3_world, m_layers);
+                Point p4_screen = WorldToScreen(p4_world, m_layers);
+
+                // P1
+                if (PointIsWithinBounds(p1_screen, dockpanel) is true)
                 {
-                    Point p1_world = dia.Value.P1;
-                    Point p2_world = dia.Value.P2;
-                    Point p3_world = dia.Value.P3;
-                    Point p4_world = dia.Value.P4;
-                    Point p1_screen = WorldToScreen(p1_world, m_layers);
-                    Point p2_screen = WorldToScreen(p2_world, m_layers);
-                    Point p3_screen = WorldToScreen(p3_world, m_layers);
-                    Point p4_screen = WorldToScreen(p4_world, m_layers);
 
-                    // P1
-                    if (PointIsWithinBounds(p1_screen, dockpanel) is true)
-                    {
+                    ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 1), p1_screen, 5, 5);
+                    idLabel = new FormattedText(
+                            $"({p1_world.X:F2}, {p1_world.Y:F2})",
+                            CultureInfo.GetCultureInfo("en-us"),
+                            FlowDirection.LeftToRight,
+                            new Typeface("Consolas"),
+                            14,
+                            Brushes.Black,
+                            VisualTreeHelper.GetDpi(this).PixelsPerDip);
 
-                        ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 1), p1_screen, 5, 5);
-                        idLabel = new FormattedText(
-                                $"({p1_world.X:F2}, {p1_world.Y:F2})",
-                                CultureInfo.GetCultureInfo("en-us"),
-                                FlowDirection.LeftToRight,
-                                new Typeface("Consolas"),
-                                14,
-                                Brushes.Black,
-                                VisualTreeHelper.GetDpi(this).PixelsPerDip);
-
-                        ctx.DrawText(idLabel, p1_screen);  // id label
-                    }
-
-                    // P2
-                    if (PointIsWithinBounds(p2_screen, dockpanel) is true)
-                    {
-                        ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 1), p2_screen, 5, 5);
-                        idLabel = new FormattedText(
-                                $"({p2_world.X:F2}, {p2_world.Y:F2})",
-                                CultureInfo.GetCultureInfo("en-us"),
-                                FlowDirection.LeftToRight,
-                                new Typeface("Consolas"),
-                                14,
-                                Brushes.Black,
-                                VisualTreeHelper.GetDpi(this).PixelsPerDip);
-                        ctx.DrawText(idLabel, p2_screen);  // id label
-                    }
-
-                    // P3
-                    if (PointIsWithinBounds(p3_screen, dockpanel) is true)
-                    {
-                        ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 1), p3_screen, 5, 5);
-                        idLabel = new FormattedText(
-                                $"({p3_world.X:F2}, {p3_world.Y:F2})",
-                                CultureInfo.GetCultureInfo("en-us"),
-                                FlowDirection.LeftToRight,
-                                new Typeface("Consolas"),
-                                14,
-                                Brushes.Black,
-                                VisualTreeHelper.GetDpi(this).PixelsPerDip);
-                        ctx.DrawText(idLabel, p3_screen);  // id label
-                    }
-
-                    // P4
-                    if (PointIsWithinBounds(p4_screen, dockpanel) is true)
-                    {
-                        ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 1), p4_screen, 5, 5);
-                        idLabel = new FormattedText(
-                                $"({p4_world.X:F2}, {p4_world.Y:F2})",
-                                CultureInfo.GetCultureInfo("en-us"),
-                                FlowDirection.LeftToRight,
-                                new Typeface("Consolas"),
-                                14,
-                                Brushes.Black,
-                                VisualTreeHelper.GetDpi(this).PixelsPerDip);
-
-                        ctx.DrawText(idLabel, p4_screen);  // id label
-                    }
-
+                    ctx.DrawText(idLabel, p1_screen);  // id label
                 }
+
+                // P2
+                if (PointIsWithinBounds(p2_screen, dockpanel) is true)
+                {
+                    ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 1), p2_screen, 5, 5);
+                    idLabel = new FormattedText(
+                            $"({p2_world.X:F2}, {p2_world.Y:F2})",
+                            CultureInfo.GetCultureInfo("en-us"),
+                            FlowDirection.LeftToRight,
+                            new Typeface("Consolas"),
+                            14,
+                            Brushes.Black,
+                            VisualTreeHelper.GetDpi(this).PixelsPerDip);
+                    ctx.DrawText(idLabel, p2_screen);  // id label
+                }
+
+                // P3
+                if (PointIsWithinBounds(p3_screen, dockpanel) is true)
+                {
+                    ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 1), p3_screen, 5, 5);
+                    idLabel = new FormattedText(
+                            $"({p3_world.X:F2}, {p3_world.Y:F2})",
+                            CultureInfo.GetCultureInfo("en-us"),
+                            FlowDirection.LeftToRight,
+                            new Typeface("Consolas"),
+                            14,
+                            Brushes.Black,
+                            VisualTreeHelper.GetDpi(this).PixelsPerDip);
+                    ctx.DrawText(idLabel, p3_screen);  // id label
+                }
+
+                // P4
+                if (PointIsWithinBounds(p4_screen, dockpanel) is true)
+                {
+                    ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 1), p4_screen, 5, 5);
+                    idLabel = new FormattedText(
+                            $"({p4_world.X:F2}, {p4_world.Y:F2})",
+                            CultureInfo.GetCultureInfo("en-us"),
+                            FlowDirection.LeftToRight,
+                            new Typeface("Consolas"),
+                            14,
+                            Brushes.Black,
+                            VisualTreeHelper.GetDpi(this).PixelsPerDip);
+
+                    ctx.DrawText(idLabel, p4_screen);  // id label
+                }
+
             }
         }
 
@@ -953,22 +977,22 @@ namespace ShearWallVisualizer
                 Point startPoint = startPoint_world.Value;
                 Point endPoint = worldPoint;
 
-                if(wallSystems == null || wallSystems.Count == 0)
+                if(wallSystem == null)
                 {
-                    wallSystems.Add(new WallSystem());
+                    wallSystem = new WallSystem();
                 }
 
-                wallSystems[0].AddWall(new WallData(defaultWallHeight, startPoint.X, startPoint.Y, endPoint.X, endPoint.Y));
+                wallSystem.AddWall(new WallData(defaultWallHeight, startPoint.X, startPoint.Y, endPoint.X, endPoint.Y));
                 Update();
             }
             else if (currentMode == DrawMode.Rectangle)
             {
-                if(diaphragmSystems == null || diaphragmSystems.Count == 0)
+                if(diaphragmSystem == null)
                 {
-                    diaphragmSystems.Add(new DiaphragmSystem());
+                    diaphragmSystem = new DiaphragmSystem();
                 }
 
-                diaphragmSystems[0].AddDiaphragm(new DiaphragmData_Rectangular(startPoint_world.Value, endPoint_world.Value));
+                diaphragmSystem.AddDiaphragm(new DiaphragmData_Rectangular(startPoint_world.Value, endPoint_world.Value));
                 Update();
             }
 

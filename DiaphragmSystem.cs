@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Windows;
 
 namespace ShearWallCalculator
@@ -14,7 +13,7 @@ namespace ShearWallCalculator
         public Dictionary<int, DiaphragmData_Rectangular> _diaphragms { get; set; } = new Dictionary<int, DiaphragmData_Rectangular>(); // collection of walls>
 
         // center of mass of the diaphragm composite region
-        public System.Windows.Point CtrMass { get; set; } = new Point(0, 0);
+        public System.Windows.Point CtrMass { get; set; } = new System.Windows.Point(double.NaN, double.NaN);
         public float TotalArea { get; set; } = 0.0f;
 
         /// <summary>

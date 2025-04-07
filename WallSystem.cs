@@ -1,10 +1,6 @@
 ﻿using calculator;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
 
 namespace ShearWallCalculator
 {
@@ -40,7 +36,7 @@ namespace ShearWallCalculator
         public double TotalRigidity_Y { get; set; } = 0;  // total rigidity in y-direction
 
         // center or rigidity
-        public System.Windows.Point CtrRigidity { get; set; } = new System.Windows.Point(0, 0);
+        public System.Windows.Point CtrRigidity { get; set; } = new System.Windows.Point(double.NaN, double.NaN);
 
         // moments of inertia for the shear wall groups
         public double InertiaXX { get; set; } // inertia of horizontal walls about center of rigidity

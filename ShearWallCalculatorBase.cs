@@ -24,6 +24,12 @@ namespace ShearWallCalculator
         public float V_x { get; set; } = 40; // x direction load (kips) acting at center of mass
         public float V_y { get; set; } = 0;  // y direction load (kips) acting at center of mass
 
+        /// <summary>
+        /// A flag that determines if the calculations can be peformed.  Looks
+        /// mainlay at CtrMass and CtrRigidity to make sure both are valid numbers
+        /// and not NaN or Infinity
+        /// </summary>
+        public bool IsValidForCalculation { get => Validate(); }
 
 
         private Point FindMaxBoundaryPt()
@@ -84,7 +90,7 @@ namespace ShearWallCalculator
 
         public ShearWallCalculatorBase()
         {
-            
+
         }
 
         /// <summary>
@@ -98,8 +104,32 @@ namespace ShearWallCalculator
             _wall_system = wall_system;
 
             BracedWallLine bracedWallLine = new BracedWallLine(5.0);
-//            LoadTestWallData();
-//            LoadTestWallData2();
+            //            LoadTestWallData();
+            //            LoadTestWallData2();
+
+            Validate();
+        }
+
+        /// <summary>
+        /// Checks if the numerics are valid for CtrMass and CtrRigidity so that calculations can be done.
+        /// </summary>
+        public bool Validate()
+        {
+            if (_diaphragm_system is null || _wall_system is null ||
+                double.IsNaN(_diaphragm_system.CtrMass.X) ||
+                double.IsNaN(_diaphragm_system.CtrMass.Y) ||
+                double.IsNaN(_wall_system.CtrRigidity.X) ||
+                double.IsNaN(_wall_system.CtrRigidity.Y) ||
+                double.IsInfinity(_diaphragm_system.CtrMass.X) ||
+                double.IsInfinity(_diaphragm_system.CtrMass.Y) ||
+                double.IsInfinity(_wall_system.CtrRigidity.X) ||
+                double.IsInfinity(_wall_system.CtrRigidity.Y))
+            {
+                return false;
+            } else
+            {
+                return true; 
+            }
         }
 
 

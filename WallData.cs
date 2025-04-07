@@ -61,11 +61,10 @@ namespace calculator
                 throw new ArgumentException("Height must be greater than 0.");
             }
 
-            WallHeight = ht;
-            WallDir = GetWallDir();
+
 
             // sort the points so START is always on the left of a horizontal line
-            if (WallDir == WallDirs.EastWest)
+            if (sy == ey)
             {
                 if(sx < ex)
                 {
@@ -78,7 +77,8 @@ namespace calculator
                 }
             }
 
-            if (WallDir == WallDirs.NorthSouth)
+            // else we are looking at a vertical line so make the START the bottom
+            else
             {
                 if (sy < ey)
                 {
@@ -97,6 +97,10 @@ namespace calculator
             {
                 throw new ArgumentException("Start and end points cannot be the same.");
             }
+
+            // these have to be after the START and END are set
+            WallHeight = ht;
+            WallDir = GetWallDir();
         }
 
         /// <summary>

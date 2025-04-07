@@ -57,6 +57,7 @@ namespace calculator
         /// </summary>
         public override void Update()
         {
+
             // check if we have data for a wall system and a diaphragm system
             if (_diaphragm_system == null || _wall_system == null)
             {
@@ -72,25 +73,30 @@ namespace calculator
             Console.WriteLine("Center of Mass -- xr: " + _diaphragm_system.CtrMass.X + " ft.  yr: " + _diaphragm_system.CtrMass.Y + " ft.");
             Console.WriteLine("Center of Rigidity -- xr: " + _wall_system.CtrRigidity.X + " ft.  yr: " + _wall_system.CtrRigidity.Y + " ft.");
 
-            // update eccentricty values between center of mass and center of Rigidity
-            ecc_x = (float)(_wall_system.CtrRigidity.X - _diaphragm_system.CtrMass.X);
-            ecc_y = (float)(_wall_system.CtrRigidity.Y - _diaphragm_system.CtrMass.Y);
-            Console.WriteLine("ecc_x: " + ecc_x + " ft.  ecc_y: " + ecc_y + " ft.");
+            
+            // check that our CoM and CoR values are valid and computed -- if not, the calculations don't work
+            if (IsValidForCalculation is true)
+            {
+                // update eccentricty values between center of mass and center of Rigidity
+                ecc_x = (float)(_wall_system.CtrRigidity.X - _diaphragm_system.CtrMass.X);
+                ecc_y = (float)(_wall_system.CtrRigidity.Y - _diaphragm_system.CtrMass.Y);
+                Console.WriteLine("ecc_x: " + ecc_x + " ft.  ecc_y: " + ecc_y + " ft.");
 
-            // compute moment due to eccentric loading between center of mass and center of rigidity
-            Mt_comb = (V_x * ecc_y) - (V_y * ecc_x);
-            Console.WriteLine("M_comb: " + Mt_comb + " kips-m");
+                // compute moment due to eccentric loading between center of mass and center of rigidity
+                Mt_comb = (V_x * ecc_y) - (V_y * ecc_x);
+                Console.WriteLine("M_comb: " + Mt_comb + " kips-m");
 
-            // Perform component calculations to compute shear contributions
-            ComputeDirectShear_X();  // horizontal walls
-            ComputeDirectShear_Y();  // vertical walls
-            ComputeEccentricShear(); // shear in line of wall due to rotation eccentricty of structure
+                // Perform component calculations to compute shear contributions
+                ComputeDirectShear_X();  // horizontal walls
+                ComputeDirectShear_Y();  // vertical walls
+                ComputeEccentricShear(); // shear in line of wall due to rotation eccentricty of structure
 
-            // compute the total shear activing on the wall
-            ComputeTotalShear();
+                // compute the total shear activing on the wall
+                ComputeTotalShear();
 
-            // display results
-            Console.WriteLine(DisplayResults());
+                // display results
+                Console.WriteLine(DisplayResults());
+            }
         }
 
 
