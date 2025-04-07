@@ -4,6 +4,8 @@ using ShearWallVisualizer.Controls;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Reflection.Emit;
+using System.Runtime.InteropServices.ComTypes;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -205,6 +207,9 @@ namespace ShearWallVisualizer
 
         }
 
+        /// <summary>
+        /// Reset the view so that the full model scales to the drawing context area and the origin of the world coordinates is at the lower left corner
+        /// </summary>
         private void ResetView()
         {
             // Set zoom factors based on the visible area and world dimensions
@@ -213,7 +218,7 @@ namespace ShearWallVisualizer
 
             // Set the scale factors so both are the same -- for square grids
             zoomFactorX = Math.Min(zoomFactorX, zoomFactorY);
-            zoomFactorY = zoomFactorX;
+            zoomFactorY = zoomFactorX; 
 
             // Compute current screen position of world (0,0)
             Point screenOrigin = WorldToScreen(new Point(0, 0), dockpanel);
@@ -1018,9 +1023,166 @@ namespace ShearWallVisualizer
             m_layers.AddLayer(52, DrawCursor);
             m_layers.AddLayer(51, DrawPreview);
             m_layers.AddLayer(42, DrawDebug);
+            m_layers.AddLayer(43, DrawCOMandCOR);
 
             // Now draw everything
             Draw(ChangeType.Redraw);
+        }
+
+        private void DrawCOMandCOR(DrawingContext ctx)
+        {
+            // Draw the center of mass
+            var com = Calculator._diaphragm_system.CtrMass;
+            var cor = Calculator._wall_system.CtrRigidity;
+
+            // display the com as a text
+            FormattedText idLabel = new FormattedText(
+                $"COM ({com.X.ToString("F2")}, {com.Y.ToString("F2")})",
+                CultureInfo.GetCultureInfo("en-us"),
+                FlowDirection.LeftToRight,
+                new Typeface("Consolas"),
+                14,
+                Brushes.Black,
+                VisualTreeHelper.GetDpi(this).PixelsPerDip);
+
+            ctx.DrawText(idLabel, new Point(5, 5));
+
+            // display the com as a text
+            idLabel = new FormattedText(
+                $"COR ({cor.X.ToString("F2")}, {cor.Y.ToString("F2")})",
+                CultureInfo.GetCultureInfo("en-us"),
+                FlowDirection.LeftToRight,
+                new Typeface("Consolas"),
+                14,
+                Brushes.Black,
+                VisualTreeHelper.GetDpi(this).PixelsPerDip);
+
+            ctx.DrawText(idLabel, new Point(5, 19));
+
+            // Draw a marker for the center of mass
+            if (Calculator != null && Calculator._diaphragm_system != null)
+            {
+                double x_screen = WorldToScreen(com, dockpanel).X;
+                double y_screen = WorldToScreen(com, dockpanel).Y;
+
+                // draw a vertical line since the Y is valid
+                if ((double.IsNaN(com.X) is false) && (double.IsNaN(com.Y) is true))
+                {
+                    Pen pen = new Pen(Brushes.Red, 2);
+                    pen.DashStyle = new DashStyle(new double[] { 3, 3 }, 0);
+
+                    x_screen = 10; // draw it justbelow the top
+                    ctx.DrawLine(pen, new Point(x_screen, 0), new Point(x_screen, dockpanel.ActualHeight));
+                }
+
+                // draw a vertical line since if the X is valid
+                else if ((double.IsNaN(com.Y) is false) && (double.IsNaN(com.X) is true))
+                {
+                    Pen pen = new Pen(Brushes.Red, 2);
+                    pen.DashStyle = new DashStyle(new double[] { 3, 3 }, 0);
+
+                    y_screen = dockpanel.ActualHeight - 10;
+
+                    ctx.DrawLine(pen, new Point(0, y_screen), new Point(dockpanel.ActualHeight, y_screen));
+                }
+
+                // draw two lines since neither value is valid
+                else if((double.IsNaN(com.X) is true) && (double.IsNaN(com.Y) is true))
+                {
+                    Pen pen = new Pen(Brushes.Red, 2);
+                    pen.DashStyle = new DashStyle(new double[] { 3, 3 }, 0);
+
+                    y_screen = dockpanel.ActualHeight - 10;
+                    x_screen = 10;
+
+                    ctx.DrawLine(pen, new Point(0, y_screen), new Point(dockpanel.ActualWidth, y_screen));
+                    ctx.DrawLine(pen, new Point(x_screen, 0), new Point(x_screen, dockpanel.ActualHeight));
+                } 
+
+                // Draw a marker
+                Point pt = new Point(x_screen, y_screen);
+
+                if (PointIsWithinBounds(pt, dockpanel))
+                {
+                    ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 2), pt, 8, 8);
+                    ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 2), pt, 5, 5);
+
+                    idLabel = new FormattedText(
+                        $"COM",
+                        CultureInfo.GetCultureInfo("en-us"),
+                        FlowDirection.LeftToRight,
+                        new Typeface("Consolas"),
+                        14,
+                        Brushes.Black,
+                        VisualTreeHelper.GetDpi(this).PixelsPerDip);
+
+                    ctx.DrawText(idLabel, new Point(x_screen + 5, y_screen - 20));
+                }
+            }
+
+
+            if (Calculator != null && Calculator._wall_system != null)
+            {
+                double x_screen = WorldToScreen(cor, dockpanel).X;
+                double y_screen = WorldToScreen(cor, dockpanel).Y;
+
+                // draw a vertical line since the Y is valid
+                if ((double.IsNaN(cor.X) is false) && (double.IsNaN(cor.Y) is true))
+                {
+                    
+                    Pen pen = new Pen(Brushes.MediumBlue, 2);
+                    pen.DashStyle = new DashStyle(new double[] { 3, 3 }, 0);
+
+                    y_screen = 10; // draw it justbelow the top
+                    ctx.DrawLine(pen, new Point(x_screen, 0), new Point(x_screen, dockpanel.ActualHeight));
+                }
+
+                // draw a horizontal line since if the X is valid
+                else if ((double.IsNaN(cor.Y) is false) && (double.IsNaN(cor.X) is true))
+                {
+                    Pen pen = new Pen(Brushes.MediumBlue, 2);
+                    pen.DashStyle = new DashStyle(new double[] { 3, 3 }, 0);
+
+                    x_screen = dockpanel.ActualWidth - 10;
+
+                    ctx.DrawLine(pen, new Point(0, y_screen), new Point(dockpanel.ActualWidth, y_screen));
+                }
+
+                // draw two lines since neither value is valid
+                else if ((double.IsNaN(cor.X) is true) && (double.IsNaN(cor.Y) is true))
+                {
+                    Pen pen = new Pen(Brushes.MediumBlue, 2);
+                    pen.DashStyle = new DashStyle(new double[] { 3, 3 }, 0);
+
+                    y_screen = 10;
+                    x_screen = dockpanel.ActualWidth - 10;
+
+                    ctx.DrawLine(pen, new Point(x_screen, 0), new Point(x_screen, dockpanel.ActualHeight));
+                    ctx.DrawLine(pen, new Point(0, y_screen), new Point(dockpanel.ActualWidth, y_screen));
+                }
+
+                // Draw a marker
+                Point pt = new Point(x_screen, y_screen);
+
+                if (PointIsWithinBounds(pt, dockpanel))
+                {
+                    ctx.DrawEllipse(Brushes.MediumBlue, new Pen(Brushes.Black, 2), pt, 8, 8);
+                    ctx.DrawEllipse(Brushes.MediumBlue, new Pen(Brushes.Black, 2), pt, 5, 5);
+
+                    idLabel = new FormattedText(
+                        $"COR",
+                        CultureInfo.GetCultureInfo("en-us"),
+                        FlowDirection.LeftToRight,
+                        new Typeface("Consolas"),
+                        14,
+                        Brushes.Black,
+                        VisualTreeHelper.GetDpi(this).PixelsPerDip);
+
+                    ctx.DrawText(idLabel, new Point(x_screen - 30, y_screen + 5));
+                }
+
+
+            }
         }
 
         #endregion
@@ -1158,507 +1320,3 @@ namespace ShearWallVisualizer
         #endregion
     }
 }
-
-
-
-    //        ////// hide the results controls
-    //        ////HideAllDataControls();
-
-    //        //// Create the diaphragm data controls
-    //        //if (Calculator._diaphragm_system._diaphragms.Count > 0)
-    //        //{
-    //        //    // turn on the controls stackpanel visibility
-    //        //    spDiaphragmDataControls.Visibility = Visibility.Visible;
-
-    //        //    DiaphragmData.Children.Clear();  // clear the stack panel controls for the diaphragm data
-    //        //    foreach (var diaphragm in Calculator._diaphragm_system._diaphragms)
-    //        //    {
-    //        //        int id = diaphragm.Key;
-    //        //        DiaphragmData_Rectangular dia = diaphragm.Value;
-
-    //        //        DiaphragmDataControl control = new DiaphragmDataControl(id, dia);
-
-    //        //        DiaphragmData.Children.Add(control);
-
-    //        //        control.DeleteDiaphragm += OnDiaphragmDeleted;
-    //        //    }
-    //        //}
-
-    //        ////// Create Table of Results
-    //        //if (Calculator._wall_system._walls.Count > 0)
-    //        //{
-    //        //    // turn on the results and wall data controls visibility
-    //        //    spWallDataControls.Visibility = Visibility.Visible;
-    //        //    spCalcResultsControls.Visibility = Visibility.Visible;
-
-    //        //    if (Calculator.GetType() == typeof(ShearWallCalculator_RigidDiaphragm))
-    //        //    {
-
-    //        //        // Create Table of Wall Data
-    //        //        ShearWallData_EW.Children.Clear(); // clear the stack panel controls for the wall data
-    //        //        ShearWallData_NS.Children.Clear(); // clear the stack panel controls for the wall data
-    //        //        ShearWallResults.Children.Clear(); // clear the stack panel controls for the calculation results data
-
-    //        //        foreach (var result in ((ShearWallCalculator_RigidDiaphragm)Calculator).TotalWallShear)
-    //        //        {
-    //        //            int id = result.Key;
-    //        //            float rigidity = ((ShearWallCalculator_RigidDiaphragm)Calculator)._wall_system.EW_Walls.ContainsKey(id) ? ((ShearWallCalculator_RigidDiaphragm)Calculator)._wall_system.EW_Walls[id].WallRigidity : Calculator._wall_system.NS_Walls[id].WallRigidity;
-    //        //            float direct_shear_x = ((ShearWallCalculator_RigidDiaphragm)Calculator).DirectShear_X.ContainsKey(id) ? ((ShearWallCalculator_RigidDiaphragm)Calculator).DirectShear_X[id] : 0.0f;
-    //        //            float direct_shear_y = ((ShearWallCalculator_RigidDiaphragm)Calculator).DirectShear_Y.ContainsKey(id) ? ((ShearWallCalculator_RigidDiaphragm)Calculator).DirectShear_Y[id] : 0.0f;
-    //        //            float eccentric_shear = ((ShearWallCalculator_RigidDiaphragm)Calculator).EccentricShear.ContainsKey(id) ? ((ShearWallCalculator_RigidDiaphragm)Calculator).EccentricShear[id] : 0.0f;
-    //        //            float total_shear = ((ShearWallCalculator_RigidDiaphragm)Calculator).TotalWallShear.ContainsKey(id) ? ((ShearWallCalculator_RigidDiaphragm)Calculator).TotalWallShear[id] : 0.0f;
-
-    //        //            ShearWallResultsControl control = new ShearWallResultsControl(
-    //        //                id,
-    //        //                rigidity,
-    //        //                Calculator._wall_system.X_bar_walls[id],
-    //        //                Calculator._wall_system.Y_bar_walls[id],
-    //        //                direct_shear_x,
-    //        //                direct_shear_y,
-    //        //                eccentric_shear,
-    //        //                total_shear
-    //        //                );
-
-    //        //            ShearWallResults.Children.Add(control);
-    //        //        }
-
-    //        //        /// Create the shearwall data controls
-    //        //        foreach (var result in ((ShearWallCalculator_RigidDiaphragm)Calculator).TotalWallShear)
-    //        //        {
-    //        //            int id = result.Key;
-    //        //            WallData wall = Calculator._wall_system.EW_Walls.ContainsKey(id) ? Calculator._wall_system.EW_Walls[id] : Calculator._wall_system.NS_Walls[id];
-    //        //            WallDataControl control = new WallDataControl(id, wall);
-
-    //        //            if (wall.WallDir == WallDirs.EastWest)
-    //        //            {
-    //        //                ShearWallData_EW.Children.Add(control);
-    //        //            }
-    //        //            else if (wall.WallDir == WallDirs.NorthSouth)
-    //        //            {
-    //        //                ShearWallData_NS.Children.Add(control);
-    //        //            }
-    //        //            else
-    //        //            {
-    //        //                throw new Exception("Invalid wall direction " + wall.WallDir.ToString() + " in wall #" + id.ToString());
-    //        //            }
-
-    //        //            control.DeleteWall += OnWallDeleted;
-    //        //        }
-    //        //    }
-    //        //    else if (Calculator.GetType() == typeof(ShearWallCalculator_FlexibleDiaphragm))
-    //        //    {
-    //        //        // Create Table of Wall Data
-    //        //        ShearWallData_EW.Children.Clear();
-    //        //        ShearWallData_NS.Children.Clear();
-    //        //        ShearWallResults.Children.Clear();
-
-    //        //        throw new NotImplementedException("\nFlexible Diaphragms Calculator not implemented yet.");
-    //        //    }
-    //        //    else
-    //        //    {
-    //        //        throw new NotImplementedException("\nInvalid Calaculator type received.");
-    //        //    }
-    //        //}
-    //    }
-
-
-    //    #region Controls
-    //    private void HideAllDataControls()
-    //    {
-    //        spCalcResultsControls.Visibility = Visibility.Collapsed;
-    //        spWallDataControls.Visibility = Visibility.Collapsed;
-    //        spDiaphragmDataControls.Visibility = Visibility.Collapsed;
-    //    }
-
-    //    private void ShowAllDataControls()
-    //    {
-    //        spCalcResultsControls.Visibility = Visibility.Visible;
-    //        spWallDataControls.Visibility = Visibility.Visible;
-    //        spDiaphragmDataControls.Visibility = Visibility.Visible;
-    //    }
-
-    //    private void ClearCoordinateDisplayData()
-    //    {
-    //        lblScreenEndCoord.Content = "";
-    //        lblScreenStartCoord.Content = "";
-    //        lblWorldEndCoord.Content = "";
-    //        lblWorldStartCoord.Content = "";
-    //    }
-    //    /// <summary>
-    //    /// Function to handle clearing point and cursor input variables
-    //    /// </summary>
-    //    private void ResetPointInputInfo()
-    //    {
-    //        _startClickSet = false;
-    //        _endClickSet = false;
-    //        CurrentStartPoint = new Point();
-    //        CurrentEndPoint = new Point();
-    //        _currentPreviewLine = null;
-
-    //        // update the infor labels
-    //        lblScreenEndCoord.Content = "";
-    //        lblScreenStartCoord.Content = "";
-    //        lblWorldEndCoord.Content = "";
-    //        lblWorldStartCoord.Content = "";
-    //    }
-    //    #endregion 
-
-    //    #region Mouse and Window Events
-    //    /// <summary>
-    //    /// What happens when the middle mouse wheel is scrolled
-    //    /// </summary>
-    //    /// <param name="sender"></param>
-    //    /// <param name="e"></param>
-    //    private void MainCanvas_MouseWheel(object sender, MouseWheelEventArgs e)
-    //    {
-    //        Point mousePosition_screen = e.GetPosition(cnvMainCanvas);
-    //        double zoomDelta = e.Delta > 0 ? _zoomFactor : 1 / _zoomFactor;
-    //        double oldScaleX = _scaleTransform.ScaleX;
-    //        double oldScaleY = _scaleTransform.ScaleY;
-
-    //        SCALE_X = _scaleTransform.ScaleX * zoomDelta;
-    //        SCALE_Y =_scaleTransform.ScaleY * zoomDelta;
-    //        double scaleChangeX = _scaleTransform.ScaleX - oldScaleX;
-    //        double scaleChangeY = _scaleTransform.ScaleY - oldScaleY;
-    //        TRANS_X =(float)(_translateTransform.X - (mousePosition_screen.X * scaleChangeX));
-    //        TRANS_Y = (float)(_translateTransform.Y - (mousePosition_screen.Y * scaleChangeY));
-    //        _translateTransform.Y -= (mousePosition_screen.Y * scaleChangeY);
-
-    //        SetupViewScaling((float)SCALE_X, (float)SCALE_Y, (float)TRANS_X, (float)TRANS_Y);
-
-    //        // recreate the canvas drawer with the new zoom factor
-    //        _canvas_drawer = new CanvasDrawer(cnvMainCanvas, SCALE_X, SCALE_Y);
-
-    //        Update();
-    //    }
-
-    //    /// <summary>
-    //    /// what happens when a mouse button is pressed
-    //    /// </summary>
-    //    /// <param name="sender"></param>
-    //    /// <param name="e"></param>
-    //    private void MainCanvas_MouseDown(object sender, MouseButtonEventArgs e)
-    //    {
-    //        // Right button click to CANCEL
-    //        if (e.RightButton == MouseButtonState.Pressed)
-    //        {
-    //            ResetPointInputInfo();
-    //            DrawCanvas();
-    //            return;
-    //        }
-
-    //        // Middle mouse button for panning and zooming
-    //        if (e.MiddleButton == MouseButtonState.Pressed)
-    //        {
-    //            _isPanning = true;
-    //            _lastMousePosition = e.GetPosition(CanvasScrollViewer);
-    //            cnvMainCanvas.Cursor = Cursors.Hand;
-    //            return;
-    //        }
-
-    //        HandleLeftClick(e);
-    //        DrawCanvas();
-    //    }
-
-    //    private void HandleLeftClick(MouseButtonEventArgs e)
-    //    {
-    //        if(CurrentInputMode != InputModes.Wall && CurrentInputMode != InputModes.Diaphragm)
-    //        {
-    //            MessageBox.Show("Please select the 'Wall' or 'Diaphragm' input mode.");
-    //            return;
-    //        }
-
-    //        Point screenPoint = e.GetPosition(cnvMainCanvas);
-    //        Point worldPoint = MathHelpers.ScreenCoord_ToWorld(cnvMainCanvas.Height, screenPoint, SCALE_X, SCALE_Y);
-
-    //        bool snapResult;
-    //        Point nearestPoint = MathHelpers.FindNearestSnapPoint(Calculator._wall_system, Calculator._diaphragm_system,
-    //            worldPoint, out snapResult);
-
-    //        if (!_startClickSet)
-    //        {
-    //            _currentPreviewLine = new Line { Stroke = Brushes.Green };
-
-    //            if (_shouldSnapToNearest && snapResult && MathHelpers.PointIsWithinRange(worldPoint, nearestPoint, _snapDistance))
-    //            {
-    //                screenPoint = MathHelpers.WorldCoord_ToScreen(cnvMainCanvas.Height, nearestPoint, SCALE_X, SCALE_Y);
-    //            }
-
-    //            CurrentStartPoint = screenPoint;
-    //            _startClickSet = true;
-    //            _canvas_drawer.DrawPreviewLine(_currentPreviewLine, CurrentStartPoint, CurrentStartPoint);
-    //            return;
-    //        }
-
-    //        if (_shouldSnapToNearest && snapResult && MathHelpers.PointIsWithinRange(worldPoint, nearestPoint, _snapDistance))
-    //        {
-    //            screenPoint = MathHelpers.WorldCoord_ToScreen(cnvMainCanvas.Height, nearestPoint, SCALE_X, SCALE_Y);
-    //        }
-
-    //        if (screenPoint == CurrentStartPoint)
-    //        {
-    //            return;
-    //        }
-
-    //        CurrentEndPoint = screenPoint;
-    //        _endClickSet = true;
-    //        _canvas_drawer.DrawPreviewLine(_currentPreviewLine, CurrentStartPoint, CurrentEndPoint);
-
-    //        ProcessFinalInput();
-    //    }
-
-    //    private void ProcessFinalInput()
-    //    {
-    //        if (_startClickSet && _endClickSet)
-    //        {
-    //            float startX = (float)CurrentStartPoint.X;
-    //            float startY = (float)CurrentStartPoint.Y;
-    //            float endX = (float)CurrentEndPoint.X;
-    //            float endY = (float)CurrentEndPoint.Y;
-
-    //            if (CurrentInputMode == InputModes.Diaphragm)
-    //            {
-    //                WallDirs dir = MathHelpers.LineIsHorizontal(_currentPreviewLine) ? WallDirs.EastWest : WallDirs.NorthSouth;
-
-    //                if (dir == WallDirs.EastWest) endY = startY;
-    //                else endX = startX;
-
-    //                Point worldStart = MathHelpers.ScreenCoord_ToWorld(cnvMainCanvas.Height, new Point(startX, startY), SCALE_X, SCALE_Y);
-    //                Point worldEnd = MathHelpers.ScreenCoord_ToWorld(cnvMainCanvas.Height, new Point(endX, endY),SCALE_X, SCALE_Y);
-
-    //                Calculator._wall_system.AddWall(new WallData(DEFAULT_WALL_HT,
-    //                    (float)worldStart.X, (float)worldStart.Y, (float)worldEnd.X, (float)worldEnd.Y, dir));
-
-    //                _currentPreviewLine = null;
-    //            }
-    //            else if (CurrentInputMode == InputModes.Wall)
-    //            {
-    //                Point worldStart = MathHelpers.ScreenCoord_ToWorld(cnvMainCanvas.Height, CurrentStartPoint, SCALE_X, SCALE_Y);
-    //                Point worldEnd = MathHelpers.ScreenCoord_ToWorld(cnvMainCanvas.Height, CurrentEndPoint, SCALE_X, SCALE_Y);
-
-    //                Calculator._diaphragm_system.AddDiaphragm(new DiaphragmData_Rectangular(worldStart, worldEnd));
-
-    //                _currentPreviewLine = null;
-    //            }
-
-    //            ResetPointInputInfo();
-    //        }
-    //    }
-
-
-    //    /// <summary>
-    //    /// What happens when the mouse is moved
-    //    /// </summary>
-    //    /// <param name="sender"></param>
-    //    /// <param name="e"></param>
-    //    private void MainCanvas_MouseMove(object sender, MouseEventArgs e)
-    //    {
-    //        _currentMousePosition = Mouse.GetPosition(cnvMainCanvas);
-
-    //        // Check if middle mouse button is pressed and we are in panning mode
-    //        if (_isPanning && e.MiddleButton == MouseButtonState.Pressed)
-    //        {
-    //            Point currentPosition = e.GetPosition(CanvasScrollViewer);
-    //            double offsetX = currentPosition.X - _lastMousePosition.X;
-    //            double offsetY = currentPosition.Y - _lastMousePosition.Y;
-    //            CanvasScrollViewer.ScrollToHorizontalOffset(CanvasScrollViewer.HorizontalOffset + offsetX);
-    //            CanvasScrollViewer.ScrollToVerticalOffset(CanvasScrollViewer.VerticalOffset + offsetY);
-
-    //            cnvMainCanvas.RenderTransform = new TranslateTransform(offsetX + cnvMainCanvas.RenderTransform.Value.OffsetX, offsetY + cnvMainCanvas.RenderTransform.Value.OffsetY);
-
-
-    //            //foreach (UIElement element in cnvMainCanvas.Children)
-    //            //{
-    //            //    if (element is FrameworkElement fe)
-    //            //    {
-    //            //        fe.RenderTransform = new TranslateTransform(offsetX + fe.RenderTransform.Value.OffsetX, offsetY + fe.RenderTransform.Value.OffsetY);
-    //            //    }
-    //            //}
-
-    //            _lastMousePosition = currentPosition;
-    //            Update();
-    //        }
-
-    //        else
-    //        {
-    //            // Update the preview lines
-    //            if (_currentPreviewLine != null)
-    //            {
-    //                var p = e.GetPosition(cnvMainCanvas);
-    //                _currentPreviewLine.X2 = p.X;
-    //                _currentPreviewLine.Y2 = p.Y;
-
-    //                // for wall entry mode, force the preview lines to be horizontal or vertical from the first point clicked
-    //                if (CurrentInputMode == InputModes.Diaphragm)
-    //                {
-    //                    // force the line to be horizontal or vertical only
-    //                    if (MathHelpers.LineIsHorizontal(_currentPreviewLine))
-    //                    {
-    //                        _currentPreviewLine.Y2 = _currentPreviewLine.Y1;
-    //                    }
-    //                    else
-    //                    {
-    //                        _currentPreviewLine.X2 = _currentPreviewLine.X1;
-    //                    }
-    //                }
-    //            }
-
-    //            // Update the mouse position_screen label
-    //            MousePosition.Content = "(" + _currentMousePosition.X.ToString("0.00") + ", " + _currentMousePosition.Y.ToString("0.00") + ")";
-
-    //        }
-    //        Update();
-
-    //    }
-
-    //    /// <summary>
-    //    /// Function to determine if a line object is more horizontal than vertical by comparing the x and y distances between the start and end points
-    //    /// </summary>
-    //    /// <param name="line"></param>
-    //    /// <returns></returns>
-
-    //    /// <summary>
-    //    /// What happens when a mouse button is released
-    //    /// </summary>
-    //    /// <param name="sender"></param>
-    //    /// <param name="e"></param>
-    //    private void MainCanvas_MouseUp(object sender, MouseButtonEventArgs e)
-    //    {
-    //        // Middle mouse button is released -- stops panning
-    //        if (e.MiddleButton == MouseButtonState.Released)
-    //        {
-    //            _isPanning = false;
-    //            cnvMainCanvas.Cursor = Cursors.Arrow;
-    //        }
-    //    }
-
-    //    private void Window_Loaded(object sender, RoutedEventArgs e)
-    //    {
-    //        var window = Window.GetWindow(this);
-    //        window.KeyDown += HandleKeyPress;
-    //    }
-
-    //    /// <summary>
-    //    /// Set up the event to detect key presses within the window
-    //    /// </summary>
-    //    /// <param name="sender"></param>
-    //    /// <param name="e"></param>
-    //    private void HandleKeyPress(object sender, KeyEventArgs e)
-    //    {
-    //        switch (e.Key)
-    //        {
-    //            // Clear all the input data
-    //            case Key.Escape:
-    //                ResetPointInputInfo();
-    //                break;
-    //            case Key.C:
-    //                if (CurrentInputMode == InputModes.Diaphragm)
-    //                {
-    //                    Calculator._wall_system._walls.Clear();
-    //                }
-    //                if (CurrentInputMode == InputModes.Wall)
-    //                {
-    //                    Calculator._diaphragm_system._diaphragms.Clear();
-    //                }
-    //                break;
-    //            // Enter points to define the diaphragm
-    //            case Key.M:
-    //                CurrentInputMode = InputModes.Wall;
-    //                CurrentMode.Content = "DIAPHRAGM ENTRY (MASS MODE)";
-    //                break;
-    //            case Key.R:
-    //                CurrentInputMode = InputModes.Diaphragm;
-    //                CurrentMode.Content = "SHEAR WALL ENTRY (RIGIDITY MODE)";
-    //                break;
-    //            default:
-    //                break;
-    //        }
-
-    //        Update();
-    //    }
-
-    //    private void OnDiaphragmDeleted(object sender, DiaphragmDataControl.DeleteDiaphragmEventArgs e)
-    //    {
-    //        if (Calculator._diaphragm_system._diaphragms.ContainsKey(e.Id) == true)
-    //        {
-    //            Calculator._diaphragm_system._diaphragms.Remove(e.Id);
-
-    //            MessageBox.Show(e.Id.ToString() + " has been deleted");
-    //        }
-    //        else
-    //        {
-    //            MessageBox.Show(e.Id.ToString() + " does not exist in Walls");
-    //        }
-
-    //        Update();
-    //    }
-
-    //    private void OnWallDeleted(object sender, WallDataControl.DeleteWallEventArgs e)
-    //    {
-    //        if (Calculator._wall_system._walls.ContainsKey(e.Id) == true)
-    //        {
-    //            Calculator._wall_system._walls.Remove(e.Id);
-
-    //            MessageBox.Show(e.Id.ToString() + " has been deleted");
-    //        }
-    //        else
-    //        {
-    //            MessageBox.Show(e.Id.ToString() + " does not exist in Walls");
-    //        }
-
-    //        Update();
-    //    }
-    //    #endregion
-
-    //    #region Controls and Button Clicks
-    //    /// <summary>
-    //    /// The SNAP MODE button
-    //    /// </summary>
-    //    /// <param name="sender"></param>
-    //    /// <param name="e"></param>
-    //    private void btnSnapToNearest_Click(object sender, RoutedEventArgs e)
-    //    {
-    //        _shouldSnapToNearest = !_shouldSnapToNearest;
-
-    //        if (_shouldSnapToNearest is true)
-    //        {
-    //            btnSnapToNearest.BorderBrush = Brushes.Black;
-    //            btnSnapToNearest.BorderThickness = new Thickness(3);
-
-    //            _crosshair_color = new SolidColorBrush(Colors.Red); // change the cross hair colors
-    //        }
-    //        else
-    //        {
-    //            btnSnapToNearest.BorderBrush = Brushes.Transparent;
-    //            btnSnapToNearest.BorderThickness = new Thickness(0);
-
-    //            _crosshair_color = new SolidColorBrush(Colors.Black);  // change the cross hair colors
-    //        }
-
-    //        Update();
-    //    }
-
-    //    /// <summary>
-    //    /// Diaphragm (wall) input mode
-    //    /// </summary>
-    //    /// <param name="sender"></param>
-    //    /// <param name="e"></param>
-    //    private void btnRigidityMode_Click(object sender, RoutedEventArgs e)
-    //    {
-    //        CurrentInputMode = InputModes.Diaphragm;
-    //        CurrentMode.Content = "SHEAR WALL ENTRY (RIGIDITY MODE)";
-    //        Update();
-    //    }
-
-    //    /// <summary>
-    //    /// Wall (diaphragm) input mode
-    //    /// </summary>
-    //    /// <param name="sender"></param>
-    //    /// <param name="e"></param>
-    //    private void btnMassMode_Click(object sender, RoutedEventArgs e)
-    //    {
-    //        CurrentInputMode = InputModes.Wall;
-    //        CurrentMode.Content = "DIAPHRAGM ENTRY (MASS MODE)";
-    //        Update();
-    //    }
-    //    #endregion

@@ -157,7 +157,7 @@ namespace ShearWallCalculator
 
             if(sum_A == 0)
             {
-                CtrMass = new System.Windows.Point(0, 0);
+                CtrMass = new System.Windows.Point(double.NaN, double.NaN);
                 TotalArea = 0;
             } else
             {
