@@ -1529,14 +1529,39 @@ namespace ShearWallVisualizer
 
                 string label = $"{index}. {System.IO.Path.GetFileName(file)}";
 
-                var item = new MenuItem
+                var menu_item = new MenuItem
                 {
                     Header = label,
                     ToolTip = file,
                     Tag = file
                 };
 
-                item.Click += (s, e) =>
+                // try to show a small tooltip of the image
+                try
+                {
+                    // Create image preview (larger size for tooltip)
+                    var image = new System.Windows.Controls.Image
+                    {
+                        Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(file)),
+                        Width = 150,  // Larger size
+                        Height = 150,
+                        Margin = new Thickness(0)
+                    };
+
+                    // Assign image preview as tooltip content
+                    var tooltip = new ToolTip
+                    {
+                        Content = image
+                    };
+
+                    menu_item.ToolTip = tooltip;
+                }
+                catch
+                {
+                    // Skip preview if image load fails
+                }
+
+                menu_item.Click += (s, e) =>
                 {
                     string filePath = (string)((MenuItem)s).Tag;
                     OpenFile(filePath);
@@ -1545,7 +1570,7 @@ namespace ShearWallVisualizer
                     selectedImageFilePath = filePath;
                 };
 
-                RecentFilesMenu.Items.Add(item);
+                RecentFilesMenu.Items.Add(menu_item);
                 index++;
             }
 
