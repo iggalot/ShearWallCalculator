@@ -1,11 +1,12 @@
 ﻿using calculator;
+using Microsoft.Win32;
 using ShearWallCalculator;
 using ShearWallVisualizer.Controls;
 using System;
-using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Globalization;
-using System.Reflection.Emit;
-using System.Runtime.InteropServices.ComTypes;
+using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -21,6 +22,7 @@ namespace ShearWallVisualizer
     {
         public ShearWallCalculator_RigidDiaphragm Calculator { get; set; } = new ShearWallCalculator_RigidDiaphragm();
 
+        string selectedImageFilePath = null;
 
         public EventHandler OnUpdated;  // the event that signals that the drawing has been updated -- controls will listen for this at the time they are created.
 
@@ -64,6 +66,7 @@ namespace ShearWallVisualizer
         public MainWindow()
         {
             InitializeComponent();
+            LoadRecentFilesMenu();
 
             this.KeyDown += MainWindow_KeyDown;
 
@@ -1027,11 +1030,16 @@ namespace ShearWallVisualizer
             m_layers.AddLayer(43, DrawSnapMarkers);
             m_layers.AddLayer(50, DrawBracedWallLines);
             m_layers.AddLayer(80, DrawCOMandCOR);
+            m_layers.AddLayer(90, DrawLoads);
             m_layers.AddLayer(100, DrawDebug);
 
 
             // Now draw everything
             Draw(ChangeType.Redraw);
+        }
+
+        private void DrawLoads(DrawingContext ctx)
+        {
         }
 
         private void DrawReferenceImage(DrawingContext context)
@@ -1041,7 +1049,13 @@ namespace ShearWallVisualizer
                 m_layers.RemoveImageLayer(0);
                 return;
             }
-            m_layers.AddImageLayer("D:\\Programming\\ShearWallCalculator\\ShearWallVisualizer\\bin\\Debug\\sample_floor_plan.jpg");
+
+            if(selectedImageFilePath is null)
+            {
+                return;
+            }
+
+            m_layers.AddImageLayer(selectedImageFilePath);
             m_layers.ImageLayers[0].SetOpacity(0.50); // fade the image a bit
 
             var width = m_layers.ImageLayers[0].Bitmap.PixelWidth;
@@ -1447,6 +1461,133 @@ namespace ShearWallVisualizer
             // You can refresh your data-bound controls here.
             MessageBox.Show("Refresh triggered!", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
         }
+
+        private void OpenImage_Click(object sender, RoutedEventArgs e)
+        {
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+
+            // (Optional) Set filter for file extension and default file type
+            openFileDialog.Filter = "Image files (*.jpg; *.jpeg; *.png)|*.jpg;*.jpeg;*.png";
+            bool? result = openFileDialog.ShowDialog();
+
+            if (result == true)
+            {
+                // Open document
+                selectedImageFilePath = openFileDialog.FileName;
+
+                // You ca now use selectedFilePath as needed
+                MessageBox.Show($"You selected: {selectedImageFilePath}");
+
+                AddToRecentFiles(selectedImageFilePath); // add to recent files list
+            }
+        }
+        #endregion
+
+        #region File Handling
+        private void OpenFile(string path)
+        {
+            // TODO: Replace with your file loading logic
+            MessageBox.Show($"Opening file:\n{path}", "Open File", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void AddToRecentFiles(string path)
+        {
+            var recent = Properties.Settings.Default.RecentFiles ?? new StringCollection();
+
+            if (recent.Contains(path))
+                recent.Remove(path); // Move to top
+
+            recent.Insert(0, path);
+
+            // Limit to 10 recent entries
+            while (recent.Count > 10)
+                recent.RemoveAt(recent.Count - 1);
+
+            Properties.Settings.Default.RecentFiles = recent;
+            Properties.Settings.Default.Save();
+
+            LoadRecentFilesMenu(); // Refresh menu
+        }
+
+        private void LoadRecentFilesMenu()
+        {
+            RecentFilesMenu.Items.Clear();
+
+            var recent = Properties.Settings.Default.RecentFiles ?? new StringCollection();
+            bool cleaned = false;
+
+            int index = 1;
+
+            foreach (var file in recent.Cast<string>().ToList())
+            {
+                if (!File.Exists(file))
+                {
+                    recent.Remove(file);
+                    cleaned = true;
+                    continue;
+                }
+
+                string label = $"{index}. {System.IO.Path.GetFileName(file)}";
+
+                var item = new MenuItem
+                {
+                    Header = label,
+                    ToolTip = file,
+                    Tag = file
+                };
+
+                item.Click += (s, e) =>
+                {
+                    string filePath = (string)((MenuItem)s).Tag;
+                    OpenFile(filePath);
+                    AddToRecentFiles(filePath); // Move to top again
+
+                    selectedImageFilePath = filePath;
+                };
+
+                RecentFilesMenu.Items.Add(item);
+                index++;
+            }
+
+            if (cleaned)
+            {
+                Properties.Settings.Default.RecentFiles = recent;
+                Properties.Settings.Default.Save();
+            }
+
+            if (RecentFilesMenu.Items.Count == 0)
+            {
+                RecentFilesMenu.Items.Add(new MenuItem
+                {
+                    Header = "No recent files",
+                    IsEnabled = false
+                });
+            }
+            else
+            {
+                RecentFilesMenu.Items.Add(new Separator());
+
+                var clearItem = new MenuItem
+                {
+                    Header = "Clear Recent Files"
+                };
+
+                clearItem.Click += (s, e) => ClearRecentFiles();
+                RecentFilesMenu.Items.Add(clearItem);
+            }
+        }
+
+        /// <summary>
+        /// 1. RecentFiles needs to be set in Properties > Settings.settings
+        /// 2.  Add a setting Name: RecentFiles, Type: StringCollection, Scope: User, Default Value: <empty>
+        /// </summary>
+        private void ClearRecentFiles()
+        {
+            Properties.Settings.Default.RecentFiles = new StringCollection();
+            Properties.Settings.Default.Save();
+            LoadRecentFilesMenu();
+        }
+
         #endregion
     }
 }
