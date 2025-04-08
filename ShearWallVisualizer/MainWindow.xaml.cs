@@ -697,7 +697,7 @@ namespace ShearWallVisualizer
 
                 // Draw the line object
                 SolidColorBrush lineStrokeBrush = new SolidColorBrush(Colors.Blue);
-                Pen pen = new Pen(lineStrokeBrush, 2);
+                Pen pen = new Pen(lineStrokeBrush, 4);
                 ctx.DrawLine(pen, p1_screen, p2_screen);
 
                 Point center_world = new Point((wall.Value.Start.X + wall.Value.End.X) / 2, (wall.Value.Start.Y + wall.Value.End.Y) / 2);
@@ -1022,12 +1022,83 @@ namespace ShearWallVisualizer
             m_layers.AddLayer(41, DrawShapes);
             m_layers.AddLayer(52, DrawCursor);
             m_layers.AddLayer(51, DrawPreview);
-            m_layers.AddLayer(42, DrawDebug);
             m_layers.AddLayer(43, DrawSnapMarkers);
-            m_layers.AddLayer(44, DrawCOMandCOR);
+            m_layers.AddLayer(50, DrawBracedWallLines);
+            m_layers.AddLayer(80, DrawCOMandCOR);
+            m_layers.AddLayer(100, DrawDebug);
+
 
             // Now draw everything
             Draw(ChangeType.Redraw);
+        }
+
+        private void DrawBracedWallLines(DrawingContext ctx)
+        {
+            // for east west walls
+            int bwl_count = 1;
+            foreach (var brace_line in wallSystem.BracedWallGroups_EW.groupedValues)
+            {
+                // draw a line at the center of all of the values in this group
+                // TODO: should this be a weight average?
+                double first = brace_line[0];
+                double last = brace_line[brace_line.Count - 1];
+                double center = (first + last) / 2;
+
+                Point p1_world = new Point(0, center);
+                Point p1_screen = GetConstrainedScreenPoint(WorldToScreen(p1_world, dockpanel), dockpanel); ;
+                Point p2_world = new Point(dockpanel.ActualWidth, center);
+                Point p2_screen = GetConstrainedScreenPoint(WorldToScreen(p2_world, dockpanel), dockpanel); ;
+
+                Pen pen = new Pen(Brushes.Black, 2);
+                pen.DashStyle = new DashStyle(new double[] { 3, 1, 3 }, 0);
+                ctx.DrawLine(pen, p1_screen, p2_screen);
+
+                // display the com as a text
+                FormattedText idLabel = new FormattedText(
+                    $"BWL{bwl_count}",
+                    CultureInfo.GetCultureInfo("en-us"),
+                    FlowDirection.LeftToRight,
+                    new Typeface("Consolas"),
+                    14,
+                    Brushes.Black,
+                    VisualTreeHelper.GetDpi(this).PixelsPerDip);
+
+                ctx.DrawText(idLabel, new Point(p1_screen.X - 40, p1_screen.Y - 7));
+
+                bwl_count++;
+            }
+
+            foreach (var brace_line in wallSystem.BracedWallGroups_NS.groupedValues)
+            {
+                // draw a line at the center of all of the values in this group
+                // TODO:  Should this be a weight average?
+                double first = brace_line[0];
+                double last = brace_line[brace_line.Count - 1];
+                double center = (first + last) / 2;
+
+                Point p1_world = new Point(center, 0);
+                Point p1_screen = GetConstrainedScreenPoint(WorldToScreen(p1_world, dockpanel), dockpanel); ;
+                Point p2_world = new Point(center, dockpanel.ActualHeight);
+                Point p2_screen = GetConstrainedScreenPoint(WorldToScreen(p2_world, dockpanel), dockpanel); ;
+
+                Pen pen = new Pen(Brushes.Black, 2);
+                pen.DashStyle = new DashStyle(new double[] { 3, 1, 3}, 0);
+                ctx.DrawLine(pen, p1_screen, p2_screen); // draw the horizontal line
+
+                // display the com as a text
+                FormattedText idLabel = new FormattedText(
+                    $"BWL{bwl_count}",
+                    CultureInfo.GetCultureInfo("en-us"),
+                    FlowDirection.LeftToRight,
+                    new Typeface("Consolas"),
+                    14,
+                    Brushes.Black,
+                    VisualTreeHelper.GetDpi(this).PixelsPerDip);
+
+                ctx.DrawText(idLabel, new Point(p1_screen.X - 14, p1_screen.Y + 2));
+
+                bwl_count++;
+            }
         }
 
         private void DrawSnapMarkers(DrawingContext ctx)
@@ -1063,7 +1134,6 @@ namespace ShearWallVisualizer
                 ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Red, 1), p2_screen, 3, 3);
                 ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Red, 1), p3_screen, 3, 3);
                 ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Red, 1), p4_screen, 3, 3);
-
             }
         }
 
@@ -1218,8 +1288,6 @@ namespace ShearWallVisualizer
 
                     ctx.DrawText(idLabel, new Point(x_screen - 30, y_screen + 5));
                 }
-
-
             }
         }
 
