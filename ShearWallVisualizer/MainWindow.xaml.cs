@@ -1,11 +1,12 @@
 ﻿using calculator;
+using Microsoft.Win32;
 using ShearWallCalculator;
 using ShearWallVisualizer.Controls;
 using System;
-using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Globalization;
-using System.Reflection.Emit;
-using System.Runtime.InteropServices.ComTypes;
+using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -21,13 +22,14 @@ namespace ShearWallVisualizer
     {
         public ShearWallCalculator_RigidDiaphragm Calculator { get; set; } = new ShearWallCalculator_RigidDiaphragm();
 
+        string selectedImageFilePath = null;
 
         public EventHandler OnUpdated;  // the event that signals that the drawing has been updated -- controls will listen for this at the time they are created.
 
         private bool initialized = false;  // is the initial window setup complete?
 
-        bool hide_Text = false;
-        bool hide_Grid = false;
+        bool hideImage = false;
+        bool hideGrid = false;
 
         private double defaultWallHeight = 9.0;
 
@@ -64,6 +66,7 @@ namespace ShearWallVisualizer
         public MainWindow()
         {
             InitializeComponent();
+            LoadRecentFilesMenu();
 
             this.KeyDown += MainWindow_KeyDown;
 
@@ -79,6 +82,7 @@ namespace ShearWallVisualizer
                 initialized = true;
 
                 ResetView(); // reset the view so that origin 0,0 is at lower left of the corner screen and the model is zoomed to fill the entire window
+                LoadRecentFilesMenu();
 
                 Draw(ChangeType.Redraw);
             };
@@ -472,7 +476,7 @@ namespace ShearWallVisualizer
             double major_gridline_thickness = 0.5;
             double minor_gridline_thickness = 0.25;
 
-            if (hide_Grid is true)
+            if (hideGrid is true)
             {
                 return;
             }
@@ -949,15 +953,15 @@ namespace ShearWallVisualizer
             m_layers.Draw(change);
         }
 
-        private void btnHideText_Click(object sender, RoutedEventArgs e)
+        private void btnHideImage_Click(object sender, RoutedEventArgs e)
         {
-            hide_Text = !hide_Text;
+            hideImage = !hideImage;
             Draw(ChangeType.Redraw);
         }
 
         private void btnHideGrid_Click(object sender, RoutedEventArgs e)
         {
-            hide_Grid = !hide_Grid;
+            hideGrid = !hideGrid;
             Draw(ChangeType.Redraw);
         }
 
@@ -1012,6 +1016,7 @@ namespace ShearWallVisualizer
         // Create the layers
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
+            m_layers.AddLayer(0, DrawReferenceImage);
             m_layers.AddLayer(5, DrawBackground, ChangeType.Resize);
             m_layers.AddLayer(11, DrawBackgroundBlock);
             m_layers.AddLayer(20, DrawStaticForeground);
@@ -1030,6 +1035,36 @@ namespace ShearWallVisualizer
 
             // Now draw everything
             Draw(ChangeType.Redraw);
+        }
+
+        private void DrawReferenceImage(DrawingContext context)
+        {
+            if (hideImage is true)
+            {
+                m_layers.RemoveImageLayer(0);
+                return;
+            }
+
+            if (selectedImageFilePath is null)
+            {
+                return;
+            }
+
+            m_layers.AddImageLayer(selectedImageFilePath);
+            m_layers.currentReferenceImageLayer.SetOpacity(0.50); // fade the image a bit
+
+            //m_layers.ImageLayers[0].SetPosition(pos_screen.X, pos_screen.Y);
+
+            var width = m_layers.currentReferenceImageLayer.Bitmap.PixelWidth;
+            var height = m_layers.currentReferenceImageLayer.Bitmap.PixelHeight;
+
+            var scale_x = Math.Max(width / dockpanel.ActualWidth, height / dockpanel.ActualHeight);
+            var scale_y = Math.Max(width / dockpanel.ActualWidth, height / dockpanel.ActualHeight);
+
+
+            m_layers.ResizeImageLayer(0, width / scale_x, height / scale_y);
+
+            //m_layers.MoveImageLayer(0, 100, 50);
         }
 
         private void DrawBracedWallLines(DrawingContext ctx)
@@ -1423,6 +1458,158 @@ namespace ShearWallVisualizer
             // You can refresh your data-bound controls here.
             MessageBox.Show("Refresh triggered!", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
         }
+
+        private void OpenImage_Click(object sender, RoutedEventArgs e)
+        {
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+
+            // (Optional) Set filter for file extension and default file type
+            openFileDialog.Filter = "Image files (*.jpg; *.jpeg; *.png)|*.jpg;*.jpeg;*.png";
+            bool? result = openFileDialog.ShowDialog();
+
+            if (result == true)
+            {
+                // Open document
+                selectedImageFilePath = openFileDialog.FileName;
+
+                // You ca now use selectedFilePath as needed
+                MessageBox.Show($"You selected: {selectedImageFilePath}");
+
+                AddToRecentFiles(selectedImageFilePath); // add to recent files list
+            }
+        }
+        #endregion
+
+        #region File Handling
+        private void OpenFile(string path)
+        {
+            // TODO: Replace with your file loading logic
+            MessageBox.Show($"Opening file:\n{path}", "Open File", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void AddToRecentFiles(string path)
+        {
+            var recent = Properties.Settings.Default.RecentFiles ?? new StringCollection();
+
+            if (recent.Contains(path))
+                recent.Remove(path); // Move to top
+
+            recent.Insert(0, path);
+
+            // Limit to 10 recent entries
+            while (recent.Count > 10)
+                recent.RemoveAt(recent.Count - 1);
+
+            Properties.Settings.Default.RecentFiles = recent;
+            Properties.Settings.Default.Save();
+
+            LoadRecentFilesMenu(); // Refresh menu
+        }
+
+        private void LoadRecentFilesMenu()
+        {
+            RecentFilesMenu.Items.Clear();
+
+            var recent = Properties.Settings.Default.RecentFiles ?? new StringCollection();
+            bool cleaned = false;
+
+            int index = 1;
+
+            foreach (var file in recent.Cast<string>().ToList())
+            {
+                if (!File.Exists(file))
+                {
+                    recent.Remove(file);
+                    cleaned = true;
+                    continue;
+                }
+
+                string label = $"{index}. {System.IO.Path.GetFileName(file)}";
+
+                var menu_item = new MenuItem
+                {
+                    Header = label,
+                    ToolTip = file,
+                    Tag = file
+                };
+
+                // try to show a small tooltip of the image
+                try
+                {
+                    // Create image preview (larger size for tooltip)
+                    var image = new System.Windows.Controls.Image
+                    {
+                        Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(file)),
+                        Width = 150,  // Larger size
+                        Height = 150,
+                        Margin = new Thickness(0)
+                    };
+
+                    // Assign image preview as tooltip content
+                    var tooltip = new ToolTip
+                    {
+                        Content = image
+                    };
+
+                    menu_item.ToolTip = tooltip;
+                }
+                catch
+                {
+                    // Skip preview if image load fails
+                }
+
+                menu_item.Click += (s, e) =>
+                {
+                    string filePath = (string)((MenuItem)s).Tag;
+                    OpenFile(filePath);
+                    AddToRecentFiles(filePath); // Move to top again
+
+                    selectedImageFilePath = filePath;
+                };
+
+                RecentFilesMenu.Items.Add(menu_item);
+                index++;
+            }
+
+            if (cleaned)
+            {
+                Properties.Settings.Default.RecentFiles = recent;
+                Properties.Settings.Default.Save();
+            }
+
+            if (RecentFilesMenu.Items.Count == 0)
+            {
+                RecentFilesMenu.Items.Add(new MenuItem
+                {
+                    Header = "No recent files",
+                    IsEnabled = false
+                });
+            }
+            else
+            {
+                RecentFilesMenu.Items.Add(new Separator());
+
+                var clearItem = new MenuItem
+                {
+                    Header = "Clear Recent Files"
+                };
+
+                clearItem.Click += (s, e) => ClearRecentFiles();
+                RecentFilesMenu.Items.Add(clearItem);
+            }
+        }
+
+        /// <summary>
+        /// 1. RecentFiles needs to be set in Properties > Settings.settings
+        /// 2.  Add a setting Name: RecentFiles, Type: StringCollection, Scope: User, Default Value: <empty>
+        /// </summary>
+        private void ClearRecentFiles()
+        {
+            Properties.Settings.Default.RecentFiles = new StringCollection();
+            Properties.Settings.Default.Save();
+            LoadRecentFilesMenu();
+        }
+
         #endregion
     }
 }

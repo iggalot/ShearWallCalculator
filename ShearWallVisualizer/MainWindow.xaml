@@ -15,6 +15,10 @@
         <!-- Menu Bar at the very top -->
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="_File">
+                <MenuItem Header="I_mage" Click="OpenImage_Click"/>
+                <Separator/>
+                <MenuItem Header="Open Recent" x:Name="RecentFilesMenu"/>
+                <Separator/>
                 <MenuItem Header="E_xit" Click="Exit_Click"/>
             </MenuItem>
             <MenuItem Header="_View">
@@ -28,7 +32,7 @@
             <!-- Top Toolbar with Buttons -->
             <StackPanel Orientation="Vertical" Margin="10">
                 <StackPanel Orientation="Horizontal">
-                    <Button Content="Hide Text" Click="btnHideText_Click" Width="70" Height="25" HorizontalAlignment="Left"/>
+                    <Button Content="Hide Image" Click="btnHideImage_Click" Width="70" Height="25" HorizontalAlignment="Left"/>
                     <Button Content="Hide Grid" Click="btnHideGrid_Click" Width="70" Height="25" HorizontalAlignment="Left"/>
                     <Button Name="btnRigidityMode" Background="MediumBlue" Margin="2" Opacity="0.75" FontWeight="Bold" Content="Wall" Width="75" Height="25" Click="btnLineMode_Click"/>
                     <Button Name="btnMassMode" Background="Red" Margin="2" Opacity="0.75" FontWeight="Bold" Content="Diaphragm" Width="75" Height="25" Click="btnRectangleMode_Click"/>
