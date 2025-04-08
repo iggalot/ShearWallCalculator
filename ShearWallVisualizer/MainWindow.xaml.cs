@@ -26,7 +26,7 @@ namespace ShearWallVisualizer
 
         private bool initialized = false;  // is the initial window setup complete?
 
-        bool hide_Text = false;
+        bool hide_Image = false;
         bool hide_Grid = false;
 
         private double defaultWallHeight = 9.0;
@@ -586,7 +586,6 @@ namespace ShearWallVisualizer
             DrawMarkers(ctx, WorldToScreen(new Point(0, 0), m_layers), 5, new Pen(Brushes.Black, 1), Brushes.DarkRed);
         }
 
-
         private void DrawMarkers(DrawingContext ctx, Point p, double dia, Pen pen, Brush fill)
         {
             ctx.DrawEllipse(fill, pen, p, dia, dia);
@@ -949,9 +948,9 @@ namespace ShearWallVisualizer
             m_layers.Draw(change);
         }
 
-        private void btnHideText_Click(object sender, RoutedEventArgs e)
+        private void btnHideImage_Click(object sender, RoutedEventArgs e)
         {
-            hide_Text = !hide_Text;
+            hide_Image = !hide_Image;
             Draw(ChangeType.Redraw);
         }
 
@@ -1012,11 +1011,14 @@ namespace ShearWallVisualizer
         // Create the layers
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
-            m_layers.AddLayer(5, DrawBackground, ChangeType.Resize);
-            m_layers.AddLayer(11, DrawBackgroundBlock);
-            m_layers.AddLayer(20, DrawStaticForeground);
-            m_layers.AddLayer(21, DrawText, ChangeType.Scroll);
-            m_layers.AddLayer(30, DrawForeground);
+
+            //m_layers.AddLayer(5, DrawBackground, ChangeType.Resize);
+            //m_layers.AddLayer(11, DrawBackgroundBlock);
+            //m_layers.AddLayer(20, DrawStaticForeground);
+            //m_layers.AddLayer(21, DrawText, ChangeType.Scroll);
+            //m_layers.AddLayer(30, DrawForeground);
+
+            m_layers.AddLayer(1, DrawReferenceImage);
 
             m_layers.AddLayer(40, DrawVisualGrid);
             m_layers.AddLayer(41, DrawShapes);
@@ -1030,6 +1032,28 @@ namespace ShearWallVisualizer
 
             // Now draw everything
             Draw(ChangeType.Redraw);
+        }
+
+        private void DrawReferenceImage(DrawingContext context)
+        {
+            if (hide_Image is true)
+            {
+                m_layers.RemoveImageLayer(0);
+                return;
+            }
+            m_layers.AddImageLayer("D:\\Programming\\ShearWallCalculator\\ShearWallVisualizer\\bin\\Debug\\sample_floor_plan.jpg");
+            m_layers.ImageLayers[0].SetOpacity(0.50); // fade the image a bit
+
+            var width = m_layers.ImageLayers[0].Bitmap.PixelWidth;
+            var height = m_layers.ImageLayers[0].Bitmap.PixelHeight;
+
+            var scale_x = Math.Max(width / dockpanel.ActualWidth, height / dockpanel.ActualHeight);
+            var scale_y = Math.Max(width / dockpanel.ActualWidth, height / dockpanel.ActualHeight);
+
+
+            m_layers.ResizeImageLayer(0, width / scale_x, height / scale_y);
+
+            //m_layers.MoveImageLayer(0, 100, 50);
         }
 
         private void DrawBracedWallLines(DrawingContext ctx)

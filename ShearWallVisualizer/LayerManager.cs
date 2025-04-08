@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Media.Media3D;
 
 namespace ShearWallVisualizer
 {
@@ -30,6 +31,8 @@ namespace ShearWallVisualizer
     {
         private readonly VisualCollection m_children;
         private readonly List<LayerData> m_layers = new List<LayerData>();
+        public List<ImageLayer> ImageLayers { get; } = new List<ImageLayer>();
+
 
         public LayerManager()
         {
@@ -61,6 +64,8 @@ namespace ShearWallVisualizer
             foreach (LayerData layer in affected)
             {
                 DrawingContext ctx = layer.Visual.RenderOpen();
+
+
                 layer.Draw(ctx);
                 ctx.Close();
             }
@@ -79,6 +84,53 @@ namespace ShearWallVisualizer
             }
 
             return m_children[index];
+        }
+
+
+        public void AddImageLayer(string path)
+        {
+            if(ImageLayers.Count > 0)
+            {
+                RemoveImageLayer(0);
+            }
+
+            // remake the image layer
+            var imgLayer = new ImageLayer(path);
+            ImageLayers.Add(imgLayer);
+            m_children.Add(imgLayer.Visual);
+        }
+
+        public void RemoveImageLayer(int index)
+        {
+            if (index >= 0 && index < ImageLayers.Count)
+            {
+                var layer = ImageLayers[index];
+
+                // Remove visual from VisualCollection
+                if (layer.Visual != null)
+                {
+                    m_children.Remove(layer.Visual);
+                }
+
+                // Remove from internal list
+                ImageLayers.RemoveAt(index);
+            }
+        }
+
+        public void ResizeImageLayer(int index, double width, double height)
+        {
+            if (index >= 0 && index < ImageLayers.Count)
+            {
+                ImageLayers[index].Resize(width, height);
+            }
+        }
+
+        public void MoveImageLayer(int index, double x, double y)
+        {
+            if (index >= 0 && index < ImageLayers.Count)
+            {
+                ImageLayers[index].SetPosition(x, y);
+            }
         }
     }
 }

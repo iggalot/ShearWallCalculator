@@ -101,6 +101,7 @@
     </Compile>
     <Compile Include="Helpers\DrawingHelpers.cs" />
     <Compile Include="Helpers\MathHelpers.cs" />
+    <Compile Include="ImageLayer.cs" />
     <Compile Include="LayerData.cs" />
     <Compile Include="LayerManager.cs" />
     <Compile Include="MainWindow.xaml.cs">
