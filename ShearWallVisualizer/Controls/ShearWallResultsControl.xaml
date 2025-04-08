@@ -6,14 +6,16 @@
              xmlns:local="clr-namespace:ShearWallVisualizer.Controls"
              mc:Ignorable="d" 
              >
+    <StackPanel Orientation="Vertical">
         <StackPanel Orientation="Horizontal" Background="AliceBlue">
-            <Label Width="50" Height="25" Background="LightGray" Margin="5 1 5 1" FontWeight="Bold" Name="ID"/>
-            <Label Width="50" Height="25" Background="LightGray" Margin="5 1 5 1" Name="Rgidity"/>
-            <Label Width="50" Height="25" Background="LightGray" Margin="5 1 5 1" Name="Xbar"/>
-            <Label Width="50" Height="25" Background="LightGray" Margin="5 1 5 1" Name="Ybar"/>
-            <Label Width="50" Height="25" Background="LightGray" Margin="5 1 5 1" Name="Vix"/>
-            <Label Width="50" Height="25" Background="LightGray" Margin="5 1 5 1" Name="Viy"/>
-            <Label Width="50" Height="25" Background="LightGray" Margin="5 1 5 1" Name="V_ecc"/>
-            <Label Width="50" Height="25" Background="LightGray" Margin="5 1 5 1" FontWeight="Bold" Name="V_tot"/>
+            <Label FontSize="10" Width="50" Height="25" Background="LightGray" Margin="5 1 5 1" FontWeight="Bold" Name="ID"/>
+            <Label FontSize="10" Width="50" Height="25" Background="LightGray" Margin="5 1 5 1" Name="Rgidity"/>
+            <Label FontSize="10" Width="50" Height="25" Background="LightGray" Margin="5 1 5 1" Name="Xbar"/>
+            <Label FontSize="10" Width="50" Height="25" Background="LightGray" Margin="5 1 5 1" Name="Ybar"/>
+            <Label FontSize="10" Width="50" Height="25" Background="LightGray" Margin="5 1 5 1" Name="Vix"/>
+            <Label FontSize="10" Width="50" Height="25" Background="LightGray" Margin="5 1 5 1" Name="Viy"/>
+            <Label FontSize="10" Width="50" Height="25" Background="LightGray" Margin="5 1 5 1" Name="V_ecc"/>
+            <Label FontSize="10" Width="50" Height="25" Background="LightGray" Margin="5 1 5 1" FontWeight="Bold" Name="V_tot"/>
         </StackPanel>
+    </StackPanel>
 </UserControl>

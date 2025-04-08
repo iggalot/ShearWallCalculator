@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Drawing;
 using System.IO;
 using System.Numerics;
 
@@ -32,16 +33,16 @@ namespace calculator
         public System.Windows.Point Start { get; set; } // start point of wall...bottommost point at one end
         public System.Windows.Point End { get; set; } // end point of wall...bottommost point at other end
         public System.Windows.Point Center { get => GetCenterPoint(); } // center point of wall
-        public float WallLength { get => GetLength(); }  // length of the wall
-        public float WallHeight { get; set; } = 9;  // height of wall feet.
-        public float WallRigidity { get => GetRigidity(); } // rigidity in direction of the wall
+        public double WallLength { get => GetLength(); }  // length of the wall
+        public double WallHeight { get; set; } = 9;  // height of wall feet.
+        public double WallRigidity { get => GetRigidity(); } // rigidity in direction of the wall
         public WallTypes WallType { get; set; } = WallTypes.Type_01;
 
         public WallDirs WallDir { get; set; }
         public Vector2 Dir { get => GetUnitDirection(); }
 
-        public float Rxr { get => ComputeFirstMomentOfRigidity_X(); }  // first moment of rigidity for horizontal walls
-        public float Ryr { get => ComputeFirstMomentOfRigidity_Y(); }  // first moment of rigidity for vertical walls
+        public double Rxr { get => ComputeFirstMomentOfRigidity_X(); }  // first moment of rigidity for horizontal walls
+        public double Ryr { get => ComputeFirstMomentOfRigidity_Y(); }  // first moment of rigidity for vertical walls
 
         /// <summary>
         /// Default constructor
@@ -53,20 +54,73 @@ namespace calculator
         /// <param name="ex">x-coord of end pt</param>
         /// <param name="ey">y-coord of end pt</param>
         /// <exception cref="ArgumentException"></exception>
-        public WallData(float ht, float sx, float sy, float ex, float ey, WallDirs wallDir)
+        public WallData(double ht, double sx, double sy, double ex, double ey)
         {
-            WallHeight = ht;
-            Start = new System.Windows.Point(sx, sy);
-            End = new System.Windows.Point(ex, ey);
-            WallDir = wallDir;
+            if (ht <= 0)
+            {
+                throw new ArgumentException("Height must be greater than 0.");
+            }
+
+
+
+            // sort the points so START is always on the left of a horizontal line
+            if (sy == ey)
+            {
+                if(sx < ex)
+                {
+                    Start = new System.Windows.Point(sx, sy);
+                    End = new System.Windows.Point(ex, ey);
+                } else
+                {
+                    Start = new System.Windows.Point(ex, ey);
+                    End = new System.Windows.Point(sx, sy);
+                }
+            }
+
+            // else we are looking at a vertical line so make the START the bottom
+            else
+            {
+                if (sy < ey)
+                {
+                    Start = new System.Windows.Point(sx, sy);
+                    End = new System.Windows.Point(ex, ey);
+                }
+                else
+                {
+                    Start = new System.Windows.Point(ex, ey);
+                    End = new System.Windows.Point(sx, sy);
+                }
+            }
 
             //TODO:: resolve this exceptions so that they return null -- and then remember to handle this in the functions that created the object.
             if(Start == End)
             {
                 throw new ArgumentException("Start and end points cannot be the same.");
             }
+
+            // these have to be after the START and END are set
+            WallHeight = ht;
+            WallDir = GetWallDir();
         }
 
+        /// <summary>
+        /// Constructor that takes input data as Point to create the object
+        /// </summary>
+        /// <exception cref="ArgumentException"></exception>
+        public WallData(double ht, Point start, Point end) : this(ht, start.X, start.Y, end.X, end.Y) { }
+
+
+        private WallDirs GetWallDir()
+        {
+            if (Start.X == End.X)
+            {
+                return WallDirs.NorthSouth;
+            }
+            else
+            {
+                return WallDirs.EastWest;
+            }
+        }
         private System.Windows.Point GetCenterPoint()
         {
             return new System.Windows.Point((float)(Start.X + End.X) / 2, (float)(Start.Y + End.Y) / 2);
@@ -76,7 +130,7 @@ namespace calculator
         /// Compute the distance from the start point to the end point
         /// </summary>
         /// <returns></returns>
-        private float GetLength()
+        private double GetLength()
         {
             return (float) Math.Sqrt((End.X - Start.X) * (End.X - Start.X) + (End.Y - Start.Y) * (End.Y - Start.Y));
         }
@@ -91,7 +145,7 @@ namespace calculator
             {
                 return new Vector2(0, 0);
             }
-            return new Vector2((float)(End.X - Start.X) / WallLength, (float)(End.Y - Start.Y) / WallLength);
+            return( new Vector2((float)((End.X - Start.X) / WallLength), (float)((End.Y - Start.Y) / WallLength)));
         }
 
         /// <summary>
@@ -101,7 +155,7 @@ namespace calculator
         /// L = wall length
         /// </summary>
         /// <returns></returns>
-        private float GetRigidity()
+        private double GetRigidity()
         {
             if (WallLength == 0)
             {
@@ -115,18 +169,18 @@ namespace calculator
         /// Compute first y-moment of rigidity about global origin (0,0)
         /// </summary>
         /// <returns></returns>
-        private float ComputeFirstMomentOfRigidity_X()
+        private double ComputeFirstMomentOfRigidity_X()
         {
-            return (float)(Start.X + End.X) / 2 * WallRigidity;
+            return (Start.X + End.X) / 2 * WallRigidity;
         }
 
         /// <summary>
         /// Compute first x-moment of rigidity about global origin (0,0)
         /// </summary>
         /// <returns></returns>
-        private float ComputeFirstMomentOfRigidity_Y()
+        private double ComputeFirstMomentOfRigidity_Y()
         {
-            return (float)(Start.Y + End.Y) / 2 * WallRigidity;
+            return (Start.Y + End.Y) / 2 * WallRigidity;
         }
 
         /// <summary>

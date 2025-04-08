@@ -55,11 +55,25 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Controls\WallSystemControl.xaml.cs">
+      <DependentUpon>WallSystemControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\DiaphragmSystemControl.xaml.cs">
+      <DependentUpon>DiaphragmSystemControl.xaml</DependentUpon>
+    </Compile>
     <Page Include="Controls\DiaphragmDataControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Controls\ShearWallDataControl.xaml">
+    <Page Include="Controls\WallSystemControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Controls\DiaphragmSystemControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\WallDataControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -75,16 +89,20 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="CanvasDrawer.cs" />
     <Compile Include="Controls\DiaphragmDataControl.xaml.cs">
       <DependentUpon>DiaphragmDataControl.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Controls\ShearWallDataControl.xaml.cs">
-      <DependentUpon>ShearWallDataControl.xaml</DependentUpon>
+    <Compile Include="Controls\WallDataControl.xaml.cs">
+      <DependentUpon>WallDataControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="Controls\ShearWallResultsControl.xaml.cs">
       <DependentUpon>ShearWallResultsControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="Helpers\DrawingHelpers.cs" />
+    <Compile Include="Helpers\MathHelpers.cs" />
+    <Compile Include="LayerData.cs" />
+    <Compile Include="LayerManager.cs" />
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>

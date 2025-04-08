@@ -1,0 +1,18 @@
+﻿<UserControl x:Class="ShearWallVisualizer.Controls.WallDataControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:ShearWallVisualizer.Controls"
+             mc:Ignorable="d" 
+             >
+    <StackPanel Orientation="Horizontal" Background="AliceBlue">
+        <Button Name="btn_Delete" Width="20" Height="20" Margin="5 1 5 1" Background="Pink" Click="btn_Delete_Click">X</Button>
+        <Label FontSize="8" Width="50" Height="25" Background="LightGray" Margin="5 1 5 1"  Name="lbl_ID"/>
+        <Label FontSize="8" Width="50" Height="25" Background="LightGray" Margin="5 1 5 1"  Name="lbl_Type"/>
+        <Label FontSize="8" Width="75" Height="25" Background="LightGray" Margin="5 1 5 1"  Name="lbl_Length"/>
+        <Label FontSize="8" Width="75" Height="25" Background="LightGray" Margin="5 1 5 1"  Name="lbl_Height"/>
+        <Label FontSize="8" Width="100" Height="25" Background="LightGray" Margin="5 1 5 1" Name="lbl_StartPt"/>
+        <Label FontSize="8" Width="100" Height="25" Background="LightGray" Margin="5 1 5 1" Name="lbl_EndPt"/>
+    </StackPanel>
+</UserControl>

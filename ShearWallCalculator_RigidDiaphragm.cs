@@ -15,55 +15,39 @@ namespace calculator
 
         public const string FILENAME = "results.txt";
 
-        /// <summary>
-        /// Loads and eccentricty values 
-        /// Uses Cartesian coordinate and right-hand rule -- x+ right, y+ up, rot+ = CCW
-        /// </summary>
-        public float V_x { get; set; } = 40; // x direction load (kips) acting at center of mass
-        public float V_y { get; set; } = 0;  // y direction load (kips) acting at center of mass
 
         /// <summary>
         /// eccentricities
         /// TODO:  CODE requires minimum of 5% of largest dimension of building as a minimum for the eccentricity
         /// </summary>
-        private float ecc_x = 0; // eccentricity in x direction (feet) measured from center of rigidity to center of mass
-        private float ecc_y = 0; // eccentricity in y direction (feet) measured from center of rigidity to center of mass
+        private double ecc_x = 0; // eccentricity in x direction (feet) measured from center of rigidity to center of mass
+        private double ecc_y = 0; // eccentricity in y direction (feet) measured from center of rigidity to center of mass
 
-        public float Mt_comb { get; set; } = 0; // moment due to eccentric loading  "+ = CCW, "-" = CW
+        public double Mt_comb { get; set; } = 0; // moment due to eccentric loading  "+ = CCW, "-" = CW
 
         // shear force from direct shear in X-direction -- resistance at base of diaphragm at top of walls
-        public Dictionary<int, float> DirectShear_X { get; set; } = new Dictionary<int, float>();
+        public Dictionary<int, double> DirectShear_X { get; set; } = new Dictionary<int, double>();
 
         // shear force from direct shear in Y-direction -- resistance at base of diaphragm at top of walls
-        public Dictionary<int, float> DirectShear_Y { get; set; } = new Dictionary<int, float>();
+        public Dictionary<int, double> DirectShear_Y { get; set; } = new Dictionary<int, double>();
 
         // shear force in line of wall from eccentric loading, Mr -- resistance at base of diaphragm at top of walls
-        public Dictionary<int, float> EccentricShear { get; set; } = new Dictionary<int, float>();
+        public Dictionary<int, double> EccentricShear { get; set; } = new Dictionary<int, double>();
 
         // dictionary containing the total shear acting on a wall -- resistance at nase pf diaphragm at top of walls
-        public Dictionary<int, float> TotalWallShear { get; set; } = new Dictionary<int, float>();
-
-
-
-
+        public Dictionary<int, double> TotalWallShear { get; set; } = new Dictionary<int, double>();
 
         /// <summary>
         /// default constructor
         /// </summary>
         public ShearWallCalculator_RigidDiaphragm()
         {
-            //// Sample data for testing
-            //LoadTestWallData();
-            //LoadTestWallData2();
-
             //update calculations once data is loaded
             Update();
         }
 
         public ShearWallCalculator_RigidDiaphragm(WallSystem walls, DiaphragmSystem diaphragm) : base(walls, diaphragm)
         {
-//            DiaphragmPoints = diaphagm_pts;
-
             // update the calculations
             Update();
         }
@@ -73,6 +57,7 @@ namespace calculator
         /// </summary>
         public override void Update()
         {
+
             // check if we have data for a wall system and a diaphragm system
             if (_diaphragm_system == null || _wall_system == null)
             {
@@ -83,28 +68,35 @@ namespace calculator
             // Update calculations if necessary for the diaphragm and the wall system            
             _diaphragm_system.Update();
             _wall_system.Update();
+
+            // TODO:  CODE requires minimum of 5% of largest dimension of building as a minimum for the eccentricity
             Console.WriteLine("Center of Mass -- xr: " + _diaphragm_system.CtrMass.X + " ft.  yr: " + _diaphragm_system.CtrMass.Y + " ft.");
             Console.WriteLine("Center of Rigidity -- xr: " + _wall_system.CtrRigidity.X + " ft.  yr: " + _wall_system.CtrRigidity.Y + " ft.");
 
-            // update eccentricty values between center of mass and center of Rigidity
-            ecc_x = (float)(_wall_system.CtrRigidity.X - _diaphragm_system.CtrMass.X);
-            ecc_y = (float)(_wall_system.CtrRigidity.Y - _diaphragm_system.CtrMass.Y);
-            Console.WriteLine("ecc_x: " + ecc_x + " ft.  ecc_y: " + ecc_y + " ft.");
+            
+            // check that our CoM and CoR values are valid and computed -- if not, the calculations don't work
+            if (IsValidForCalculation is true)
+            {
+                // update eccentricty values between center of mass and center of Rigidity
+                ecc_x = (float)(_wall_system.CtrRigidity.X - _diaphragm_system.CtrMass.X);
+                ecc_y = (float)(_wall_system.CtrRigidity.Y - _diaphragm_system.CtrMass.Y);
+                Console.WriteLine("ecc_x: " + ecc_x + " ft.  ecc_y: " + ecc_y + " ft.");
 
-            // compute moment due to eccentric loading between center of mass and center of rigidity
-            Mt_comb = (V_x * ecc_y) - (V_y * ecc_x);
-            Console.WriteLine("M_comb: " + Mt_comb + " kips-m");
+                // compute moment due to eccentric loading between center of mass and center of rigidity
+                Mt_comb = (V_x * ecc_y) - (V_y * ecc_x);
+                Console.WriteLine("M_comb: " + Mt_comb + " kips-m");
 
-            // Perform component calculations to compute shear contributions
-            ComputeDirectShear_X();  // horizontal walls
-            ComputeDirectShear_Y();  // vertical walls
-            ComputeEccentricShear(); // shear in line of wall due to rotation eccentricty of structure
+                // Perform component calculations to compute shear contributions
+                ComputeDirectShear_X();  // horizontal walls
+                ComputeDirectShear_Y();  // vertical walls
+                ComputeEccentricShear(); // shear in line of wall due to rotation eccentricty of structure
 
-            // compute the total shear activing on the wall
-            ComputeTotalShear();
+                // compute the total shear activing on the wall
+                ComputeTotalShear();
 
-            // display results
-            Console.WriteLine(DisplayResults());
+                // display results
+                Console.WriteLine(DisplayResults());
+            }
         }
 
 
@@ -237,7 +229,7 @@ namespace calculator
                     }
                 }
 
-                float moment = Math.Abs(Mt_comb * _wall_system.Y_bar_walls[wall.Key]);
+                double moment = Math.Abs(Mt_comb * _wall_system.Y_bar_walls[wall.Key]);
                 EccentricShear.Add(wall.Key, (sign * moment * wall.Value.WallRigidity) / _wall_system.InertiaPolar);
             }
 
@@ -275,7 +267,7 @@ namespace calculator
                     }
                 }
 
-                float moment = Math.Abs(Mt_comb * _wall_system.X_bar_walls[wall.Key]);
+                double moment = Math.Abs(Mt_comb * _wall_system.X_bar_walls[wall.Key]);
                 EccentricShear.Add(wall.Key, (sign * moment * wall.Value.WallRigidity) / _wall_system.InertiaPolar);
             }
         }

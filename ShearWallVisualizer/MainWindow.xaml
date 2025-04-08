@@ -5,10 +5,93 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ShearWallVisualizer"
         mc:Ignorable="d"
-        Title="Rigid Diaphragm Shear Wall Calculator v0.1" Height="800" Width="1200"
-        Loaded="Window_Loaded"
-        Background="LightGray">
-        <StackPanel Orientation="Horizontal" Margin="3">
+        Title="Rigid Diaphragm Shear Wall Calculator v0.1" Height="900" Width="1500"
+        Background="LightGray"
+        Loaded="OnLoaded"
+        >
+
+    <DockPanel>
+
+        <!-- Menu Bar at the very top -->
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="_File">
+                <MenuItem Header="E_xit" Click="Exit_Click"/>
+            </MenuItem>
+            <MenuItem Header="_View">
+                <MenuItem Header="_Refresh" Click="Refresh_Click"/>
+            </MenuItem>
+        </Menu>
+
+        <!-- Main Content Area -->
+        <StackPanel Orientation="Vertical">
+
+            <!-- Top Toolbar with Buttons -->
+            <StackPanel Orientation="Vertical" Margin="10">
+                <StackPanel Orientation="Horizontal">
+                    <Button Content="Hide Text" Click="btnHideText_Click" Width="70" Height="25" HorizontalAlignment="Left"/>
+                    <Button Content="Hide Grid" Click="btnHideGrid_Click" Width="70" Height="25" HorizontalAlignment="Left"/>
+                    <Button Name="btnRigidityMode" Background="MediumBlue" Margin="2" Opacity="0.75" FontWeight="Bold" Content="Wall" Width="75" Height="25" Click="btnLineMode_Click"/>
+                    <Button Name="btnMassMode" Background="Red" Margin="2" Opacity="0.75" FontWeight="Bold" Content="Diaphragm" Width="75" Height="25" Click="btnRectangleMode_Click"/>
+                    <Button Name="btnSnapToNearest" Background="Red" Margin="2" Opacity="0.75" Content="Snap" Width="100" Height="25" Click="btnSnapMode_Click"/>
+                </StackPanel>
+            </StackPanel>
+
+            <!-- Main Drawing + Right-side Tabs -->
+            <StackPanel Orientation="Horizontal" Margin="10">
+
+                <!-- Drawing Area -->
+                <DockPanel x:Name="dockpanel" LastChildFill="True" Width="750" Height="600">
+                    <local:LayerManager x:Name="m_layers" DockPanel.Dock="Left" 
+                                PreviewMouseDown="m_layers_PreviewMouseDown" 
+                                PreviewMouseMove="m_layers_PreviewMouseMove"
+                                PreviewMouseWheel="m_layers_PreviewMouseWheel"
+                                PreviewMouseRightButtonDown="m_layers_PreviewMouseRightButtonDown"/>
+                </DockPanel>
+
+                <!-- Dynamic Tabs -->
+                <TabControl x:Name="MainTabControl" Width="900" Height="600"
+                            TabStripPlacement="Top" Margin="10 0 0 0">
+                    <TabItem Header="Dimensions">
+                        <StackPanel Orientation="Vertical">
+                            <StackPanel Name="sp_DimPanel_Walls"></StackPanel>
+                            <StackPanel Name="sp_DimPanel_Diaphragms"></StackPanel>
+                        </StackPanel>
+                    </TabItem>
+                    <TabItem Header="Calculations">
+                        <StackPanel Orientation="Vertical">
+                            <Label Content="RESULTS" Background="Black" Opacity="0.5" Foreground="White" Margin="0 10 0 0"/>
+
+                            <StackPanel Orientation="Horizontal" Background="AliceBlue">
+                                <Label Width="55" Height="25"  Margin="2" FontWeight="Bold" Content="Wall ID"/>
+                                <Label Width="55" Height="25"  Margin="2" FontWeight="Bold" Content="Rigidity"/>
+                                <Label Width="55" Height="25"  Margin="2" FontWeight="Bold" Content="Xbar (ft)"/>
+                                <Label Width="55" Height="25"  Margin="2" FontWeight="Bold" Content="Ybar (ft)"/>
+                                <Label Width="55" Height="25"  Margin="2" FontWeight="Bold" Content="Vix (k)"/>
+                                <Label Width="55" Height="25"  Margin="2" FontWeight="Bold" Content="Viy (k)"/>
+                                <Label Width="55" Height="25"  Margin="2" FontWeight="Bold" Content="V_ecc (k)"/>
+                                <Label Width="55" Height="25"  Margin="2" FontWeight="Bold" Content="V_tot (k)"/>
+                            </StackPanel>
+                            
+                            <StackPanel Name="sp_CalcPanel"></StackPanel>
+                        </StackPanel>
+                    </TabItem>
+                </TabControl>
+
+                <!-- Optional Logging + Scroll --><!--
+                <TextBlock Name="m_log" Height="600" Width="150" Margin="10 0 0 0"/>
+                <ScrollBar Name="m_scroll" MaxHeight="600" Scroll="OnScroll" Orientation="Vertical"/>-->
+            </StackPanel>
+            <!-- Info Labels -->
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Width="Auto" Height="20" Margin="5" Name="tbZoom" Text="Zoom"/>
+                <TextBlock Width="Auto" Height="20" Margin="5" Name="tbPan" Text="Pan"/>
+                <TextBlock Width="Auto" Height="20" Margin="5" Name="tbWorldCoords" Text="World Coords"/>
+                <TextBlock Width="Auto" Height="20" Margin="5" Name="tbScreenCoords" Text="Screen Coords"/>
+            </StackPanel>
+        </StackPanel>
+    </DockPanel>
+
+    <!--<StackPanel Orientation="Horizontal" Margin="3">
             <StackPanel Orientation="Vertical" Width="450">
                 <Label Content="Rigid Diaphragm Shear Wall Calculator" FontSize="20" FontWeight="Bold" Height="40"/>
             <StackPanel Name="Toolbar" Orientation="Horizontal" Margin="3">
@@ -22,13 +105,14 @@
                     <Label Width="30" Height="25"  FontWeight="Bold" Content="C.R."/>
                     <Label Name="CenterOfRigidity" Width="100" Height="25" FontWeight="Bold" Content="value"/>
                 </StackPanel>
-                <ScrollViewer Name="CanvasScrollViewer" Width="450" Height="450" 
+                <ScrollViewer Name="CanvasScrollViewer" 
                               HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-                    <Canvas Name="cnvMainCanvas" Width="400" Height="400" Background="White"
+                    <Canvas Name="cnvMainCanvas" Background="White"
                             MouseWheel = "MainCanvas_MouseWheel"
                             MouseDown = "MainCanvas_MouseDown"
                             MouseMove = "MainCanvas_MouseMove"
                             MouseUp = "MainCanvas_MouseUp"
+                            ClipToBounds="True"
                             />
                 </ScrollViewer>
                 <Label Name="CurrentMode" Background ="LightBlue" FontWeight="Bold"  Margin="0 0 0 0" Height="25" Content="SELECT EDIT MODE (M for MASS and R for RIGIDITY and C to CLEAR CURRENT) "/>
@@ -84,7 +168,7 @@
 
 
             <StackPanel Orientation="Vertical">
-                <!--== Calculation Results-->
+                --><!--== Calculation Results--><!--
                 <StackPanel Name="spCalcResultsControls" HorizontalAlignment="Center" Orientation="Vertical" Margin="0 20 0 0">
                     <Label HorizontalAlignment="Left" Width="200" Height="30" FontWeight="Bold" Content="Shear Wall Forces Results"/>
                     <StackPanel Orientation="Horizontal" Background="AliceBlue">
@@ -101,7 +185,7 @@
                 </StackPanel>
 
 
-                <!--Wall Data-->
+                --><!--Wall Data--><!--
                 <StackPanel Name ="spWallDataControls" HorizontalAlignment="Left" Orientation="Vertical" Margin="0 20 0 0">
                     <Label HorizontalAlignment="Left" Background="Blue" Width="600" Height="30" FontWeight="Bold" Content="Shear Wall Data"/>
                     <Label HorizontalAlignment="Left" Width="200" Height="30" FontWeight="Bold" Content="EAST-WEST DIRECTION"/>
@@ -121,7 +205,7 @@
 
                 </StackPanel>
 
-                <!--Diaphragm Data-->
+                --><!--Diaphragm Data--><!--
                 <StackPanel Name="spDiaphragmDataControls" HorizontalAlignment="Left" Orientation="Vertical" Margin="0 20 0 0">
                     <Label HorizontalAlignment="Left" Background="Red" Width="600" Height="30" FontWeight="Bold" Content="Diaphragm Data" />
                     <StackPanel Orientation="Horizontal" Background="AliceBlue" >
@@ -138,5 +222,5 @@
                     <StackPanel Name="DiaphragmData" HorizontalAlignment="Center" Orientation="Vertical" />
                 </StackPanel>
             </StackPanel>
-        </StackPanel>
+        </StackPanel>-->
 </Window>

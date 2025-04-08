@@ -15,6 +15,23 @@ namespace ShearWallCalculator
         public System.Windows.Point Boundary_Max_Point { get => FindMinBoundaryPt(); }
         public System.Windows.Point Boundary_Min_Point { get => FindMaxBoundaryPt(); }
 
+
+
+        /// <summary>
+        /// Loads and eccentricty values 
+        /// Uses Cartesian coordinate and right-hand rule -- x+ right, y+ up, rot+ = CCW
+        /// </summary>
+        public float V_x { get; set; } = 40; // x direction load (kips) acting at center of mass
+        public float V_y { get; set; } = 0;  // y direction load (kips) acting at center of mass
+
+        /// <summary>
+        /// A flag that determines if the calculations can be peformed.  Looks
+        /// mainlay at CtrMass and CtrRigidity to make sure both are valid numbers
+        /// and not NaN or Infinity
+        /// </summary>
+        public bool IsValidForCalculation { get => Validate(); }
+
+
         private Point FindMaxBoundaryPt()
         {
             float temp_y = -1000000;
@@ -73,7 +90,7 @@ namespace ShearWallCalculator
 
         public ShearWallCalculatorBase()
         {
-            
+
         }
 
         /// <summary>
@@ -86,8 +103,33 @@ namespace ShearWallCalculator
             _diaphragm_system = diaphragm_system;
             _wall_system = wall_system;
 
-            LoadTestWallData();
-//            LoadTestWallData2();
+            BracedWallLine bracedWallLine = new BracedWallLine(5.0);
+            //            LoadTestWallData();
+            //            LoadTestWallData2();
+
+            Validate();
+        }
+
+        /// <summary>
+        /// Checks if the numerics are valid for CtrMass and CtrRigidity so that calculations can be done.
+        /// </summary>
+        public bool Validate()
+        {
+            if (_diaphragm_system is null || _wall_system is null ||
+                double.IsNaN(_diaphragm_system.CtrMass.X) ||
+                double.IsNaN(_diaphragm_system.CtrMass.Y) ||
+                double.IsNaN(_wall_system.CtrRigidity.X) ||
+                double.IsNaN(_wall_system.CtrRigidity.Y) ||
+                double.IsInfinity(_diaphragm_system.CtrMass.X) ||
+                double.IsInfinity(_diaphragm_system.CtrMass.Y) ||
+                double.IsInfinity(_wall_system.CtrRigidity.X) ||
+                double.IsInfinity(_wall_system.CtrRigidity.Y))
+            {
+                return false;
+            } else
+            {
+                return true; 
+            }
         }
 
 
@@ -102,15 +144,15 @@ namespace ShearWallCalculator
             _diaphragm_system.CtrMass = new System.Windows.Point(7.58f, 37.5f);
 
             // East / West Wall Segments
-            _wall_system.AddWall(new WallData(9, 0, 0, 20, 0, WallDirs.EastWest));
-            _wall_system.AddWall(new WallData(9, 20, 30, 30, 30, WallDirs.EastWest));
-            _wall_system.AddWall(new WallData(9, 20, 45, 30, 45, WallDirs.EastWest));
-            _wall_system.AddWall(new WallData(9, 0, 75, 20, 75, WallDirs.EastWest));
+            _wall_system.AddWall(new WallData(9, 0, 0, 20, 0));
+            _wall_system.AddWall(new WallData(9, 20, 30, 30, 30));
+            _wall_system.AddWall(new WallData(9, 20, 45, 30, 45));
+            _wall_system.AddWall(new WallData(9, 0, 75, 20, 75));
 
             // North / South Wall Segments
-            _wall_system.AddWall(new WallData(9, 0, 27.5f, 0, 47.5f, WallDirs.NorthSouth));
-            _wall_system.AddWall(new WallData(9, 20, 20, 20, 30, WallDirs.NorthSouth));
-            _wall_system.AddWall(new WallData(9, 20, 45, 20, 55, WallDirs.NorthSouth));
+            _wall_system.AddWall(new WallData(9, 0, 27.5f, 0, 47.5f));
+            _wall_system.AddWall(new WallData(9, 20, 20, 20, 30));
+            _wall_system.AddWall(new WallData(9, 20, 45, 20, 55));
 
             _wall_system.Update();
         }
@@ -127,12 +169,12 @@ namespace ShearWallCalculator
             _diaphragm_system.CtrMass = new System.Windows.Point(20, 40);
 
             // East / West Wall Segments
-            _wall_system.AddWall(new WallData(9, 15, 80, 25, 80, WallDirs.EastWest));
-            _wall_system.AddWall(new WallData(9, 15, 80, 25, 80, WallDirs.EastWest)); // this wall is 3x rigid as others
+            _wall_system.AddWall(new WallData(9, 15, 80, 25, 80));
+            _wall_system.AddWall(new WallData(9, 15, 80, 25, 80)); // this wall is 3x rigid as others
 
             // North / South Wall Segments
-            _wall_system.AddWall(new WallData(9, 0, 5, 0, 15, WallDirs.NorthSouth));
-            _wall_system.AddWall(new WallData(9, 40, 5, 40, 15, WallDirs.NorthSouth));
+            _wall_system.AddWall(new WallData(9, 0, 5, 0, 15));
+            _wall_system.AddWall(new WallData(9, 40, 5, 40, 15));
 
             _wall_system.Update();
         }
