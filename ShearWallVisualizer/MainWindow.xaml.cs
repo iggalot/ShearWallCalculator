@@ -23,7 +23,11 @@ namespace ShearWallVisualizer
     {
         public ShearWallCalculator_RigidDiaphragm Calculator { get; set; } = new ShearWallCalculator_RigidDiaphragm();
 
+        // data for the image overlay
         string selectedImageFilePath = null;
+        double pixelScaleX = 1.0;  // the scale factor for pixels to real-world coords
+        double pixelScaleY = 1.0;  // the scale factor for pixels to real-world coords
+
 
         public EventHandler OnUpdated;  // the event that signals that the drawing has been updated -- controls will listen for this at the time they are created.
 
@@ -413,7 +417,145 @@ namespace ShearWallVisualizer
             }
         }
 
-        #region LayerManager Test stuff
+        /// <summary>
+        /// Helper function to determine if a point is within the bounds of a framework element (ActualWidth and ActualHeight)
+        /// </summary>
+        /// <param name="p1"></param>
+        /// <param name="element"></param>
+        /// <returns></returns>
+        private bool PointIsWithinBounds(Point p1, FrameworkElement element)
+        {
+            return (p1.X > 0 && p1.X < element.ActualWidth && p1.Y > 0 && p1.Y < element.ActualHeight);
+        }
+
+        /// <summary>
+        /// Returns a point that is bounded by the framework element -- used for when a point is out of bounds 
+        /// and needs to be shifted back to the elements boundary when drawing
+        /// </summary>
+        /// <param name="p1"></param>
+        /// <param name="element"></param>
+        /// <returns></returns>
+        private Point GetConstrainedScreenPoint(Point p1, FrameworkElement element)
+        {
+            Point temp = p1;
+            if (temp.X < 0)
+            {
+                temp.X = 0;
+            }
+            if (temp.X > element.ActualWidth)
+            {
+                temp.X = element.ActualWidth;
+            }
+            if (temp.Y < 0)
+            {
+                temp.Y = 0;
+            }
+            if (temp.Y > element.ActualHeight)
+            {
+                temp.Y = element.ActualHeight;
+            }
+            return temp;
+        }
+
+        private void CreatePreviewShape()
+        {
+            if (currentMode == DrawMode.Line)
+                previewShape = new Line { Stroke = Brushes.DarkGreen, StrokeThickness = 5 };
+            else if (currentMode == DrawMode.Rectangle)
+                previewShape = new Rectangle { Stroke = Brushes.DarkGreen, StrokeThickness = 5, Fill = Brushes.Transparent };
+        }
+
+        protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
+        {
+            base.OnRenderSizeChanged(sizeInfo);
+
+            //m_scroll.Minimum = 0;
+            //m_scroll.Maximum = m_layers.ActualHeight - 70;
+            Draw(ChangeType.Resize);
+        }
+
+        private void OnScroll(object sender, ScrollEventArgs e)
+        {
+            Draw(ChangeType.Scroll);
+        }
+
+        // Create the layers
+        private void OnLoaded(object sender, RoutedEventArgs e)
+        {
+            m_layers.AddLayer(0, DrawReferenceImage);
+            m_layers.AddLayer(5, DrawBackground, ChangeType.Resize);
+            m_layers.AddLayer(11, DrawBackgroundBlock);
+            m_layers.AddLayer(20, DrawStaticForeground);
+            m_layers.AddLayer(21, DrawText, ChangeType.Scroll);
+            m_layers.AddLayer(30, DrawForeground);
+
+            m_layers.AddLayer(40, DrawVisualGrid);
+            m_layers.AddLayer(41, DrawShapes);
+            m_layers.AddLayer(52, DrawCursor);
+            m_layers.AddLayer(51, DrawPreview);
+            m_layers.AddLayer(43, DrawSnapMarkers);
+            m_layers.AddLayer(50, DrawBracedWallLines);
+            m_layers.AddLayer(80, DrawCOMandCOR);
+            m_layers.AddLayer(100, DrawDebug);
+
+
+            // Now draw everything
+            Draw(ChangeType.Redraw);
+        }
+
+        private void Log(string text)
+        {
+            //m_log.Text = text + "\r\n" + m_log.Text;
+
+            //if (m_log.Text.Length > 1000)
+            //{
+            //    m_log.Text = m_log.Text.Substring(0, 1000);
+            //}
+        }
+
+        private void FinalizeShape(Point worldPoint)
+        {
+            if (currentMode == DrawMode.Line)
+            {
+                // For the line to be horizontal or vertical only
+                worldPoint = GetConstrainedPoint(worldPoint, startPoint_world.Value); // Ensure alignment
+
+                // Create the line in world space and store it in the worldShapes list
+                Point startPoint = startPoint_world.Value;
+                Point endPoint = worldPoint;
+
+                if (wallSystem == null)
+                {
+                    wallSystem = new WallSystem();
+                }
+
+                wallSystem.AddWall(new WallData(defaultWallHeight, startPoint.X, startPoint.Y, endPoint.X, endPoint.Y));
+                Update();
+            }
+            else if (currentMode == DrawMode.Rectangle)
+            {
+                if (diaphragmSystem == null)
+                {
+                    diaphragmSystem = new DiaphragmSystem();
+                }
+
+                diaphragmSystem.AddDiaphragm(new DiaphragmData_Rectangular(startPoint_world.Value, endPoint_world.Value));
+                Update();
+            }
+
+            // Clear the preview shape from the screen.
+            previewShape = null;
+            startPoint_world = null;
+            endPoint_world = null;
+
+            Draw(ChangeType.Redraw);
+        }
+
+
+
+
+
+        #region Drawing functions
         private void DrawText(DrawingContext ctx)
         {
             //if (hide_Text) return;
@@ -452,7 +594,6 @@ namespace ShearWallVisualizer
 
             //Log("background block");
         }
-
 
         private void DrawForeground(DrawingContext ctx)
         {
@@ -591,7 +732,6 @@ namespace ShearWallVisualizer
             DrawMarkers(ctx, WorldToScreen(new Point(0, 0), m_layers), 5, new Pen(Brushes.Black, 1), Brushes.DarkRed);
         }
 
-
         private void DrawMarkers(DrawingContext ctx, Point p, double dia, Pen pen, Brush fill)
         {
             ctx.DrawEllipse(fill, pen, p, dia, dia);
@@ -620,14 +760,6 @@ namespace ShearWallVisualizer
                 ctx.DrawLine(new Pen(Brushes.Black, 1), cross_pt, new Point(cross_pt.X, 0));
                 ctx.DrawLine(new Pen(Brushes.Black, 1), cross_pt, new Point(cross_pt.X, dockpanel.Height));
             }
-        }
-
-        private void CreatePreviewShape()
-        {
-            if (currentMode == DrawMode.Line)
-                previewShape = new Line { Stroke = Brushes.DarkGreen, StrokeThickness = 5 };
-            else if (currentMode == DrawMode.Rectangle)
-                previewShape = new Rectangle { Stroke = Brushes.DarkGreen, StrokeThickness = 5, Fill = Brushes.Transparent };
         }
 
         private void DrawPreview(DrawingContext ctx)
@@ -768,35 +900,6 @@ namespace ShearWallVisualizer
             }
         }
 
-        /// <summary>
-        /// Returns a point that is bounded by the framework element -- used for when a point is out of bounds 
-        /// and needs to be shifted back to the elements boundary when drawing
-        /// </summary>
-        /// <param name="p1"></param>
-        /// <param name="element"></param>
-        /// <returns></returns>
-        private Point GetConstrainedScreenPoint(Point p1, FrameworkElement element)
-        {
-            Point temp = p1;
-            if (temp.X < 0)
-            {
-                temp.X = 0;
-            }
-            if (temp.X > element.ActualWidth)
-            {
-                temp.X = element.ActualWidth;
-            }
-            if (temp.Y < 0)
-            {
-                temp.Y = 0;
-            }
-            if (temp.Y > element.ActualHeight)
-            {
-                temp.Y = element.ActualHeight;
-            }
-            return temp;
-        }
-
         private void DrawDebug(DrawingContext ctx)
         {
             if (debugMode == false)
@@ -920,120 +1023,6 @@ namespace ShearWallVisualizer
             }
         }
 
-        /// <summary>
-        /// Helper function to determine if a point is within the bounds of a framework element (ActualWidth and ActualHeight)
-        /// </summary>
-        /// <param name="p1"></param>
-        /// <param name="element"></param>
-        /// <returns></returns>
-        private bool PointIsWithinBounds(Point p1, FrameworkElement element)
-        {
-            return (p1.X > 0 && p1.X < element.ActualWidth && p1.Y > 0 && p1.Y < element.ActualHeight);
-        }
-
-        protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
-        {
-            base.OnRenderSizeChanged(sizeInfo);
-
-            //m_scroll.Minimum = 0;
-            //m_scroll.Maximum = m_layers.ActualHeight - 70;
-            Draw(ChangeType.Resize);
-        }
-
-        private void OnScroll(object sender, ScrollEventArgs e)
-        {
-            Draw(ChangeType.Scroll);
-        }
-
-        private void Draw(ChangeType change)
-        {
-            m_layers.Draw(change);
-        }
-
-        private void btnHideImage_Click(object sender, RoutedEventArgs e)
-        {
-            hideImage = !hideImage;
-            Draw(ChangeType.Redraw);
-        }
-
-        private void btnHideGrid_Click(object sender, RoutedEventArgs e)
-        {
-            hideGrid = !hideGrid;
-            Draw(ChangeType.Redraw);
-        }
-
-        private void Log(string text)
-        {
-            //m_log.Text = text + "\r\n" + m_log.Text;
-
-            //if (m_log.Text.Length > 1000)
-            //{
-            //    m_log.Text = m_log.Text.Substring(0, 1000);
-            //}
-        }
-
-        private void FinalizeShape(Point worldPoint)
-        {
-            if (currentMode == DrawMode.Line)
-            {
-                // For the line to be horizontal or vertical only
-                worldPoint = GetConstrainedPoint(worldPoint, startPoint_world.Value); // Ensure alignment
-
-                // Create the line in world space and store it in the worldShapes list
-                Point startPoint = startPoint_world.Value;
-                Point endPoint = worldPoint;
-
-                if(wallSystem == null)
-                {
-                    wallSystem = new WallSystem();
-                }
-
-                wallSystem.AddWall(new WallData(defaultWallHeight, startPoint.X, startPoint.Y, endPoint.X, endPoint.Y));
-                Update();
-            }
-            else if (currentMode == DrawMode.Rectangle)
-            {
-                if(diaphragmSystem == null)
-                {
-                    diaphragmSystem = new DiaphragmSystem();
-                }
-
-                diaphragmSystem.AddDiaphragm(new DiaphragmData_Rectangular(startPoint_world.Value, endPoint_world.Value));
-                Update();
-            }
-
-            // Clear the preview shape from the screen.
-            previewShape = null;
-            startPoint_world = null;
-            endPoint_world = null;
-
-            Draw(ChangeType.Redraw);
-        }
-
-        // Create the layers
-        private void OnLoaded(object sender, RoutedEventArgs e)
-        {
-            m_layers.AddLayer(0, DrawReferenceImage);
-            m_layers.AddLayer(5, DrawBackground, ChangeType.Resize);
-            m_layers.AddLayer(11, DrawBackgroundBlock);
-            m_layers.AddLayer(20, DrawStaticForeground);
-            m_layers.AddLayer(21, DrawText, ChangeType.Scroll);
-            m_layers.AddLayer(30, DrawForeground);
-
-            m_layers.AddLayer(40, DrawVisualGrid);
-            m_layers.AddLayer(41, DrawShapes);
-            m_layers.AddLayer(52, DrawCursor);
-            m_layers.AddLayer(51, DrawPreview);
-            m_layers.AddLayer(43, DrawSnapMarkers);
-            m_layers.AddLayer(50, DrawBracedWallLines);
-            m_layers.AddLayer(80, DrawCOMandCOR);
-            m_layers.AddLayer(100, DrawDebug);
-
-
-            // Now draw everything
-            Draw(ChangeType.Redraw);
-        }
-
         private void DrawReferenceImage(DrawingContext context)
         {
             if (hideImage is true)
@@ -1047,11 +1036,11 @@ namespace ShearWallVisualizer
                 return;
             }
 
-            m_layers.AddImageLayer(selectedImageFilePath, 1, 1);
+            m_layers.AddImageLayer(selectedImageFilePath, pixelScaleX, pixelScaleY); // scale the image so that pixel scale aligns with world scale.
             m_layers.currentReferenceImageLayer.SetOpacity(0.30); // fade the image a bit
 
-            double width = m_layers.currentReferenceImageLayer.Bitmap.PixelWidth;
-            double height = m_layers.currentReferenceImageLayer.Bitmap.PixelHeight;
+            double width = m_layers.currentReferenceImageLayer.TargetRect.Width;
+            double height = m_layers.currentReferenceImageLayer.TargetRect.Height;
 
 
             Rect imageWorldRect = new Rect(0, 0, width, height);
@@ -1127,7 +1116,7 @@ namespace ShearWallVisualizer
                 Point p2_screen = GetConstrainedScreenPoint(WorldToScreen(p2_world, dockpanel), dockpanel); ;
 
                 Pen pen = new Pen(Brushes.Black, 2);
-                pen.DashStyle = new DashStyle(new double[] { 3, 1, 3}, 0);
+                pen.DashStyle = new DashStyle(new double[] { 3, 1, 3 }, 0);
                 ctx.DrawLine(pen, p1_screen, p2_screen); // draw the horizontal line
 
                 // display the com as a text
@@ -1148,7 +1137,7 @@ namespace ShearWallVisualizer
 
         private void DrawSnapMarkers(DrawingContext ctx)
         {
-            if(snapMode == false)
+            if (snapMode == false)
             {
                 return;
             }
@@ -1164,7 +1153,7 @@ namespace ShearWallVisualizer
                 ctx.DrawEllipse(Brushes.MediumBlue, new Pen(Brushes.MediumBlue, 1), p2_screen, 3, 3);
 
             }
-                foreach (var dia in diaphragmSystem._diaphragms)
+            foreach (var dia in diaphragmSystem._diaphragms)
             {
                 Point p1_world = dia.Value.P1;
                 Point p2_world = dia.Value.P2;
@@ -1240,7 +1229,7 @@ namespace ShearWallVisualizer
                 }
 
                 // draw two lines since neither value is valid
-                else if((double.IsNaN(com.X) is true) && (double.IsNaN(com.Y) is true))
+                else if ((double.IsNaN(com.X) is true) && (double.IsNaN(com.Y) is true))
                 {
                     Pen pen = new Pen(Brushes.Red, 2);
                     pen.DashStyle = new DashStyle(new double[] { 3, 3 }, 0);
@@ -1250,7 +1239,7 @@ namespace ShearWallVisualizer
 
                     ctx.DrawLine(pen, new Point(0, y_screen), new Point(dockpanel.ActualWidth, y_screen));
                     ctx.DrawLine(pen, new Point(x_screen, 0), new Point(x_screen, dockpanel.ActualHeight));
-                } 
+                }
 
                 // Draw a marker
                 Point pt = new Point(x_screen, y_screen);
@@ -1282,7 +1271,7 @@ namespace ShearWallVisualizer
                 // draw a vertical line since the Y is valid
                 if ((double.IsNaN(cor.X) is false) && (double.IsNaN(cor.Y) is true))
                 {
-                    
+
                     Pen pen = new Pen(Brushes.MediumBlue, 2);
                     pen.DashStyle = new DashStyle(new double[] { 3, 3 }, 0);
 
@@ -1334,6 +1323,11 @@ namespace ShearWallVisualizer
                     ctx.DrawText(idLabel, new Point(x_screen - 30, y_screen + 5));
                 }
             }
+        }
+
+        private void Draw(ChangeType change)
+        {
+            m_layers.Draw(change);
         }
 
         #endregion
@@ -1440,6 +1434,20 @@ namespace ShearWallVisualizer
 
         #region UI Events
 
+
+
+        private void btnHideImage_Click(object sender, RoutedEventArgs e)
+        {
+            hideImage = !hideImage;
+            Draw(ChangeType.Redraw);
+        }
+
+        private void btnHideGrid_Click(object sender, RoutedEventArgs e)
+        {
+            hideGrid = !hideGrid;
+            Draw(ChangeType.Redraw);
+        }
+
         private void btnLineMode_Click(object sender, RoutedEventArgs e)
         {
             SetLineMode();
@@ -1458,6 +1466,28 @@ namespace ShearWallVisualizer
         #endregion
 
         #region Menu Events
+        private void OpenImageTool_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new ImageMeasurementWindow
+            {
+                Owner = this
+            };
+
+            dialog.MeasurementCompleted += OnMeasurementCompleted;
+            dialog.ShowDialog();
+
+            //if (dialog.ShowDialog() == true && dialog.Result != null)
+            //{
+            //    var result = dialog.Result;
+
+            //    MessageBox.Show(
+            //        $"Image: {result.FilePath}\n" +
+            //        $"Pixel Distance: {result.PixelDistance:F2}\n" +
+            //        $"Real Distance: {result.RealWorldDistance:F2}\n" +
+            //        $"Scale Factor: {result.ScaleFactor:F4} units/pixel",
+            //        "Measurement Result");
+            //}
+        }
         private void Exit_Click(object sender, RoutedEventArgs e)
         {
             Application.Current.Shutdown();
@@ -1479,14 +1509,21 @@ namespace ShearWallVisualizer
 
             if (result == true)
             {
-                // Open document
-                selectedImageFilePath = openFileDialog.FileName;
-
-                // You ca now use selectedFilePath as needed
-                MessageBox.Show($"You selected: {selectedImageFilePath}");
-
-                AddToRecentFiles(selectedImageFilePath); // add to recent files list
+                LoadImageFile(openFileDialog.FileName);
             }
+        }
+
+        private void LoadImageFile(string filename, double pixel_scale_x=1.0, double pixel_scale_y=1.0)
+        {
+            // Open document
+            selectedImageFilePath = filename;
+            pixelScaleX = pixel_scale_x;
+            pixelScaleY = pixel_scale_y;
+
+            // You ca now use selectedFilePath as needed
+            MessageBox.Show($"You selected: {selectedImageFilePath}");
+
+            AddToRecentFiles(selectedImageFilePath); // add to recent files list
         }
         #endregion
 
@@ -1620,38 +1657,23 @@ namespace ShearWallVisualizer
             LoadRecentFilesMenu();
         }
 
-        private void OpenImageTool_Click(object sender, RoutedEventArgs e)
-        {
-            var dialog = new ImageMeasurementWindow
-            {
-                Owner = this
-            };
-
-            dialog.MeasurementCompleted += OnMeasurementCompleted;
-            dialog.ShowDialog();
-
-            //if (dialog.ShowDialog() == true && dialog.Result != null)
-            //{
-            //    var result = dialog.Result;
-
-            //    MessageBox.Show(
-            //        $"Image: {result.FilePath}\n" +
-            //        $"Pixel Distance: {result.PixelDistance:F2}\n" +
-            //        $"Real Distance: {result.RealWorldDistance:F2}\n" +
-            //        $"Scale Factor: {result.ScaleFactor:F4} units/pixel",
-            //        "Measurement Result");
-            //}
-        }
 
         private void OnMeasurementCompleted(object sender, ImageMeasurementEventArgs e)
         {
-            
+            // set the image parameters so that the DrawRerenceImage function has the items it needs to draw the true image.
+            selectedImageFilePath = e.FilePath;
+            pixelScaleX = e.ScaleFactor;
+            pixelScaleY = e.ScaleFactor;
+
             // Handle the measurement data here
             MessageBox.Show($"Measurement completed!\n" +
                             $"File: {e.FilePath}\n" +
                             $"Pixel Distance: {e.PixelDistance:F2}\n" +
                             $"Real-World Distance: {e.RealWorldDistance:F2}\n" +
                             $"Scale Factor: {e.ScaleFactor:F6}");
+
+            Draw(ChangeType.Redraw); // force a redraw
+
 
             // You can update the MainWindow with the measurement result, if needed
             // For example, showing the scale factor or other data in the UI

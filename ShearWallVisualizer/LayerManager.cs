@@ -84,18 +84,24 @@ namespace ShearWallVisualizer
             return m_children[index];
         }
 
-        public void AddImageLayer(string path, double scale_x, double scale_y)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="path">path to the image file</param>
+        /// <param name="scale_x">the pixel to world scale factor in x-dir</param>
+        /// <param name="scale_y">the pixel to world scale factor in y-dir</param>
+        public void AddImageLayer(string path, double scale_x=1, double scale_y=1)
         {
             if (ImageLayers.Count > 0)
             {
                 RemoveImageLayer(0);
             }
 
-            if (currentReferenceImagePath != path)
-            {
-                currentReferenceImagePath = path;
-                currentReferenceImageLayer = new ImageLayer(path, scale_x, scale_y);
-            }
+            currentReferenceImagePath = path;
+            currentReferenceImageLayer = new ImageLayer(path);
+            currentReferenceImageLayer.Resize(
+                currentReferenceImageLayer.TargetRect.Width * scale_x,
+                currentReferenceImageLayer.TargetRect.Height * scale_y); // resize it to the new scale
 
             ImageLayers.Add(currentReferenceImageLayer);
             m_children.Add(currentReferenceImageLayer.Visual);
