@@ -6,8 +6,8 @@
         xmlns:local="clr-namespace:ShearWallVisualizer.Dialogs"
         xmlns:ctrl="clr-namespace:ShearWallVisualizer.Controls"
         mc:Ignorable="d"
-        Title="ImageMeasurementWindow">
-    <Grid Name="layoutGrid">
+        Title="ImageMeasurementWindow" SizeToContent="WidthAndHeight" >
+    <Grid Name="layoutGrid" >
 
     </Grid>
 </Window>

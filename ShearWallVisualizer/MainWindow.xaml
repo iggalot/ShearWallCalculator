@@ -32,8 +32,10 @@
             <!-- Top Toolbar with Buttons -->
             <StackPanel Orientation="Vertical" Margin="10">
                 <StackPanel Orientation="Horizontal">
-                    <Button Content="Hide Image" Click="btnHideImage_Click" Width="70" Height="25" HorizontalAlignment="Left"/>
-                    <Button Content="Hide Grid" Click="btnHideGrid_Click" Width="70" Height="25" HorizontalAlignment="Left"/>
+                    <Button Name="btnHideImage" Content="Hide Image" Click="btnHideImage_Click" Width="70" Height="25" HorizontalAlignment="Left"/>
+                    <Button Name="btnHideGrid" Content="Hide Grid" Click="btnHideGrid_Click" Width="70" Height="25" HorizontalAlignment="Left"/>
+                    <Button Name="btnHideShapes" Content="Hide Shapes" Click="btnHideShapes_Click" Width="70" Height="25" HorizontalAlignment="Left"/>
+
                     <Button Name="btnRigidityMode" Background="MediumBlue" Margin="2" Opacity="0.75" FontWeight="Bold" Content="Wall" Width="75" Height="25" Click="btnLineMode_Click"/>
                     <Button Name="btnMassMode" Background="Red" Margin="2" Opacity="0.75" FontWeight="Bold" Content="Diaphragm" Width="75" Height="25" Click="btnRectangleMode_Click"/>
                     <Button Name="btnSnapToNearest" Background="Red" Margin="2" Opacity="0.75" Content="Snap" Width="100" Height="25" Click="btnSnapMode_Click"/>

@@ -35,6 +35,7 @@ namespace ShearWallVisualizer
 
         bool hideImage = false;
         bool hideGrid = false;
+        bool hideShapes = false;
 
         private double defaultWallHeight = 9.0;
 
@@ -860,6 +861,10 @@ namespace ShearWallVisualizer
         /// </summary>
         private void DrawShapes(DrawingContext ctx)
         {
+            if(hideShapes is true)
+            {
+                return;
+            }
             double center_pt_dia = 5;
 
             // Redraw all the shapes in world coordinates
@@ -1480,18 +1485,28 @@ namespace ShearWallVisualizer
 
         #region UI Events
 
+        private void btnHideShapes_Click(object sender, RoutedEventArgs e)
+        {
+            hideShapes = !hideShapes;
+            Draw(ChangeType.Redraw);
+            btnHideShapes.Content = hideShapes ? "Show Shapes" : "Hide Shapes";
 
+        }
 
         private void btnHideImage_Click(object sender, RoutedEventArgs e)
         {
             hideImage = !hideImage;
             Draw(ChangeType.Redraw);
+
+            btnHideImage.Content = hideImage ? "Show Image" : "Hide Image";
         }
 
         private void btnHideGrid_Click(object sender, RoutedEventArgs e)
         {
             hideGrid = !hideGrid;
             Draw(ChangeType.Redraw);
+            btnHideGrid.Content = hideGrid ? "Show Grid" : "Hide Grid";
+
         }
 
         private void btnLineMode_Click(object sender, RoutedEventArgs e)

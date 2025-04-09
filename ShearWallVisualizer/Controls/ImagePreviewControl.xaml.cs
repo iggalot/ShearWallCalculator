@@ -35,9 +35,25 @@ namespace ShearWallVisualizer.Controls
         private Point? firstPoint = null;
         private Point? secondPoint = null;
 
+        private ScaleTransform imageScaleTransform = new ScaleTransform(1.0, 1.0);
+        private TranslateTransform imageTranslateTransform = new TranslateTransform(0, 0);
+        private Point lastPanPoint;
+        private bool isPanning = false;
+
+        // Class-level fields for storing the offset of the image after centering
+        private double imageOffsetX = 0;
+        private double imageOffsetY = 0;
+
         public ImagePreviewControl()
         {
             InitializeComponent();
+
+            // Zooming and panning input events
+            this.MouseWheel += ImagePreviewControl_MouseWheel;
+            canvasImage.MouseDown += CanvasImage_MouseDown;
+            canvasImage.MouseMove += CanvasImage_MouseMove;
+            canvasImage.MouseUp += CanvasImage_MouseUp;
+            canvasImage.MouseLeave += CanvasImage_MouseUp;
         }
 
         private void btnLoadImage_Click(object sender, RoutedEventArgs e)
@@ -57,11 +73,50 @@ namespace ShearWallVisualizer.Controls
                 imageDisplay.Width = bitmap.PixelWidth;
                 imageDisplay.Height = bitmap.PixelHeight;
 
-                // Position the image at (0,0) on the canvas
-                Canvas.SetLeft(imageDisplay, 0);
-                Canvas.SetTop(imageDisplay, 0);
+                // Define a maximum width for the preview control (e.g., 800px)
+                double maxWidth = 800;
+                double minWidth = 700;
 
-                // Ensure the canvas size matches the image
+                // Dynamically adjust the ImagePreviewControl width based on the image width
+                double previewWidth = Math.Min(bitmap.PixelWidth, maxWidth); // Ensure the image doesn't exceed maxWidth
+
+                // If the image width is less than the minimum size, scale it up to the minimum width
+                if (previewWidth < minWidth)
+                {
+                    previewWidth = minWidth;
+                }
+
+                // Calculate the corresponding height to maintain aspect ratio
+                double previewHeight = bitmap.PixelHeight * (previewWidth / bitmap.PixelWidth);
+
+                // Set the size of the control (this is the ImagePreviewControl itself)
+                this.Width = previewWidth + 20; // Add some padding/margin if necessary
+                this.Height = previewHeight + 50; // Adjust height accordingly, with some padding
+
+                // Apply scaling transform to the image
+                var transformGroup = new TransformGroup();
+
+                // Scaling transform
+                imageScaleTransform.ScaleX = previewWidth / bitmap.PixelWidth;
+                imageScaleTransform.ScaleY = previewHeight / bitmap.PixelHeight;
+                transformGroup.Children.Add(imageScaleTransform);
+
+                // Apply the transform to the image
+                imageDisplay.RenderTransform = transformGroup;
+                imageDisplay.RenderTransformOrigin = new Point(0, 0);
+
+                // Center the image on the canvas using TranslateTransform
+                double centerX = (this.Width - previewWidth) / 2;
+                double centerY = (this.Height - previewHeight) / 2;
+
+                // Apply the offset directly to the image (not the canvas)
+                TranslateTransform translateTransform = new TranslateTransform(centerX, centerY);
+                imageDisplay.RenderTransform = new TransformGroup
+                {
+                    Children = { imageScaleTransform, translateTransform }
+                };
+
+                // Ensure canvas size matches the image size (not affected by the translation)
                 canvasImage.Width = bitmap.PixelWidth;
                 canvasImage.Height = bitmap.PixelHeight;
 
@@ -69,7 +124,7 @@ namespace ShearWallVisualizer.Controls
                 canvasImage.Children.Clear();
                 canvasImage.Children.Add(imageDisplay);
 
-                // Set image size info in the UI
+                // Update image size info in the UI
                 txtImageSize.Text = $"{bitmap.PixelWidth} x {bitmap.PixelHeight}";
 
                 // Reset previous measurement points and distance text
@@ -81,53 +136,26 @@ namespace ShearWallVisualizer.Controls
 
         private void imageDisplay_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            Console.WriteLine("mouse clicked.");
-            // Guard clause to prevent clicks if bitmap is null
             if (bitmap == null) return;
 
-            Point clickPoint = e.GetPosition(imageDisplay);
+            // Get the mouse position relative to the canvas
+            Point mousePositionOnCanvas = e.GetPosition(canvasImage);
 
-            // Debugging: Print which step we're on
-            Console.WriteLine($"Mouse clicked at: {clickPoint}, FirstPoint: {firstPoint}, SecondPoint: {secondPoint}");
-
-            // Handle the first click (initial point)
+            // Proceed with the point selection logic
             if (firstPoint == null)
             {
-                firstPoint = clickPoint;
+                firstPoint = mousePositionOnCanvas;
                 DrawMarker(firstPoint.Value, Brushes.Red);
-                Console.WriteLine("First point set.");
             }
             else if (secondPoint == null)
             {
-                // Ensure second click is processed only when secondPoint is null
-                secondPoint = clickPoint;
-                Console.WriteLine("Second point set.");
-
-                //// Check if points are aligned horizontally or vertically
-                //bool isHorizontal = Math.Abs(firstPoint.Value.Y - secondPoint.Value.Y) < 0.01;
-                //bool isVertical = Math.Abs(firstPoint.Value.X - secondPoint.Value.X) < 0.01;
-
-                //if (!isHorizontal && !isVertical)
-                //{
-                //    // Show error message if not horizontal or vertical
-                //    MessageBox.Show("Points must be strictly horizontal or vertical.", "Invalid Selection");
-                //    ResetMeasurement(); // Reset the measurement
-                //    return;
-                //}
-
-                // Draw second marker
+                secondPoint = mousePositionOnCanvas;
                 DrawMarker(secondPoint.Value, Brushes.Blue);
 
-                //// Calculate pixel distance
-                //double pixelDistance = isHorizontal
-                //    ? Math.Abs(firstPoint.Value.X - secondPoint.Value.X)
-                //    : Math.Abs(firstPoint.Value.Y - secondPoint.Value.Y);
+                // Calculate pixel distance on the canvas (no transforms required here)
                 double pixelDistance = Distance(firstPoint.Value, secondPoint.Value);
-
-                // Draw the line connecting the points
                 DrawLine(firstPoint.Value, secondPoint.Value, Brushes.Green);
 
-                // **Only after second click, show the measurement dialog**
                 var dialog = new EnterMeasurementDialog();
                 dialog.Owner = Window.GetWindow(this);
 
@@ -136,41 +164,80 @@ namespace ShearWallVisualizer.Controls
                     double realDistance = dialog.RealWorldDistance.Value;
                     txtMeasuredDistance.Text = $"{realDistance} (pixels: {pixelDistance:F2})";
 
-                    // Notify parent window of the measurement completion
                     MeasurementCompleted?.Invoke(this,
                         new ImageMeasurementEventArgs(currentFilePath, pixelDistance, realDistance));
                 }
-
-                Console.WriteLine("Measurement dialog completed.");
             }
-
-            // If both points are selected, reset the measurement (optional, depending on your flow)
-            else if (firstPoint != null && secondPoint != null)
+            else
             {
                 ResetMeasurement();
-                Console.WriteLine("Measurement reset.");
             }
 
-            // If we're selecting the second point, show the preview line (optional)
             if (firstPoint != null && secondPoint == null)
             {
-                DrawPreviewLine(firstPoint.Value, clickPoint, Brushes.Gray);
-                Console.WriteLine("Preview line drawn.");
+                DrawPreviewLine(firstPoint.Value, mousePositionOnCanvas, Brushes.Gray);
             }
+        }
+
+
+        private void ImagePreviewControl_MouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if (bitmap == null) return;
+
+            double zoomFactor = e.Delta > 0 ? 1.1 : 0.9;
+            Point mousePos = e.GetPosition(canvasImage);
+
+            double absX = (mousePos.X - imageTranslateTransform.X) / imageScaleTransform.ScaleX;
+            double absY = (mousePos.Y - imageTranslateTransform.Y) / imageScaleTransform.ScaleY;
+
+            imageScaleTransform.ScaleX *= zoomFactor;
+            imageScaleTransform.ScaleY *= zoomFactor;
+
+            imageTranslateTransform.X = mousePos.X - absX * imageScaleTransform.ScaleX;
+            imageTranslateTransform.Y = mousePos.Y - absY * imageScaleTransform.ScaleY;
+        }
+
+        private void CanvasImage_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.MiddleButton == MouseButtonState.Pressed ||
+                (e.LeftButton == MouseButtonState.Pressed && Keyboard.IsKeyDown(Key.LeftShift)))
+            {
+                isPanning = true;
+                lastPanPoint = e.GetPosition(this);
+                canvasImage.CaptureMouse();
+            }
+        }
+
+        private void CanvasImage_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (isPanning)
+            {
+                Point currentPoint = e.GetPosition(this);
+                Vector delta = currentPoint - lastPanPoint;
+
+                imageTranslateTransform.X += delta.X;
+                imageTranslateTransform.Y += delta.Y;
+
+                lastPanPoint = currentPoint;
+            }
+        }
+
+        private void CanvasImage_MouseUp(object sender, MouseEventArgs e)
+        {
+            isPanning = false;
+            canvasImage.ReleaseMouseCapture();
         }
 
         private void DrawPreviewLine(Point p1, Point p2, Brush color)
         {
-            // Remove previous preview line if it exists
-            foreach (var child in canvasImage.Children.OfType<Line>())
+            foreach (var child in canvasImage.Children.OfType<Line>().ToList())
             {
-                if (child.Stroke == Brushes.Gray) // Or another way to identify the preview line
+                if (child.Stroke == Brushes.Gray)
                 {
                     canvasImage.Children.Remove(child);
                 }
             }
 
-            // Draw the new preview line
             Line previewLine = new Line
             {
                 X1 = p1.X,
@@ -179,7 +246,7 @@ namespace ShearWallVisualizer.Controls
                 Y2 = p2.Y,
                 Stroke = color,
                 StrokeThickness = 1,
-                StrokeDashArray = new DoubleCollection() { 2, 2 } // dashed line
+                StrokeDashArray = new DoubleCollection() { 2, 2 }
             };
 
             canvasImage.Children.Add(previewLine);
@@ -187,13 +254,11 @@ namespace ShearWallVisualizer.Controls
 
         private void ResetMeasurement()
         {
-            // Clear points and markers, reset canvas, and clear the display
             firstPoint = null;
             secondPoint = null;
-            canvasImage.Children.Clear(); // Remove all child elements
-            canvasImage.Children.Add(imageDisplay); // Re-add the image itself
-            txtMeasuredDistance.Text = ""; // Clear the measurement display
-            Console.WriteLine("Measurement reset.");
+            canvasImage.Children.Clear();
+            canvasImage.Children.Add(imageDisplay);
+            txtMeasuredDistance.Text = "";
         }
 
         private void DrawMarker(Point point, Brush color)
