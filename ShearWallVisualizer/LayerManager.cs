@@ -84,7 +84,7 @@ namespace ShearWallVisualizer
             return m_children[index];
         }
 
-        public void AddImageLayer(string path)
+        public void AddImageLayer(string path, double scale_x, double scale_y)
         {
             if (ImageLayers.Count > 0)
             {
@@ -94,7 +94,7 @@ namespace ShearWallVisualizer
             if (currentReferenceImagePath != path)
             {
                 currentReferenceImagePath = path;
-                currentReferenceImageLayer = new ImageLayer(path);
+                currentReferenceImageLayer = new ImageLayer(path, scale_x, scale_y);
             }
 
             ImageLayers.Add(currentReferenceImageLayer);
