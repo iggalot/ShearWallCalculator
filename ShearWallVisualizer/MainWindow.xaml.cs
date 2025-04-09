@@ -686,8 +686,6 @@ namespace ShearWallVisualizer
             // Redraw all the shapes in world coordinates
             foreach (var wall in wallSystem._walls)
             {
-                Shape shapeToDraw = null;
-                Ellipse centerPointMarker = null;
                 FormattedText idLabel = null;
 
                 Point p1_world = wall.Value.Start;
@@ -728,8 +726,6 @@ namespace ShearWallVisualizer
             // Redraw all the shapes in world coordinates
             foreach (var rect in diaphragmSystem._diaphragms)
             {
-                Shape shapeToDraw = null;
-                Ellipse centerPointMarker = null;
                 FormattedText idLabel = null;
 
                 Point p1_world = rect.Value.P1;
@@ -1050,21 +1046,34 @@ namespace ShearWallVisualizer
                 return;
             }
 
-            m_layers.AddImageLayer(selectedImageFilePath);
-            m_layers.currentReferenceImageLayer.SetOpacity(0.50); // fade the image a bit
+            m_layers.AddImageLayer(selectedImageFilePath, 1, 1);
+            m_layers.currentReferenceImageLayer.SetOpacity(0.30); // fade the image a bit
 
-            //m_layers.ImageLayers[0].SetPosition(pos_screen.X, pos_screen.Y);
-
-            var width = m_layers.currentReferenceImageLayer.Bitmap.PixelWidth;
-            var height = m_layers.currentReferenceImageLayer.Bitmap.PixelHeight;
-
-            var scale_x = Math.Max(width / dockpanel.ActualWidth, height / dockpanel.ActualHeight);
-            var scale_y = Math.Max(width / dockpanel.ActualWidth, height / dockpanel.ActualHeight);
+            double width = m_layers.currentReferenceImageLayer.Bitmap.PixelWidth;
+            double height = m_layers.currentReferenceImageLayer.Bitmap.PixelHeight;
 
 
-            m_layers.ResizeImageLayer(0, width / scale_x, height / scale_y);
+            Rect imageWorldRect = new Rect(0, 0, width, height);
 
-            //m_layers.MoveImageLayer(0, 100, 50);
+            double y_offset = height;
+
+            Point p4_world = new Point(0, 0 + y_offset);
+            Point p3_world = new Point(width, 0 + y_offset);
+            Point p2_world = new Point(width, height + y_offset);
+            Point p1_world = new Point(0, height + y_offset);
+
+            Point p1_screen = WorldToScreen(p1_world, m_layers);
+            Point p2_screen = WorldToScreen(p2_world, m_layers);
+            Point p3_screen = WorldToScreen(p3_world, m_layers);
+            Point p4_screen = WorldToScreen(p4_world, m_layers);
+
+            double width_screen = p3_screen.X - p1_screen.X;
+            double height_screen = p3_screen.Y - p1_screen.Y;
+
+            Rect imageScreenRect = new Rect(p1_screen.X, p1_screen.Y, width_screen, height_screen);
+
+            m_layers.currentReferenceImageLayer.TargetRect = imageScreenRect;
+            m_layers.currentReferenceImageLayer.SetPosition(p4_screen.X, p4_screen.Y);
         }
 
         private void DrawBracedWallLines(DrawingContext ctx)
