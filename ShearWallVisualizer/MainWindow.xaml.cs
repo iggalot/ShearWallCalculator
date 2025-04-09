@@ -2,6 +2,7 @@
 using Microsoft.Win32;
 using ShearWallCalculator;
 using ShearWallVisualizer.Controls;
+using ShearWallVisualizer.Dialogs;
 using System;
 using System.Collections.Specialized;
 using System.Globalization;
@@ -1617,6 +1618,48 @@ namespace ShearWallVisualizer
             Properties.Settings.Default.RecentFiles = new StringCollection();
             Properties.Settings.Default.Save();
             LoadRecentFilesMenu();
+        }
+
+        private void OpenImageTool_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new ImageMeasurementWindow
+            {
+                Owner = this
+            };
+
+            dialog.MeasurementCompleted += OnMeasurementCompleted;
+            dialog.ShowDialog();
+
+            //if (dialog.ShowDialog() == true && dialog.Result != null)
+            //{
+            //    var result = dialog.Result;
+
+            //    MessageBox.Show(
+            //        $"Image: {result.FilePath}\n" +
+            //        $"Pixel Distance: {result.PixelDistance:F2}\n" +
+            //        $"Real Distance: {result.RealWorldDistance:F2}\n" +
+            //        $"Scale Factor: {result.ScaleFactor:F4} units/pixel",
+            //        "Measurement Result");
+            //}
+        }
+
+        private void OnMeasurementCompleted(object sender, ImageMeasurementEventArgs e)
+        {
+            
+            // Handle the measurement data here
+            MessageBox.Show($"Measurement completed!\n" +
+                            $"File: {e.FilePath}\n" +
+                            $"Pixel Distance: {e.PixelDistance:F2}\n" +
+                            $"Real-World Distance: {e.RealWorldDistance:F2}\n" +
+                            $"Scale Factor: {e.ScaleFactor:F6}");
+
+            // You can update the MainWindow with the measurement result, if needed
+            // For example, showing the scale factor or other data in the UI
+
+            // TODO:  We now have the data from the measurement scaler window, but we need to know automatically load
+            // to the window at the appropriate scale as we did before.
+
+            // TODO:  Also, need to find a way to save this file and its scale factors to the recent files list.
         }
 
         #endregion

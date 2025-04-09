@@ -15,7 +15,7 @@
         <!-- Menu Bar at the very top -->
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="_File">
-                <MenuItem Header="I_mage" Click="OpenImage_Click"/>
+                <MenuItem Header="Open Image Tool" Click="OpenImageTool_Click"/>
                 <Separator/>
                 <MenuItem Header="Open Recent" x:Name="RecentFilesMenu"/>
                 <Separator/>

@@ -55,6 +55,9 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Controls\ImagePreviewControl.xaml.cs">
+      <DependentUpon>ImagePreviewControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Controls\WallSystemControl.xaml.cs">
       <DependentUpon>WallSystemControl.xaml</DependentUpon>
     </Compile>
@@ -62,6 +65,10 @@
       <DependentUpon>DiaphragmSystemControl.xaml</DependentUpon>
     </Compile>
     <Page Include="Controls\DiaphragmDataControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\ImagePreviewControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -78,6 +85,14 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Controls\ShearWallResultsControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Dialogs\EnterMeasurementDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Dialogs\ImageMeasurementWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -98,6 +113,12 @@
     </Compile>
     <Compile Include="Controls\ShearWallResultsControl.xaml.cs">
       <DependentUpon>ShearWallResultsControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Dialogs\EnterMeasurementDialog.xaml.cs">
+      <DependentUpon>EnterMeasurementDialog.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Dialogs\ImageMeasurementWindow.xaml.cs">
+      <DependentUpon>ImageMeasurementWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Helpers\DrawingHelpers.cs" />
     <Compile Include="Helpers\MathHelpers.cs" />
@@ -141,5 +162,6 @@
       <Name>ShearWallCalculator</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
