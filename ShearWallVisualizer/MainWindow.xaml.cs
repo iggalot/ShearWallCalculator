@@ -63,8 +63,12 @@ namespace ShearWallVisualizer
         private Point lastPanPoint;
         private bool isPanning = false;
 
-        private double worldWidth = 200;
-        private double worldHeight = 200;
+        private double worldWidth = 150;
+        private double worldHeight = 150;
+
+
+        double majorGridSpacing = 5.0;  // Major grid lines in world units
+        double minorGridSpacing = 1.0;  // Minor grid lines in world units
 
         private Point currentMouseScreenPosition = new Point(0, 0);
 
@@ -626,15 +630,20 @@ namespace ShearWallVisualizer
             // thickness of the minor gridlines
             Pen pen;
 
-            double majorGridSpacing = 10.0;  // Major grid lines in world units
-            double minorGridSpacing = 5.0;  // Minor grid lines in world units
-
             double layerWidth = dockpanel.ActualWidth;
             double layerHeight = dockpanel.ActualHeight;
 
             // Draw vertical grid lines (major and minor) in world coordinates
             for (double x = 0; x <= layerWidth; x += minorGridSpacing)
             {
+                Point p1 = WorldToScreen(new Point(x, 0), m_layers);
+                Point p2 = WorldToScreen(new Point(x, layerHeight), m_layers);
+
+                if (p1.X < 0 || p1.X > layerWidth || p2.X < 0 || p2.X > layerWidth)
+                {
+                    continue;  // if we are outside of the view box, no need to draw the grid
+                }
+
                 // If its a major grid line, make it thicker
                 if (x % majorGridSpacing == 0)
                 {
@@ -650,8 +659,6 @@ namespace ShearWallVisualizer
 
                 }
 
-                Point p1 = WorldToScreen(new Point(x, 0), m_layers);
-                Point p2 = WorldToScreen(new Point(x, layerHeight), m_layers);
 
                 // Check if line is outside of viewbox
                 if (p1.X < 0 || p1.X > layerWidth || p2.X < 0 || p2.X > layerWidth)
@@ -678,11 +685,36 @@ namespace ShearWallVisualizer
                 }
 
                 ctx.DrawLine(pen, p1, p2);
+
+                if (x % (2 * majorGridSpacing) == 0)
+                {
+                    // Add a marker at every two major gridlines
+                    // display the com as a text
+                    FormattedText idLabel = new FormattedText(
+                        $"{x}",
+                        CultureInfo.GetCultureInfo("en-us"),
+                        FlowDirection.LeftToRight,
+                        new Typeface("Consolas"),
+                        9,
+                        Brushes.Gray,
+                        VisualTreeHelper.GetDpi(this).PixelsPerDip);
+
+                    
+                    ctx.DrawText(idLabel, new Point(p1.X-5, p1.Y));
+                }
             }
 
             // Draw horizontal grid lines (major and minor)
             for (double y = 0; y <= layerHeight; y += minorGridSpacing)
             {
+                Point p1 = WorldToScreen(new Point(0, y), m_layers);
+                Point p2 = WorldToScreen(new Point(layerWidth, y), m_layers);
+
+                if (p1.Y < 0 || p1.Y > layerHeight || p2.Y < 0 || p2.Y > layerHeight)
+                {
+                    continue;  // if we are outside of the view box, no need to draw the grid
+                }
+
                 // If its a major grid line, make it thicker
                 if (y % majorGridSpacing == 0)
                 {
@@ -698,8 +730,6 @@ namespace ShearWallVisualizer
 
                 }
 
-                Point p1 = WorldToScreen(new Point(0, y), m_layers);
-                Point p2 = WorldToScreen(new Point(layerWidth, y), m_layers);
 
                 // Check if line is outside of viewbox
                 if (p1.Y < 0 || p1.Y > layerHeight || p2.Y < 0 || p2.Y > layerHeight)
@@ -726,6 +756,22 @@ namespace ShearWallVisualizer
                 }
 
                 ctx.DrawLine(pen, p1, p2);
+
+                if (y % (2 * majorGridSpacing) == 0)
+                {
+                    // Add a marker at every two major gridlines
+                    // display the com as a text
+                    FormattedText idLabel = new FormattedText(
+                        $"{y}",
+                        CultureInfo.GetCultureInfo("en-us"),
+                        FlowDirection.LeftToRight,
+                        new Typeface("Consolas"),
+                        9,
+                        Brushes.Gray,
+                        VisualTreeHelper.GetDpi(this).PixelsPerDip);
+
+                    ctx.DrawText(idLabel, new Point(p1.X-12, p1.Y-5));
+                }
             }
 
             // Draw an origin marker
