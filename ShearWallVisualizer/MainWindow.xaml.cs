@@ -23,6 +23,14 @@ namespace ShearWallVisualizer
     {
         public ShearWallCalculator_RigidDiaphragm Calculator { get; set; } = new ShearWallCalculator_RigidDiaphragm();
 
+        /// <summary>
+        /// Load data for the calculator
+        /// </summary>
+        private double currentMagX = 0.0;
+        private double currentLocX = 0.0;
+        private double currentMagY = 0.0;
+        private double currentLocY = 0.0;
+
         // data for the image overlay
         string selectedImageFilePath = null;
         double pixelScaleX = 1.0;  // the scale factor for pixels to real-world coords
@@ -207,11 +215,12 @@ namespace ShearWallVisualizer
             CreateDiaphragmDataControls();
 
             // update the calculator
-            Calculator = new ShearWallCalculator_RigidDiaphragm(wallSystem, diaphragmSystem);
+            Calculator = new ShearWallCalculator_RigidDiaphragm(wallSystem, diaphragmSystem, currentMagX, currentMagY);
             if(Calculator.IsValidForCalculation is true)
             { 
                 CreateCalculationResultsControls();
             }
+            UpdateLoadDisplay();
 
             // notify controls that we have updated
             OnUpdated?.Invoke(this, EventArgs.Empty); // signal that the window has been updated -- so that subcontrols can refresh
@@ -1510,7 +1519,6 @@ namespace ShearWallVisualizer
             hideGrid = !hideGrid;
             Draw(ChangeType.Redraw);
             btnHideGrid.Content = hideGrid ? "Show Grid" : "Hide Grid";
-
         }
 
         private void btnLineMode_Click(object sender, RoutedEventArgs e)
@@ -1528,9 +1536,25 @@ namespace ShearWallVisualizer
             SetSnapMode();
         }
 
-        private void btnLoadEntry_Click(object sender, RoutedEventArgs e)
+        private void btnOpenLoadDialog_Click(object sender, RoutedEventArgs e)
         {
+            var dialog = new LoadInputDialog(currentMagX, currentLocX, currentMagY, currentLocY)
+            {
+                Owner = this
+            };
 
+            if (dialog.ShowDialog() == true)
+            {
+                currentMagX = dialog.MagnitudeX;
+                currentLocX = dialog.LocationX;
+                currentMagY = dialog.MagnitudeY;
+                currentLocY = dialog.LocationY;
+
+                // Do something with the updated values
+                MessageBox.Show($"Updated Load Info:\nX: {currentMagX} @ {currentLocX}\nY: {currentMagY} @ {currentLocY}");
+
+                Update();  // update the calculator
+            }
         }
 
         #endregion
@@ -1742,6 +1766,9 @@ namespace ShearWallVisualizer
 
         #endregion
 
-
+        private void UpdateLoadDisplay()
+        {
+            LoadInfoTextBlock.Text = $"X: {currentMagX} @ {currentLocX} | Y: {currentMagY} @ {currentLocY}";
+        }
     }
 }

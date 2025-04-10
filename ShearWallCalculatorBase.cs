@@ -21,8 +21,8 @@ namespace ShearWallCalculator
         /// Loads and eccentricty values 
         /// Uses Cartesian coordinate and right-hand rule -- x+ right, y+ up, rot+ = CCW
         /// </summary>
-        public float V_x { get; set; } = 40; // x direction load (kips) acting at center of mass
-        public float V_y { get; set; } = 0;  // y direction load (kips) acting at center of mass
+        public double V_x { get; set; } = 1; // x direction load (kips) acting at center of mass
+        public double V_y { get; set; } = 1;  // y direction load (kips) acting at center of mass
 
         /// <summary>
         /// A flag that determines if the calculations can be peformed.  Looks
@@ -98,10 +98,12 @@ namespace ShearWallCalculator
         /// </summary>
         /// <param name="wall_system"></param>
         /// <param name="diaphragm_system"></param>
-        public ShearWallCalculatorBase(WallSystem wall_system, DiaphragmSystem diaphragm_system)
+        public ShearWallCalculatorBase(WallSystem wall_system, DiaphragmSystem diaphragm_system, double shear_x, double shear_y)
         {
             _diaphragm_system = diaphragm_system;
             _wall_system = wall_system;
+            V_x = shear_x;
+            V_y = shear_y;
 
             BracedWallLine bracedWallLine = new BracedWallLine(5.0);
             //            LoadTestWallData();

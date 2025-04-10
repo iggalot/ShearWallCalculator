@@ -96,6 +96,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Dialogs\LoadInputDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -119,6 +123,9 @@
     </Compile>
     <Compile Include="Dialogs\ImageMeasurementWindow.xaml.cs">
       <DependentUpon>ImageMeasurementWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Dialogs\LoadInputDialog.xaml.cs">
+      <DependentUpon>LoadInputDialog.xaml</DependentUpon>
     </Compile>
     <Compile Include="Helpers\DrawingHelpers.cs" />
     <Compile Include="Helpers\MathHelpers.cs" />

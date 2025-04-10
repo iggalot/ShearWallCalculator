@@ -46,7 +46,7 @@ namespace calculator
             Update();
         }
 
-        public ShearWallCalculator_RigidDiaphragm(WallSystem walls, DiaphragmSystem diaphragm) : base(walls, diaphragm)
+        public ShearWallCalculator_RigidDiaphragm(WallSystem walls, DiaphragmSystem diaphragm, double v_x, double v_y) : base(walls, diaphragm, v_x, v_y)
         {
             // update the calculations
             Update();
