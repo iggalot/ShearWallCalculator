@@ -13,6 +13,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using static ShearWallVisualizer.Controls.DiaphragmDataControl;
 using static ShearWallVisualizer.Controls.WallDataControl;
@@ -35,6 +36,11 @@ namespace ShearWallVisualizer
         string selectedImageFilePath = null;
         double pixelScaleX = 1.0;  // the scale factor for pixels to real-world coords
         double pixelScaleY = 1.0;  // the scale factor for pixels to real-world coords
+
+
+        bool gridNeedsUpdate = true;
+        DrawingVisual gridVisual = null;
+        private RenderTargetBitmap gridBitmap;
 
 
         public EventHandler OnUpdated;  // the event that signals that the drawing has been updated -- controls will listen for this at the time they are created.
@@ -507,7 +513,7 @@ namespace ShearWallVisualizer
             m_layers.AddLayer(21, DrawText, ChangeType.Scroll);
             m_layers.AddLayer(30, DrawForeground);
 
-            m_layers.AddLayer(40, DrawVisualGrid);
+            m_layers.AddLayer(40, DrawGridInformation);
             m_layers.AddLayer(41, DrawShapes);
             m_layers.AddLayer(52, DrawCursor);
             m_layers.AddLayer(51, DrawPreview);
@@ -569,6 +575,68 @@ namespace ShearWallVisualizer
             Draw(ChangeType.Redraw);
         }
 
+        private void DrawGridInformation(DrawingContext ctx)
+        {
+            if (hideGrid)
+            {
+                return;  // Skip drawing if the grid is hidden
+            }
+
+            // Check if zoom or pan has changed
+            if (gridNeedsUpdate || gridVisual == null)
+            {
+                Console.WriteLine("Recalculating grid");
+
+                // Recreate the grid visual when necessary (zoom or pan has changed)
+                CreateGridVisual();
+                gridNeedsUpdate = false;
+            }
+
+            // Draw the cached grid bitmap
+            ctx.DrawImage(gridBitmap, new Rect(0, 0, dockpanel.ActualWidth, dockpanel.ActualHeight));
+
+
+            //// Draw the cached grid visual
+            //ctx.DrawDrawing(gridVisual.Drawing);
+        }
+
+        private void CreateGridVisual()
+        {
+
+
+            Console.WriteLine("Creating grid visual");
+            gridVisual = new DrawingVisual();
+
+            using (DrawingContext ctx = gridVisual.RenderOpen())
+            {
+                // Draw the grid in world coordinates
+                DrawVisualGrid(ctx);  // This method draws the gridlines
+            }
+
+            // Define the size of the render target bitmap (same size as your drawing area)
+            double width = dockpanel.ActualWidth;
+            double height = dockpanel.ActualHeight;
+
+            // Create a new RenderTargetBitmap with the same size as the drawing area
+            gridBitmap = new RenderTargetBitmap((int)width, (int)height, 96, 96, PixelFormats.Pbgra32);
+
+            // Create a DrawingVisual to draw the grid
+            DrawingVisual drawingVisual = new DrawingVisual();
+
+            using (DrawingContext ctx = drawingVisual.RenderOpen())
+            {
+                DrawVisualGrid(ctx);  // This is the method that draws the grid
+            }
+
+            // Render the DrawingVisual to the RenderTargetBitmap
+            gridBitmap.Render(drawingVisual);
+        }
+
+        private void InvalidateGrid()
+        {
+            // Mark the grid as needing an update (this should be called when zoom or pan changes)
+            gridNeedsUpdate = true;
+        }
 
 
 
@@ -1454,7 +1522,7 @@ namespace ShearWallVisualizer
         private void m_layers_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
         {
             // Determine the zoom factor
-            double zoomFactor = (e.Delta > 0) ? 1.1 : 0.9;
+            double zoomFactor = (e.Delta > 0) ? 1.2 : 0.8;
 
             // Get the mouse position_screen relative to the canvas
             Point mousePosition_screen = e.GetPosition(m_layers);
@@ -1478,6 +1546,9 @@ namespace ShearWallVisualizer
             tbZoom.Text = "Zoom: (" + zoomFactorX.ToString("F2") + ", " + zoomFactorY.ToString("F2") + ")";
             tbWorldCoords.Text = "World Coords: (" + afterZoom.X.ToString("F2") + ", " + afterZoom.Y.ToString("F2") + ")";  // changed this one too
             tbScreenCoords.Text = "Screen Coords: (" + mousePosition_screen.X.ToString("F2") + ", " + mousePosition_screen.Y.ToString("F2") + ")"; // changed this one too
+
+            // signal that the grid needs updating
+            gridNeedsUpdate = true;
 
             Draw(ChangeType.Redraw);
         }
