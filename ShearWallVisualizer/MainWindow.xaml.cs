@@ -254,7 +254,8 @@ namespace ShearWallVisualizer
         {
             ResetUIButtons();
             btnRigidityMode.BorderThickness = new Thickness(3);
-            btnRigidityMode.BorderBrush = new SolidColorBrush(Colors.Black);
+            btnRigidityMode.BorderBrush = new SolidColorBrush(Colors.White);
+            btnRigidityMode.Background = new SolidColorBrush(Colors.YellowGreen);
 
             currentMode = DrawMode.Line;  // Set to Line drawing mode
             MessageBox.Show("Line mode activated.");
@@ -265,7 +266,9 @@ namespace ShearWallVisualizer
         {
             ResetUIButtons();
             btnMassMode.BorderThickness = new Thickness(3);
-            btnMassMode.BorderBrush = new SolidColorBrush(Colors.Black);
+            btnMassMode.BorderBrush = new SolidColorBrush(Colors.White);
+            btnMassMode.Background = new SolidColorBrush(Colors.YellowGreen);
+
 
             currentMode = DrawMode.Rectangle;  // Set to Rectangle drawing mode
             MessageBox.Show("Rectangle mode activated.");
@@ -282,9 +285,8 @@ namespace ShearWallVisualizer
         }
         private void SetSnapMode()
         {
-            ResetUIButtons();
             btnSnapToNearest.BorderThickness = new Thickness(3);
-            btnSnapToNearest.BorderBrush = new SolidColorBrush(Colors.Black);
+            btnSnapToNearest.BorderBrush = new SolidColorBrush(Colors.White);
 
             snapMode = !snapMode;
             MessageBox.Show($"Snap Mode {(snapMode ? "Enabled" : "Disabled")}");
@@ -305,6 +307,8 @@ namespace ShearWallVisualizer
         private void ResetUIButtons()
         {
             btnRigidityMode.BorderThickness = new Thickness(0);
+            btnRigidityMode.Background = new SolidColorBrush(Colors.MediumBlue);
+            btnMassMode.Background = new SolidColorBrush(Colors.Red);
             btnMassMode.BorderThickness = new Thickness(0);
             btnSnapToNearest.BorderThickness = new Thickness(0);
 
@@ -1524,6 +1528,11 @@ namespace ShearWallVisualizer
             SetSnapMode();
         }
 
+        private void btnLoadEntry_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
+
         #endregion
 
         #region Menu Events
@@ -1558,20 +1567,6 @@ namespace ShearWallVisualizer
         {
             // You can refresh your data-bound controls here.
             MessageBox.Show("Refresh triggered!", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-
-        private void OpenImage_Click(object sender, RoutedEventArgs e)
-        {
-            OpenFileDialog openFileDialog = new OpenFileDialog();
-
-            // (Optional) Set filter for file extension and default file type
-            openFileDialog.Filter = "Image files (*.jpg; *.jpeg; *.png)|*.jpg;*.jpeg;*.png";
-            bool? result = openFileDialog.ShowDialog();
-
-            if (result == true)
-            {
-                LoadImageFile(openFileDialog.FileName);
-            }
         }
 
         private void LoadImageFile(string filename, double pixel_scale_x=1.0, double pixel_scale_y=1.0)
@@ -1746,5 +1741,7 @@ namespace ShearWallVisualizer
         }
 
         #endregion
+
+
     }
 }
