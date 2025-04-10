@@ -42,7 +42,7 @@
                     <Button Name="btnMassMode" Foreground="White" Background="Red" Margin="2" Opacity="0.75" FontWeight="Bold" Content="Diaphragm" Width="75" Height="25" Click="btnRectangleMode_Click"/>
                 </StackPanel>
                 <StackPanel>
-                    <Button Name="btnLoadEntry" HorizontalAlignment="Left" Content="LOADS" Width="50" Height="50" Click="btnOpenLoadDialog_Click"/>
+                    <Button Name="btnLoadEntry" HorizontalAlignment="Left" Content="LOADS" Width="50" Height="25" Click="btnOpenLoadDialog_Click"/>
                     <TextBlock x:Name="LoadInfoTextBlock" VerticalAlignment="Center" FontSize="14"/>
                 </StackPanel>
             </StackPanel>

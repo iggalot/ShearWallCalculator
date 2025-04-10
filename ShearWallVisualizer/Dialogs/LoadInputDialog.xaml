@@ -25,7 +25,7 @@
         <TextBlock Text="Load Magnitude (kips) X:" Grid.Row="0" Grid.Column="0" Margin="5"/>
         <TextBox x:Name="MagnitudeXBox" Grid.Row="0" Grid.Column="1" Margin="5"/>
 
-        <TextBlock Text=" (ft) X:" Grid.Row="1" Grid.Column="0" Margin="5"/>
+        <TextBlock Text="Location (ft) X:" Grid.Row="1" Grid.Column="0" Margin="5"/>
         <TextBox x:Name="LocationXBox" Grid.Row="1" Grid.Column="1" Margin="5"/>
 
         <!-- Direction Y -->

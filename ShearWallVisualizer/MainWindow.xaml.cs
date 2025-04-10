@@ -37,10 +37,12 @@ namespace ShearWallVisualizer
         double pixelScaleX = 1.0;  // the scale factor for pixels to real-world coords
         double pixelScaleY = 1.0;  // the scale factor for pixels to real-world coords
 
-
+        // grid stuff
         bool gridNeedsUpdate = true;
         DrawingVisual gridVisual = null;
         private RenderTargetBitmap gridBitmap;
+        double majorGridSpacing = 5.0;  // Major grid lines in world units
+        double minorGridSpacing = 1.0;  // Minor grid lines in world units
 
 
         public EventHandler OnUpdated;  // the event that signals that the drawing has been updated -- controls will listen for this at the time they are created.
@@ -67,8 +69,8 @@ namespace ShearWallVisualizer
 
         private double zoomFactorX = 1.0;
         private double zoomFactorY = 1.0;
-        private double panOffsetX = 0.0;
-        private double panOffsetY = 0.0;
+        private double panOffsetX = -25.0;
+        private double panOffsetY = -25.0;
 
         private Shape previewShape = null;
         private Shape cursorShape = null;
@@ -78,12 +80,11 @@ namespace ShearWallVisualizer
         private Point lastPanPoint;
         private bool isPanning = false;
 
-        private double worldWidth = 150;
-        private double worldHeight = 150;
+        private double worldWidth = 120;
+        private double worldHeight = 120;
 
 
-        double majorGridSpacing = 5.0;  // Major grid lines in world units
-        double minorGridSpacing = 1.0;  // Minor grid lines in world units
+
 
         private Point currentMouseScreenPosition = new Point(0, 0);
 
@@ -106,18 +107,15 @@ namespace ShearWallVisualizer
                 initialized = true;
 
                 ResetView(); // reset the view so that origin 0,0 is at lower left of the corner screen and the model is zoomed to fill the entire window
-                LoadRecentFilesMenu();
+                LoadRecentFilesMenu();  // recent files menu
+                CreateGridVisual();
+                CreateTabs();
+
+                Update();
 
                 Draw(ChangeType.Redraw);
+
             };
-
-            CreateTabs();
-
-            CreateWallDataControls();
-            CreateDiaphragmDataControls();
-
-            // update the visualizer and the calculator
-            Update();
         }
 
         private void CreateWallDataControls()
@@ -363,13 +361,11 @@ namespace ShearWallVisualizer
             {
                 SetDebugMode();
             }
-            else
+            else if (e.Key == Key.Z)
             {
-                 if (e.Key == Key.Z)
-                {
-                    ResetInputMode();
-                    ResetView();
-                }
+                ResetInputMode();
+                ResetView();
+                InvalidateGrid();
             }
 
             Draw(ChangeType.Redraw);
@@ -506,14 +502,10 @@ namespace ShearWallVisualizer
         // Create the layers
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
-            m_layers.AddLayer(0, DrawReferenceImage);
-            m_layers.AddLayer(5, DrawBackground, ChangeType.Resize);
-            m_layers.AddLayer(11, DrawBackgroundBlock);
-            m_layers.AddLayer(20, DrawStaticForeground);
-            m_layers.AddLayer(21, DrawText, ChangeType.Scroll);
-            m_layers.AddLayer(30, DrawForeground);
+            m_layers.AddLayer(0, DrawBackground, ChangeType.Resize);
+            m_layers.AddLayer(1, DrawGridInformation);
+            m_layers.AddLayer(2, DrawReferenceImage);
 
-            m_layers.AddLayer(40, DrawGridInformation);
             m_layers.AddLayer(41, DrawShapes);
             m_layers.AddLayer(52, DrawCursor);
             m_layers.AddLayer(51, DrawPreview);
@@ -583,10 +575,8 @@ namespace ShearWallVisualizer
             }
 
             // Check if zoom or pan has changed
-            if (gridNeedsUpdate || gridVisual == null)
+            if (gridNeedsUpdate || gridVisual == null || gridBitmap == null)
             {
-                Console.WriteLine("Recalculating grid");
-
                 // Recreate the grid visual when necessary (zoom or pan has changed)
                 CreateGridVisual();
                 gridNeedsUpdate = false;
@@ -602,17 +592,6 @@ namespace ShearWallVisualizer
 
         private void CreateGridVisual()
         {
-
-
-            Console.WriteLine("Creating grid visual");
-            gridVisual = new DrawingVisual();
-
-            using (DrawingContext ctx = gridVisual.RenderOpen())
-            {
-                // Draw the grid in world coordinates
-                DrawVisualGrid(ctx);  // This method draws the gridlines
-            }
-
             // Define the size of the render target bitmap (same size as your drawing area)
             double width = dockpanel.ActualWidth;
             double height = dockpanel.ActualHeight;
@@ -621,15 +600,15 @@ namespace ShearWallVisualizer
             gridBitmap = new RenderTargetBitmap((int)width, (int)height, 96, 96, PixelFormats.Pbgra32);
 
             // Create a DrawingVisual to draw the grid
-            DrawingVisual drawingVisual = new DrawingVisual();
+            gridVisual = new DrawingVisual();
 
-            using (DrawingContext ctx = drawingVisual.RenderOpen())
+            using (DrawingContext ctx = gridVisual.RenderOpen())
             {
-                DrawVisualGrid(ctx);  // This is the method that draws the grid
+                ConstructVisualGrid(ctx);  // This is the method that draws the grid
             }
 
             // Render the DrawingVisual to the RenderTargetBitmap
-            gridBitmap.Render(drawingVisual);
+            gridBitmap.Render(gridVisual);
         }
 
         private void InvalidateGrid()
@@ -642,26 +621,6 @@ namespace ShearWallVisualizer
 
 
         #region Drawing functions
-        private void DrawText(DrawingContext ctx)
-        {
-            //if (hide_Text) return;
-
-            //var pen = new Pen(Brushes.Black, 1);
-            //var rect = new Rect(20, m_scroll.Value, 15, 25);
-            //ctx.DrawRectangle(Brushes.Teal, pen, rect);
-
-            //var txt = new FormattedText(
-            //    "qazwsxedcrfvtgbyhnujmik,ol.p;/[']\r\nqwertyuiop\r\n\r\nasdfghjkl\r\nzxcvbnm\r\n0987654321",
-            //    CultureInfo.GetCultureInfo("en-us"),
-            //    FlowDirection.LeftToRight,
-            //    new Typeface("Consolas"),
-            //    14,
-            //    Brushes.White);
-
-            //ctx.DrawText(txt, new Point(20, m_scroll.Value));
-
-            //Log("text");
-        }
 
         private void DrawBackground(DrawingContext ctx)
         {
@@ -672,34 +631,11 @@ namespace ShearWallVisualizer
             Log("background");
         }
 
-        private void DrawBackgroundBlock(DrawingContext ctx)
-        {
-            //var pen = new Pen(Brushes.DarkOliveGreen, 1);
-            //var rect = new Rect(20, 60, 200, 50);
-            //ctx.DrawRoundedRectangle(Brushes.DarkOliveGreen, pen, rect, 50, 50);
-
-            //Log("background block");
-        }
-
-        private void DrawForeground(DrawingContext ctx)
-        {
-            //var pen = new Pen(Brushes.Black, 1);
-            //var rect = new Rect(20, 20, 50, 55);
-            //ctx.DrawRectangle(Brushes.Red, pen, rect);
-
-            //Log("foreground");
-        }
-
-        private void DrawStaticForeground(DrawingContext ctx)
-        {
-            //var pen = new Pen(Brushes.Black, 1);
-            //var rect = new Rect(70, 20, 100, 100);
-            //ctx.DrawRectangle(Brushes.Blue, pen, rect);
-
-            //Log("foreground");
-        }
-
-        private void DrawVisualGrid(DrawingContext ctx)
+        /// <summary>
+        /// Creates the grid in screen coordinates.  Called by CreateGridVisual which stores it in a bitmap.
+        /// </summary>
+        /// <param name="ctx"></param>
+        private void ConstructVisualGrid(DrawingContext ctx)
         {
             double major_gridline_thickness = 0.5;
             double minor_gridline_thickness = 0.25;
@@ -890,6 +826,10 @@ namespace ShearWallVisualizer
             }
         }
 
+        /// <summary>
+        /// Draws the preview shapes which constructing walls or diaphragms
+        /// </summary>
+        /// <param name="ctx"></param>
         private void DrawPreview(DrawingContext ctx)
         {
             // Do we have a preview shape?
@@ -1197,7 +1137,6 @@ namespace ShearWallVisualizer
             m_layers.currentReferenceImageLayer.TargetRect = imageScreenRect;
             m_layers.currentReferenceImageLayer.SetPosition(p4_screen.X, p4_screen.Y);
         }
-
         private void DrawBracedWallLines(DrawingContext ctx)
         {
             // for east west walls
@@ -1547,8 +1486,7 @@ namespace ShearWallVisualizer
             tbWorldCoords.Text = "World Coords: (" + afterZoom.X.ToString("F2") + ", " + afterZoom.Y.ToString("F2") + ")";  // changed this one too
             tbScreenCoords.Text = "Screen Coords: (" + mousePosition_screen.X.ToString("F2") + ", " + mousePosition_screen.Y.ToString("F2") + ")"; // changed this one too
 
-            // signal that the grid needs updating
-            gridNeedsUpdate = true;
+            InvalidateGrid();               // signal that the grid needs updating
 
             Draw(ChangeType.Redraw);
         }
