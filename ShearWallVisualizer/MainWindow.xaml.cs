@@ -1,6 +1,9 @@
 ﻿using calculator;
 using Microsoft.Win32;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using ShearWallCalculator;
+using ShearWallCalculator.Interfaces;
 using ShearWallVisualizer.Controls;
 using ShearWallVisualizer.Dialogs;
 using System;
@@ -15,6 +18,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using System.Xml.Linq;
 using static ShearWallVisualizer.Controls.DiaphragmDataControl;
 using static ShearWallVisualizer.Controls.WallDataControl;
 
@@ -22,7 +26,12 @@ namespace ShearWallVisualizer
 {
     public partial class MainWindow : Window
     {
-        public ShearWallCalculator_RigidDiaphragm Calculator { get; set; } = new ShearWallCalculator_RigidDiaphragm();
+        public ShearWallCalculatorBase Calculator = new ShearWallCalculatorBase();
+        private DiaphragmSystem diaphragmSystem = new DiaphragmSystem();
+        private WallSystem wallSystem = new WallSystem();
+
+        private JsonDrawingSerializer _serializer = new JsonDrawingSerializer();
+
 
         /// <summary>
         /// Load data for the calculator
@@ -63,9 +72,6 @@ namespace ShearWallVisualizer
 
         private Point? startPoint_world = null;  // the first click in world coordinates
         private Point? endPoint_world = null;    // the second click in world coordinates
-
-        private DiaphragmSystem diaphragmSystem = new DiaphragmSystem();
-        private WallSystem wallSystem = new WallSystem();
 
         private double zoomFactorX = 1.0;
         private double zoomFactorY = 1.0;
@@ -177,38 +183,52 @@ namespace ShearWallVisualizer
                 var xbar = Calculator._wall_system.X_bar_walls[id];
                 var ybar = Calculator._wall_system.Y_bar_walls[id];
 
-                // Must check validity of numbers since some walls may be in X direction and others in Y direction
-                double vi_x = double.NaN;
-                if(Calculator.DirectShear_X.ContainsKey(id) is true)
+                if (Calculator is ShearWallCalculator_RigidDiaphragm)
                 {
-                    vi_x = Calculator.DirectShear_X[id];
-                }
+                    ShearWallCalculator_RigidDiaphragm calc = Calculator as ShearWallCalculator_RigidDiaphragm;
+                    // Must check validity of numbers since some walls may be in X direction and others in Y direction
+                    double vi_x = double.NaN;
+                    if (calc.DirectShear_X.ContainsKey(id) is true)
+                    {
+                        vi_x = calc.DirectShear_X[id];
+                    }
 
-                var vi_y = double.NaN;
-                if (Calculator.DirectShear_Y.ContainsKey(id) is true)
-                {
-                    vi_y = Calculator.DirectShear_Y[id];
-                }
+                    var vi_y = double.NaN;
+                    if (calc.DirectShear_Y.ContainsKey(id) is true)
+                    {
+                        vi_y = calc.DirectShear_Y[id];
+                    }
 
-                var v_ecc = double.NaN;
-                if (Calculator.EccentricShear.ContainsKey(id) is true)
-                {
-                    v_ecc = Calculator.EccentricShear[id];
-                }
+                    var v_ecc = double.NaN;
+                    if (calc.EccentricShear.ContainsKey(id) is true)
+                    {
+                        v_ecc = calc.EccentricShear[id];
+                    }
 
-                var v_tot = double.NaN;
-                if (Calculator.TotalWallShear.ContainsKey(id) is true)
-                {
-                    v_tot = Calculator.TotalWallShear[id];
-                }
+                    var v_tot = double.NaN;
+                    if (calc.TotalWallShear.ContainsKey(id) is true)
+                    {
+                        v_tot = calc.TotalWallShear[id];
+                    }
 
-                ShearWallResultsControl control = new ShearWallResultsControl(id, rigidity, xbar, ybar, vi_x, vi_y, v_ecc, v_tot);
-                sp_CalcPanel.Children.Add(control);
+                    ShearWallResultsControl control = new ShearWallResultsControl(id, rigidity, xbar, ybar, vi_x, vi_y, v_ecc, v_tot);
+                    sp_CalcPanel.Children.Add(control);
+                }
             }
         }
 
         public void Update()
         {
+            if(Calculator is null)
+            {
+                // TODO figure out how to handle this case.
+            }
+
+            wallSystem = Calculator._wall_system;
+            diaphragmSystem = Calculator._diaphragm_system;
+            Calculator = new ShearWallCalculator_RigidDiaphragm(wallSystem, diaphragmSystem, currentMagX, currentMagY);
+            Calculator.Update();
+
             // clear the tabs
             sp_DimPanel_Diaphragms.Children.Clear();
             sp_DimPanel_Walls.Children.Clear();
@@ -219,7 +239,6 @@ namespace ShearWallVisualizer
             CreateDiaphragmDataControls();
 
             // update the calculator
-            Calculator = new ShearWallCalculator_RigidDiaphragm(wallSystem, diaphragmSystem, currentMagX, currentMagY);
             if(Calculator.IsValidForCalculation is true)
             { 
                 CreateCalculationResultsControls();
@@ -1779,5 +1798,71 @@ namespace ShearWallVisualizer
         {
             LoadInfoTextBlock.Text = $"X: {currentMagX} @ {currentLocX} | Y: {currentMagY} @ {currentLocY}";
         }
+
+        //// Event handler to open the test window when the button is clicked
+        private void btnUnionTest_Click(object sender, RoutedEventArgs e)
+        {
+        //    // Create and show the test window
+        //    RectangleUnionTest testWindow = new RectangleUnionTest();
+        //    testWindow.Show();
+        }
+
+        private void MenuItem_Save_Click(object sender, RoutedEventArgs e)
+        {
+            var saveFileDialog = new SaveFileDialog
+            {
+                Filter = "JSON Drawing (*.json)|*.json",
+                FileName = "drawing.json"
+            };
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                _serializer.Save(saveFileDialog.FileName, Calculator);
+                MessageBox.Show("Drawing saved!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+
+        private void MenuItem_Load_Click(object sender, RoutedEventArgs e)
+        {
+            var openFileDialog = new OpenFileDialog
+            {
+                Filter = "JSON Drawing (*.json)|*.json"
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                JsonSerializerSettings _settings = new JsonSerializerSettings();
+
+                var json = _serializer.Load(openFileDialog.FileName);
+
+                // Parse just enough to extact a fieldJObject obj = JObject.Parse(json);
+                JObject obj = JObject.Parse(json);
+
+                // Get the calculator type value
+                string calculatorType = (string)obj["CalculatorType"];
+
+                // Load the appropriate calculator
+                if (calculatorType == "Rigid Diaphragm")
+                {
+                    var rigid_calc = JsonConvert.DeserializeObject<ShearWallCalculator_RigidDiaphragm>(json, _settings);
+                    Calculator = new ShearWallCalculator_RigidDiaphragm(rigid_calc);
+                    OnUpdated?.Invoke(this, EventArgs.Empty);
+                }
+                else if (calculatorType == "Flexible Diaphragm")
+                {
+                    var flex_calc = JsonConvert.DeserializeObject<ShearWallCalculator_FlexibleDiaphragm>(json, _settings);
+                    Calculator = new ShearWallCalculator_FlexibleDiaphragm(flex_calc);
+                    OnUpdated?.Invoke(this, EventArgs.Empty);
+
+
+                }
+
+
+                Update();
+                MessageBox.Show("Drawing loaded!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+
+
     }
 }

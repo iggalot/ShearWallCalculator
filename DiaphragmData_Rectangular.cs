@@ -1,5 +1,7 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Windows;
+using System.Windows.Media;
 
 namespace ShearWallCalculator
 {
@@ -12,9 +14,13 @@ namespace ShearWallCalculator
     /// <summary>
     /// Diaphragms are retangular areas defined by four points that contain a mass element in the structure
     /// </summary>
-    public class DiaphragmData_Rectangular
+    [JsonObject(MemberSerialization.OptIn)]
+    public class DiaphragmData_Rectangular : DrawableObject
     {
+        [JsonProperty]
         public DiaphragmTypes DiaphragmType = DiaphragmTypes.DIAPHRAGM_RIGID;
+
+        public override string Type => "Diaphragm";
 
         /// Rectangular region defined by P1, P2, P3, P4
         /// 
@@ -22,9 +28,14 @@ namespace ShearWallCalculator
         /// |       |
         /// P1 --- P2 
 
+
+        [JsonProperty]
         public System.Windows.Point P1 { get; set; } = new System.Windows.Point();
+        [JsonProperty]
         public System.Windows.Point P2 { get; set; } = new System.Windows.Point();
+        [JsonProperty]
         public System.Windows.Point P3 { get; set; } = new System.Windows.Point();
+        [JsonProperty]
         public System.Windows.Point P4 { get; set; } = new System.Windows.Point();
 
 
@@ -39,6 +50,10 @@ namespace ShearWallCalculator
         // Vertical dimension of the diaphragm
         public float HorizDim_Y { get; set; } = 0.0f;
 
+        public DiaphragmData_Rectangular()
+        {
+            
+        }
         /// <summary>
         /// Default constructor
         ///              

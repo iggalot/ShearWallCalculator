@@ -1,7 +1,10 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using ShearWallCalculator;
+using System;
 using System.Drawing;
 using System.IO;
 using System.Numerics;
+using System.Windows.Media;
 
 namespace calculator
 {
@@ -27,23 +30,32 @@ namespace calculator
     /// <summary>
     /// Base class for all wall objects
     /// </summary>
-    public class WallData
+    [JsonObject(MemberSerialization.OptIn)]
+    public class WallData : DrawableObject
     {
-        public int Id {get; set;}
+        public override string Type => "Wall";
+        [JsonProperty]
         public System.Windows.Point Start { get; set; } // start point of wall...bottommost point at one end
+        [JsonProperty]
         public System.Windows.Point End { get; set; } // end point of wall...bottommost point at other end
         public System.Windows.Point Center { get => GetCenterPoint(); } // center point of wall
         public double WallLength { get => GetLength(); }  // length of the wall
+        [JsonProperty]
         public double WallHeight { get; set; } = 9;  // height of wall feet.
         public double WallRigidity { get => GetRigidity(); } // rigidity in direction of the wall
+        [JsonProperty]
         public WallTypes WallType { get; set; } = WallTypes.Type_01;
-
+        [JsonProperty]
         public WallDirs WallDir { get; set; }
         public Vector2 Dir { get => GetUnitDirection(); }
 
         public double Rxr { get => ComputeFirstMomentOfRigidity_X(); }  // first moment of rigidity for horizontal walls
         public double Ryr { get => ComputeFirstMomentOfRigidity_Y(); }  // first moment of rigidity for vertical walls
 
+        public WallData()
+        {
+                
+        }
         /// <summary>
         /// Default constructor
         /// </summary>
@@ -165,6 +177,11 @@ namespace calculator
             return 1.0f / (0.4f * (WallHeight / WallLength) * (WallHeight / WallLength) * (WallHeight / WallLength) + 0.3f * (WallHeight / WallLength)); ;
         }
 
+        public void Update()
+        {
+            // Update stuff for walls here.
+        }
+
         /// <summary>
         /// Compute first y-moment of rigidity about global origin (0,0)
         /// </summary>
@@ -190,22 +207,11 @@ namespace calculator
         public string DisplayInfo()
         {
             string str = "";
-            str += "\nWall ID: " + Id + "   WallDir: " + WallDir;
+            str += "\nWallDir: " + WallDir;
             str += "\nStart: " + Start.X + ", " + Start.Y + "  End: " + End.X + ", " + End.Y + "   UnitVec: <" + Dir.X + ", " + Dir.Y +">";
             str += "\nLength: " + WallLength + "  Height: " + WallHeight + "  Rigidity: " + WallRigidity;
             str += "\nRxr: " + Rxr + "  Ryr: " + Ryr;
             return str;
-        }
-
-        public void WriteToFile(string filename)
-        {
-            string str = "";
-            str += Id.ToString() + " " + Start.X.ToString() + " " + Start.Y.ToString() + " " + End.X.ToString() + " " + End.Y.ToString() + " " + WallHeight.ToString() + " " + WallDir.ToString();
-
-            using (StreamWriter sw = File.AppendText(filename))
-            {
-                sw.WriteLine(str);
-            }
         }
     }
 }

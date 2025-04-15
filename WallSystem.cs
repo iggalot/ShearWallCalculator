@@ -1,4 +1,5 @@
 ﻿using calculator;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 
@@ -16,37 +17,51 @@ namespace ShearWallCalculator
 
 
         // sorted collection of walls in East West direction (horizontal on screen)
+        [JsonIgnore]
         public Dictionary<int, WallData> EW_Walls { get; set; } = new Dictionary<int, WallData>();
 
         // sorted collection of walls in North South direction (vertical on screen)
+        [JsonIgnore]
+
         public Dictionary<int, WallData> NS_Walls { get; set; } = new Dictionary<int, WallData>();
 
         // braced wall line groups
+        [JsonIgnore]
         public BracedWallLine BracedWallGroups_EW { get; set; }
+        [JsonIgnore]
         public BracedWallLine BracedWallGroups_NS { get; set; }
 
         // distance from center of wall to center of rigidity in y-direction
+        [JsonIgnore]
         public Dictionary<int, double> Y_bar_walls { get; set; } = new Dictionary<int, double>();
 
         // distance from center of wall to center of rigidity in x-direction
+        [JsonIgnore]
         public Dictionary<int, double> X_bar_walls { get; set; } = new Dictionary<int, double>();
 
 
+        [JsonIgnore]
         public double TotalRigidity_X { get; set; } = 0;  // total rigidity in x-direction
+        [JsonIgnore]
         public double TotalRigidity_Y { get; set; } = 0;  // total rigidity in y-direction
 
         // center or rigidity
+        [JsonIgnore]
         public System.Windows.Point CtrRigidity { get; set; } = new System.Windows.Point(double.NaN, double.NaN);
 
         // moments of inertia for the shear wall groups
+        [JsonIgnore]
         public double InertiaXX { get; set; } // inertia of horizontal walls about center of rigidity
+        [JsonIgnore]
         public double InertiaYY { get; set; } // inertia of vertical walls about center of rigidity
+        [JsonIgnore]
         public double InertiaPolar { get; set; } // polar moment of all walls about center of rigidity
 
 
         /// <summary>
         /// Returns the minimum (leftmost) X value of all wall points
         /// </summary>
+        [JsonIgnore]
         public System.Windows.Point X_MIN
         {
             get
@@ -66,9 +81,11 @@ namespace ShearWallCalculator
                 return minpt;
             }
         }
+
         /// <summary>
         /// Returns a point with the maximum (rightmost) X value of all diaphragm points
         /// </summary>
+        [JsonIgnore]
         public System.Windows.Point X_MAX
         {
             get
@@ -91,6 +108,7 @@ namespace ShearWallCalculator
         /// <summary>
         /// Returns the minimum (bottom) Y value of all wall points
         /// </summary>
+        [JsonIgnore]
         public System.Windows.Point Y_MIN
         {
             get
@@ -113,6 +131,7 @@ namespace ShearWallCalculator
         /// <summary>
         /// Returns the maximum (top) Y value of all diaphragm points
         /// </summary>
+        [JsonIgnore]
         public System.Windows.Point Y_MAX
         {
             get
@@ -146,6 +165,11 @@ namespace ShearWallCalculator
 
         public void Update()
         {
+            foreach (WallData item in _walls.Values)
+            {
+                item.Update();
+            }
+
             // clear the current calculator
             EW_Walls.Clear();
             NS_Walls.Clear();

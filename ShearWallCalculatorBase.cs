@@ -1,21 +1,15 @@
 ﻿using calculator;
-using System;
-using System.Data;
-using System.Media;
-using System.Security.Cryptography.X509Certificates;
+using Newtonsoft.Json;
 using System.Windows;
 
 namespace ShearWallCalculator
 {
     public class ShearWallCalculatorBase
     {
+    
+        public string CalculatorType { get; }
         public WallSystem _wall_system = new WallSystem();
         public DiaphragmSystem _diaphragm_system = new DiaphragmSystem();
-
-        public System.Windows.Point Boundary_Max_Point { get => FindMinBoundaryPt(); }
-        public System.Windows.Point Boundary_Min_Point { get => FindMaxBoundaryPt(); }
-
-
 
         /// <summary>
         /// Loads and eccentricty values 
@@ -29,6 +23,7 @@ namespace ShearWallCalculator
         /// mainlay at CtrMass and CtrRigidity to make sure both are valid numbers
         /// and not NaN or Infinity
         /// </summary>
+        [JsonIgnore]
         public bool IsValidForCalculation { get => Validate(); }
 
 

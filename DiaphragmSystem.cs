@@ -1,6 +1,6 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
-using System.Windows;
 
 namespace ShearWallCalculator
 {
@@ -9,16 +9,19 @@ namespace ShearWallCalculator
     /// </summary>
     public class DiaphragmSystem
     {
-        // A collection of all walls defined in the system
+        // A collection of all diaphragms defined in the system
         public Dictionary<int, DiaphragmData_Rectangular> _diaphragms { get; set; } = new Dictionary<int, DiaphragmData_Rectangular>(); // collection of walls>
 
         // center of mass of the diaphragm composite region
+        [JsonIgnore]
         public System.Windows.Point CtrMass { get; set; } = new System.Windows.Point(double.NaN, double.NaN);
+        [JsonIgnore]
         public float TotalArea { get; set; } = 0.0f;
 
         /// <summary>
         /// Returns the minimum (leftmost) X value of all diaphragm points
         /// </summary>
+        [JsonIgnore]
         public System.Windows.Point X_MIN 
         { 
             get
@@ -45,6 +48,7 @@ namespace ShearWallCalculator
         /// <summary>
         /// Returns the maximum (rightmost) X value of all diaphragm points
         /// </summary>
+        [JsonIgnore]
         public System.Windows.Point X_MAX
         {
             get
@@ -71,6 +75,7 @@ namespace ShearWallCalculator
         /// <summary>
         /// Returns the minimum (bottom) Y value of all diaphragm points
         /// </summary>
+        [JsonIgnore]
         public System.Windows.Point Y_MIN
         {
             get
@@ -97,6 +102,7 @@ namespace ShearWallCalculator
         /// <summary>
         /// Returns the maximum (top) Y value of all diaphragm points
         /// </summary>
+        [JsonIgnore]
         public System.Windows.Point Y_MAX
         {
             get
@@ -135,6 +141,11 @@ namespace ShearWallCalculator
         /// </summary>
         public void Update()
         {
+            foreach (DiaphragmData_Rectangular item in _diaphragms.Values)
+            {
+                item.Update();
+            }
+
             // Recompute the center of mass  and the total area for the system
             ComputeCenterOfMassAndTotalArea();
         }

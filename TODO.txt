@@ -32,13 +32,13 @@ Grid snapping toggle
 Resize diaphragm and line objects by clicking on them and dragging?c
 
 Show data by hovering or selecting walls or diaphragms?
-Brace wall line grouping of individial walls -- group by max spacing
+*  Brace wall line grouping of individial walls -- group by max spacing
 -- sorting of EW walls by Y in table
 -- sorting of NS walls
 
 hovering over control -- highlight wall or diaphragm on canvas?
 
-Input 1:1 image overlay as background of Canvas?
+*  Input 1:1 image overlay as background of Canvas?
 
 flexible diaphragm calculations
 

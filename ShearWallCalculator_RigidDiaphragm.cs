@@ -1,4 +1,5 @@
-﻿using ShearWallCalculator;
+﻿using Newtonsoft.Json;
+using ShearWallCalculator;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -10,31 +11,39 @@ namespace calculator
     /// +x direction is to the right
     /// +y direction is up
     /// </summary>
+    
     public class ShearWallCalculator_RigidDiaphragm : ShearWallCalculatorBase
     {
+        public new string CalculatorType { get => "Rigid Diaphragm"; }
 
         public const string FILENAME = "results.txt";
-
 
         /// <summary>
         /// eccentricities
         /// TODO:  CODE requires minimum of 5% of largest dimension of building as a minimum for the eccentricity
         /// </summary>
+        [JsonIgnore]
         private double ecc_x = 0; // eccentricity in x direction (feet) measured from center of rigidity to center of mass
+        [JsonIgnore]
         private double ecc_y = 0; // eccentricity in y direction (feet) measured from center of rigidity to center of mass
 
+        [JsonIgnore]
         public double Mt_comb { get; set; } = 0; // moment due to eccentric loading  "+ = CCW, "-" = CW
 
         // shear force from direct shear in X-direction -- resistance at base of diaphragm at top of walls
+        [JsonIgnore]
         public Dictionary<int, double> DirectShear_X { get; set; } = new Dictionary<int, double>();
 
         // shear force from direct shear in Y-direction -- resistance at base of diaphragm at top of walls
+        [JsonIgnore]
         public Dictionary<int, double> DirectShear_Y { get; set; } = new Dictionary<int, double>();
 
         // shear force in line of wall from eccentric loading, Mr -- resistance at base of diaphragm at top of walls
+        [JsonIgnore]
         public Dictionary<int, double> EccentricShear { get; set; } = new Dictionary<int, double>();
 
         // dictionary containing the total shear acting on a wall -- resistance at nase pf diaphragm at top of walls
+        [JsonIgnore]
         public Dictionary<int, double> TotalWallShear { get; set; } = new Dictionary<int, double>();
 
         /// <summary>
@@ -51,6 +60,20 @@ namespace calculator
             // update the calculations
             Update();
         }
+
+        /// <summary>
+        /// copy constructor
+        /// </summary>
+        /// <param name="copy_calc"></param>
+        public ShearWallCalculator_RigidDiaphragm(ShearWallCalculator_RigidDiaphragm copy_calc)
+        {
+            _diaphragm_system = copy_calc._diaphragm_system;
+            _wall_system = copy_calc._wall_system;
+
+            Update();
+
+        }
+
 
         /// <summary>
         /// Function to update calculations.  Should be called everytime data is added, removed, or changed.
@@ -290,29 +313,5 @@ namespace calculator
                 TotalWallShear.Add(id, result.Value + EccentricShear[id]);
             }
         }
-
-        /// <summary>
-        /// Routine to write out wall data to the file
-        /// </summary>
-        /// <param name="filename"></param>
-        public void WriteToFile(string filename)
-        {
-            foreach (var wall in _wall_system.EW_Walls)
-            {
-                wall.Value.WriteToFile(FILENAME);
-            }
-            foreach (var wall in _wall_system.NS_Walls)
-            {
-                wall.Value.WriteToFile(FILENAME);
-            }
-        }
-
-        public void ReadFromFile(string filename)
-        {
-            throw new NotImplementedException();
-        }
-
-
-
     }
 }
