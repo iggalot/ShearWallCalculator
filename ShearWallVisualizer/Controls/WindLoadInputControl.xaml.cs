@@ -23,11 +23,24 @@ namespace ShearWallVisualizer.Controls
             List<WindPressureResult> results = new List<WindPressureResult>();
             foreach (var kvp in pressures)
             {
-                results.Add(new WindPressureResult
+                WindPressureResult wpr = new WindPressureResult();
+                wpr.Surface = kvp.Key;
+                wpr.Pressure = Math.Round(kvp.Value, 2);
+
+                if (kvp.Key == "Windward Wall")
                 {
-                    Surface = kvp.Key,
-                    Pressure = Math.Round(kvp.Value, 2)
-                });
+                    wpr.Cp = 0.8;
+                }
+                else if (kvp.Key == "Leeward Wall")
+                {
+                    wpr.Cp = WindLoadCalculator.GetCpLeeward(parameters);
+                }
+                else if (kvp.Key == "Sidewall")
+                {
+                    wpr.Cp = WindLoadCalculator.GetCpSidewall(parameters); ;
+                }
+
+                results.Add(wpr);
             }
 
             tbl_qh.Text = Math.Round(WindLoadCalculator.CalculateWindPressure(parameters), 2).ToString();
@@ -97,6 +110,8 @@ namespace ShearWallVisualizer.Controls
     public class WindPressureResult
     {
         public string Surface { get; set; }
+        public double Cp { get; set; }
+
         public double Pressure { get; set; }
     }
 
@@ -106,6 +121,7 @@ namespace ShearWallVisualizer.Controls
         public string ZoneName { get; set; }
         public double StartDistance { get; set; }
         public double EndDistance { get; set; }
+        public double Cp { get; set; }
         public double Pressure { get; set; }
     }
 
@@ -120,7 +136,7 @@ namespace ShearWallVisualizer.Controls
             double Kd = p.Kd;
             double Kzt = p.Kzt;
             double I = p.ImportanceFactor;
-            double Kz = GetKzApprox(z, p.ExposureCategory);
+            double Kz = GetKz(z, p.ExposureCategory);
             double qz = 0.00256 * Kz * Kzt * Kd * V * V * I;
             double GCpi = GetGCpi(p.EnclosureClassification);
 
@@ -159,7 +175,8 @@ namespace ShearWallVisualizer.Controls
                     ZoneName = "Windward Roof",
                     StartDistance = 0,
                     EndDistance = L,
-                    Pressure = Math.Round(qz * -0.9, 2) // Cp for windward roof
+                    Pressure = Math.Round(qz * -0.9, 2), // Cp for windward roof
+                    Cp = GetCpRoofWindward(p)
                 });
 
                 // Leeward Roof (single pressure)
@@ -168,7 +185,9 @@ namespace ShearWallVisualizer.Controls
                     ZoneName = "Leeward Roof",
                     StartDistance = 0,
                     EndDistance = L,
-                    Pressure = Math.Round(qz * 0.3, 2) // Cp for leeward roof
+                    Pressure = Math.Round(qz * 0.3, 2), // Cp for leeward roof
+                    Cp = GetCpRoofLeeward(p)
+
                 });
             }
             // Parallel to Wind (Multiple zones like flat roof)
@@ -180,7 +199,8 @@ namespace ShearWallVisualizer.Controls
                     ZoneName = "Zone 3 (WW Edge)",
                     StartDistance = 0,
                     EndDistance = a,
-                    Pressure = Math.Round(qz * -1.3, 2) // Cp for edge zone
+                    Pressure = Math.Round(qz * -1.3, 2), // Cp for edge zone
+                    Cp = 0.0
                 });
 
                 // Zone 2: From 'a' to '2a' (Transition zone)
@@ -189,7 +209,8 @@ namespace ShearWallVisualizer.Controls
                     ZoneName = "Zone 2 (Transition)",
                     StartDistance = a,
                     EndDistance = 2 * a,
-                    Pressure = Math.Round(qz * -1.0, 2) // Cp for transition zone
+                    Pressure = Math.Round(qz * -1.0, 2), // Cp for transition zone
+                    Cp = 0.0
                 });
 
                 // Zone 1: From '2a' to end of building (Interior zone)
@@ -198,7 +219,8 @@ namespace ShearWallVisualizer.Controls
                     ZoneName = "Zone 1 (LW Edge)",
                     StartDistance = 2 * a,
                     EndDistance = L,
-                    Pressure = Math.Round(qz * -0.9, 2) // Cp for interior zone
+                    Pressure = Math.Round(qz * -0.9, 2), // Cp for interior zone
+                    Cp = 0.0
                 });
             }
 
@@ -213,7 +235,7 @@ namespace ShearWallVisualizer.Controls
             double Kd = p.Kd;
             double Kzt = p.Kzt;
             double I = p.ImportanceFactor;
-            double Kz = GetKzApprox(z, p.ExposureCategory);
+            double Kz = GetKz(z, p.ExposureCategory);
             double qh = 0.00256 * Kz * Kzt * Kd * V * V * I;
             return qh;
         }
@@ -228,18 +250,88 @@ namespace ShearWallVisualizer.Controls
         }
 
         // Get Kz approximation based on building height and exposure category
-        private static double GetKzApprox(double h, string exposure)
+        private static double GetKz(double z, string exposure)
         {
-            if (exposure == "B") return h <= 30 ? 0.62 : 0.70;
-            if (exposure == "C") return h <= 30 ? 0.76 : 0.85;
-            if (exposure == "D") return h <= 30 ? 0.91 : 1.0;
-            return 0.85;
+            double zg, alpha;
+
+            switch (exposure)
+            {
+                case "B":
+                    zg = 1200;
+                    alpha = 7.0;
+                    break;
+                case "C":
+                    zg = 900;
+                    alpha = 9.5;
+                    break;
+                case "D":
+                    zg = 700;
+                    alpha = 11.5;
+                    break;
+                default:
+                    zg = 900;
+                    alpha = 9.5;
+                    break;
+            }
+
+            z = Math.Max(z, 15); // Minimum height for Kz is 15 ft
+            return 2.01 * Math.Pow(z / zg, 2.0 / alpha);
         }
 
-        // Cp values for different roof zones
-        private static double GetCpLeeward(WindLoadParameters p) => -0.3;
-        private static double GetCpSidewall(WindLoadParameters p) => -0.7;
-        private static double GetCpRoofWindward(WindLoadParameters p) => -0.9;
-        private static double GetCpRoofLeeward(WindLoadParameters p) => -0.3;
+        // Cp values for different roof zones and surfaces
+        public static double GetCpLeeward(WindLoadParameters p)
+        {
+            double length = p.BuildingLength;
+            double width = p.BuildingWidth;
+
+            // Ensure ratio is length over width (L/B) ≥ 1
+            double ratio = length >= width ? length / width : width / length;
+
+            // Approximate Cp values based on ASCE 7-16 Figure 27.4-1
+            if (ratio <= 1.0)
+                return -0.3;
+            else if (ratio <= 2.0)
+                return -0.5;
+            else
+                return -0.6;
+        }
+        public static double GetCpSidewall(WindLoadParameters p) => -0.7;
+        public static double GetCpRoofWindward(WindLoadParameters p)
+        {
+            double pitch = p.RoofPitch;
+            string ridgeDir = p.RidgeDirection;
+
+            if (pitch <= 10.0) // Low slope, treated like flat
+                return -0.9;
+
+            if (ridgeDir == "Perpendicular to Wind")
+            {
+                if (pitch <= 20.0) return -0.9;
+                return -1.1;
+            }
+            else // Parallel to Wind
+            {
+                // Use zone pressures based on ASCE 7-16 for flat roof approximation
+                return -0.5;
+            }
+        }
+        public static double GetCpRoofLeeward(WindLoadParameters p)
+        {
+            double pitch = p.RoofPitch;
+            string ridgeDir = p.RidgeDirection;
+
+            if (pitch <= 10.0 || ridgeDir == "Parallel to Wind")
+            {
+                // Flat roof or parallel ridge — zoned analysis should be used
+                return -0.3; // base value, but actual implementation should use zone Cp
+            }
+            else if (ridgeDir == "Perpendicular to Wind")
+            {
+                if (pitch <= 20.0) return -0.3;
+                return -0.5; // steeper roofs have more suction on leeward face
+            }
+
+            return -0.3; // fallback
+        }
     }
 }

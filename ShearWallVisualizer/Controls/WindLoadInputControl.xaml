@@ -141,6 +141,7 @@
                   IsReadOnly="True">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Zone" Binding="{Binding ZoneName}" Width="100"/>
+                    <DataGridTextColumn Header="Cp" Binding="{Binding Cp, StringFormat=N2}" Width="50"/>
                     <DataGridTextColumn Header="Start (ft)" Binding="{Binding StartDistance, StringFormat=N2}" Width="50"/>
                     <DataGridTextColumn Header="End (ft)" Binding="{Binding EndDistance, StringFormat=N2}" Width="50"/>
                     <DataGridTextColumn Header="Pressure (psf)" Binding="{Binding Pressure, StringFormat=N2}" Width="*"/>
