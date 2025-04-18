@@ -91,6 +91,14 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Controls\WindLoadResultsControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Controls\WindLoadInputControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Dialogs\EnterMeasurementDialog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -120,6 +128,12 @@
     </Compile>
     <Compile Include="Controls\ShearWallResultsControl.xaml.cs">
       <DependentUpon>ShearWallResultsControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\WindLoadResultsControl.xaml.cs">
+      <DependentUpon>WindLoadResultsControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\WindLoadInputControl.xaml.cs">
+      <DependentUpon>WindLoadInputControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="Dialogs\EnterMeasurementDialog.xaml.cs">
       <DependentUpon>EnterMeasurementDialog.xaml</DependentUpon>
