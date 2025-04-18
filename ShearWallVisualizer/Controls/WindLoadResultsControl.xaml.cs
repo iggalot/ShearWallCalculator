@@ -34,6 +34,7 @@ namespace ShearWallVisualizer.Controls
             tbl_theta.Text = Math.Round(parameters.RoofPitch, 2).ToString();
             tbl_hOverL.Text = Math.Round(parameters.BuildingHeight / parameters.BuildingLength, 2).ToString();
             tbl_h.Text = Math.Round(parameters.BuildingHeight, 2).ToString();
+            tbl_windOrientation.Text = parameters.RidgeDirection;
 
 
 
@@ -150,61 +151,62 @@ namespace ShearWallVisualizer.Controls
                 if (kvp.Key == "Windward Roof 0->h/2")
                 {
                     wpr.Start = 0;
-                    wpr.End = parameters.BuildingLength / 2;
+                    wpr.End = parameters.BuildingHeight / 2;
                     wpr.CpA = Math.Round(cases.Cp_CaseA_Windward, 2);
                     wpr.CpB = Math.Round(cases.Cp_CaseB_Windward, 2);
                 }
                 else if (kvp.Key == "Windward Roof h/2->h")
                 {
-                    wpr.Start = parameters.BuildingLength / 2;
-                    wpr.End = parameters.BuildingLength;
+                    wpr.Start = parameters.BuildingHeight / 2;
+                    wpr.End = parameters.BuildingHeight;
                     wpr.CpA = Math.Round(cases.Cp_CaseA_Windward, 2);
                     wpr.CpB = Math.Round(cases.Cp_CaseB_Windward, 2);
                 }
                 else if (kvp.Key == "Windward Roof h->2h")
                 {
-                    wpr.Start = parameters.BuildingLength;
-                    wpr.End = 2 * parameters.BuildingLength;
+                    wpr.Start = parameters.BuildingHeight;
+                    wpr.End = 2 * parameters.BuildingHeight;
                     wpr.CpA = Math.Round(cases.Cp_CaseA_Windward, 2);
                     wpr.CpB = Math.Round(cases.Cp_CaseB_Windward, 2);
                 }
-                else if (kvp.Key == "Windward Roof h->end")
+                else if (kvp.Key == "Windward Roof 2h->end")
                 {
-                    wpr.Start = parameters.BuildingLength;
-                    wpr.End = parameters.BuildingLength * 2;
+                    wpr.Start = 2 * parameters.BuildingHeight;
+                    wpr.End = parameters.BuildingLength;
                     wpr.CpA = Math.Round(cases.Cp_CaseA_Windward, 2);
                     wpr.CpB = Math.Round(cases.Cp_CaseB_Windward, 2);
                 }
 
-                else if (kvp.Key == "Leeward Roof 0->h/2")
+                else if (kvp.Key == "Windward Roof")
                 {
-                    wpr.Start = 0;
+                    wpr.Start = 0.0;
                     wpr.End = parameters.BuildingLength / 2;
-                    wpr.CpA = Math.Round(cases.Cp_CaseA_Leeward, 2);
-                    wpr.CpB = Math.Round(cases.Cp_CaseB_Leeward, 2);
+                    wpr.CpA = Math.Round(cases.Cp_CaseA_Windward, 2);
+                    wpr.CpB = Math.Round(cases.Cp_CaseB_Windward, 2);
                 }
-                else if (kvp.Key == "Leeward Roof h/2->h")
+                else if (kvp.Key == "Leeward Roof")
                 {
                     wpr.Start = parameters.BuildingLength / 2;
                     wpr.End = parameters.BuildingLength;
                     wpr.CpA = Math.Round(cases.Cp_CaseA_Leeward, 2);
                     wpr.CpB = Math.Round(cases.Cp_CaseB_Leeward, 2);
                 }
-                else if (kvp.Key == "Leeward Roof h->2h")
+                 else
                 {
-                    wpr.Start = parameters.BuildingLength;
-                    wpr.End = 2 * parameters.BuildingLength;
-                    wpr.CpA = Math.Round(cases.Cp_CaseA_Leeward, 2);
-                    wpr.CpB = Math.Round(cases.Cp_CaseB_Leeward, 2);
+                    wpr.Start = 0;
+                    wpr.End = 0;
+                    wpr.CpA = 0;
+                    wpr.CpB = 0;
                 }
-                else if (kvp.Key == "Leeward Roof h->end")
-                {
-                    wpr.Start = parameters.BuildingLength;
-                    wpr.End = parameters.BuildingLength * 2;
-                    wpr.CpA = Math.Round(cases.Cp_CaseA_Leeward, 2);
-                    wpr.CpB = Math.Round(cases.Cp_CaseB_Leeward, 2);
 
+                // Adjust the end point if it's off the building length
+                if (wpr.End > parameters.BuildingLength)
+                {
+                    wpr.End = parameters.BuildingLength;
                 }
+
+
+
                 wpr.GCpi_A = +1.0 * WindLoadCalculator.GetGCpiMagnitude(parameters.EnclosureClassification);
                 wpr.GCpi_B = -1.0 * WindLoadCalculator.GetGCpiMagnitude(parameters.EnclosureClassification);
                 var Kzh = Math.Round(WindLoadCalculator.GetKz(parameters.BuildingHeight, parameters.ExposureCategory), 2);
@@ -328,7 +330,7 @@ namespace ShearWallVisualizer.Controls
                         zones.Add("Windward Roof 0->h/2", 0);
                         zones.Add("Windward Roof h/2->h", 0);
                         zones.Add("Windward Roof h->2h", 0);
-                        zones.Add("Windward Roof h->end", 0);
+                        zones.Add("Windward Roof 2h->end", 0);
                     }
                 }
                 else
@@ -343,35 +345,24 @@ namespace ShearWallVisualizer.Controls
                 {
                     // Windward Roof (single pressure)
                     zones.Add("Windward Roof 0->h/2", 0);
-                    zones.Add("Leeward Roof 0->h/2", 0);
-
                 }
                 else if (L > 0.5 * h && L <= h)
                 {
                     zones.Add("Windward Roof 0->h/2", 0);
                     zones.Add("Windward Roof h/2->h", 0);
-                    zones.Add("Leeward Roof 0->h/2", 0);
-                    zones.Add("Leeward Roof h/2->h", 0);
                 }
                 else if (L > h && L <= 2.0 * h)
                 {
                     zones.Add("Windward Roof 0->h/2", 0);
                     zones.Add("Windward Roof h/2->h", 0);
                     zones.Add("Windward Roof h->2h", 0);
-                    zones.Add("Leeward Roof 0->h/2", 0);
-                    zones.Add("Leeward Roof h/2->h", 0);
-                    zones.Add("Leeward Roof h->2h", 0);
                 }
                 else
                 {
                     zones.Add("Windward Roof 0->h/2", 0);
                     zones.Add("Windward Roof h/2->h", 0);
                     zones.Add("Windward Roof h->2h", 0);
-                    zones.Add("Windward Roof h->end", 0);
-                    zones.Add("Leeward Roof 0->h/2", 0);
-                    zones.Add("Leeward Roof h/2->h", 0);
-                    zones.Add("Leeward Roof h->2h", 0);
-                    zones.Add("Leeward Roof h->end", 0);
+                    zones.Add("Windward Roof 2h->end", 0);
                 }
             }
 
@@ -458,7 +449,7 @@ namespace ShearWallVisualizer.Controls
                 { "Windward Roof 0->h/2", -0.9 },
                 { "Windward Roof h/2->h", -0.9 },
                 { "Windward Roof h->2h", -0.5 },
-                { "Windward Roof h->end", -0.3 }
+                { "Windward Roof 2h->end", -0.3 }
             };
 
             Dictionary<string, double> RoofCoeff_hOVerL_0_5_CaseB_Windward = new Dictionary<string, double>
@@ -466,7 +457,7 @@ namespace ShearWallVisualizer.Controls
                 { "Windward Roof 0->h/2", -0.18 },
                 { "Windward Roof h/2->h", -0.18 },
                 { "Windward Roof h->2h", -0.18 },
-                { "Windward Roof h->end", -0.18 }
+                { "Windward Roof 2h->end", -0.18 }
             };
 
             Dictionary<string, double> RoofCoeff_hOVerL_1_0_CaseA_Windward = new Dictionary<string, double>
@@ -474,7 +465,7 @@ namespace ShearWallVisualizer.Controls
                 { "Windward Roof 0->h/2", -1.3 },
                 { "Windward Roof h/2->h", -0.7 },
                 { "Windward Roof h->2h", -0.7 },
-                { "Windward Roof h->end", -0.7 }
+                { "Windward Roof 2h->end", -0.7 }
             };
 
             Dictionary<string, double> RoofCoeff_hOVerL_1_0_CaseB_Windward = new Dictionary<string, double>
@@ -482,7 +473,7 @@ namespace ShearWallVisualizer.Controls
                 { "Windward Roof 0->h/2", -0.18 },
                 { "Windward Roof h/2->h", -0.18 },
                 { "Windward Roof h->2h", -0.18 },
-                { "Windward Roof h->end", -0.18 }
+                { "Windward Roof 2h->end", -0.18 }
             };
 
             double CpA, CpB;
@@ -497,8 +488,8 @@ namespace ShearWallVisualizer.Controls
             {
                 // Interpolate Cp values for hOverL range (0.5 to 1.0)
                 double t = (hOverL - 0.5) / (1.0 - 0.5);
-                CpA = InterpolateCp(RoofCoeff_hOVerL_0_5_CaseA_Windward[zone_name], RoofCoeff_hOVerL_1_0_CaseA_Windward[zone_name], 0.5, 1.0, t);
-                CpB = InterpolateCp(RoofCoeff_hOVerL_0_5_CaseB_Windward[zone_name], RoofCoeff_hOVerL_1_0_CaseB_Windward[zone_name], 0.5, 1.0, t);
+                CpA = RoofCoeff_hOVerL_0_5_CaseA_Windward.ContainsKey(zone_name) ? InterpolateCp(RoofCoeff_hOVerL_0_5_CaseA_Windward[zone_name], RoofCoeff_hOVerL_1_0_CaseA_Windward[zone_name], 0.5, 1.0, t) : 0.0;
+                CpB = RoofCoeff_hOVerL_0_5_CaseA_Windward.ContainsKey(zone_name) ? InterpolateCp(RoofCoeff_hOVerL_0_5_CaseB_Windward[zone_name], RoofCoeff_hOVerL_1_0_CaseB_Windward[zone_name], 0.5, 1.0, t) : 0.0;
             }
             else
             {

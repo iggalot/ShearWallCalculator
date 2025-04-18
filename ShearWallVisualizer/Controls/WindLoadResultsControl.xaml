@@ -34,6 +34,10 @@
                 <TextBlock Text="h (ft) = " VerticalAlignment="Center"/>
                 <TextBlock Name="tbl_h" Width="150" Text=""/>
             </StackPanel>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                <TextBlock Text="Wind Orientation = " VerticalAlignment="Center"/>
+                <TextBlock Name="tbl_windOrientation" Width="150" Text=""/>
+            </StackPanel>
             <!-- Display Results of MWFRS Calculation -->
             <TextBlock Text="Results (MWFRS)" Margin="10"/>
             <DataGrid x:Name="WallResultsDataGrid" 
