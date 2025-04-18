@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -46,83 +47,83 @@ namespace ShearWallVisualizer.Controls
         private static List<WindPressurResult_Wall> CalculateWallPressureResults(WindLoadParameters parameters, Dictionary<string, double> wall_zones)
         {
             List<WindPressurResult_Wall> wall_results = new List<WindPressurResult_Wall>();
+
+            // Helper method to calculate common values for pressure calculation
+            double CalculatePressure(double qz, double qh, double Cp, double GCpi, double GustFactor)
+            {
+                return  Math.Round(qz * GustFactor * Cp + GCpi * qh, 2);
+            }
+
+            // Loop through wall zones and calculate pressures
             foreach (var kvp in wall_zones)
             {
                 WindPressurResult_Wall wpr = new WindPressurResult_Wall();
                 wpr.Surface = kvp.Key;
 
-                if (kvp.Key == "Windward Wall - z=0ft")
-                {
-                    wpr.Cp = WindLoadCalculator.GetCpWindwardwall(parameters);
-                    wpr.GCpi_A = -1.0 * WindLoadCalculator.GetGCpiMagnitude(parameters.EnclosureClassification);
-                    wpr.GCpi_B = +1.0 * WindLoadCalculator.GetGCpiMagnitude(parameters.EnclosureClassification);
-                    wpr.z = 0;
-                    wpr.Kz = Math.Round(WindLoadCalculator.GetKz(0.0, parameters.ExposureCategory), 2);
-                    var Kzh = Math.Round(WindLoadCalculator.GetKz(parameters.BuildingHeight, parameters.ExposureCategory), 2);
-                    wpr.qz = Math.Round(0.00256 * wpr.Kz * parameters.Kzt * parameters.Kd * parameters.WindSpeed * parameters.WindSpeed * parameters.ImportanceFactor, 2);
-                    var qh = Math.Round(0.00256 * Kzh * parameters.Kzt * parameters.Kd * parameters.WindSpeed * parameters.WindSpeed * parameters.ImportanceFactor, 2);
-                    wpr.Pressure_A = Math.Round(wpr.qz * parameters.GustFactor * wpr.Cp + wpr.GCpi_A * qh, 2);
-                    wpr.Pressure_B = Math.Round(wpr.qz * parameters.GustFactor * wpr.Cp + wpr.GCpi_B * qh, 2);
-                }
-                else if (kvp.Key == "Windward Wall - z=15ft")
-                {
-                    wpr.Cp = WindLoadCalculator.GetCpWindwardwall(parameters);
-                    wpr.GCpi_A = -1.0 * WindLoadCalculator.GetGCpiMagnitude(parameters.EnclosureClassification);
-                    wpr.GCpi_B = +1.0 * WindLoadCalculator.GetGCpiMagnitude(parameters.EnclosureClassification);
-                    wpr.z = 15;
-                    wpr.Kz = Math.Round(WindLoadCalculator.GetKz(15.0, parameters.ExposureCategory), 2);
-                    var Kzh = Math.Round(WindLoadCalculator.GetKz(parameters.BuildingHeight, parameters.ExposureCategory), 2);
-                    wpr.qz = Math.Round(0.00256 * wpr.Kz * parameters.Kzt * parameters.Kd * parameters.WindSpeed * parameters.WindSpeed * parameters.ImportanceFactor, 2);
-                    var qh = Math.Round(0.00256 * Kzh * parameters.Kzt * parameters.Kd * parameters.WindSpeed * parameters.WindSpeed * parameters.ImportanceFactor, 2);
-                    wpr.Pressure_A = Math.Round(wpr.qz * parameters.GustFactor * wpr.Cp + wpr.GCpi_A * qh, 2);
-                    wpr.Pressure_B = Math.Round(wpr.qz * parameters.GustFactor * wpr.Cp + wpr.GCpi_B * qh, 2);
+                // Get the correct Cp value based on the surface type
+                wpr.GCpi_A = -1.0 * WindLoadCalculator.GetGCpiMagnitude(parameters.EnclosureClassification); // balloon case
+                wpr.GCpi_B = +1.0 * WindLoadCalculator.GetGCpiMagnitude(parameters.EnclosureClassification); // internal suction case
 
-                }
-                else if (kvp.Key == "Windward Wall - z=h")
+                switch (kvp.Key)
                 {
-                    wpr.Cp = WindLoadCalculator.GetCpWindwardwall(parameters);
-                    wpr.GCpi_A = -1.0 * WindLoadCalculator.GetGCpiMagnitude(parameters.EnclosureClassification);
-                    wpr.GCpi_B = +1.0 * WindLoadCalculator.GetGCpiMagnitude(parameters.EnclosureClassification);
-                    wpr.z = parameters.BuildingHeight;
-                    wpr.Kz = Math.Round(WindLoadCalculator.GetKz(parameters.BuildingHeight, parameters.ExposureCategory), 2);
-                    var Kzh = Math.Round(WindLoadCalculator.GetKz(parameters.BuildingHeight, parameters.ExposureCategory), 2);
-                    wpr.qz = Math.Round(0.00256 * wpr.Kz * parameters.Kzt * parameters.Kd * parameters.WindSpeed * parameters.WindSpeed * parameters.ImportanceFactor, 2);
-                    var qh = Math.Round(0.00256 * Kzh * parameters.Kzt * parameters.Kd * parameters.WindSpeed * parameters.WindSpeed * parameters.ImportanceFactor, 2);
-                    wpr.Pressure_A = Math.Round(wpr.qz * parameters.GustFactor * wpr.Cp + wpr.GCpi_A * qh, 2);
-                    wpr.Pressure_B = Math.Round(wpr.qz * parameters.GustFactor * wpr.Cp + wpr.GCpi_B * qh, 2);
-                }
-                else if (kvp.Key == "Leeward Wall")
-                {
-                    wpr.Cp = WindLoadCalculator.GetCpLeewardWall(parameters);
-                    wpr.GCpi_A = +1.0 * WindLoadCalculator.GetGCpiMagnitude(parameters.EnclosureClassification);
-                    wpr.GCpi_B = -1.0 * WindLoadCalculator.GetGCpiMagnitude(parameters.EnclosureClassification);
-                    wpr.z = parameters.BuildingHeight;
-                    wpr.Kz = Math.Round(WindLoadCalculator.GetKz(parameters.BuildingHeight, parameters.ExposureCategory), 2);
-                    var Kzh = Math.Round(WindLoadCalculator.GetKz(parameters.BuildingHeight, parameters.ExposureCategory), 2);
-                    wpr.qz = Math.Round(0.00256 * wpr.Kz * parameters.Kzt * parameters.Kd * parameters.WindSpeed * parameters.WindSpeed * parameters.ImportanceFactor, 2);
-                    var qh = Math.Round(0.00256 * Kzh * parameters.Kzt * parameters.Kd * parameters.WindSpeed * parameters.WindSpeed * parameters.ImportanceFactor, 2);
-                    wpr.Pressure_A = Math.Round(wpr.qz * parameters.GustFactor * wpr.Cp + wpr.GCpi_A * qh, 2);
-                    wpr.Pressure_B = Math.Round(wpr.qz * parameters.GustFactor * wpr.Cp + wpr.GCpi_B * qh, 2);
-                }
-                else if (kvp.Key == "Sidewall")
-                {
-                    wpr.Cp = WindLoadCalculator.GetCpSidewall(parameters);
-                    wpr.GCpi_A = +1.0 * WindLoadCalculator.GetGCpiMagnitude(parameters.EnclosureClassification);
-                    wpr.GCpi_B = -1.0 * WindLoadCalculator.GetGCpiMagnitude(parameters.EnclosureClassification);
-                    wpr.z = parameters.BuildingHeight;
-                    wpr.Kz = Math.Round(WindLoadCalculator.GetKz(parameters.BuildingHeight, parameters.ExposureCategory), 2);
-                    var Kzh = Math.Round(WindLoadCalculator.GetKz(parameters.BuildingHeight, parameters.ExposureCategory), 2);
-                    wpr.qz = Math.Round(0.00256 * wpr.Kz * parameters.Kzt * parameters.Kd * parameters.WindSpeed * parameters.WindSpeed * parameters.ImportanceFactor, 2);
-                    var qh = Math.Round(0.00256 * Kzh * parameters.Kzt * parameters.Kd * parameters.WindSpeed * parameters.WindSpeed * parameters.ImportanceFactor, 2);
-                    wpr.Pressure_A = Math.Round(wpr.qz * parameters.GustFactor * wpr.Cp + wpr.GCpi_A * qh, 2);
-                    wpr.Pressure_B = Math.Round(wpr.qz * parameters.GustFactor * wpr.Cp + wpr.GCpi_B * qh, 2);
+                    case "Windward Wall - z=0ft":
+                        wpr.z = 0;
+                        wpr.Cp = WindLoadCalculator.GetCpWindwardwall(parameters);
+                        break;
+                    case "Windward Wall - z=15ft":
+                        wpr.z = 15;
+                        wpr.Cp = WindLoadCalculator.GetCpWindwardwall(parameters);
+                        break;
+                    case "Windward Wall - z=h":
+                        wpr.z = parameters.BuildingHeight;
+                        wpr.Cp = WindLoadCalculator.GetCpWindwardwall(parameters);
+                        break;
+
+                    case "Leeward Wall":
+                        // swap these values since the balloon case is additive for leeward and sidewalls
+                        double temp = wpr.GCpi_A;
+                        wpr.GCpi_A = wpr.GCpi_B;
+                        wpr.GCpi_B = temp;
+
+                        wpr.z = parameters.BuildingHeight;
+                        wpr.Cp = WindLoadCalculator.GetCpLeewardWall(parameters);
+                        break;
+
+                    case "Sidewall":
+                        // swap these values since the balloon case is additive for leeward and sidewalls
+                        double temp2 = wpr.GCpi_A;
+                        wpr.GCpi_A = wpr.GCpi_B;
+                        wpr.GCpi_B = temp2;
+
+                        wpr.z = parameters.BuildingHeight;
+                        wpr.Cp = WindLoadCalculator.GetCpSidewall(parameters);
+                        break;
+
+                    default:
+                        wpr.GCpi_A = 0;
+                        wpr.GCpi_B = 0;
+                        wpr.z = 0;
+                        wpr.Cp = 0; // Default value, can be adjusted based on use case
+                        break;
                 }
 
+                // Common values
+                wpr.Kz = Math.Round(WindLoadCalculator.GetKz(wpr.z, parameters.ExposureCategory), 2);
+                var Kzh = Math.Round(WindLoadCalculator.GetKz(parameters.BuildingHeight, parameters.ExposureCategory), 2);
+                wpr.qz = Math.Round(0.00256 * wpr.Kz * parameters.Kzt * parameters.Kd * parameters.WindSpeed * parameters.WindSpeed * parameters.ImportanceFactor, 2);
+                var qh = Math.Round(0.00256 * Kzh * parameters.Kzt * parameters.Kd * parameters.WindSpeed * parameters.WindSpeed * parameters.ImportanceFactor, 2);
+
+                // Calculate pressures using common logic
+                wpr.Pressure_A = CalculatePressure(wpr.qz, qh, wpr.Cp, wpr.GCpi_A, parameters.GustFactor);
+                wpr.Pressure_B = CalculatePressure(wpr.qz, qh, wpr.Cp, wpr.GCpi_B, parameters.GustFactor);
+
+                // Add the result to the list
                 wall_results.Add(wpr);
             }
 
             return wall_results;
         }
+
         private static List<WindPressurResult_Roof> CalculateRoofPressureResults(WindLoadParameters parameters, Dictionary<string, double> roof_zones)
         {
             List<WindPressurResult_Roof> roof_results = new List<WindPressurResult_Roof>();
@@ -451,116 +452,62 @@ namespace ShearWallVisualizer.Controls
         {
             double hOverL = h / L;
 
-            Dictionary<string, double> RoofCoeff_hOVerL_0_5_CaseA_Windward = new Dictionary<string, double>();
-            RoofCoeff_hOVerL_0_5_CaseA_Windward.Add("Windward Roof 0->h/2", -0.9);
-            RoofCoeff_hOVerL_0_5_CaseA_Windward.Add("Windward Roof h/2->h", -0.9);
-            RoofCoeff_hOVerL_0_5_CaseA_Windward.Add("Windward Roof h->2h", -0.5);
-            RoofCoeff_hOVerL_0_5_CaseA_Windward.Add("Windward Roof h->end", -0.3);
+            // Define the base Cp values for the roof coefficients at different hOverL ranges
+            Dictionary<string, double> RoofCoeff_hOVerL_0_5_CaseA_Windward = new Dictionary<string, double>
+            {
+                { "Windward Roof 0->h/2", -0.9 },
+                { "Windward Roof h/2->h", -0.9 },
+                { "Windward Roof h->2h", -0.5 },
+                { "Windward Roof h->end", -0.3 }
+            };
 
-            Dictionary<string, double> RoofCoeff_hOVerL_0_5_CaseB_Windward = new Dictionary<string, double>();
-            RoofCoeff_hOVerL_0_5_CaseB_Windward.Add("Windward Roof 0->h/2", -0.18);
-            RoofCoeff_hOVerL_0_5_CaseB_Windward.Add("Windward Roof h/2->h", -0.18);
-            RoofCoeff_hOVerL_0_5_CaseB_Windward.Add("Windward Roof h->2h", -0.18);
-            RoofCoeff_hOVerL_0_5_CaseB_Windward.Add("Windward Roof h->end", -0.18);
+            Dictionary<string, double> RoofCoeff_hOVerL_0_5_CaseB_Windward = new Dictionary<string, double>
+            {
+                { "Windward Roof 0->h/2", -0.18 },
+                { "Windward Roof h/2->h", -0.18 },
+                { "Windward Roof h->2h", -0.18 },
+                { "Windward Roof h->end", -0.18 }
+            };
 
-            Dictionary<string, double> RoofCoeff_hOVerL_1_0_CaseA_Windward = new Dictionary<string, double>();
-            RoofCoeff_hOVerL_1_0_CaseA_Windward.Add("Windward Roof 0->h/2", -1.3);
-            RoofCoeff_hOVerL_1_0_CaseA_Windward.Add("Windward Roof h/2->h", -0.7);
-            RoofCoeff_hOVerL_1_0_CaseA_Windward.Add("Windward Roof h->2h", -0.7);
-            RoofCoeff_hOVerL_1_0_CaseA_Windward.Add("Windward Roof h->end", -0.7);
+            Dictionary<string, double> RoofCoeff_hOVerL_1_0_CaseA_Windward = new Dictionary<string, double>
+            {
+                { "Windward Roof 0->h/2", -1.3 },
+                { "Windward Roof h/2->h", -0.7 },
+                { "Windward Roof h->2h", -0.7 },
+                { "Windward Roof h->end", -0.7 }
+            };
 
-            Dictionary<string, double> RoofCoeff_hOVerL_1_0_CaseB_Windward = new Dictionary<string, double>();
-            RoofCoeff_hOVerL_1_0_CaseB_Windward.Add("Windward Roof 0->h/2", -0.18);
-            RoofCoeff_hOVerL_1_0_CaseB_Windward.Add("Windward Roof h/2->h", -0.18);
-            RoofCoeff_hOVerL_1_0_CaseB_Windward.Add("Windward Roof h->2h", -0.18);
-            RoofCoeff_hOVerL_1_0_CaseB_Windward.Add("Windward Roof h->end", -0.18);
+            Dictionary<string, double> RoofCoeff_hOVerL_1_0_CaseB_Windward = new Dictionary<string, double>
+            {
+                { "Windward Roof 0->h/2", -0.18 },
+                { "Windward Roof h/2->h", -0.18 },
+                { "Windward Roof h->2h", -0.18 },
+                { "Windward Roof h->end", -0.18 }
+            };
 
             double CpA, CpB;
+
+            // Interpolation based on hOverL values (only)
             if (hOverL <= 0.5)
             {
-                switch (zone_name)
-                {
-                    case "Windward Roof 0->h/2":
-                        CpA = -0.9;
-                        CpB = -0.18;
-                        break;
-                    case "Windward Roof h/2->h":
-                        CpA = -0.9;
-                        CpB = -0.18;
-                        break;
-                    case "Windward Roof h->2h":
-                        CpA = -0.5;
-                        CpB = -0.18;
-                        break;
-
-                    case "Windward Roof h->end":
-                        CpA = -0.3;
-                        CpB = -0.18;
-                        break;
-                    default:
-                        CpA = 0.0;
-                        CpB = 0.0;
-                        break;
-                }
+                CpA = RoofCoeff_hOVerL_0_5_CaseA_Windward.ContainsKey(zone_name) ? RoofCoeff_hOVerL_0_5_CaseA_Windward[zone_name] : 0.0;
+                CpB = RoofCoeff_hOVerL_0_5_CaseB_Windward.ContainsKey(zone_name) ? RoofCoeff_hOVerL_0_5_CaseB_Windward[zone_name] : 0.0;
             }
             else if (hOverL > 0.5 && hOverL <= 1.0)
             {
-                // Interpolate for h/L
-                double caseA, caseB;
+                // Interpolate Cp values for hOverL range (0.5 to 1.0)
                 double t = (hOverL - 0.5) / (1.0 - 0.5);
-                switch (zone_name)
-                {
-                    case "Windward Roof 0->h/2":
-                        CpA = -0.9 +  (-0.4 * t);
-                        CpB = -0.18;
-                        break;
-                    case "Windward Roof h/2->h":
-                        CpA = -0.9 + (0.2 * t);
-                        CpB = -0.18;
-                        break;
-                    case "Windward Roof h->2h":
-                        CpA = -0.5 + (-0.2 * t);
-                        CpB = -0.18;
-                        break;
-                    case "Windward Roof h->end":
-                        CpA = -0.3 + (-0.4 * t);
-                        CpB = -0.18;
-                        break;
-                    default:
-                        CpA = 0.0;
-                        CpB = 0.0;
-                        break;
-                }
+                CpA = InterpolateCp(RoofCoeff_hOVerL_0_5_CaseA_Windward[zone_name], RoofCoeff_hOVerL_1_0_CaseA_Windward[zone_name], 0.5, 1.0, t);
+                CpB = InterpolateCp(RoofCoeff_hOVerL_0_5_CaseB_Windward[zone_name], RoofCoeff_hOVerL_1_0_CaseB_Windward[zone_name], 0.5, 1.0, t);
             }
             else
             {
-                switch (zone_name)
-                {
-                    case "Windward Roof 0->h/2":
-                        CpA = -1.3;
-                        CpB = -0.18;
-                        break;
-                    case "Windward Roof h/2->h":
-                        CpA = -0.7;
-                        CpB = -0.18;
-                        break;
-                    case "Windward Roof h->2h":
-                        CpA = -0.7;
-                        CpB = -0.18;
-                        break;
-
-                    case "Windward Roof h->end":
-                        CpA = -0.7;
-                        CpB = -0.18;
-                        break;
-                    default:
-                        CpA = 0.0;
-                        CpB = 0.0;
-                        break;
-                }
+                CpA = RoofCoeff_hOVerL_1_0_CaseA_Windward.ContainsKey(zone_name) ? RoofCoeff_hOVerL_1_0_CaseA_Windward[zone_name] : 0.0;
+                CpB = RoofCoeff_hOVerL_1_0_CaseB_Windward.ContainsKey(zone_name) ? RoofCoeff_hOVerL_1_0_CaseB_Windward[zone_name] : 0.0;
             }
 
-            return new RoofCpCases(CpA, CpB, 0, 0); // 0 here because no leeward surface on flat roof
+            // Return the Cp values wrapped in RoofCpCases (Leeward values are not relevant for flat roofs)
+            return new RoofCpCases(CpA, CpB, 0, 0);  // No leeward surfaces on a flat roof
         }
 
         /// <summary>
@@ -573,278 +520,107 @@ namespace ShearWallVisualizer.Controls
         /// <returns></returns>
         public static RoofCpCases CalculateRoofCp_PerpendicularRidge(double h, double L, double theta)
         {
-            // Case A -- Figure 27.4.1 -- topmost values 
-            Dictionary<double, double> RoofCoeff_hOVerL_0_25_CaseA_Windward = new Dictionary<double, double>();
-            RoofCoeff_hOVerL_0_25_CaseA_Windward.Add(10, -0.7);
-            RoofCoeff_hOVerL_0_25_CaseA_Windward.Add(15, -0.5);
-            RoofCoeff_hOVerL_0_25_CaseA_Windward.Add(20, -0.3);
-            RoofCoeff_hOVerL_0_25_CaseA_Windward.Add(25, -0.2);
-            RoofCoeff_hOVerL_0_25_CaseA_Windward.Add(30, -0.2);
-            RoofCoeff_hOVerL_0_25_CaseA_Windward.Add(35, 0.0);
-            RoofCoeff_hOVerL_0_25_CaseA_Windward.Add(45, 0.0);
-            RoofCoeff_hOVerL_0_25_CaseA_Windward.Add(60, 0.0);
-            RoofCoeff_hOVerL_0_25_CaseA_Windward.Add(90, 0.0);
+            // Define roof coefficients for different cases and wind directions
+            var roofCoefficients = new Dictionary<string, Dictionary<double, Dictionary<double, double>>>
+            {
+                {
+                    "CaseA_Windward", new Dictionary<double, Dictionary<double, double>>()
+                    {
+                        { 0.25, new Dictionary<double, double> { { 10, -0.7 }, { 15, -0.5 }, { 20, -0.3 }, { 25, -0.2 }, { 30, -0.2 }, { 35, 0.0 }, { 45, 0.0 }, { 60, 0.0 }, { 90, 0.0 } } },
+                        { 0.5, new Dictionary<double, double> { { 10, -0.9 }, { 15, -0.7 }, { 20, -0.4 }, { 25, -0.3 }, { 30, -0.2 }, { 35, -0.2 }, { 45, 0.0 }, { 60, 0.0 }, { 90, 0.0 } } },
+                        { 1.0, new Dictionary<double, double> { { 10, -1.3 }, { 15, -1.0 }, { 20, -0.7 }, { 25, -0.5 }, { 30, -0.3 }, { 35, -0.2 }, { 45, 0.0 }, { 60, 0.0 }, { 90, 0.0 } } }
+                    }
+                },
+                {
+                    "CaseA_Leeward", new Dictionary<double, Dictionary<double, double>>()
+                    {
+                        { 0.25, new Dictionary<double, double> { { 10, -0.3 }, { 15, -0.5 }, { 20, -0.6 } } },
+                        { 0.5, new Dictionary<double, double> { { 10, -0.5 }, { 15, -0.5 }, { 20, -0.6 } } },
+                        { 1.0, new Dictionary<double, double> { { 10, -0.7 }, { 15, -0.6 }, { 20, -0.6 } } }
+                    }
+                },
+                {
+                    "CaseB_Windward", new Dictionary<double, Dictionary<double, double>>()
+                    {
+                        { 0.25, new Dictionary<double, double> { { 10, -0.18 }, { 15, 0.0 }, { 20, 0.2 }, { 25, 0.3 }, { 30, 0.3 }, { 35, 0.4 }, { 45, 0.4 }, { 60, 0.01 }, { 90, 0.01 } } },
+                        { 0.5, new Dictionary<double, double> { { 10, -0.18 }, { 15, -0.18 }, { 20, 0.0 }, { 25, 0.2 }, { 30, 0.2 }, { 35, 0.3 }, { 45, 0.4 }, { 60, 0.01 }, { 90, 0.01 } } },
+                        { 1.0, new Dictionary<double, double> { { 10, -0.18 }, { 15, -0.18 }, { 20, -0.18 }, { 25, 0.0 }, { 30, 0.2 }, { 35, 0.2 }, { 45, 0.3 }, { 60, 0.01 }, { 90, 0.01 } } }
+                    }
+                },
+                {
+                    "CaseB_Leeward", new Dictionary<double, Dictionary<double, double>>()
+                    {
+                        { 0.25, new Dictionary<double, double> { { 10, -0.3 }, { 15, -0.5 }, { 20, -0.6 }, { 25, -0.6 }, { 30, -0.6 }, { 35, -0.6 }, { 45, -0.6 }, { 60, -0.6 }, { 90, -0.6 } } },
+                        { 0.5, new Dictionary<double, double> { { 10, -0.5 }, { 15, -0.5 }, { 20, -0.6 }, { 25, -0.6 }, { 30, -0.6 }, { 35, -0.6 }, { 45, -0.6 }, { 60, -0.6 }, { 90, -0.6 } } },
+                        { 1.0, new Dictionary<double, double> { { 10, -0.7 }, { 15, -0.6 }, { 20, -0.6 }, { 25, -0.6 }, { 30, -0.6 }, { 35, -0.6 }, { 45, -0.6 }, { 60, -0.6 }, { 90, -0.6 } } }
+                    }
+                }
+            };
 
-
-            Dictionary<double, double> RoofCoeff_hOVerL_0_50_CaseA_Windward = new Dictionary<double, double>();
-            RoofCoeff_hOVerL_0_50_CaseA_Windward.Add(10, -0.9);
-            RoofCoeff_hOVerL_0_50_CaseA_Windward.Add(15, -0.7);
-            RoofCoeff_hOVerL_0_50_CaseA_Windward.Add(20, -0.4);
-            RoofCoeff_hOVerL_0_50_CaseA_Windward.Add(25, -0.3);
-            RoofCoeff_hOVerL_0_50_CaseA_Windward.Add(30, -0.2);
-            RoofCoeff_hOVerL_0_50_CaseA_Windward.Add(35, -0.2);
-            RoofCoeff_hOVerL_0_50_CaseA_Windward.Add(45, 0.0);
-            RoofCoeff_hOVerL_0_50_CaseA_Windward.Add(60, 0.0);
-            RoofCoeff_hOVerL_0_50_CaseA_Windward.Add(90, 0.0);
-
-
-            Dictionary<double, double> RoofCoeff_hOVerL_1_0_CaseA_Windward = new Dictionary<double, double>();
-            RoofCoeff_hOVerL_1_0_CaseA_Windward.Add(10, -1.3);
-            RoofCoeff_hOVerL_1_0_CaseA_Windward.Add(15, -1.0);
-            RoofCoeff_hOVerL_1_0_CaseA_Windward.Add(20, -0.7);
-            RoofCoeff_hOVerL_1_0_CaseA_Windward.Add(25, -0.5);
-            RoofCoeff_hOVerL_1_0_CaseA_Windward.Add(30, -0.3);
-            RoofCoeff_hOVerL_1_0_CaseA_Windward.Add(35, -0.2);
-            RoofCoeff_hOVerL_1_0_CaseA_Windward.Add(45, 0.0);
-            RoofCoeff_hOVerL_1_0_CaseA_Windward.Add(60, 0.0);
-            RoofCoeff_hOVerL_1_0_CaseA_Windward.Add(90, 0.0);
-
-
-            Dictionary<double, Dictionary<double, double>> RoofCoefficientCp_CaseA_Windward = new Dictionary<double, Dictionary<double, double>>();
-            RoofCoefficientCp_CaseA_Windward.Add(0.25, RoofCoeff_hOVerL_0_25_CaseA_Windward);
-            RoofCoefficientCp_CaseA_Windward.Add(0.5, RoofCoeff_hOVerL_0_50_CaseA_Windward);
-            RoofCoefficientCp_CaseA_Windward.Add(1.0, RoofCoeff_hOVerL_1_0_CaseA_Windward);
-
-            Dictionary<double, double> RoofCoeff_hOVerL_0_25_CaseA_Leeward = new Dictionary<double, double>();
-            RoofCoeff_hOVerL_0_25_CaseA_Leeward.Add(10, -0.3);
-            RoofCoeff_hOVerL_0_25_CaseA_Leeward.Add(15, -0.5);
-            RoofCoeff_hOVerL_0_25_CaseA_Leeward.Add(20, -0.6);
-
-            Dictionary<double, double> RoofCoeff_hOVerL_0_50_CaseA_Leeward = new Dictionary<double, double>();
-            RoofCoeff_hOVerL_0_50_CaseA_Leeward.Add(10, -0.5);
-            RoofCoeff_hOVerL_0_50_CaseA_Leeward.Add(15, -0.5);
-            RoofCoeff_hOVerL_0_50_CaseA_Leeward.Add(20, -0.6);
-
-            Dictionary<double, double> RoofCoeff_hOVerL_1_0_CaseA_Leeward = new Dictionary<double, double>();
-            RoofCoeff_hOVerL_1_0_CaseA_Leeward.Add(10, -0.7);
-            RoofCoeff_hOVerL_1_0_CaseA_Leeward.Add(15, -0.6);
-            RoofCoeff_hOVerL_1_0_CaseA_Leeward.Add(20, -0.6);
-
-            Dictionary<double, Dictionary<double, double>> RoofCoefficientCp_CaseA_Leeward = new Dictionary<double, Dictionary<double, double>>();
-            RoofCoefficientCp_CaseA_Leeward.Add(0.25, RoofCoeff_hOVerL_0_25_CaseA_Leeward);
-            RoofCoefficientCp_CaseA_Leeward.Add(0.5, RoofCoeff_hOVerL_0_50_CaseA_Leeward);
-            RoofCoefficientCp_CaseA_Leeward.Add(1.0, RoofCoeff_hOVerL_1_0_CaseA_Leeward);
-
-
-            // Case B -- Figure 27.4.1 -- bottommost values 
-            Dictionary<double, double> RoofCoeff_hOVerL_0_25_CaseB_Windward = new Dictionary<double, double>();
-            RoofCoeff_hOVerL_0_25_CaseB_Windward.Add(10, -0.18);
-            RoofCoeff_hOVerL_0_25_CaseB_Windward.Add(15, 0.0);
-            RoofCoeff_hOVerL_0_25_CaseB_Windward.Add(20, 0.2);
-            RoofCoeff_hOVerL_0_25_CaseB_Windward.Add(25, 0.3);
-            RoofCoeff_hOVerL_0_25_CaseB_Windward.Add(30, 0.3);
-            RoofCoeff_hOVerL_0_25_CaseB_Windward.Add(35, 0.4);
-            RoofCoeff_hOVerL_0_25_CaseB_Windward.Add(45, 0.4);
-            RoofCoeff_hOVerL_0_25_CaseB_Windward.Add(60, 0.01 * theta);
-            RoofCoeff_hOVerL_0_25_CaseB_Windward.Add(90, 0.01 * theta);
-
-            Dictionary<double, double> RoofCoeff_hOVerL_0_50_CaseB_Windward = new Dictionary<double, double>();
-            RoofCoeff_hOVerL_0_50_CaseB_Windward.Add(10, -0.18);
-            RoofCoeff_hOVerL_0_50_CaseB_Windward.Add(15, -0.18);
-            RoofCoeff_hOVerL_0_50_CaseB_Windward.Add(20, 0.0);
-            RoofCoeff_hOVerL_0_50_CaseB_Windward.Add(25, 0.2);
-            RoofCoeff_hOVerL_0_50_CaseB_Windward.Add(30, 0.2);
-            RoofCoeff_hOVerL_0_50_CaseB_Windward.Add(35, 0.3);
-            RoofCoeff_hOVerL_0_50_CaseB_Windward.Add(45, 0.4);
-            RoofCoeff_hOVerL_0_50_CaseB_Windward.Add(60, 0.01 * theta);
-            RoofCoeff_hOVerL_0_50_CaseB_Windward.Add(90, 0.01 * theta);
-
-            Dictionary<double, double> RoofCoeff_hOVerL_1_0_CaseB_Windward = new Dictionary<double, double>();
-            RoofCoeff_hOVerL_1_0_CaseB_Windward.Add(10, -0.18);
-            RoofCoeff_hOVerL_1_0_CaseB_Windward.Add(15, -0.18);
-            RoofCoeff_hOVerL_1_0_CaseB_Windward.Add(20, -0.18);
-            RoofCoeff_hOVerL_1_0_CaseB_Windward.Add(25, 0.0);
-            RoofCoeff_hOVerL_1_0_CaseB_Windward.Add(30, 0.2);
-            RoofCoeff_hOVerL_1_0_CaseB_Windward.Add(35, 0.2);
-            RoofCoeff_hOVerL_1_0_CaseB_Windward.Add(45, 0.3);
-            RoofCoeff_hOVerL_1_0_CaseB_Windward.Add(60, 0.01 * theta);
-            RoofCoeff_hOVerL_1_0_CaseB_Windward.Add(90, 0.01 * theta);
-
-            Dictionary<double, Dictionary<double, double>> RoofCoefficientCp_CaseB_Windward = new Dictionary<double, Dictionary<double, double>>();
-            RoofCoefficientCp_CaseB_Windward.Add(0.25, RoofCoeff_hOVerL_0_25_CaseB_Windward);
-            RoofCoefficientCp_CaseB_Windward.Add(0.5, RoofCoeff_hOVerL_0_50_CaseB_Windward);
-            RoofCoefficientCp_CaseB_Windward.Add(1.0, RoofCoeff_hOVerL_1_0_CaseB_Windward);
-
-            Dictionary<double, double> RoofCoeff_hOVerL_0_25_CaseB_Leeward = new Dictionary<double, double>();
-            RoofCoeff_hOVerL_0_25_CaseB_Leeward.Add(10, -0.3);
-            RoofCoeff_hOVerL_0_25_CaseB_Leeward.Add(15, -0.5);
-            RoofCoeff_hOVerL_0_25_CaseB_Leeward.Add(20, -0.6);
-            RoofCoeff_hOVerL_0_25_CaseB_Leeward.Add(25, -0.6);
-            RoofCoeff_hOVerL_0_25_CaseB_Leeward.Add(30, -0.6);
-            RoofCoeff_hOVerL_0_25_CaseB_Leeward.Add(35, -0.6);
-            RoofCoeff_hOVerL_0_25_CaseB_Leeward.Add(45, -0.6);
-            RoofCoeff_hOVerL_0_25_CaseB_Leeward.Add(60, -0.6);
-            RoofCoeff_hOVerL_0_25_CaseB_Leeward.Add(90, -0.6);
-
-
-            Dictionary<double, double> RoofCoeff_hOVerL_0_50_CaseB_Leeward = new Dictionary<double, double>();
-            RoofCoeff_hOVerL_0_50_CaseB_Leeward.Add(10, -0.5);
-            RoofCoeff_hOVerL_0_50_CaseB_Leeward.Add(15, -0.5);
-            RoofCoeff_hOVerL_0_50_CaseB_Leeward.Add(20, -0.6);
-            RoofCoeff_hOVerL_0_50_CaseB_Leeward.Add(25, -0.6);
-            RoofCoeff_hOVerL_0_50_CaseB_Leeward.Add(30, -0.6);
-            RoofCoeff_hOVerL_0_50_CaseB_Leeward.Add(35, -0.6);
-            RoofCoeff_hOVerL_0_50_CaseB_Leeward.Add(45, -0.6);
-            RoofCoeff_hOVerL_0_50_CaseB_Leeward.Add(60, -0.6);
-            RoofCoeff_hOVerL_0_50_CaseB_Leeward.Add(90, -0.6);
-
-            Dictionary<double, double> RoofCoeff_hOVerL_1_0_CaseB_Leeward = new Dictionary<double, double>();
-            RoofCoeff_hOVerL_1_0_CaseB_Leeward.Add(10, -0.7);
-            RoofCoeff_hOVerL_1_0_CaseB_Leeward.Add(15, -0.6);
-            RoofCoeff_hOVerL_1_0_CaseB_Leeward.Add(20, -0.6);
-            RoofCoeff_hOVerL_1_0_CaseB_Leeward.Add(25, -0.6);
-            RoofCoeff_hOVerL_1_0_CaseB_Leeward.Add(30, -0.6);
-            RoofCoeff_hOVerL_1_0_CaseB_Leeward.Add(35, -0.6);
-            RoofCoeff_hOVerL_1_0_CaseB_Leeward.Add(45, -0.6);
-            RoofCoeff_hOVerL_1_0_CaseB_Leeward.Add(60, -0.6);
-            RoofCoeff_hOVerL_1_0_CaseB_Leeward.Add(90, -0.6);
-
-
-            Dictionary<double, Dictionary<double, double>> RoofCoefficientCp_CaseB_Leeward = new Dictionary<double, Dictionary<double, double>>();
-            RoofCoefficientCp_CaseB_Leeward.Add(0.25, RoofCoeff_hOVerL_0_25_CaseB_Leeward);
-            RoofCoefficientCp_CaseB_Leeward.Add(0.5, RoofCoeff_hOVerL_0_50_CaseB_Leeward);
-            RoofCoefficientCp_CaseB_Leeward.Add(1.0, RoofCoeff_hOVerL_1_0_CaseB_Leeward);
-
+            // Compute h/L ratio
             double hOverL = h / L;
 
-            double t_hOverL;
-            double hOverL_low;
-            double hOverL_high;
-            double t_theta;
-            double theta_low;
-            double theta_high;
-            // Interpolate for h/L
-            if (hOverL > 0.25 && hOverL < 0.5)
-            {
-                // Interpolate for h/L between 0.25 and 0.5
-                t_hOverL = (hOverL - 0.25) / (1.0 - 0.25); // t = 0 at h/L = 0.25, t = 1 at h/L = 1.0
-                hOverL_low = 0.25;
-                hOverL_high = 0.5;
-            }
-            else
-            {
-                // Interpolate for h/L between 0.5 and 1.0
-                t_hOverL = (hOverL - 0.5) / (1.0 - 0.5); // t = 0 at h/L = 0.5, t = 1 at h/L = 1.0
-                hOverL_low = 0.5;
-                hOverL_high = 1.0;
-            }
+            // Determine closest hOverL ranges (0.25, 0.5, or 1.0)
+            double lowHOverL = GetClosestHOverLRange(hOverL);
+            double highHOverL = lowHOverL == 0.25 ? 0.5 : (lowHOverL == 0.5 ? 1.0 : 1.0);
 
-            // Interpolate for theta
-            if (theta >= 10 && theta < 15)
-            {
-                t_theta = (theta - 10) / (15 - 10); // t = 0 at theta = 10, t = 1 at theta = 15
-                theta_low = 10;
-                theta_high = 15;
-            }
-            else if (theta >= 15 && theta < 20)
-            {
-                t_theta = (theta - 15) / (20 - 15); // t = 0 at theta = 15, t = 1 at theta = 20
-                theta_low = 15;
-                theta_high = 20;
-            }
-            else if (theta >= 20 && theta < 25)
-            {
-                t_theta = (theta - 20) / (25 - 20); // t = 0 at theta = 20, t = 1 at theta = 25
-                theta_low = 20;
-                theta_high = 25;
-            }
-            else if (theta >= 25 && theta < 30)
-            {
-                t_theta = (theta - 25) / (30 - 25); // t = 0 at theta = 25, t = 1 at theta = 30
-                theta_low = 25;
-                theta_high = 30;
-            }
-            else if (theta >= 30 && theta < 35)
-            {
-                t_theta = (theta - 30) / (35 - 30); // t = 0 at theta = 30, t = 1 at theta = 35
-                theta_low = 30;
-                theta_high = 35;
-            }
-            else if (theta >= 35 && theta < 45)
-            {
-                t_theta = (theta - 35) / (45 - 35); // t = 0 at theta = 35, t = 1 at theta = 40
-                theta_low = 35;
-                theta_high = 45;
-            }
-            else if (theta >= 45 && theta < 60)
-            {
-                t_theta = (theta - 45) / (60 - 45); // t = 0 at theta = 45, t = 1 at theta = 60
-                theta_low = 45;
-                theta_high = 60;
-            }
-            else
-            {
-                t_theta = (theta - 60) / (90 - 60); // t = 0 at theta = 60, t = 1 at theta = 90
-                theta_low = 60;
-                theta_high = 90;
-            }
+            // Calculate interpolation factor for hOverL
+            double t_hOverL = (hOverL - lowHOverL) / (highHOverL - lowHOverL);
 
-            // WINDWARD INTERPOLATIONS
-            //Case A Windward interpolation
-            double low_lowCp_theta_CaseA_Windward = RoofCoefficientCp_CaseA_Windward[hOverL_low][theta_low];
-            double low_highCp_theta_CaseA_Windward = RoofCoefficientCp_CaseA_Windward[hOverL_low][theta_high];
-            double high_lowCp_theta_CaseA_Windward = RoofCoefficientCp_CaseA_Windward[hOverL_high][theta_low];
-            double high_highCp_theta_CaseA_Windward = RoofCoefficientCp_CaseA_Windward[hOverL_high][theta_high];
+            // Interpolate theta
+            double[] thetaBreaks = { 10, 15, 20, 25, 30, 35, 45, 60, 90 };
+            double theta_low = thetaBreaks.First(x => x >= theta);
+            double theta_high = thetaBreaks.Last(x => x <= theta);
 
-            // interpolated values for theta
-            double interpolated_low_Cp_theta_CaseA_Windward = low_lowCp_theta_CaseA_Windward + t_theta * (low_highCp_theta_CaseA_Windward - low_lowCp_theta_CaseA_Windward);
-            double interpolated_high_Cp_theta_CaseA_Windward = high_lowCp_theta_CaseA_Windward + t_theta * (high_highCp_theta_CaseA_Windward - high_lowCp_theta_CaseA_Windward);
+            double t_theta = (theta - theta_low) / (theta_high - theta_low);
 
-            // then interpolate values for h/L
-            double interpolated_Cp_CaseA_Windward = interpolated_low_Cp_theta_CaseA_Windward + t_hOverL * (interpolated_high_Cp_theta_CaseA_Windward - interpolated_low_Cp_theta_CaseA_Windward);
+            // Select windward or leeward case for both A and B
+            string caseKeyA_Windward = "CaseA_Windward";
+            string caseKeyA_Leeward = "CaseA_Leeward";
+            string caseKeyB_Windward = "CaseB_Windward";
+            string caseKeyB_Leeward = "CaseB_Leeward";
 
-            // Case B interpolation
-            double low_lowCp_theta_CaseB_Windward = RoofCoefficientCp_CaseB_Windward[hOverL_low][theta_low];
-            double low_highCp_theta_CaseB_Windward = RoofCoefficientCp_CaseB_Windward[hOverL_low][theta_high];
-            double high_lowCp_theta_CaseB_Windward = RoofCoefficientCp_CaseB_Windward[hOverL_high][theta_low];
-            double high_highCp_theta_CaseB_Windward = RoofCoefficientCp_CaseB_Windward[hOverL_high][theta_high];
+            // Interpolate Cp values for Case A and Case B for both windward and leeward
+            var caseDataA_Windward = roofCoefficients[caseKeyA_Windward];
+            var caseDataA_Leeward = roofCoefficients[caseKeyA_Leeward];
+            var caseDataB_Windward = roofCoefficients[caseKeyB_Windward];
+            var caseDataB_Leeward = roofCoefficients[caseKeyB_Leeward];
 
-            // interpolated values for theta
-            double interpolated_low_Cp_theta_CaseB_Windward = low_lowCp_theta_CaseB_Windward + t_theta * (low_highCp_theta_CaseB_Windward - low_lowCp_theta_CaseB_Windward);
-            double interpolated_high_Cp_theta_CaseB_Windward = high_lowCp_theta_CaseB_Windward + t_theta * (high_highCp_theta_CaseB_Windward - high_lowCp_theta_CaseB_Windward);
+            // Calculate Cp for each case (Windward and Leeward for both A and B)
+            // Access the Cp values for low and high hOverL values
+            double CpA_Windward_Low = caseDataA_Windward[lowHOverL][theta_low];
+            double CpA_Windward_High = caseDataA_Windward[highHOverL][theta_high];
+            double CpA_Leeward_Low = caseDataA_Leeward[lowHOverL][theta_low];
+            double CpA_Leeward_High = caseDataA_Leeward[highHOverL][theta_high];
+            double CpB_Windward_Low = caseDataB_Windward[lowHOverL][theta_low];
+            double CpB_Windward_High = caseDataB_Windward[highHOverL][theta_high];
+            double CpB_Leeward_Low = caseDataB_Leeward[lowHOverL][theta_low];
+            double CpB_Leeward_High = caseDataB_Leeward[highHOverL][theta_high];
 
-            // then interpolate values for h/L
-            double interpolated_Cp_CaseB_Windward = interpolated_low_Cp_theta_CaseB_Windward + t_hOverL * (interpolated_high_Cp_theta_CaseB_Windward - interpolated_low_Cp_theta_CaseB_Windward);
+            // Interpolate Cp values for each case (Windward and Leeward for both A and B)
+            double CpA_Windward = InterpolateCp(CpA_Windward_Low, CpA_Windward_High, theta_low, theta_high, t_theta);
+            double CpA_Leeward = InterpolateCp(CpA_Leeward_Low, CpA_Leeward_High, theta_low, theta_high, t_theta);
+            double CpB_Windward = InterpolateCp(CpB_Windward_Low, CpB_Windward_High, theta_low, theta_high, t_theta);
+            double CpB_Leeward = InterpolateCp(CpB_Leeward_Low, CpB_Leeward_High, theta_low, theta_high, t_theta);
 
-            // LEEWARD INTERPOLATIONS
-            //Case A Windward interpolation
-            double low_lowCp_theta_CaseA_Leeward = RoofCoefficientCp_CaseA_Leeward[hOverL_low][theta_low];
-            double low_highCp_theta_CaseA_Leeward = RoofCoefficientCp_CaseA_Leeward[hOverL_low][theta_high];
-            double high_lowCp_theta_CaseA_Leeward = RoofCoefficientCp_CaseA_Leeward[hOverL_high][theta_low];
-            double high_highCp_theta_CaseA_Leeward = RoofCoefficientCp_CaseA_Leeward[hOverL_high][theta_high];
+            // Create and return RoofCpCases object using the new constructor
+            return new RoofCpCases(CpA_Windward, CpB_Windward, CpA_Leeward, CpB_Leeward);
+        }
 
-            // interpolated values for theta
-            double interpolated_low_Cp_theta_CaseA_Leeward = low_lowCp_theta_CaseA_Leeward + t_theta * (low_highCp_theta_CaseA_Leeward - low_lowCp_theta_CaseA_Leeward);
-            double interpolated_high_Cp_theta_CaseA_Leeward = high_lowCp_theta_CaseA_Leeward + t_theta * (high_highCp_theta_CaseA_Leeward - high_lowCp_theta_CaseA_Leeward);
+        public static double InterpolateCp(double lowCp, double highCp, double lowTheta, double highTheta, double t_theta)
+        {
+            // Linear interpolation formula
+            return lowCp + (highCp - lowCp) * t_theta;
+        }
 
-            // then interpolate values for h/L
-            double interpolated_Cp_CaseA_Leeward = interpolated_low_Cp_theta_CaseA_Leeward + t_hOverL * (interpolated_high_Cp_theta_CaseA_Leeward - interpolated_low_Cp_theta_CaseA_Leeward);
+        public static double GetClosestHOverLRange(double hOverL)
+        {
+            // Define the possible ranges for h/L
+            double[] hOverLRanges = { 0.25, 0.5, 1.0 };
 
-            // Case B interpolation
-            double low_lowCp_theta_CaseB_Leeward = RoofCoefficientCp_CaseB_Leeward[hOverL_low][theta_low];
-            double low_highCp_theta_CaseB_Leeward = RoofCoefficientCp_CaseB_Leeward[hOverL_low][theta_high];
-            double high_lowCp_theta_CaseB_Leeward = RoofCoefficientCp_CaseB_Leeward[hOverL_high][theta_low];
-            double high_highCp_theta_CaseB_Leeward = RoofCoefficientCp_CaseB_Leeward[hOverL_high][theta_high];
-
-            // interpolated values for theta
-            double interpolated_low_Cp_theta_CaseB_Leeward = low_lowCp_theta_CaseB_Leeward + t_theta * (low_highCp_theta_CaseB_Leeward - low_lowCp_theta_CaseB_Leeward);
-            double interpolated_high_Cp_theta_CaseB_Leeward = high_lowCp_theta_CaseB_Leeward + t_theta * (high_highCp_theta_CaseB_Leeward - high_lowCp_theta_CaseB_Leeward);
-
-            // then interpolate values for h/L
-            double interpolated_Cp_CaseB_Leeward = interpolated_low_Cp_theta_CaseB_Leeward + t_hOverL * (interpolated_high_Cp_theta_CaseB_Leeward - interpolated_low_Cp_theta_CaseB_Leeward);
-
-            return new RoofCpCases(interpolated_Cp_CaseA_Windward, interpolated_Cp_CaseB_Windward, interpolated_Cp_CaseA_Leeward, interpolated_Cp_CaseB_Leeward);
-
+            // Find the closest value to hOverL from the predefined ranges
+            double closest = hOverLRanges.OrderBy(range => Math.Abs(range - hOverL)).First();
+            return closest;
         }
     }
 
