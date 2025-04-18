@@ -112,9 +112,11 @@ namespace ShearWallVisualizer.Controls
                 wpr.qz = Math.Round(0.00256 * wpr.Kz * parameters.Kzt * parameters.Kd * parameters.WindSpeed * parameters.WindSpeed * parameters.ImportanceFactor, 2);
                 var qh = Math.Round(0.00256 * Kzh * parameters.Kzt * parameters.Kd * parameters.WindSpeed * parameters.WindSpeed * parameters.ImportanceFactor, 2);
 
+                // Base pressure without internal effects
+                wpr.PressBase = Math.Round(CalculatePressure(wpr.qz, qh, wpr.Cp, 0, parameters.GustFactor), 2);
                 // Calculate pressures using common logic
-                wpr.Pressure_A = CalculatePressure(wpr.qz, qh, wpr.Cp, wpr.GCpi_A, parameters.GustFactor);
-                wpr.Pressure_B = CalculatePressure(wpr.qz, qh, wpr.Cp, wpr.GCpi_B, parameters.GustFactor);
+                wpr.PressSuction = Math.Round(CalculatePressure(wpr.qz, qh, wpr.Cp, wpr.GCpi_A, parameters.GustFactor), 2);
+                wpr.PressBalloon = Math.Round(CalculatePressure(wpr.qz, qh, wpr.Cp, wpr.GCpi_B, parameters.GustFactor), 2);
 
                 // Add the result to the list
                 wall_results.Add(wpr);
@@ -209,10 +211,16 @@ namespace ShearWallVisualizer.Controls
                 wpr.GCpi_B = -1.0 * WindLoadCalculator.GetGCpiMagnitude(parameters.EnclosureClassification);
                 var Kzh = Math.Round(WindLoadCalculator.GetKz(parameters.BuildingHeight, parameters.ExposureCategory), 2);
                 wpr.qh = Math.Round(0.00256 * Kzh * parameters.Kzt * parameters.Kd * parameters.WindSpeed * parameters.WindSpeed * parameters.ImportanceFactor, 2);
-                wpr.Pressure_A1 = Math.Round(wpr.qh * parameters.GustFactor * wpr.CpA + wpr.GCpi_A * wpr.qh, 2);
-                wpr.Pressure_A2 = Math.Round(wpr.qh * parameters.GustFactor * wpr.CpA - wpr.GCpi_A * wpr.qh, 2);
-                wpr.Pressure_B1 = Math.Round(wpr.qh * parameters.GustFactor * wpr.CpB + wpr.GCpi_B * wpr.qh, 2);
-                wpr.Pressure_B2 = Math.Round(wpr.qh * parameters.GustFactor * wpr.CpB - wpr.GCpi_B * wpr.qh, 2);
+
+                wpr.PressBaseA = Math.Round(wpr.qh * parameters.GustFactor * wpr.CpA, 2);
+                wpr.PressBaseB = Math.Round(wpr.qh * parameters.GustFactor * wpr.CpB, 2);
+
+
+
+                wpr.Suction1 = Math.Round(wpr.PressBaseA + wpr.GCpi_A * wpr.qh, 2);
+                wpr.Balloon1 = Math.Round(wpr.PressBaseA - wpr.GCpi_A * wpr.qh, 2);
+                wpr.Balloon2 = Math.Round(wpr.PressBaseB + wpr.GCpi_B * wpr.qh, 2);
+                wpr.Suction2 = Math.Round(wpr.PressBaseB - wpr.GCpi_B * wpr.qh, 2);
                 wpr.theta = parameters.RoofPitch;
 
 
@@ -235,9 +243,11 @@ namespace ShearWallVisualizer.Controls
         public double GCpi_A { get; set; }  // GCpi for internal pressure expansion (balloon) case
         public double GCpi_B { get; set; }  // GCpi for internal pressure suction case
         public double qz { get; set; }
+        public double PressBase { get; set; }
 
-        public double Pressure_A { get; set; }
-        public double Pressure_B { get; set; }
+
+        public double PressSuction { get; set; }
+        public double PressBalloon { get; set; }
     }
 
     // Result class for roof wind pressure calculations
@@ -253,11 +263,13 @@ namespace ShearWallVisualizer.Controls
         public double GCpi_A { get; set; }  // GCpi for internal pressure expansion (balloon) case
         public double GCpi_B { get; set; }  // GCpi for internal pressure suction case
         public double qh { get; set; }
-        public double Pressure_A1 { get; set; }
-        public double Pressure_A2 { get; set; }
+        public double PressBaseA { get; set; }
+        public double PressBaseB { get; set; }
+        public double Suction1 { get; set; }
+        public double Suction2 { get; set; }
 
-        public double Pressure_B1 { get; set; }
-        public double Pressure_B2 { get; set; }
+        public double Balloon1 { get; set; }
+        public double Balloon2 { get; set; }
 
     }
 
@@ -523,9 +535,9 @@ namespace ShearWallVisualizer.Controls
                 {
                     "CaseA_Leeward", new Dictionary<double, Dictionary<double, double>>()
                     {
-                        { 0.25, new Dictionary<double, double> { { 10, -0.3 }, { 15, -0.5 }, { 20, -0.6 } } },
-                        { 0.5, new Dictionary<double, double> { { 10, -0.5 }, { 15, -0.5 }, { 20, -0.6 } } },
-                        { 1.0, new Dictionary<double, double> { { 10, -0.7 }, { 15, -0.6 }, { 20, -0.6 } } }
+                        { 0.25, new Dictionary<double, double> { { 10, -0.3 }, { 15, -0.5 }, { 20, -0.6 }, { 25, -0.6 }, { 30, -0.6 }, { 35, -0.6 }, { 45, -0.6 }, { 60, -0.6 }, { 90, -0.6 } } },
+                        { 0.5, new Dictionary<double, double> { { 10, -0.5 }, { 15, -0.5 }, { 20, -0.6 }, { 25, -0.6 }, { 30, -0.6 }, { 35, -0.6 }, { 45, -0.6 }, { 60, -0.6 }, { 90, -0.6 } } },
+                        { 1.0, new Dictionary<double, double> { { 10, -0.7 }, { 15, -0.6 }, { 20, -0.6 }, { 25, -0.6 }, { 30, -0.6 }, { 35, -0.6 }, { 45, -0.6 }, { 60, -0.6 }, { 90, -0.6 } } }
                     }
                 },
                 {
