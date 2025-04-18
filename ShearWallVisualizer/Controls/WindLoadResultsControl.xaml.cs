@@ -36,8 +36,6 @@ namespace ShearWallVisualizer.Controls
             tbl_h.Text = Math.Round(parameters.BuildingHeight, 2).ToString();
             tbl_windOrientation.Text = parameters.RidgeDirection;
 
-
-
             WallResultsDataGrid.ItemsSource = null;
             WallResultsDataGrid.ItemsSource = wall_results;
 
@@ -563,7 +561,15 @@ namespace ShearWallVisualizer.Controls
             double theta_low = thetaBreaks.First(x => x >= theta);
             double theta_high = thetaBreaks.Last(x => x <= theta);
 
-            double t_theta = (theta - theta_low) / (theta_high - theta_low);
+            double t_theta;
+            if (theta_low == theta_high)
+            {
+                t_theta = 0.0;
+            }
+            else
+            {
+                t_theta = (theta - theta_low) / (theta_high - theta_low);
+            }
 
             // Select windward or leeward case for both A and B
             string caseKeyA_Windward = "CaseA_Windward";
@@ -571,28 +577,77 @@ namespace ShearWallVisualizer.Controls
             string caseKeyB_Windward = "CaseB_Windward";
             string caseKeyB_Leeward = "CaseB_Leeward";
 
-            // Interpolate Cp values for Case A and Case B for both windward and leeward
             var caseDataA_Windward = roofCoefficients[caseKeyA_Windward];
             var caseDataA_Leeward = roofCoefficients[caseKeyA_Leeward];
             var caseDataB_Windward = roofCoefficients[caseKeyB_Windward];
             var caseDataB_Leeward = roofCoefficients[caseKeyB_Leeward];
 
-            // Calculate Cp for each case (Windward and Leeward for both A and B)
-            // Access the Cp values for low and high hOverL values
-            double CpA_Windward_Low = caseDataA_Windward[lowHOverL][theta_low];
-            double CpA_Windward_High = caseDataA_Windward[highHOverL][theta_high];
-            double CpA_Leeward_Low = caseDataA_Leeward[lowHOverL][theta_low];
-            double CpA_Leeward_High = caseDataA_Leeward[highHOverL][theta_high];
-            double CpB_Windward_Low = caseDataB_Windward[lowHOverL][theta_low];
-            double CpB_Windward_High = caseDataB_Windward[highHOverL][theta_high];
-            double CpB_Leeward_Low = caseDataB_Leeward[lowHOverL][theta_low];
-            double CpB_Leeward_High = caseDataB_Leeward[highHOverL][theta_high];
+            // Step 1: Interpolate over theta for each h/L
+            double CpA_Windward_LowTheta = InterpolateCp(
+                caseDataA_Windward[lowHOverL][theta_low],
+                caseDataA_Windward[lowHOverL][theta_high],
+                theta_low,
+                theta_high,
+                t_theta
+            );
+            double CpA_Windward_HighTheta = InterpolateCp(
+                caseDataA_Windward[highHOverL][theta_low],
+                caseDataA_Windward[highHOverL][theta_high],
+                theta_low,
+                theta_high,
+                t_theta
+            );
 
-            // Interpolate Cp values for each case (Windward and Leeward for both A and B)
-            double CpA_Windward = InterpolateCp(CpA_Windward_Low, CpA_Windward_High, theta_low, theta_high, t_theta);
-            double CpA_Leeward = InterpolateCp(CpA_Leeward_Low, CpA_Leeward_High, theta_low, theta_high, t_theta);
-            double CpB_Windward = InterpolateCp(CpB_Windward_Low, CpB_Windward_High, theta_low, theta_high, t_theta);
-            double CpB_Leeward = InterpolateCp(CpB_Leeward_Low, CpB_Leeward_High, theta_low, theta_high, t_theta);
+            double CpA_Leeward_LowTheta = InterpolateCp(
+                caseDataA_Leeward[lowHOverL][theta_low],
+                caseDataA_Leeward[lowHOverL][theta_high],
+                theta_low,
+                theta_high,
+                t_theta
+            );
+            double CpA_Leeward_HighTheta = InterpolateCp(
+                caseDataA_Leeward[highHOverL][theta_low],
+                caseDataA_Leeward[highHOverL][theta_high],
+                theta_low,
+                theta_high,
+                t_theta
+            );
+
+            double CpB_Windward_LowTheta = InterpolateCp(
+                caseDataB_Windward[lowHOverL][theta_low],
+                caseDataB_Windward[lowHOverL][theta_high],
+                theta_low,
+                theta_high,
+                t_theta
+            );
+            double CpB_Windward_HighTheta = InterpolateCp(
+                caseDataB_Windward[highHOverL][theta_low],
+                caseDataB_Windward[highHOverL][theta_high],
+                theta_low,
+                theta_high,
+                t_theta
+            );
+
+            double CpB_Leeward_LowTheta = InterpolateCp(
+                caseDataB_Leeward[lowHOverL][theta_low],
+                caseDataB_Leeward[lowHOverL][theta_high],
+                theta_low,
+                theta_high,
+                t_theta
+            );
+            double CpB_Leeward_HighTheta = InterpolateCp(
+                caseDataB_Leeward[highHOverL][theta_low],
+                caseDataB_Leeward[highHOverL][theta_high],
+                theta_low,
+                theta_high,
+                t_theta
+            );
+
+            // Step 2: Interpolate over h/L
+            double CpA_Windward = InterpolateCp(CpA_Windward_LowTheta, CpA_Windward_HighTheta, lowHOverL, highHOverL, t_hOverL);
+            double CpA_Leeward = InterpolateCp(CpA_Leeward_LowTheta, CpA_Leeward_HighTheta, lowHOverL, highHOverL, t_hOverL);
+            double CpB_Windward = InterpolateCp(CpB_Windward_LowTheta, CpB_Windward_HighTheta, lowHOverL, highHOverL, t_hOverL);
+            double CpB_Leeward = InterpolateCp(CpB_Leeward_LowTheta, CpB_Leeward_HighTheta, lowHOverL, highHOverL, t_hOverL);
 
             // Create and return RoofCpCases object using the new constructor
             return new RoofCpCases(CpA_Windward, CpB_Windward, CpA_Leeward, CpB_Leeward);
