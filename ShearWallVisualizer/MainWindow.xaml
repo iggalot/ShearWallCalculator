@@ -70,7 +70,7 @@
                 </DockPanel>
 
                 <!-- Dynamic Tabs -->
-                <TabControl x:Name="MainTabControl" Width="900" Height="600"
+                <TabControl x:Name="MainTabControl" Height="600"
                             TabStripPlacement="Top" Margin="10 0 0 0">
                     <TabItem Header="Dimensions">
                         <StackPanel Orientation="Vertical">
@@ -80,6 +80,9 @@
                     </TabItem>
                     <TabItem Header="WIND Input">
                         <ctrl:WindLoadInputControl x:Name="WindLoadInputControl" Margin="5 0 0 0"/>
+                    </TabItem>
+                    <TabItem Name="tabWindResults" Header="WIND Calculations" Visibility="Collapsed">
+                        <ctrl:WindLoadResultsControl x:Name="ctrlWindLoadResultsControl" Margin="5 0 0 0"/>
                     </TabItem>
                     <TabItem Header="Calculations">
                         <StackPanel Orientation="Vertical">

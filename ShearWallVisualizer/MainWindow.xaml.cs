@@ -121,7 +121,18 @@ namespace ShearWallVisualizer
 
                 Draw(ChangeType.Redraw);
 
+
+                // Events for wind load calculation
+                WindLoadInputControl.WindCalculated += WindLoadInputControl_WindCalculated;
             };
+        }
+
+        private void WindLoadInputControl_WindCalculated(object sender, WindLoadInputControl.OnWindCalculatedEventArgs e)
+        {
+            WindLoadResultsControl ctrl = new WindLoadResultsControl(e._parameters);
+            ctrlWindLoadResultsControl.Content = ctrl;  // load the new control
+            tabWindResults.Visibility = Visibility.Visible;
+            tabWindResults.IsSelected = true;
         }
 
         private void CreateWallDataControls()
