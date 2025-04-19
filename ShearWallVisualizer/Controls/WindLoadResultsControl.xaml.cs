@@ -41,6 +41,9 @@ namespace ShearWallVisualizer.Controls
 
             RoofResultsDataGrid.ItemsSource = null;
             RoofResultsDataGrid.ItemsSource = roof_results;
+
+            
+            spResultsAndCanvas.Children.Add(new WindLoadGraphicCanvas(parameters, wall_results, roof_results));
         }
 
         private static List<WindPressurResult_Wall> CalculateWallPressureResults(WindLoadParameters parameters, Dictionary<string, double> wall_zones)

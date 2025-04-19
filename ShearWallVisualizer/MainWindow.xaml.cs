@@ -535,6 +535,7 @@ namespace ShearWallVisualizer
             m_layers.AddLayer(0, DrawBackground, ChangeType.Resize);
             m_layers.AddLayer(1, DrawGridInformation);
             m_layers.AddLayer(2, DrawReferenceImage);
+            m_layers.AddLayer(3, DrawBoundingBox);
 
             m_layers.AddLayer(41, DrawShapes);
             m_layers.AddLayer(52, DrawCursor);
@@ -548,6 +549,8 @@ namespace ShearWallVisualizer
             // Now draw everything
             Draw(ChangeType.Redraw);
         }
+
+
 
         private void Log(string text)
         {
@@ -854,6 +857,21 @@ namespace ShearWallVisualizer
                 ctx.DrawLine(new Pen(Brushes.Black, 1), cross_pt, new Point(cross_pt.X, 0));
                 ctx.DrawLine(new Pen(Brushes.Black, 1), cross_pt, new Point(cross_pt.X, dockpanel.Height));
             }
+        }
+
+        private void DrawBoundingBox(DrawingContext ctx)
+        {
+            Rect rect = Calculator.GetBoundingRectangle_World();
+
+            var p1 = WorldToScreen(rect.BottomLeft, m_layers);
+            var p2 = WorldToScreen(rect.BottomRight, m_layers);
+            var p3 = WorldToScreen(rect.TopRight, m_layers);
+            var p4 = WorldToScreen(rect.TopLeft, m_layers);
+
+            ctx.DrawLine(new Pen(Brushes.Green, 4), p1, p2);
+            ctx.DrawLine(new Pen(Brushes.Green, 4), p2, p3);
+            ctx.DrawLine(new Pen(Brushes.Green, 4), p3, p4);
+            ctx.DrawLine(new Pen(Brushes.Green, 4), p4, p1);
         }
 
         /// <summary>

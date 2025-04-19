@@ -1,5 +1,7 @@
 ﻿using calculator;
 using Newtonsoft.Json;
+using System.Collections.Generic;
+using System;
 using System.Windows;
 
 namespace ShearWallCalculator
@@ -8,8 +10,8 @@ namespace ShearWallCalculator
     {
     
         public string CalculatorType { get; }
-        public WallSystem _wall_system = new WallSystem();
-        public DiaphragmSystem _diaphragm_system = new DiaphragmSystem();
+        public WallSystem _wall_system { get; set;  } = new WallSystem();
+        public DiaphragmSystem _diaphragm_system { get; set; } = new DiaphragmSystem();
 
         /// <summary>
         /// Loads and eccentricty values 
@@ -26,61 +28,58 @@ namespace ShearWallCalculator
         [JsonIgnore]
         public bool IsValidForCalculation { get => Validate(); }
 
-
-        private Point FindMaxBoundaryPt()
+        public Rect GetBoundingRectangle_World()
         {
-            float temp_y = -1000000;
-            float temp_x = -1000000;
+            double minX = double.MaxValue;
+            double minY = double.MaxValue;
+            double maxX = double.MinValue;
+            double maxY = double.MinValue;
 
-            foreach (var wall in _wall_system._walls.Values)
+            if (_wall_system != null)
             {
-                if (wall.Start.Y > temp_y) temp_y = (float)wall.Start.Y;
-                if (wall.End.Y > temp_y) temp_y = (float)wall.End.Y;
-                if (wall.Start.X > temp_x) temp_x = (float)wall.Start.X;
-                if (wall.End.X > temp_x) temp_x = (float)wall.End.X;
+                foreach (KeyValuePair<int, WallData> wall in _wall_system._walls)
+                {
+                    if (wall.Value.Start.X < minX) minX = wall.Value.Start.X;
+                    if (wall.Value.End.X < minX) minX = wall.Value.End.X;
+
+                    if (wall.Value.Start.Y < minY) minY = wall.Value.Start.Y;
+                    if (wall.Value.End.Y < minY) minY = wall.Value.End.Y;
+
+                    if (wall.Value.Start.X > maxX) maxX = wall.Value.Start.X;
+                    if (wall.Value.End.X > maxX) maxX = wall.Value.End.X;
+
+                    if (wall.Value.Start.Y > maxY) maxY = wall.Value.Start.Y;
+                    if (wall.Value.End.Y > maxY) maxY = wall.Value.End.Y;
+                }
             }
 
-            foreach (var diaphragm in _diaphragm_system._diaphragms.Values)
+            if (_diaphragm_system != null)
             {
-                if (diaphragm.P1.Y > temp_y) temp_y = (float)diaphragm.P1.Y;
-                if (diaphragm.P1.X > temp_x) temp_x = (float)diaphragm.P1.X;
-                if (diaphragm.P2.Y > temp_y) temp_y = (float)diaphragm.P2.Y;
-                if (diaphragm.P2.X > temp_x) temp_x = (float)diaphragm.P2.X;
-                if (diaphragm.P3.Y > temp_y) temp_y = (float)diaphragm.P3.Y;
-                if (diaphragm.P3.X > temp_x) temp_x = (float)diaphragm.P3.X;
-                if (diaphragm.P4.Y > temp_y) temp_y = (float)diaphragm.P4.Y;
-                if (diaphragm.P4.X > temp_x) temp_x = (float)diaphragm.P4.X;
+                foreach (KeyValuePair<int, DiaphragmData_Rectangular> dia in _diaphragm_system._diaphragms)
+                {
+                    if (dia.Value.P1.X < minX) minX = dia.Value.P1.X;
+                    if (dia.Value.P2.X < minX) minX = dia.Value.P2.X;
+                    if (dia.Value.P3.X < minX) minX = dia.Value.P3.X;
+                    if (dia.Value.P4.X < minX) minX = dia.Value.P4.X;
+
+                    if (dia.Value.P1.Y < minY) minY = dia.Value.P1.Y;
+                    if (dia.Value.P2.Y < minY) minY = dia.Value.P2.Y;
+                    if (dia.Value.P3.Y < minY) minY = dia.Value.P3.Y;
+                    if (dia.Value.P4.Y < minY) minY = dia.Value.P4.Y;
+
+                    if (dia.Value.P1.X > maxX) maxX = dia.Value.P1.X;
+                    if (dia.Value.P2.X > maxX) maxX = dia.Value.P2.X;
+                    if (dia.Value.P3.X > maxX) maxX = dia.Value.P3.X;
+                    if (dia.Value.P4.X > maxX) maxX = dia.Value.P4.X;
+
+                    if (dia.Value.P1.Y > maxY) maxY = dia.Value.P1.Y;
+                    if (dia.Value.P2.Y > maxY) maxY = dia.Value.P2.Y;
+                    if (dia.Value.P3.Y > maxY) maxY = dia.Value.P3.Y;
+                    if (dia.Value.P4.Y > maxY) maxY = dia.Value.P4.Y;
+                }
             }
 
-            return new System.Windows.Point(temp_x, temp_y);
-        }
-
-        private Point FindMinBoundaryPt()
-        {
-            float temp_y = 1000000;
-            float temp_x = 1000000;
-
-            foreach (var wall in _wall_system._walls.Values)
-            {
-                if (wall.Start.Y < temp_y) temp_y = (float)wall.Start.Y;
-                if (wall.End.Y < temp_y) temp_y = (float)wall.End.Y;
-                if (wall.Start.X < temp_x) temp_x = (float)wall.Start.X;
-                if (wall.End.X < temp_x) temp_x = (float)wall.End.X;
-            }
-
-            foreach (var diaphragm in _diaphragm_system._diaphragms.Values)
-            {
-                if (diaphragm.P1.Y < temp_y) temp_y = (float)diaphragm.P1.Y;
-                if (diaphragm.P1.X < temp_x) temp_x = (float)diaphragm.P1.X;
-                if (diaphragm.P2.Y < temp_y) temp_y = (float)diaphragm.P2.Y;
-                if (diaphragm.P2.X < temp_x) temp_x = (float)diaphragm.P2.X;
-                if (diaphragm.P3.Y < temp_y) temp_y = (float)diaphragm.P3.Y;
-                if (diaphragm.P3.X < temp_x) temp_x = (float)diaphragm.P3.X;
-                if (diaphragm.P4.Y < temp_y) temp_y = (float)diaphragm.P4.Y;
-                if (diaphragm.P4.X < temp_x) temp_x = (float)diaphragm.P4.X;
-            }
-
-            return new System.Windows.Point(temp_x, temp_y);
+            return new Rect(new Point(minX, minY), new Point(maxX, maxY));
         }
 
         public ShearWallCalculatorBase()

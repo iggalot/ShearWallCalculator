@@ -91,6 +91,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Controls\WindLoadGraphicCanvas.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Controls\WindLoadResultsControl.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -128,6 +132,9 @@
     </Compile>
     <Compile Include="Controls\ShearWallResultsControl.xaml.cs">
       <DependentUpon>ShearWallResultsControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\WindLoadGraphicCanvas.xaml.cs">
+      <DependentUpon>WindLoadGraphicCanvas.xaml</DependentUpon>
     </Compile>
     <Compile Include="Controls\WindLoadResultsControl.xaml.cs">
       <DependentUpon>WindLoadResultsControl.xaml</DependentUpon>

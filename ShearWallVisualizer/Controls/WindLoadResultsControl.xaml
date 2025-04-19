@@ -16,7 +16,7 @@
         </Grid.ColumnDefinitions>
 
         <!-- Results Controls (Right Column) -->
-        <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Vertical" HorizontalAlignment="Left" Margin="10">
+        <StackPanel Name="spResultsAndCanvas" Grid.Row="0" Grid.Column="0" Orientation="Vertical" HorizontalAlignment="Left" Margin="10">
             <!-- Importance Factor -->
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                 <TextBlock Text="qh (psf) = " VerticalAlignment="Center" />
