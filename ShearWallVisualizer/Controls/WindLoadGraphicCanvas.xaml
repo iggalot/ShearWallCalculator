@@ -8,9 +8,9 @@
              >
 
     <StackPanel Orientation="Horizontal">
-        <Canvas Name="cnvPlanView" Width="200" Height="200" Margin="10">
+        <Canvas Name="cnvPlanView" Width="200" Height="150" Margin="75, 20, 75, 0">
         </Canvas>
-        <Canvas Name="cnvElevationView" Width="200" Height="200" Margin="10">
+        <Canvas Name="cnvElevationView" Width="200" Height="150" Margin="20">
         </Canvas>
     </StackPanel>
 </UserControl>
