@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -29,7 +30,6 @@ namespace ShearWallVisualizer.Controls
             List<WindPressurResult_Wall> wall_results = CalculateWallPressureResults(parameters, wall_zones);
             List<WindPressurResult_Roof> roof_results = CalculateRoofPressureResults(parameters, roof_zones);
 
-
             tbl_qh.Text = Math.Round(WindLoadCalculator.CalculateWindPressure(parameters, parameters.BuildingHeight), 2).ToString();
             tbl_theta.Text = Math.Round(parameters.RoofPitch, 2).ToString();
             tbl_hOverL.Text = Math.Round(parameters.BuildingHeight / parameters.BuildingLength, 2).ToString();
@@ -41,7 +41,6 @@ namespace ShearWallVisualizer.Controls
 
             RoofResultsDataGrid.ItemsSource = null;
             RoofResultsDataGrid.ItemsSource = roof_results;
-
             
             spResultsAndCanvas.Children.Add(new WindLoadGraphicCanvas(parameters, wall_results, roof_results));
         }
@@ -116,10 +115,10 @@ namespace ShearWallVisualizer.Controls
                 var qh = Math.Round(0.00256 * Kzh * parameters.Kzt * parameters.Kd * parameters.WindSpeed * parameters.WindSpeed * parameters.ImportanceFactor, 2);
 
                 // Base pressure without internal effects
-                wpr.PressBase = Math.Round(CalculatePressure(wpr.qz, qh, wpr.Cp, 0, parameters.GustFactor), 2);
+                wpr.PressBaseA = Math.Round(CalculatePressure(wpr.qz, qh, wpr.Cp, 0, parameters.GustFactor), 2);
                 // Calculate pressures using common logic
-                wpr.PressSuction = Math.Round(CalculatePressure(wpr.qz, qh, wpr.Cp, wpr.GCpi_A, parameters.GustFactor), 2);
-                wpr.PressBalloon = Math.Round(CalculatePressure(wpr.qz, qh, wpr.Cp, wpr.GCpi_B, parameters.GustFactor), 2);
+                wpr.Suction1 = Math.Round(CalculatePressure(wpr.qz, qh, wpr.Cp, wpr.GCpi_A, parameters.GustFactor), 2);
+                wpr.Balloon1 = Math.Round(CalculatePressure(wpr.qz, qh, wpr.Cp, wpr.GCpi_B, parameters.GustFactor), 2);
 
                 // Add the result to the list
                 wall_results.Add(wpr);
@@ -208,8 +207,6 @@ namespace ShearWallVisualizer.Controls
                     wpr.End = parameters.BuildingLength;
                 }
 
-
-
                 wpr.GCpi_A = +1.0 * WindLoadCalculator.GetGCpiMagnitude(parameters.EnclosureClassification);
                 wpr.GCpi_B = -1.0 * WindLoadCalculator.GetGCpiMagnitude(parameters.EnclosureClassification);
                 var Kzh = Math.Round(WindLoadCalculator.GetKz(parameters.BuildingHeight, parameters.ExposureCategory), 2);
@@ -217,19 +214,13 @@ namespace ShearWallVisualizer.Controls
 
                 wpr.PressBaseA = Math.Round(wpr.qh * parameters.GustFactor * wpr.CpA, 2);
                 wpr.PressBaseB = Math.Round(wpr.qh * parameters.GustFactor * wpr.CpB, 2);
-
-
-
                 wpr.Suction1 = Math.Round(wpr.PressBaseA + wpr.GCpi_A * wpr.qh, 2);
                 wpr.Balloon1 = Math.Round(wpr.PressBaseA - wpr.GCpi_A * wpr.qh, 2);
                 wpr.Balloon2 = Math.Round(wpr.PressBaseB + wpr.GCpi_B * wpr.qh, 2);
                 wpr.Suction2 = Math.Round(wpr.PressBaseB - wpr.GCpi_B * wpr.qh, 2);
                 wpr.theta = parameters.RoofPitch;
 
-
                 roof_results.Add(wpr);
-
-
             }
 
             return roof_results;
@@ -246,11 +237,15 @@ namespace ShearWallVisualizer.Controls
         public double GCpi_A { get; set; }  // GCpi for internal pressure expansion (balloon) case
         public double GCpi_B { get; set; }  // GCpi for internal pressure suction case
         public double qz { get; set; }
-        public double PressBase { get; set; }
 
+        [DisplayName("LC1 Base(psf)")]
+        public double PressBaseA { get; set; }
 
-        public double PressSuction { get; set; }
-        public double PressBalloon { get; set; }
+        [DisplayName("LC3 Balloon1(psf)")]
+        public double Balloon1 { get; set; }
+
+        [DisplayName("LC5 Suction1(psf)")]
+        public double Suction1 { get; set; }
     }
 
     // Result class for roof wind pressure calculations
@@ -268,11 +263,12 @@ namespace ShearWallVisualizer.Controls
         public double qh { get; set; }
         public double PressBaseA { get; set; }
         public double PressBaseB { get; set; }
+        public double Balloon1 { get; set; }
+        public double Balloon2 { get; set; }
         public double Suction1 { get; set; }
         public double Suction2 { get; set; }
 
-        public double Balloon1 { get; set; }
-        public double Balloon2 { get; set; }
+
 
     }
 

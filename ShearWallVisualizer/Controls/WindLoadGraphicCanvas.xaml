@@ -6,11 +6,23 @@
              xmlns:local="clr-namespace:ShearWallVisualizer.Controls"
              mc:Ignorable="d" 
              >
+    <StackPanel Orientation="Vertical">
+        <!-- Checkboxes for Load Cases -->
 
-    <StackPanel Orientation="Horizontal">
-        <Canvas Name="cnvPlanView" Width="200" Height="150" Margin="75, 20, 75, 0">
-        </Canvas>
-        <Canvas Name="cnvElevationView" Width="200" Height="150" Margin="20">
-        </Canvas>
+        <StackPanel Orientation="Horizontal" Grid.Column="0" Margin="10">
+
+            <CheckBox Content="LC1" Name="chkLC1" FontWeight="Bold" Checked="LoadCase_CheckedChanged" Unchecked="LoadCase_CheckedChanged"/>
+            <CheckBox Content="LC2" Name="chkLC2" FontWeight="Bold" Checked="LoadCase_CheckedChanged" Unchecked="LoadCase_CheckedChanged"/>
+            <CheckBox Content="LC3" Name="chkLC3" FontWeight="Bold" Checked="LoadCase_CheckedChanged" Unchecked="LoadCase_CheckedChanged"/>
+            <CheckBox Content="LC4" Name="chkLC4" FontWeight="Bold" Checked="LoadCase_CheckedChanged" Unchecked="LoadCase_CheckedChanged"/>
+            <CheckBox Content="LC5" Name="chkLC5" FontWeight="Bold" Checked="LoadCase_CheckedChanged" Unchecked="LoadCase_CheckedChanged"/>
+            <CheckBox Content="LC6" Name="chkLC6" FontWeight="Bold" Checked="LoadCase_CheckedChanged" Unchecked="LoadCase_CheckedChanged"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal">
+            <Canvas Name="cnvPlanView" Width="200" Height="150" Margin="75, 20, 75, 0">
+            </Canvas>
+            <Canvas Name="cnvElevationView" Width="200" Height="150" Margin="20">
+            </Canvas>
+        </StackPanel>
     </StackPanel>
 </UserControl>
