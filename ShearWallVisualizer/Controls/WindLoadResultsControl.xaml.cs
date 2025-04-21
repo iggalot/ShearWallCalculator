@@ -30,7 +30,7 @@ namespace ShearWallVisualizer.Controls
             List<WindPressurResult_Wall> wall_results = CalculateWallPressureResults(parameters, wall_zones);
             List<WindPressurResult_Roof> roof_results = CalculateRoofPressureResults(parameters, roof_zones);
 
-            tbl_qh.Text = Math.Round(WindLoadCalculator.CalculateWindPressure(parameters, parameters.BuildingHeight), 2).ToString();
+            tbl_qh.Text = Math.Round(WindLoadCalculator.CalculateDynamicWindPressure(parameters, parameters.BuildingHeight), 2).ToString();
             tbl_theta.Text = Math.Round(parameters.RoofPitch, 2).ToString();
             tbl_hOverL.Text = Math.Round(parameters.BuildingHeight / parameters.BuildingLength, 2).ToString();
             tbl_h.Text = Math.Round(parameters.BuildingHeight, 2).ToString();
@@ -378,16 +378,21 @@ namespace ShearWallVisualizer.Controls
             return zones;
         }
 
-        // Calculate wind pressure based on wind speed and other parameters
-        public static double CalculateWindPressure(WindLoadParameters p, double z)
+        /// <summary>
+        /// Calculates the dyanmic wind pressure q at a specified height z
+        /// </summary>
+        /// <param name="p"></param>
+        /// <param name="z"></param>
+        /// <returns></returns>
+        public static double CalculateDynamicWindPressure(WindLoadParameters p, double z)
         {
             double V = p.WindSpeed;
             double Kd = p.Kd;
             double Kzt = p.Kzt;
             double I = p.ImportanceFactor;
             double Kz = GetKz(z, p.ExposureCategory);
-            double qh = 0.00256 * Kz * Kzt * Kd * V * V * I;
-            return qh;
+            double qz = 0.00256 * Kz * Kzt * Kd * V * V * I;
+            return qz;
         }
 
         // Get GCpi based on enclosure classification
