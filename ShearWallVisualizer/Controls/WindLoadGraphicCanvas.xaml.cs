@@ -67,6 +67,10 @@ namespace ShearWallVisualizer.Controls
             SCALE_X = (cnv_width_elev - 2 * _margin) / length;
             SCALE_Y = Math.Min((cnv_ht_elev - 2 * _margin) / ridge_ht, (cnv_ht_plan - 2 * _margin) / width);
 
+            // set it so there's a uniform scale factor
+            SCALE_X = Math.Min(SCALE_X, SCALE_Y);
+            SCALE_Y = Math.Min(SCALE_X, SCALE_Y);
+
             RedrawCanvas();
 
         }

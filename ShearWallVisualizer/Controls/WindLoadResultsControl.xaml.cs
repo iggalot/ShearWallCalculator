@@ -594,7 +594,14 @@ namespace ShearWallVisualizer.Controls
             double highHOverL = lowHOverL == 0.25 ? 0.5 : (lowHOverL == 0.5 ? 1.0 : 1.0);
 
             // Calculate interpolation factor for hOverL
-            double t_hOverL = (hOverL - lowHOverL) / (highHOverL - lowHOverL);
+            double t_hOverL;
+            if(highHOverL != lowHOverL)
+            {
+                t_hOverL = (hOverL - lowHOverL) / (highHOverL - lowHOverL);
+            } else
+            {
+                t_hOverL = 0.0;
+            }
 
             // Interpolate theta
             double[] thetaBreaks = { 10, 15, 20, 25, 30, 35, 45, 60, 90 };
