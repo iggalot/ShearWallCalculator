@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -9,7 +10,31 @@ namespace ShearWallVisualizer.Controls
 {
     public partial class WindLoadResultsControl : UserControl
     {
+        public event EventHandler<OnWindCalculatedEventArgs> WindCalculated;  // the event that signals that the drawing has been updated -- controls will listen for this at the time they are created.
+
+        public class OnWindCalculatedEventArgs : EventArgs
+        {
+            public WindLoadParameters _parameters { get; }
+            public List<WindPressureResult_Wall> _wall_results { get; }
+            public List<WindPressureResult_Roof> _roof_results { get; }
+
+            public OnWindCalculatedEventArgs(WindLoadParameters parameters, List<WindPressureResult_Wall> wall_results, List<WindPressureResult_Roof> roof_results)
+            {
+                _parameters = parameters;
+                _wall_results = wall_results;
+                _roof_results = roof_results;
+            }
+        }
+
+        protected virtual void OnWindCalculated(WindLoadParameters parameters, List<WindPressureResult_Wall> wall_results, List<WindPressureResult_Roof> roof_results)
+        {
+            WindCalculated?.Invoke(this, new OnWindCalculatedEventArgs(parameters, wall_results, roof_results));
+        }
+
         private WindLoadParameters _parameters;
+
+        public List<WindPressureResult_Wall> wall_results = new List<WindPressureResult_Wall>();
+        public List<WindPressureResult_Roof> roof_results = new List<WindPressureResult_Roof>();
 
         public WindLoadResultsControl()
         {
@@ -22,32 +47,39 @@ namespace ShearWallVisualizer.Controls
 
             _parameters = parameters;
 
-            Dictionary<string, double> wall_zones = WindLoadCalculator.CalculateMWFRS_WallZones(parameters);
-            Dictionary<string, double> roof_zones = WindLoadCalculator.CalculateMWFRS_RoofZones(parameters);
+            this.Loaded += WindLoadResultsControl_Loaded;
+        }
 
-            // Display wall results in the DataGrid
+        private void WindLoadResultsControl_Loaded(object sender, RoutedEventArgs e)
+        {
+            Dictionary<string, double> wall_zones = WindLoadCalculator.CalculateMWFRS_WallZones(_parameters);
+            Dictionary<string, double> roof_zones = WindLoadCalculator.CalculateMWFRS_RoofZones(_parameters);
 
-            List<WindPressurResult_Wall> wall_results = CalculateWallPressureResults(parameters, wall_zones);
-            List<WindPressurResult_Roof> roof_results = CalculateRoofPressureResults(parameters, roof_zones);
+            // compute the wind load results tables
+            wall_results = CalculateWallPressureResults(_parameters, wall_zones);
+            roof_results = CalculateRoofPressureResults(_parameters, roof_zones);
 
-            tbl_qh.Text = Math.Round(WindLoadCalculator.CalculateDynamicWindPressure(parameters, parameters.BuildingHeight), 2).ToString();
-            tbl_theta.Text = Math.Round(parameters.RoofPitch, 2).ToString();
-            tbl_hOverL.Text = Math.Round(parameters.BuildingHeight / parameters.BuildingLength, 2).ToString();
-            tbl_h.Text = Math.Round(parameters.BuildingHeight, 2).ToString();
-            tbl_windOrientation.Text = parameters.RidgeDirection;
+            tbl_qh.Text = Math.Round(WindLoadCalculator.CalculateDynamicWindPressure(_parameters, _parameters.BuildingHeight), 2).ToString();
+            tbl_theta.Text = Math.Round(_parameters.RoofPitch, 2).ToString();
+            tbl_hOverL.Text = Math.Round(_parameters.BuildingHeight / _parameters.BuildingLength, 2).ToString();
+            tbl_h.Text = Math.Round(_parameters.BuildingHeight, 2).ToString();
+            tbl_windOrientation.Text = _parameters.RidgeDirection;
 
+            // Display wall results in the DataGrids
             WallResultsDataGrid.ItemsSource = null;
             WallResultsDataGrid.ItemsSource = wall_results;
 
             RoofResultsDataGrid.ItemsSource = null;
             RoofResultsDataGrid.ItemsSource = roof_results;
-            
-            spResultsAndCanvas.Children.Add(new WindLoadGraphicCanvas(parameters, wall_results, roof_results));
+
+            spResultsAndCanvas.Children.Add(new WindLoadGraphicCanvas(_parameters, wall_results, roof_results));
+
+            OnWindCalculated(_parameters, wall_results, roof_results);
         }
 
-        private static List<WindPressurResult_Wall> CalculateWallPressureResults(WindLoadParameters parameters, Dictionary<string, double> wall_zones)
+        private static List<WindPressureResult_Wall> CalculateWallPressureResults(WindLoadParameters parameters, Dictionary<string, double> wall_zones)
         {
-            List<WindPressurResult_Wall> wall_results = new List<WindPressurResult_Wall>();
+            List<WindPressureResult_Wall> wall_results = new List<WindPressureResult_Wall>();
 
             // Helper method to calculate common values for pressure calculation
             double CalculatePressure(double qz, double qh, double Cp, double GCpi, double GustFactor)
@@ -58,7 +90,7 @@ namespace ShearWallVisualizer.Controls
             // Loop through wall zones and calculate pressures
             foreach (var kvp in wall_zones)
             {
-                WindPressurResult_Wall wpr = new WindPressurResult_Wall();
+                WindPressureResult_Wall wpr = new WindPressureResult_Wall();
                 wpr.Surface = kvp.Key;
 
                 // Get the correct Cp value based on the surface type
@@ -127,12 +159,12 @@ namespace ShearWallVisualizer.Controls
             return wall_results;
         }
 
-        private static List<WindPressurResult_Roof> CalculateRoofPressureResults(WindLoadParameters parameters, Dictionary<string, double> roof_zones)
+        private static List<WindPressureResult_Roof> CalculateRoofPressureResults(WindLoadParameters parameters, Dictionary<string, double> roof_zones)
         {
-            List<WindPressurResult_Roof> roof_results = new List<WindPressurResult_Roof>();
+            List<WindPressureResult_Roof> roof_results = new List<WindPressureResult_Roof>();
             foreach (var kvp in roof_zones)
             {
-                WindPressurResult_Roof wpr = new WindPressurResult_Roof();
+                WindPressureResult_Roof wpr = new WindPressureResult_Roof();
                 wpr.Surface = kvp.Key;
 
                 RoofCpCases cases;
@@ -228,7 +260,7 @@ namespace ShearWallVisualizer.Controls
     }
 
     // Result class for wall wind pressure calculations
-    public class WindPressurResult_Wall
+    public class WindPressureResult_Wall
     {
         public string Surface { get; set; }
         public double Cp { get; set; }
@@ -249,7 +281,7 @@ namespace ShearWallVisualizer.Controls
     }
 
     // Result class for roof wind pressure calculations
-    public class WindPressurResult_Roof
+    public class WindPressureResult_Roof
     {
         public string Surface { get; set; }
         public double Start { get; set; }
@@ -700,5 +732,13 @@ namespace ShearWallVisualizer.Controls
             this.Cp_CaseA_Leeward = interpolated_Cp_CaseA_Leeward;
             this.Cp_CaseB_Leeward = interpolated_Cp_CaseB_Leeward;
         }
+    }
+
+    public class WindLoadResults_PerpToRidge
+    {
+        public double WW { get; set; }
+        public double LW { get; set; }
+        public double SW { get; set; }
+
     }
 }

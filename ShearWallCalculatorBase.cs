@@ -1,7 +1,6 @@
 ﻿using calculator;
 using Newtonsoft.Json;
 using System.Collections.Generic;
-using System;
 using System.Windows;
 
 namespace ShearWallCalculator
@@ -28,7 +27,43 @@ namespace ShearWallCalculator
         [JsonIgnore]
         public bool IsValidForCalculation { get => Validate(); }
 
-        public Rect GetBoundingRectangle_World()
+        /// <summary>
+        /// Contains a Rect that determines the maximum extents of the wall system and diaphragm system of the model
+        /// </summary>
+        public Rect BoundingBoxWorld { get; private set; }
+
+        public ShearWallCalculatorBase()
+        {
+
+        }
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="wall_system"></param>
+        /// <param name="diaphragm_system"></param>
+        public ShearWallCalculatorBase(WallSystem wall_system, DiaphragmSystem diaphragm_system, double shear_x, double shear_y)
+        {
+            _diaphragm_system = diaphragm_system;
+            _wall_system = wall_system;
+            V_x = shear_x;
+            V_y = shear_y;
+
+            BracedWallLine bracedWallLine = new BracedWallLine(5.0);
+            //            LoadTestWallData();
+            //            LoadTestWallData2();
+
+            // set the BoundingBox for the model
+            BoundingBoxWorld = ComputeBoundingBox_World();
+
+            Validate();
+        }
+
+        /// <summary>
+        /// Algorithm to determine the maximum and minimum extents of the wall system and the diaphragm system
+        /// </summary>
+        /// <returns></returns>
+        private Rect ComputeBoundingBox_World()
         {
             double minX = double.MaxValue;
             double minY = double.MaxValue;
@@ -82,29 +117,6 @@ namespace ShearWallCalculator
             return new Rect(new Point(minX, minY), new Point(maxX, maxY));
         }
 
-        public ShearWallCalculatorBase()
-        {
-
-        }
-
-        /// <summary>
-        /// Constructor
-        /// </summary>
-        /// <param name="wall_system"></param>
-        /// <param name="diaphragm_system"></param>
-        public ShearWallCalculatorBase(WallSystem wall_system, DiaphragmSystem diaphragm_system, double shear_x, double shear_y)
-        {
-            _diaphragm_system = diaphragm_system;
-            _wall_system = wall_system;
-            V_x = shear_x;
-            V_y = shear_y;
-
-            BracedWallLine bracedWallLine = new BracedWallLine(5.0);
-            //            LoadTestWallData();
-            //            LoadTestWallData2();
-
-            Validate();
-        }
 
         /// <summary>
         /// Checks if the numerics are valid for CtrMass and CtrRigidity so that calculations can be done.

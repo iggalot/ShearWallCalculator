@@ -3,6 +3,7 @@ using ShearWallCalculator;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Windows;
 
 namespace calculator
 {
@@ -100,9 +101,15 @@ namespace calculator
             // check that our CoM and CoR values are valid and computed -- if not, the calculations don't work
             if (IsValidForCalculation is true)
             {
+                // Set ASCE 7 minimum for building eccentricity.
+                double min_ecc_x = 0.05 * BoundingBoxWorld.Width;
+                double min_ecc_y = 0.05 * BoundingBoxWorld.Height;
+
                 // update eccentricty values between center of mass and center of Rigidity
-                ecc_x = (float)(_wall_system.CtrRigidity.X - _diaphragm_system.CtrMass.X);
-                ecc_y = (float)(_wall_system.CtrRigidity.Y - _diaphragm_system.CtrMass.Y);
+                // TODO:  this function isnt very efficient.  Can we do better?  Should we signal that the eccentricity is being overridden by the minimum code value?
+                ecc_x = Math.Max(min_ecc_x, (float)(_wall_system.CtrRigidity.X - _diaphragm_system.CtrMass.X));
+                ecc_y = Math.Max(min_ecc_y,(float)(_wall_system.CtrRigidity.Y - _diaphragm_system.CtrMass.Y));
+
                 Console.WriteLine("ecc_x: " + ecc_x + " ft.  ecc_y: " + ecc_y + " ft.");
 
                 // compute moment due to eccentric loading between center of mass and center of rigidity

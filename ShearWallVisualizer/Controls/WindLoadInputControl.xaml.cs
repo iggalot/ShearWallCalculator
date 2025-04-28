@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -6,23 +7,24 @@ namespace ShearWallVisualizer.Controls
 {
     public partial class WindLoadInputControl : UserControl
     {
-        public event EventHandler<OnWindCalculatedEventArgs> WindCalculated;  // the event that signals that the drawing has been updated -- controls will listen for this at the time they are created.
+        private WindLoadParameters parameters;
 
-        public class OnWindCalculatedEventArgs : EventArgs 
+        public event EventHandler<OnWindInputCompleteEventArgs> WindInputComplete;  // the event that signals that the drawing has been updated -- controls will listen for this at the time they are created.
+
+        public class OnWindInputCompleteEventArgs : EventArgs
         {
             public WindLoadParameters _parameters { get; }
 
-            public OnWindCalculatedEventArgs(WindLoadParameters parameters)
+            public OnWindInputCompleteEventArgs(WindLoadParameters parameters)
             {
                 _parameters = parameters;
             }
         }
 
-        protected virtual void OnWindCalculated(WindLoadParameters parameters)
+        protected virtual void OnWindInputComplete(WindLoadParameters parameters)
         {
-            WindCalculated?.Invoke(this, new OnWindCalculatedEventArgs(parameters));
+            WindInputComplete?.Invoke(this, new OnWindInputCompleteEventArgs(parameters));
         }
-
 
         public WindLoadInputControl()
         {
@@ -33,7 +35,7 @@ namespace ShearWallVisualizer.Controls
         private void ComputeButton_Click(object sender, RoutedEventArgs e)
         {
             WindLoadParameters parameters = GetWindLoadParameters();
-            OnWindCalculated(parameters); // raise the event where input has been completed
+            OnWindInputComplete(parameters); // raise the event where input has been completed
         }
 
         // Method to retrieve parameters from the input fields

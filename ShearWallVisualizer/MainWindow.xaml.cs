@@ -7,6 +7,7 @@ using ShearWallCalculator.Interfaces;
 using ShearWallVisualizer.Controls;
 using ShearWallVisualizer.Dialogs;
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Globalization;
 using System.IO;
@@ -123,16 +124,69 @@ namespace ShearWallVisualizer
 
 
                 // Events for wind load calculation
-                WindLoadInputControl.WindCalculated += WindLoadInputControl_WindCalculated;
+                ctrlWindLoadResultsControl.WindCalculated += WindLoadResultsControl_WindCalculated;
+                WindLoadInputControl.WindInputComplete += WindLoadInputControl_WindInputComplete;
             };
         }
 
-        private void WindLoadInputControl_WindCalculated(object sender, WindLoadInputControl.OnWindCalculatedEventArgs e)
+        /// <summary>
+        /// Event listener for when input of the wind loads as been completed
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void WindLoadInputControl_WindInputComplete(object sender, WindLoadInputControl.OnWindInputCompleteEventArgs e)
         {
+            if (ctrlWindLoadResultsControl != null)
+            {
+                ctrlWindLoadResultsControl.WindCalculated -= WindLoadResultsControl_WindCalculated;
+            }
+
             WindLoadResultsControl ctrl = new WindLoadResultsControl(e._parameters);
-            ctrlWindLoadResultsControl.Content = ctrl;  // load the new control
+
+            ctrl.WindCalculated += WindLoadResultsControl_WindCalculated;
+            ctrlWindLoadResultsControl.Content = ctrl;
+
+            ctrlWindLoadResultsControl = ctrl;
+
             tabWindResults.Visibility = Visibility.Visible;
             tabWindResults.IsSelected = true;
+        }
+
+        /// <summary>
+        /// Event listener for when wind load calculations have been completed.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void WindLoadResultsControl_WindCalculated(object sender, WindLoadResultsControl.OnWindCalculatedEventArgs e)
+        {
+            List<WindPressureResult_Wall> wall_results = e._wall_results;
+            List<WindPressureResult_Roof> roof_results = e._roof_results;
+            WindLoadParameters parameters = e._parameters;
+
+            // find the maximum of the windward and leeward sums at elevation h
+            double temp_sum = double.MinValue;
+            // Get the internal suction windward case
+            double ww = 0;
+            double lw = 0;
+            
+            foreach (var wall in wall_results)
+            {
+                if (wall.Surface == "Windward Wall - z=h")
+                {
+                    ww = wall.PressBaseA;
+                }
+
+                if (wall.Surface == "Leeward Wall")
+                {
+                    lw = wall.PressBaseA;
+                }
+            }
+
+            // worst x case will be +WW and -LW -- internal suction should offset each other.
+            currentMagX = (ww - lw) * parameters.BuildingHeight * parameters.BuildingWidth / 1000; // net sum at elevation h
+            currentMagY = 0;
+
+            Update();
         }
 
         private void CreateWallDataControls()
@@ -536,6 +590,7 @@ namespace ShearWallVisualizer
             m_layers.AddLayer(1, DrawGridInformation);
             m_layers.AddLayer(2, DrawReferenceImage);
             m_layers.AddLayer(3, DrawBoundingBox);
+            m_layers.AddLayer(4, DrawLoads);
 
             m_layers.AddLayer(41, DrawShapes);
             m_layers.AddLayer(52, DrawCursor);
@@ -859,19 +914,24 @@ namespace ShearWallVisualizer
             }
         }
 
+        private void DrawLoads(DrawingContext ctx)
+        {
+
+        }
+
         private void DrawBoundingBox(DrawingContext ctx)
         {
-            Rect rect = Calculator.GetBoundingRectangle_World();
+            Rect rect = Calculator.BoundingBoxWorld;
 
             var p1 = WorldToScreen(rect.BottomLeft, m_layers);
             var p2 = WorldToScreen(rect.BottomRight, m_layers);
             var p3 = WorldToScreen(rect.TopRight, m_layers);
             var p4 = WorldToScreen(rect.TopLeft, m_layers);
 
-            ctx.DrawLine(new Pen(Brushes.Green, 4), p1, p2);
-            ctx.DrawLine(new Pen(Brushes.Green, 4), p2, p3);
-            ctx.DrawLine(new Pen(Brushes.Green, 4), p3, p4);
-            ctx.DrawLine(new Pen(Brushes.Green, 4), p4, p1);
+            ctx.DrawLine(new Pen(Brushes.Green, 1), p1, p2);
+            ctx.DrawLine(new Pen(Brushes.Green, 1), p2, p3);
+            ctx.DrawLine(new Pen(Brushes.Green, 1), p3, p4);
+            ctx.DrawLine(new Pen(Brushes.Green, 1), p4, p1);
         }
 
         /// <summary>
@@ -1875,17 +1935,12 @@ namespace ShearWallVisualizer
                 {
                     var rigid_calc = JsonConvert.DeserializeObject<ShearWallCalculator_RigidDiaphragm>(json, _settings);
                     Calculator = new ShearWallCalculator_RigidDiaphragm(rigid_calc);
-                    OnUpdated?.Invoke(this, EventArgs.Empty);
                 }
                 else if (calculatorType == "Flexible Diaphragm")
                 {
                     var flex_calc = JsonConvert.DeserializeObject<ShearWallCalculator_FlexibleDiaphragm>(json, _settings);
                     Calculator = new ShearWallCalculator_FlexibleDiaphragm(flex_calc);
-                    OnUpdated?.Invoke(this, EventArgs.Empty);
-
-
                 }
-
 
                 Update();
                 MessageBox.Show("Drawing loaded!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
