@@ -79,7 +79,7 @@ namespace calculator
         /// <summary>
         /// Function to update calculations.  Should be called everytime data is added, removed, or changed.
         /// </summary>
-        public override void Update()
+        public void Update()
         {
 
             // check if we have data for a wall system and a diaphragm system
@@ -97,13 +97,15 @@ namespace calculator
             Console.WriteLine("Center of Mass -- xr: " + _diaphragm_system.CtrMass.X + " ft.  yr: " + _diaphragm_system.CtrMass.Y + " ft.");
             Console.WriteLine("Center of Rigidity -- xr: " + _wall_system.CtrRigidity.X + " ft.  yr: " + _wall_system.CtrRigidity.Y + " ft.");
 
+            base.Update();  // call the base class to update also.
             
             // check that our CoM and CoR values are valid and computed -- if not, the calculations don't work
             if (IsValidForCalculation is true)
             {
                 // Set ASCE 7 minimum for building eccentricity.
-                double min_ecc_x = 0.05 * BoundingBoxWorld.Width;
-                double min_ecc_y = 0.05 * BoundingBoxWorld.Height;
+                // 5% of building width / Length or 10% of building height
+                double min_ecc_x = Math.Max(0.05 * BoundingBoxWorld.Width, 0.1 * building_height);
+                double min_ecc_y = Math.Max(0.05 * BoundingBoxWorld.Height, 0.1 * building_height);
 
                 // update eccentricty values between center of mass and center of Rigidity
                 // TODO:  this function isnt very efficient.  Can we do better?  Should we signal that the eccentricity is being overridden by the minimum code value?

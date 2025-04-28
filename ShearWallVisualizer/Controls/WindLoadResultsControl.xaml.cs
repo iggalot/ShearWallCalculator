@@ -94,8 +94,8 @@ namespace ShearWallVisualizer.Controls
                 wpr.Surface = kvp.Key;
 
                 // Get the correct Cp value based on the surface type
-                wpr.GCpi_A = -1.0 * WindLoadCalculator.GetGCpiMagnitude(parameters.EnclosureClassification); // balloon case
-                wpr.GCpi_B = +1.0 * WindLoadCalculator.GetGCpiMagnitude(parameters.EnclosureClassification); // internal suction case
+                wpr.GCpi_A = +1.0 * WindLoadCalculator.GetGCpiMagnitude(parameters.EnclosureClassification); // suction case
+                wpr.GCpi_B = -1.0 * WindLoadCalculator.GetGCpiMagnitude(parameters.EnclosureClassification); // internal balloon case
 
                 switch (kvp.Key)
                 {
@@ -114,20 +114,12 @@ namespace ShearWallVisualizer.Controls
 
                     case "Leeward Wall":
                         // swap these values since the balloon case is additive for leeward and sidewalls
-                        double temp = wpr.GCpi_A;
-                        wpr.GCpi_A = wpr.GCpi_B;
-                        wpr.GCpi_B = temp;
-
                         wpr.z = parameters.BuildingHeight;
                         wpr.Cp = WindLoadCalculator.GetCpLeewardWall(parameters);
                         break;
 
                     case "Sidewall":
                         // swap these values since the balloon case is additive for leeward and sidewalls
-                        double temp2 = wpr.GCpi_A;
-                        wpr.GCpi_A = wpr.GCpi_B;
-                        wpr.GCpi_B = temp2;
-
                         wpr.z = parameters.BuildingHeight;
                         wpr.Cp = WindLoadCalculator.GetCpSidewall(parameters);
                         break;

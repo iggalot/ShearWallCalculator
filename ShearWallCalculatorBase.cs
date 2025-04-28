@@ -7,7 +7,10 @@ namespace ShearWallCalculator
 {
     public class ShearWallCalculatorBase
     {
-    
+        private const double DEFAULT_BUILDING_HEIGHT = 10.0;
+        public double building_height { get; set; } = DEFAULT_BUILDING_HEIGHT; // TODO:  need to make this sync with the wind load calculations which can potentially override the value
+
+
         public string CalculatorType { get; }
         public WallSystem _wall_system { get; set;  } = new WallSystem();
         public DiaphragmSystem _diaphragm_system { get; set; } = new DiaphragmSystem();
@@ -25,7 +28,7 @@ namespace ShearWallCalculator
         /// and not NaN or Infinity
         /// </summary>
         [JsonIgnore]
-        public bool IsValidForCalculation { get => Validate(); }
+        public bool IsValidForCalculation { get; set; }
 
         /// <summary>
         /// Contains a Rect that determines the maximum extents of the wall system and diaphragm system of the model
@@ -53,10 +56,31 @@ namespace ShearWallCalculator
             //            LoadTestWallData();
             //            LoadTestWallData2();
 
+            Update();
+        }
+
+        public void Update()
+        {
             // set the BoundingBox for the model
             BoundingBoxWorld = ComputeBoundingBox_World();
+            building_height = ComputeBuildingHeight();
 
-            Validate();
+            // validate the model for calculations
+            IsValidForCalculation = Validate();
+        }
+
+        /// <summary>
+        /// Returns the maximum wall height of the system.
+        /// </summary>
+        /// <returns></returns>
+        private double ComputeBuildingHeight()
+        {
+            double height = 0.0;
+            foreach (KeyValuePair<int, WallData> wall in _wall_system._walls)
+            {
+                if (wall.Value.WallHeight > height) height = wall.Value.WallHeight;
+            }
+            return height;
         }
 
         /// <summary>
@@ -186,10 +210,5 @@ namespace ShearWallCalculator
 
             _wall_system.Update();
         }
-
-        /// <summary>
-        /// Called by subclasses to force an update
-        /// </summary>
-        public virtual void Update() {}
     }
 }
