@@ -1308,7 +1308,9 @@ namespace ShearWallVisualizer
                     Brushes.Black,
                     VisualTreeHelper.GetDpi(this).PixelsPerDip);
 
-                ctx.DrawText(idLabel, new Point(p1_screen.X - 14, p1_screen.Y + 2));
+                ctx.PushTransform(new RotateTransform(90, p1_screen.X, p1_screen.Y + 10));
+                ctx.DrawText(idLabel, new Point(p1_screen.X, p1_screen.Y));
+                ctx.Pop();  // remember to pop the transform after its been used.
 
                 bwl_count++;
             }
