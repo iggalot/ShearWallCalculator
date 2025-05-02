@@ -33,6 +33,7 @@ namespace calculator
     [JsonObject(MemberSerialization.OptIn)]
     public class WallData : DrawableObject
     {
+        public override int ID { get; set; }
         public override string Type => "Wall";
         [JsonProperty]
         public System.Windows.Point Start { get; set; } // start point of wall...bottommost point at one end

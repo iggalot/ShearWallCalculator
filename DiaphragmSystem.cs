@@ -185,6 +185,7 @@ namespace ShearWallCalculator
         public void AddDiaphragm(DiaphragmData_Rectangular diaphragm)
         {
             int id = GetNextDiaphragmID();
+            diaphragm.ID = id;
             _diaphragms.Add(id, diaphragm);
             Update();
         }

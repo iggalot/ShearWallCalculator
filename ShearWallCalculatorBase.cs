@@ -52,7 +52,7 @@ namespace ShearWallCalculator
             V_x = shear_x;
             V_y = shear_y;
 
-            BracedWallLine bracedWallLine = new BracedWallLine(5.0);
+            //BracedWallLine bracedWallLine = new BracedWallLine(5.0);
             //            LoadTestWallData();
             //            LoadTestWallData2();
 

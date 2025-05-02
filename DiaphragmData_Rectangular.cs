@@ -20,6 +20,7 @@ namespace ShearWallCalculator
         [JsonProperty]
         public DiaphragmTypes DiaphragmType = DiaphragmTypes.DIAPHRAGM_RIGID;
 
+        public override int ID { get; set; }
         public override string Type => "Diaphragm";
 
         /// Rectangular region defined by P1, P2, P3, P4

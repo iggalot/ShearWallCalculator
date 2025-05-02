@@ -159,8 +159,8 @@ namespace ShearWallCalculator
         public WallSystem()
         {
             // Create the braced wall line groups for this wall system
-            BracedWallGroups_EW = new BracedWallLine(DEFAULT_ALLOWABLE_BRACEDLINE_OFFSET);
-            BracedWallGroups_NS = new BracedWallLine(DEFAULT_ALLOWABLE_BRACEDLINE_OFFSET);
+            BracedWallGroups_EW = new BracedWallLine(DEFAULT_ALLOWABLE_BRACEDLINE_OFFSET, WallDirs.EastWest);
+            BracedWallGroups_NS = new BracedWallLine(DEFAULT_ALLOWABLE_BRACEDLINE_OFFSET, WallDirs.NorthSouth);
         }
 
         public void Update()
@@ -182,12 +182,12 @@ namespace ShearWallCalculator
                 if (wall.Value.WallDir == WallDirs.EastWest)
                 {
                     EW_Walls.Add(wall.Key, wall.Value);
-                    BracedWallGroups_EW.AddValue(wall.Value.Center.Y); // add horizontal walls to the braced wall lines groups
+                    BracedWallGroups_EW.AddWall(wall.Value); // add horizontal walls to the braced wall lines groups
                 }
                 else
                 {
                     NS_Walls.Add(wall.Key, wall.Value);
-                    BracedWallGroups_NS.AddValue(wall.Value.Center.X); // add vertical walls to the braced wall lines
+                    BracedWallGroups_NS.AddWall(wall.Value); // add vertical walls to the braced wall lines
                 }
             }
 
@@ -309,7 +309,9 @@ namespace ShearWallCalculator
         public void AddWall(WallData wall)
         {
             int id = GetNextWallID();
+            wall.ID = id;
             _walls.Add(id, wall);
+            Update();
         }
 
         /// <summary>

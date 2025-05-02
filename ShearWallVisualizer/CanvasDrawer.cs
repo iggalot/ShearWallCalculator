@@ -210,15 +210,15 @@ namespace ShearWallVisualizer
         {
             if(wall_system == null)
             {
-                if (wall_system.BracedWallGroups_EW != null && wall_system.BracedWallGroups_EW.groupedValues != null)
+                if (wall_system.BracedWallGroups_EW != null && wall_system.BracedWallGroups_EW.groupedWalls != null)
                 {
                     // search the EW braced wall lines
-                    foreach (var wall in wall_system.BracedWallGroups_EW.groupedValues)
+                    foreach (var wall in wall_system.BracedWallGroups_EW.groupedWalls)
                     {
 
                         // draw a line at the center of all of the values in this group
-                        double first = wall[0];
-                        double last = wall[wall.Count - 1];
+                        double first = wall[0].Center.Y;
+                        double last = wall[wall.Count - 1].Center.Y;
                         double center = (first + last) / 2;
                         Point p1_world = new Point(-3000, center);
                         Point p2_world = new Point(3000, center);
@@ -229,14 +229,14 @@ namespace ShearWallVisualizer
                         _canvas.Children.Add(line);
                     }
                 }
-                if (wall_system.BracedWallGroups_NS != null && wall_system.BracedWallGroups_NS.groupedValues != null)
+                if (wall_system.BracedWallGroups_NS != null && wall_system.BracedWallGroups_NS.groupedWalls != null)
                 {
                     // Draw the east west braced wall lines
-                    foreach (var wall in wall_system.BracedWallGroups_NS.groupedValues)
+                    foreach (var wall in wall_system.BracedWallGroups_NS.groupedWalls)
                     {
                         // draw a line at the center of all of the values in this group
-                        float first = (float)wall[0];
-                        float last = (float)wall[wall.Count - 1];
+                        float first = (float)wall[0].Center.X;
+                        float last = (float)wall[wall.Count - 1].Center.X;
                         float center = (first + last) / 2;
                         Point p1_world = new Point(center, -3000);
                         Point p2_world = new Point(center, 3000);

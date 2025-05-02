@@ -1249,12 +1249,12 @@ namespace ShearWallVisualizer
         {
             // for east west walls
             int bwl_count = 1;
-            foreach (var brace_line in wallSystem.BracedWallGroups_EW.groupedValues)
+            foreach (var brace_line in wallSystem.BracedWallGroups_EW.groupedWalls)
             {
                 // draw a line at the center of all of the values in this group
                 // TODO: should this be a weight average?
-                double first = brace_line[0];
-                double last = brace_line[brace_line.Count - 1];
+                double first = brace_line[0].Center.Y;
+                double last = brace_line[brace_line.Count - 1].Center.Y;
                 double center = (first + last) / 2;
 
                 Point p1_world = new Point(0, center);
@@ -1281,12 +1281,12 @@ namespace ShearWallVisualizer
                 bwl_count++;
             }
 
-            foreach (var brace_line in wallSystem.BracedWallGroups_NS.groupedValues)
+            foreach (var brace_line in wallSystem.BracedWallGroups_NS.groupedWalls)
             {
                 // draw a line at the center of all of the values in this group
                 // TODO:  Should this be a weight average?
-                double first = brace_line[0];
-                double last = brace_line[brace_line.Count - 1];
+                double first = brace_line[0].Center.X;
+                double last = brace_line[brace_line.Count - 1].Center.X;
                 double center = (first + last) / 2;
 
                 Point p1_world = new Point(center, 0);
