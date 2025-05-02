@@ -47,6 +47,7 @@
                     <Button Name="btnRigidityMode" Foreground="White" Background="MediumBlue" Margin="2" Opacity="0.75" FontWeight="Bold" Content="Wall" Width="75" Height="25" Click="btnLineMode_Click"/>
                     <Button Name="btnMassMode" Foreground="White" Background="Red" Margin="2" Opacity="0.75" FontWeight="Bold" Content="Diaphragm" Width="75" Height="25" Click="btnRectangleMode_Click"/>
                 </StackPanel>
+                <TextBlock Name="tbCalculatorType" FontSize="14" FontWeight="Black"/>
                 <StackPanel>
 
                     <!--<Button Name="btnLoadEntry" HorizontalAlignment="Left" Content="LOADS" Width="50" Height="25" Click="btnOpenLoadDialog_Click"/>-->

@@ -164,8 +164,6 @@ namespace ShearWallCalculator
             }
         }
 
-
-
         /// <summary>
         /// Prepares a set of test data.  Based on Tonatiuh Rodriquez Niki video 01 on YouTube.
         /// https://www.youtube.com/watch?v=Ljp5M0CTOwA&list=PLOnJNeyZggWT5z5PoXbNfec9nlfH6AczC&index=1

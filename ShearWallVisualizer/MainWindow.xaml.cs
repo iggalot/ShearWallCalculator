@@ -279,6 +279,32 @@ namespace ShearWallVisualizer
                     ShearWallResultsControl control = new ShearWallResultsControl(id, rigidity, xbar, ybar, vi_x, vi_y, v_ecc, v_tot);
                     sp_CalcPanel.Children.Add(control);
                 }
+
+                if (Calculator is ShearWallCalculator_FlexibleDiaphragm)
+                {
+                    ShearWallCalculator_FlexibleDiaphragm calc = Calculator as ShearWallCalculator_FlexibleDiaphragm;
+                    // Must check validity of numbers since some walls may be in X direction and others in Y direction
+                    double vi_x = double.NaN;
+                    if (calc.DirectShear_X.ContainsKey(id) is true)
+                    {
+                        vi_x = calc.DirectShear_X[id];
+                    }
+
+                    var vi_y = double.NaN;
+                    if (calc.DirectShear_Y.ContainsKey(id) is true)
+                    {
+                        vi_y = calc.DirectShear_Y[id];
+                    }
+
+                    var v_tot = double.NaN;
+                    if (calc.TotalWallShear.ContainsKey(id) is true)
+                    {
+                        v_tot = calc.TotalWallShear[id];
+                    }
+
+                    ShearWallResultsControl control = new ShearWallResultsControl(id, rigidity, xbar, ybar, vi_x, vi_y, 0, v_tot);
+                    sp_CalcPanel.Children.Add(control);
+                }
             }
         }
 
@@ -291,7 +317,9 @@ namespace ShearWallVisualizer
 
             wallSystem = Calculator._wall_system;
             diaphragmSystem = Calculator._diaphragm_system;
-            Calculator = new ShearWallCalculator_RigidDiaphragm(wallSystem, diaphragmSystem, currentMagX, currentMagY);
+            //Calculator = new ShearWallCalculator_RigidDiaphragm(wallSystem, diaphragmSystem, currentMagX, currentMagY);
+            Calculator = new ShearWallCalculator_FlexibleDiaphragm(wallSystem, diaphragmSystem, currentMagX, currentMagY);
+
             Calculator.Update();
 
             // clear the tabs
@@ -302,6 +330,9 @@ namespace ShearWallVisualizer
             // recreate the data controls
             CreateWallDataControls();
             CreateDiaphragmDataControls();
+
+            // list the type of calculator
+            tbCalculatorType.Text = Calculator.GetType().Name;
 
             // update the calculator
             if(Calculator.IsValidForCalculation is true)
