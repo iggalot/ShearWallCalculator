@@ -78,6 +78,7 @@ namespace ShearWallCalculator
             foreach (KeyValuePair<int, WallData> kvp in walls)
             {
                 WallData wall = kvp.Value;
+                wall.ID = kvp.Key;  // ensure ID is set correctly.
                 if (wall.WallDir == WallDirs.EastWest)
                     EW_Walls.Add(wall);
                 else if (wall.WallDir == WallDirs.NorthSouth)
