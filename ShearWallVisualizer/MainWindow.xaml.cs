@@ -241,12 +241,24 @@ namespace ShearWallVisualizer
 
         private void CreateCalculationResultsControls_Rigid()
         {
+
             foreach (var wall in wallSystem._walls)
             {
                 int id = wall.Key;
                 var rigidity = wall.Value.WallRigidity;
-                var xbar = Calculator._wall_system.X_bar_walls[id];
-                var ybar = Calculator._wall_system.Y_bar_walls[id];
+
+                double xbar = double.NaN;
+                double ybar = double.NaN;
+
+                if (Calculator._wall_system.X_bar_walls.ContainsKey(id) is true)
+                {
+                    xbar = Calculator._wall_system.X_bar_walls[id];
+                }
+
+                if (Calculator._wall_system.Y_bar_walls.ContainsKey(id) is true)
+                {
+                    ybar = Calculator._wall_system.Y_bar_walls[id];
+                }
 
                 if (Calculator is ShearWallCalculator_RigidDiaphragm)
                 {
@@ -288,9 +300,19 @@ namespace ShearWallVisualizer
             {
                 int id = wall.Key;
                 var rigidity = wall.Value.WallRigidity;
-                var xbar = Calculator._wall_system.X_bar_walls[id];
-                var ybar = Calculator._wall_system.Y_bar_walls[id];
 
+                double xbar = double.NaN;
+                double ybar = double.NaN;
+
+                if (Calculator._wall_system.X_bar_walls.ContainsKey(id) is true)
+                {
+                    xbar = Calculator._wall_system.X_bar_walls[id];
+                }
+
+                if (Calculator._wall_system.Y_bar_walls.ContainsKey(id) is true)
+                {
+                    ybar = Calculator._wall_system.Y_bar_walls[id];
+                }
                 if (Calculator is ShearWallCalculator_FlexibleDiaphragm)
                 {
                     ShearWallCalculator_FlexibleDiaphragm calc = Calculator as ShearWallCalculator_FlexibleDiaphragm;
@@ -1290,77 +1312,80 @@ namespace ShearWallVisualizer
             m_layers.currentReferenceImageLayer.TargetRect = imageScreenRect;
             m_layers.currentReferenceImageLayer.SetPosition(p4_screen.X, p4_screen.Y);
         }
+
+
         private void DrawBracedWallLines(DrawingContext ctx)
         {
+            // do we have a wall system or BWL manager created yet?
+            if(wallSystem is null || wallSystem.BWL_Manager is null)
+            {
+                return;
+            }
+
             // for east west walls
             int bwl_count = 1;
-            foreach (var brace_line in wallSystem.BracedWallGroups_EW.groupedWalls)
+
+            for (int i = 0; i < wallSystem.BWL_Manager.BracedWallLines.Count; i++)
             {
-                // draw a line at the center of all of the values in this group
-                // TODO: should this be a weight average?
-                double first = brace_line[0].Center.Y;
-                double last = brace_line[brace_line.Count - 1].Center.Y;
-                double center = (first + last) / 2;
+                BracedWallLine bwl = wallSystem.BWL_Manager.BracedWallLines[i];
+                int bwl_id = bwl.GroupNumber;
 
-                Point p1_world = new Point(0, center);
-                Point p1_screen = GetConstrainedScreenPoint(WorldToScreen(p1_world, dockpanel), dockpanel); ;
-                Point p2_world = new Point(dockpanel.ActualWidth, center);
-                Point p2_screen = GetConstrainedScreenPoint(WorldToScreen(p2_world, dockpanel), dockpanel); ;
+                if (bwl.WallDir == WallDirs.EastWest)
+                {
+                    double center = bwl.Center.Y;
 
-                Pen pen = new Pen(Brushes.Black, 2);
-                pen.DashStyle = new DashStyle(new double[] { 3, 1, 3 }, 0);
-                ctx.DrawLine(pen, p1_screen, p2_screen);
+                    Point p1_world = new Point(-10, center);
+                    Point p1_screen = GetConstrainedScreenPoint(WorldToScreen(p1_world, dockpanel), dockpanel); ;
+                    Point p2_world = new Point(dockpanel.ActualWidth, center);
+                    Point p2_screen = GetConstrainedScreenPoint(WorldToScreen(p2_world, dockpanel), dockpanel); ;
 
-                // display the com as a text
-                FormattedText idLabel = new FormattedText(
-                    $"BWL{bwl_count}",
-                    CultureInfo.GetCultureInfo("en-us"),
-                    FlowDirection.LeftToRight,
-                    new Typeface("Consolas"),
-                    14,
-                    Brushes.Black,
-                    VisualTreeHelper.GetDpi(this).PixelsPerDip);
+                    Pen pen = new Pen(Brushes.Black, 2);
+                    pen.DashStyle = new DashStyle(new double[] { 3, 1, 3 }, 0);
+                    ctx.DrawLine(pen, p1_screen, p2_screen);
 
-                ctx.DrawText(idLabel, new Point(p1_screen.X - 40, p1_screen.Y - 7));
+                    // display the com as a text
+                    FormattedText idLabel = new FormattedText(
+                        $"BWL{bwl_id.ToString()}",
+                        CultureInfo.GetCultureInfo("en-us"),
+                        FlowDirection.LeftToRight,
+                        new Typeface("Consolas"),
+                        14,
+                        Brushes.Black,
+                        VisualTreeHelper.GetDpi(this).PixelsPerDip);
 
-                bwl_count++;
-            }
+                    ctx.DrawText(idLabel, new Point(p1_screen.X - 40, p1_screen.Y - 7));
 
-            foreach (var brace_line in wallSystem.BracedWallGroups_NS.groupedWalls)
-            {
-                // draw a line at the center of all of the values in this group
-                // TODO:  Should this be a weight average?
-                double first = brace_line[0].Center.X;
-                double last = brace_line[brace_line.Count - 1].Center.X;
-                double center = (first + last) / 2;
+                    bwl_count++;
+                }
+                else if (bwl.WallDir == WallDirs.NorthSouth)
+                {
+                    double center = bwl.Center.X;
 
-                Point p1_world = new Point(center, 0);
-                Point p1_screen = GetConstrainedScreenPoint(WorldToScreen(p1_world, dockpanel), dockpanel); ;
-                Point p2_world = new Point(center, dockpanel.ActualHeight);
-                Point p2_screen = GetConstrainedScreenPoint(WorldToScreen(p2_world, dockpanel), dockpanel); ;
+                    Point p1_world = new Point(center, -10);
+                    Point p1_screen = GetConstrainedScreenPoint(WorldToScreen(p1_world, dockpanel), dockpanel); ;
+                    Point p2_world = new Point(center, dockpanel.ActualHeight);
+                    Point p2_screen = GetConstrainedScreenPoint(WorldToScreen(p2_world, dockpanel), dockpanel); ;
 
-                Pen pen = new Pen(Brushes.Black, 2);
-                pen.DashStyle = new DashStyle(new double[] { 3, 1, 3 }, 0);
-                ctx.DrawLine(pen, p1_screen, p2_screen); // draw the horizontal line
+                    Pen pen = new Pen(Brushes.Black, 2);
+                    pen.DashStyle = new DashStyle(new double[] { 3, 1, 3 }, 0);
+                    ctx.DrawLine(pen, p1_screen, p2_screen);
 
-                // display the com as a text
-                FormattedText idLabel = new FormattedText(
-                    $"BWL{bwl_count}",
-                    CultureInfo.GetCultureInfo("en-us"),
-                    FlowDirection.LeftToRight,
-                    new Typeface("Consolas"),
-                    14,
-                    Brushes.Black,
-                    VisualTreeHelper.GetDpi(this).PixelsPerDip);
+                    // display the com as a text
+                    FormattedText idLabel = new FormattedText(
+                        $"BWL{bwl_id.ToString()}",
+                        CultureInfo.GetCultureInfo("en-us"),
+                        FlowDirection.LeftToRight,
+                        new Typeface("Consolas"),
+                        14,
+                        Brushes.Black,
+                        VisualTreeHelper.GetDpi(this).PixelsPerDip);
 
-                ctx.PushTransform(new RotateTransform(90, p1_screen.X, p1_screen.Y + 10));
-                ctx.DrawText(idLabel, new Point(p1_screen.X, p1_screen.Y));
-                ctx.Pop();  // remember to pop the transform after its been used.
-
-                bwl_count++;
+                    ctx.PushTransform(new RotateTransform(90, p1_screen.X, p1_screen.Y + 10));
+                    ctx.DrawText(idLabel, new Point(p1_screen.X, p1_screen.Y));
+                    ctx.Pop();  // remember to pop the transform after its been used.
+                }
             }
         }
-
         private void DrawSnapMarkers(DrawingContext ctx)
         {
             if (snapMode == false)

@@ -155,30 +155,30 @@ namespace ShearWallCalculator
             double beamStart = BoundingBoxWorld.Y;
             double beamEnd = BoundingBoxWorld.Y + BoundingBoxWorld.Height;
 
-            var bracedWallLine = _wall_system.BracedWallGroups_EW;
+            var bracedWallLine = _wall_system.BWL_Manager.GetEastWestWallLines();
 
-            // Compute support center Y-coordinates
-            List<double> supports = bracedWallLine.groupedWalls
-                .Where(g => g.Count > 0)
-                .Select(group => group.Average(w => w.Center.Y))
-                .ToList();
+            //// Compute support center Y-coordinates
+            //List<double> supports = bracedWallLine.groupedWalls
+            //    .Where(g => g.Count > 0)
+            //    .Select(group => group.Average(w => w.Center.Y))
+            //    .ToList();
 
-            var loads = SupportLoadDistributor.DistributeLoad(supports, shear_x_plf, beamStart, beamEnd);
+            //var loads = SupportLoadDistributor.DistributeLoad(supports, shear_x_plf, beamStart, beamEnd);
 
-            // Store individual group loads
-            var groupLoads = loads.Select(l => l.Load).ToList();
-            DirectShear_X_Groups[bracedWallLine] = groupLoads;
+            //// Store individual group loads
+            //var groupLoads = loads.Select(l => l.Load).ToList();
+            //DirectShear_X_Groups[bracedWallLine] = groupLoads;
 
-            // Store total for verification
-            double totalShear = groupLoads.Sum();
-            DirectShear_X_Braced[bracedWallLine] = totalShear;
+            //// Store total for verification
+            //double totalShear = groupLoads.Sum();
+            //DirectShear_X_Braced[bracedWallLine] = totalShear;
 
             // Output
-            for (int i = 0; i < groupLoads.Count; i++)
-            {
-                Console.WriteLine($"Group {i} (Y = {supports[i]:F2}) carries {groupLoads[i]:F2} kN");
-            }
-            Console.WriteLine($"Total shear on braced wall line: {totalShear:F2} kN");
+            //for (int i = 0; i < groupLoads.Count; i++)
+            //{
+            //    Console.WriteLine($"Group {i} (Y = {supports[i]:F2}) carries {groupLoads[i]:F2} kN");
+            //}
+            //Console.WriteLine($"Total shear on braced wall line: {totalShear:F2} kN");
         }
 
         /// <summary>
@@ -284,38 +284,5 @@ namespace ShearWallCalculator
                 return supports;
             }
         }
-
-        public double? GetShearByWallId(BracedWallLine wallLine, int wallId)
-        {
-            if (!DirectShear_X_Groups.ContainsKey(wallLine))
-                return null;
-
-            var groups = wallLine.GetGroups();
-            for (int i = 0; i < groups.Count; i++)
-            {
-                if (groups[i].Any(w => w.ID == wallId))
-                {
-                    return DirectShear_X_Groups[wallLine][i];
-                }
-            }
-
-            return null; // Wall not found
-        }
-
-        public double? GetShearByGroupIndex(BracedWallLine wallLine, int groupIndex)
-        {
-            if (!DirectShear_X_Groups.ContainsKey(wallLine))
-                return null;
-
-            var groupList = DirectShear_X_Groups[wallLine];
-            if (groupIndex >= 0 && groupIndex < groupList.Count)
-            {
-                return groupList[groupIndex];
-            }
-
-            return null; // Index out of range
-        }
-
-
     }
 }

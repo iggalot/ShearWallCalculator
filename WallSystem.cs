@@ -10,11 +10,9 @@ namespace ShearWallCalculator
     /// </summary>
     public class WallSystem
     {
-        private float DEFAULT_ALLOWABLE_BRACEDLINE_OFFSET = 8.0f;  // the minimum offset allowed for groupings of braced wall lines IRC requires 4ft max.
 
         // A collection of all walls defined in the system
         public Dictionary<int, WallData> _walls { get; set; } = new Dictionary<int, WallData>(); // collection of walls>
-
 
         // sorted collection of walls in East West direction (horizontal on screen)
         [JsonIgnore]
@@ -25,11 +23,12 @@ namespace ShearWallCalculator
 
         public Dictionary<int, WallData> NS_Walls { get; set; } = new Dictionary<int, WallData>();
 
-        // braced wall line groups
-        [JsonIgnore]
-        public BracedWallLine BracedWallGroups_EW { get; set; }
-        [JsonIgnore]
-        public BracedWallLine BracedWallGroups_NS { get; set; }
+        //// braced wall line groups
+        //[JsonIgnore]
+        //public BracedWallLine BracedWallGroups_EW { get; set; }
+        //[JsonIgnore]
+        //public BracedWallLine BracedWallGroups_NS { get; set; }
+        public BracedWallLineGroupManager BWL_Manager { get; set; }
 
         // distance from center of wall to center of rigidity in y-direction
         [JsonIgnore]
@@ -158,9 +157,7 @@ namespace ShearWallCalculator
         /// <param name="walls"></param>
         public WallSystem()
         {
-            // Create the braced wall line groups for this wall system
-            BracedWallGroups_EW = new BracedWallLine(DEFAULT_ALLOWABLE_BRACEDLINE_OFFSET, WallDirs.EastWest);
-            BracedWallGroups_NS = new BracedWallLine(DEFAULT_ALLOWABLE_BRACEDLINE_OFFSET, WallDirs.NorthSouth);
+
         }
 
         public void Update()
@@ -173,33 +170,9 @@ namespace ShearWallCalculator
             // clear the current calculator
             EW_Walls.Clear();
             NS_Walls.Clear();
-            BracedWallGroups_EW.Clear();
-            BracedWallGroups_NS.Clear();
 
-            // sort through the list of walls and assign to appropriate dictionary
-            foreach (var wall in _walls)
-            {
-                if (wall.Value.WallDir == WallDirs.EastWest)
-                {
-                    EW_Walls.Add(wall.Key, wall.Value);
-                    BracedWallGroups_EW.AddWall(wall.Value); // add horizontal walls to the braced wall lines groups
-                }
-                else
-                {
-                    NS_Walls.Add(wall.Key, wall.Value);
-                    BracedWallGroups_NS.AddWall(wall.Value); // add vertical walls to the braced wall lines
-                }
-            }
-
-            // update braced wall line calculations
-            BracedWallGroups_EW.Update(); 
-            BracedWallGroups_NS.Update();
-
-            Console.WriteLine("\nEW Wall Groups: ");
-            BracedWallGroups_EW.PrintGroups();
-
-            Console.WriteLine("\nNS Wall Groups: ");
-            BracedWallGroups_NS.PrintGroups();
+            // Create the braced wall line manager
+            BWL_Manager = new BracedWallLineGroupManager(_walls);
 
             // recompute the center of rigidity for the system
             ComputeCenterOfRigidity();
@@ -270,31 +243,43 @@ namespace ShearWallCalculator
         /// </summary>
         public void ComputeCenterOfRigidity()
         {
+            if(BWL_Manager is null || BWL_Manager.BracedWallLines.Count == 0)
+            {
+                return;
+            }
+
             // Display the wall info
             double horiz_sum = 0;
             double horiz_rigidity_sum = 0;
             double Ryr_sum = 0;
-            //Console.WriteLine("\nHorizontal Walls");
-            foreach (var wall in EW_Walls)
-            {
-                horiz_sum += wall.Value.WallLength;
-                horiz_rigidity_sum += wall.Value.WallRigidity;
-                Ryr_sum += wall.Value.Ryr;
-                //Console.WriteLine(wall.Value.DisplayInfo());
-            }
-            //Console.WriteLine("Sum Ry: " + horiz_rigidity_sum + "   Sum Ryr: " + Ryr_sum);
 
             double vert_rigidity_sum = 0;
             double vert_sum = 0;
             double Rxr_sum = 0;
-            //Console.WriteLine("\nVertical Walls");
-            foreach (var wall in NS_Walls)
+
+            foreach (var bwl in BWL_Manager.BracedWallLines)
             {
-                vert_sum += wall.Value.WallLength;
-                vert_rigidity_sum += wall.Value.WallRigidity;
-                Rxr_sum += wall.Value.Rxr;
-                //Console.WriteLine(wall.Value.DisplayInfo());
+                if(bwl.WallDir == WallDirs.EastWest)
+                {
+                    foreach(WallData wall in bwl.WallReferences)
+                    {
+                        horiz_sum += wall.WallLength;
+                        horiz_rigidity_sum += wall.WallRigidity;
+                        Ryr_sum += wall.Ryr;
+                    }
+                }
+
+                if (bwl.WallDir == WallDirs.NorthSouth)
+                {
+                    foreach (WallData wall in bwl.WallReferences)
+                    {
+                        vert_sum += wall.WallLength;
+                        vert_rigidity_sum += wall.WallRigidity;
+                        Rxr_sum += wall.Rxr;
+                    }
+                }
             }
+
             //Console.WriteLine("\nSum Rx: " + vert_rigidity_sum + "   Sum Rxyr: " + Rxr_sum);
 
             CtrRigidity = new System.Windows.Point(Rxr_sum / vert_rigidity_sum, Ryr_sum / horiz_rigidity_sum);

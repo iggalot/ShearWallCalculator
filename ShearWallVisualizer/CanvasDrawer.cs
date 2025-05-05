@@ -208,46 +208,46 @@ namespace ShearWallVisualizer
 
         public void DrawBracedWallLines(WallSystem wall_system)
         {
-            if(wall_system == null)
-            {
-                if (wall_system.BracedWallGroups_EW != null && wall_system.BracedWallGroups_EW.groupedWalls != null)
-                {
-                    // search the EW braced wall lines
-                    foreach (var wall in wall_system.BracedWallGroups_EW.groupedWalls)
-                    {
+            //if(wall_system == null)
+            //{
+            //    if (wall_system.BracedWallGroups_EW != null && wall_system.BracedWallGroups_EW.groupedWalls != null)
+            //    {
+            //        // search the EW braced wall lines
+            //        foreach (var wall in wall_system.BracedWallGroups_EW.groupedWalls)
+            //        {
 
-                        // draw a line at the center of all of the values in this group
-                        double first = wall[0].Center.Y;
-                        double last = wall[wall.Count - 1].Center.Y;
-                        double center = (first + last) / 2;
-                        Point p1_world = new Point(-3000, center);
-                        Point p2_world = new Point(3000, center);
-                        Point p1_screen = MathHelpers.WorldCoord_ToScreen(_canvas.Height, p1_world, SCALE_X, SCALE_Y);
-                        Point p2_screen = MathHelpers.WorldCoord_ToScreen(_canvas.Height, p2_world, SCALE_X, SCALE_Y);
+            //            // draw a line at the center of all of the values in this group
+            //            double first = wall[0].Center.Y;
+            //            double last = wall[wall.Count - 1].Center.Y;
+            //            double center = (first + last) / 2;
+            //            Point p1_world = new Point(-3000, center);
+            //            Point p2_world = new Point(3000, center);
+            //            Point p1_screen = MathHelpers.WorldCoord_ToScreen(_canvas.Height, p1_world, SCALE_X, SCALE_Y);
+            //            Point p2_screen = MathHelpers.WorldCoord_ToScreen(_canvas.Height, p2_world, SCALE_X, SCALE_Y);
 
-                        Line line = new Line { X1 = p1_screen.X, Y1 = p1_screen.Y, X2 = p2_screen.X, Y2 = p2_screen.Y, Stroke = Brushes.Red, StrokeDashArray = new DoubleCollection { 4, 2 }, StrokeThickness = 0.5 };
-                        _canvas.Children.Add(line);
-                    }
-                }
-                if (wall_system.BracedWallGroups_NS != null && wall_system.BracedWallGroups_NS.groupedWalls != null)
-                {
-                    // Draw the east west braced wall lines
-                    foreach (var wall in wall_system.BracedWallGroups_NS.groupedWalls)
-                    {
-                        // draw a line at the center of all of the values in this group
-                        float first = (float)wall[0].Center.X;
-                        float last = (float)wall[wall.Count - 1].Center.X;
-                        float center = (first + last) / 2;
-                        Point p1_world = new Point(center, -3000);
-                        Point p2_world = new Point(center, 3000);
-                        Point p1_screen = MathHelpers.WorldCoord_ToScreen(_canvas.Height, p1_world, SCALE_X, SCALE_Y);
-                        Point p2_screen = MathHelpers.WorldCoord_ToScreen(_canvas.Height, p2_world, SCALE_X, SCALE_Y);
+            //            Line line = new Line { X1 = p1_screen.X, Y1 = p1_screen.Y, X2 = p2_screen.X, Y2 = p2_screen.Y, Stroke = Brushes.Red, StrokeDashArray = new DoubleCollection { 4, 2 }, StrokeThickness = 0.5 };
+            //            _canvas.Children.Add(line);
+            //        }
+            //    }
+            //    if (wall_system.BracedWallGroups_NS != null && wall_system.BracedWallGroups_NS.groupedWalls != null)
+            //    {
+            //        // Draw the east west braced wall lines
+            //        foreach (var wall in wall_system.BracedWallGroups_NS.groupedWalls)
+            //        {
+            //            // draw a line at the center of all of the values in this group
+            //            float first = (float)wall[0].Center.X;
+            //            float last = (float)wall[wall.Count - 1].Center.X;
+            //            float center = (first + last) / 2;
+            //            Point p1_world = new Point(center, -3000);
+            //            Point p2_world = new Point(center, 3000);
+            //            Point p1_screen = MathHelpers.WorldCoord_ToScreen(_canvas.Height, p1_world, SCALE_X, SCALE_Y);
+            //            Point p2_screen = MathHelpers.WorldCoord_ToScreen(_canvas.Height, p2_world, SCALE_X, SCALE_Y);
 
-                        Line line = new Line { X1 = p1_screen.X, Y1 = p1_screen.Y, X2 = p2_screen.X, Y2 = p2_screen.Y, Stroke = Brushes.Red, StrokeDashArray = new DoubleCollection { 4, 2 }, StrokeThickness = 0.5 };
-                        _canvas.Children.Add(line);
-                    }
-                }
-            }
+            //            Line line = new Line { X1 = p1_screen.X, Y1 = p1_screen.Y, X2 = p2_screen.X, Y2 = p2_screen.Y, Stroke = Brushes.Red, StrokeDashArray = new DoubleCollection { 4, 2 }, StrokeThickness = 0.5 };
+            //            _canvas.Children.Add(line);
+            //        }
+            //    }
+            //}
         }
 
         /// <summary>
