@@ -239,7 +239,7 @@ namespace ShearWallVisualizer
             }
         }
 
-        private void CreateCalculationResultsControls()
+        private void CreateCalculationResultsControls_Rigid()
         {
             foreach (var wall in wallSystem._walls)
             {
@@ -276,9 +276,20 @@ namespace ShearWallVisualizer
                         v_tot = calc.TotalWallShear[id];
                     }
 
-                    ShearWallResultsControl control = new ShearWallResultsControl(id, rigidity, xbar, ybar, vi_x, vi_y, v_ecc, v_tot);
-                    sp_CalcPanel.Children.Add(control);
+                    ShearWallResultsControl_Rigid control = new ShearWallResultsControl_Rigid(id, rigidity, xbar, ybar, vi_x, vi_y, v_ecc, v_tot);
+                    sp_RigidCalcPanel.Children.Add(control);
                 }
+            }
+        }
+
+        private void CreateCalculationResultsControls_Flexible()
+        {
+            foreach (var wall in wallSystem._walls)
+            {
+                int id = wall.Key;
+                var rigidity = wall.Value.WallRigidity;
+                var xbar = Calculator._wall_system.X_bar_walls[id];
+                var ybar = Calculator._wall_system.Y_bar_walls[id];
 
                 if (Calculator is ShearWallCalculator_FlexibleDiaphragm)
                 {
@@ -302,11 +313,12 @@ namespace ShearWallVisualizer
                         v_tot = calc.TotalWallShear[id];
                     }
 
-                    ShearWallResultsControl control = new ShearWallResultsControl(id, rigidity, xbar, ybar, vi_x, vi_y, 0, v_tot);
-                    sp_CalcPanel.Children.Add(control);
+                    ShearWallResultsControl_Flexible control = new ShearWallResultsControl_Flexible(id, vi_x, vi_y);
+                    sp_FlexibleCalcPanel.Children.Add(control);
                 }
             }
         }
+
 
         public void Update()
         {
@@ -325,7 +337,9 @@ namespace ShearWallVisualizer
             // clear the tabs
             sp_DimPanel_Diaphragms.Children.Clear();
             sp_DimPanel_Walls.Children.Clear();
-            sp_CalcPanel.Children.Clear();
+            sp_RigidCalcPanel.Children.Clear();
+            sp_FlexibleCalcPanel.Children.Clear();
+
 
             // recreate the data controls
             CreateWallDataControls();
@@ -337,7 +351,8 @@ namespace ShearWallVisualizer
             // update the calculator
             if(Calculator.IsValidForCalculation is true)
             { 
-                CreateCalculationResultsControls();
+                CreateCalculationResultsControls_Rigid();
+                CreateCalculationResultsControls_Flexible();
             }
             UpdateLoadDisplay();
 
@@ -735,7 +750,6 @@ namespace ShearWallVisualizer
             // Mark the grid as needing an update (this should be called when zoom or pan changes)
             gridNeedsUpdate = true;
         }
-
 
 
 
@@ -1755,6 +1769,57 @@ namespace ShearWallVisualizer
 
             AddToRecentFiles(selectedImageFilePath); // add to recent files list
         }
+
+        private void MenuItem_Save_Click(object sender, RoutedEventArgs e)
+        {
+            var saveFileDialog = new SaveFileDialog
+            {
+                Filter = "JSON Drawing (*.json)|*.json",
+                FileName = "drawing.json"
+            };
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                _serializer.Save(saveFileDialog.FileName, Calculator);
+                MessageBox.Show("Drawing saved!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+
+        private void MenuItem_Load_Click(object sender, RoutedEventArgs e)
+        {
+            var openFileDialog = new OpenFileDialog
+            {
+                Filter = "JSON Drawing (*.json)|*.json"
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                JsonSerializerSettings _settings = new JsonSerializerSettings();
+
+                var json = _serializer.Load(openFileDialog.FileName);
+
+                // Parse just enough to extact a fieldJObject obj = JObject.Parse(json);
+                JObject obj = JObject.Parse(json);
+
+                // Get the calculator type value
+                string calculatorType = (string)obj["CalculatorType"];
+
+                // Load the appropriate calculator
+                if (calculatorType == "Rigid Diaphragm")
+                {
+                    var rigid_calc = JsonConvert.DeserializeObject<ShearWallCalculator_RigidDiaphragm>(json, _settings);
+                    Calculator = new ShearWallCalculator_RigidDiaphragm(rigid_calc);
+                }
+                else if (calculatorType == "Flexible Diaphragm")
+                {
+                    var flex_calc = JsonConvert.DeserializeObject<ShearWallCalculator_FlexibleDiaphragm>(json, _settings);
+                    Calculator = new ShearWallCalculator_FlexibleDiaphragm(flex_calc);
+                }
+
+                Update();
+                MessageBox.Show("Drawing loaded!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
         #endregion
 
         #region File Handling
@@ -1920,66 +1985,5 @@ namespace ShearWallVisualizer
         {
             LoadInfoTextBlock.Text = $"X: {currentMagX} @ {currentLocX} | Y: {currentMagY} @ {currentLocY}";
         }
-
-        //// Event handler to open the test window when the button is clicked
-        private void btnUnionTest_Click(object sender, RoutedEventArgs e)
-        {
-        //    // Create and show the test window
-        //    RectangleUnionTest testWindow = new RectangleUnionTest();
-        //    testWindow.Show();
-        }
-
-        private void MenuItem_Save_Click(object sender, RoutedEventArgs e)
-        {
-            var saveFileDialog = new SaveFileDialog
-            {
-                Filter = "JSON Drawing (*.json)|*.json",
-                FileName = "drawing.json"
-            };
-
-            if (saveFileDialog.ShowDialog() == true)
-            {
-                _serializer.Save(saveFileDialog.FileName, Calculator);
-                MessageBox.Show("Drawing saved!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-        }
-
-        private void MenuItem_Load_Click(object sender, RoutedEventArgs e)
-        {
-            var openFileDialog = new OpenFileDialog
-            {
-                Filter = "JSON Drawing (*.json)|*.json"
-            };
-
-            if (openFileDialog.ShowDialog() == true)
-            {
-                JsonSerializerSettings _settings = new JsonSerializerSettings();
-
-                var json = _serializer.Load(openFileDialog.FileName);
-
-                // Parse just enough to extact a fieldJObject obj = JObject.Parse(json);
-                JObject obj = JObject.Parse(json);
-
-                // Get the calculator type value
-                string calculatorType = (string)obj["CalculatorType"];
-
-                // Load the appropriate calculator
-                if (calculatorType == "Rigid Diaphragm")
-                {
-                    var rigid_calc = JsonConvert.DeserializeObject<ShearWallCalculator_RigidDiaphragm>(json, _settings);
-                    Calculator = new ShearWallCalculator_RigidDiaphragm(rigid_calc);
-                }
-                else if (calculatorType == "Flexible Diaphragm")
-                {
-                    var flex_calc = JsonConvert.DeserializeObject<ShearWallCalculator_FlexibleDiaphragm>(json, _settings);
-                    Calculator = new ShearWallCalculator_FlexibleDiaphragm(flex_calc);
-                }
-
-                Update();
-                MessageBox.Show("Drawing loaded!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-        }
-
-
     }
 }

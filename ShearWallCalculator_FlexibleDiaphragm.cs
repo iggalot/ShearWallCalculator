@@ -13,9 +13,11 @@ namespace ShearWallCalculator
         public Dictionary<int, double> TotalWallShear { get; set; } = new Dictionary<int, double>();
         // shear force from direct shear in X-direction -- resistance at base of diaphragm at top of walls
 
+        [JsonIgnore]
         public Dictionary<BracedWallLine, double> DirectShear_X_Braced { get; set; } = new Dictionary<BracedWallLine, double>();
-        public Dictionary<BracedWallLine, List<double>> DirectShear_X_Groups { get; set; } = new Dictionary<BracedWallLine, List<double>>();
 
+        [JsonIgnore]
+        public Dictionary<BracedWallLine, List<double>> DirectShear_X_Groups { get; set; } = new Dictionary<BracedWallLine, List<double>>();
 
         [JsonIgnore]
         public Dictionary<int, double> DirectShear_X { get; set; } = new Dictionary<int, double>();

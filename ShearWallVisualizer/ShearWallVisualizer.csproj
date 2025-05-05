@@ -61,6 +61,9 @@
     <Compile Include="Controls\ImagePreviewControl.xaml.cs">
       <DependentUpon>ImagePreviewControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Controls\ShearWallResultsControl_Flexible.xaml.cs">
+      <DependentUpon>ShearWallResultsControl_Flexible.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Controls\WallSystemControl.xaml.cs">
       <DependentUpon>WallSystemControl.xaml</DependentUpon>
     </Compile>
@@ -75,6 +78,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Controls\ShearWallResultsControl_Flexible.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Controls\WallSystemControl.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -87,7 +94,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Controls\ShearWallResultsControl.xaml">
+    <Page Include="Controls\ShearWallResultsControl_Rigid.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -130,8 +137,8 @@
     <Compile Include="Controls\WallDataControl.xaml.cs">
       <DependentUpon>WallDataControl.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Controls\ShearWallResultsControl.xaml.cs">
-      <DependentUpon>ShearWallResultsControl.xaml</DependentUpon>
+    <Compile Include="Controls\ShearWallResultsControl_Rigid.xaml.cs">
+      <DependentUpon>ShearWallResultsControl_Rigid.xaml</DependentUpon>
     </Compile>
     <Compile Include="Controls\WindLoadGraphicCanvas.xaml.cs">
       <DependentUpon>WindLoadGraphicCanvas.xaml</DependentUpon>
