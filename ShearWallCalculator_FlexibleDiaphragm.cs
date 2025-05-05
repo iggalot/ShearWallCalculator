@@ -14,7 +14,7 @@ namespace ShearWallCalculator
         // shear force from direct shear in X-direction -- resistance at base of diaphragm at top of walls
 
         [JsonIgnore]
-        public Dictionary<BracedWallLine, double> DirectShear_X_Braced { get; set; } = new Dictionary<BracedWallLine, double>();
+        public Dictionary<BracedWallLine, double> DirectShear_X_BracedLine { get; set; } = new Dictionary<BracedWallLine, double>();
 
         [JsonIgnore]
         public Dictionary<BracedWallLine, List<double>> DirectShear_X_Groups { get; set; } = new Dictionary<BracedWallLine, List<double>>();
@@ -34,7 +34,7 @@ namespace ShearWallCalculator
             Update();
         }
 
-        public ShearWallCalculator_FlexibleDiaphragm(WallSystem walls, DiaphragmSystem diaphragm, double v_x, double v_y) : base(walls, diaphragm, v_x, v_y)
+        public ShearWallCalculator_FlexibleDiaphragm(WallSystem wall_system, DiaphragmSystem diaphragm, double v_x, double v_y) : base(wall_system, diaphragm, v_x, v_y)
         {
             // update the calculations
             Update();
@@ -93,58 +93,58 @@ namespace ShearWallCalculator
         public string DisplayResults()
         {
             string str = "";
-            str += "\n  ID   | Rigidity | X-bar   |  Y-bar   | Vix (kips)   | Viy (k)   | V_tot (k)";
-            str += "\n ------------------------------------------------------------------------------------------";
-            foreach (var result in TotalWallShear)
-            {
-                int id = result.Key;
-                str += "\n" + id + "   |   ";
+        //    str += "\n  ID   | Rigidity | X-bar   |  Y-bar   | Vix (kips)   | Viy (k)   | V_tot (k)";
+        //    str += "\n ------------------------------------------------------------------------------------------";
+        //    foreach (var result in TotalWallShear)
+        //    {
+        //        int id = result.Key;
+        //        str += "\n" + id + "   |   ";
 
-                if (_wall_system.EW_Walls.ContainsKey(id))
-                {
-                    str += _wall_system.EW_Walls[id].WallRigidity.ToString("0.00");
-                }
-                else if (_wall_system.NS_Walls.ContainsKey(id))
-                {
-                    str += _wall_system.NS_Walls[id].WallRigidity.ToString("0.00");
-                }
-                else
-                {
-                    str += " ERROR ";
-                }
-                str += "     |   ";
+        //        if (_wall_system.EW_Walls.ContainsKey(id))
+        //        {
+        //            str += _wall_system.EW_Walls[id].WallRigidity.ToString("0.00");
+        //        }
+        //        else if (_wall_system.NS_Walls.ContainsKey(id))
+        //        {
+        //            str += _wall_system.NS_Walls[id].WallRigidity.ToString("0.00");
+        //        }
+        //        else
+        //        {
+        //            str += " ERROR ";
+        //        }
+        //        str += "     |   ";
 
 
-                str += _wall_system.X_bar_walls[id].ToString("0.00") + "    |   " + _wall_system.Y_bar_walls[id].ToString("0.00") + "   |   ";
+        //        str += _wall_system.X_bar_walls[id].ToString("0.00") + "    |   " + _wall_system.Y_bar_walls[id].ToString("0.00") + "   |   ";
 
-                if (DirectShear_X.ContainsKey(id))
-                {
-                    str += DirectShear_X[id].ToString("0.00");
-                }
-                else
-                {
-                    str += "----";
-                }
-                str += "     |   ";
-                if (DirectShear_Y.ContainsKey(id))
-                {
-                    str += DirectShear_Y[id].ToString("0.00");
-                }
-                else
-                {
-                    str += "----";
-                }
-                str += "      |   ";
+        //        if (DirectShear_X.ContainsKey(id))
+        //        {
+        //            str += DirectShear_X[id].ToString("0.00");
+        //        }
+        //        else
+        //        {
+        //            str += "----";
+        //        }
+        //        str += "     |   ";
+        //        if (DirectShear_Y.ContainsKey(id))
+        //        {
+        //            str += DirectShear_Y[id].ToString("0.00");
+        //        }
+        //        else
+        //        {
+        //            str += "----";
+        //        }
+        //        str += "      |   ";
 
-                if (TotalWallShear.ContainsKey(id))
-                {
-                    str += TotalWallShear[id].ToString("0.00");
-                }
-                else
-                {
-                    str += "----";
-                }
-            }
+        //        if (TotalWallShear.ContainsKey(id))
+        //        {
+        //            str += TotalWallShear[id].ToString("0.00");
+        //        }
+        //        else
+        //        {
+        //            str += "----";
+        //        }
+        //    }
             return str;
         }
 
@@ -155,31 +155,97 @@ namespace ShearWallCalculator
             double beamStart = BoundingBoxWorld.Y;
             double beamEnd = BoundingBoxWorld.Y + BoundingBoxWorld.Height;
 
-            var bracedWallLine = _wall_system.BWL_Manager.GetEastWestWallLines();
+            // Step 1: Collect supports from all East-West braced wall lines
+            List<SupportLoadDistributor.Support> supports = new List<SupportLoadDistributor.Support>();
+            foreach (var bwl in _wall_system.BWL_Manager.BracedWallLines)
+            {
+                if (bwl.WallDir == WallDirs.EastWest)
+                {
+                    supports.Add(new SupportLoadDistributor.Support
+                    {
+                        ID = bwl.GroupNumber,
+                        Location = bwl.Center.Y
+                    });
+                }
+            }
 
-            //// Compute support center Y-coordinates
-            //List<double> supports = bracedWallLine.groupedWalls
-            //    .Where(g => g.Count > 0)
-            //    .Select(group => group.Average(w => w.Center.Y))
-            //    .ToList();
+            // Debugging: Print the number of east-west braced wall lines found
+            Console.WriteLine($"Found {supports.Count} east-west braced wall lines.");
 
-            //var loads = SupportLoadDistributor.DistributeLoad(supports, shear_x_plf, beamStart, beamEnd);
+            // Step 2: Sort supports by Y-location
+            supports.Sort((a, b) => a.Location.CompareTo(b.Location));
 
-            //// Store individual group loads
-            //var groupLoads = loads.Select(l => l.Load).ToList();
-            //DirectShear_X_Groups[bracedWallLine] = groupLoads;
+            // Step 3: Distribute the total shear to the supports
+            List<SupportLoadDistributor.Support> loads = SupportLoadDistributor.DistributeLoad(supports, shear_x_plf, beamStart, beamEnd);
 
-            //// Store total for verification
-            //double totalShear = groupLoads.Sum();
-            //DirectShear_X_Braced[bracedWallLine] = totalShear;
+            // Step 4: Initialize result dictionaries
+            DirectShear_X_Groups.Clear();
+            DirectShear_X_BracedLine.Clear();
+            DirectShear_X.Clear();
 
-            // Output
-            //for (int i = 0; i < groupLoads.Count; i++)
-            //{
-            //    Console.WriteLine($"Group {i} (Y = {supports[i]:F2}) carries {groupLoads[i]:F2} kN");
-            //}
-            //Console.WriteLine($"Total shear on braced wall line: {totalShear:F2} kN");
+            // Step 5: Build a lookup of distributed shear loads by group ID
+            Dictionary<int, double> groupLoadMap = loads.ToDictionary(l => l.ID, l => l.Load);
+
+            // Debugging: Print the total shear for each braced wall line
+            foreach (var load in loads)
+            {
+                Console.WriteLine($"Group {load.ID} has {load.Load:F2} kN of shear.");
+            }
+
+            // Step 6: Accumulate shear load to each wall based on rigidity
+            foreach (var bwl in _wall_system.BWL_Manager.BracedWallLines)
+            {
+                if (bwl.WallDir != WallDirs.EastWest)
+                    continue;
+
+                // Get total load for this braced wall line from the lookup table
+                if (!groupLoadMap.TryGetValue(bwl.GroupNumber, out double totalShear))
+                    continue;
+
+                // Store total shear for this BWL
+                DirectShear_X_BracedLine[bwl] = totalShear;
+
+                // Debugging: Log the total shear for the current BWL
+                Console.WriteLine($"Braced Wall Line {bwl.GroupNumber} has a total shear of {totalShear:F2} kN.");
+
+                // Calculate total rigidity of all walls in this BWL
+                double sum_rigid = bwl.WallReferences.Sum(w => w.WallRigidity);
+                if (sum_rigid == 0)
+                    continue;
+
+                // Distribute the shear load to individual wall segments
+                foreach (var wall in bwl.WallReferences)
+                {
+                    // Make sure wall ID is correctly populated
+                    if (wall.ID == 0)
+                    {
+                        Console.WriteLine($"Warning: Wall ID is 0 for Wall in BWL {bwl.GroupNumber}. Check initialization.");
+                    }
+
+                    double wallShear = totalShear * (wall.WallRigidity / sum_rigid);
+
+                    // Check if the wall ID already exists in DirectShear_X and accumulate the shear value
+                    if (DirectShear_X.ContainsKey(wall.ID))
+                    {
+                        DirectShear_X[wall.ID] += wallShear; // Accumulate shear for duplicate wall ID
+                    }
+                    else
+                    {
+                        DirectShear_X.Add(wall.ID, wallShear); // Add new shear for a unique wall ID
+                    }
+
+                    // Debugging: Print the shear assigned to this wall
+                    Console.WriteLine($"Wall ID {wall.ID} receives {wallShear:F2} kN of shear.");
+                }
+            }
+
+            // Debugging: Print the final shear for each wall
+            foreach (var entry in DirectShear_X)
+            {
+                Console.WriteLine($"Wall ID: {entry.Key}, Total Shear: {entry.Value:F2} kN");
+            }
         }
+
 
         /// <summary>
         /// Compute the direct shear for loads acting in the Y-direction
@@ -229,43 +295,47 @@ namespace ShearWallCalculator
             /// Includes beam overhangs if beamStart or beamEnd extend beyond supports.
             /// </summary>
             public static List<Support> DistributeLoad(
-                List<double> supportPositions,
+                List<Support> supports_unsorted,
                 double uniformLoad,
                 double beamStart,
                 double beamEnd)
             {
-                if (supportPositions == null || supportPositions.Count < 2)
+                if (supports_unsorted == null || supports_unsorted.Count < 2)
                     throw new ArgumentException("At least two supports are required.");
 
                 if (beamEnd <= beamStart)
                     throw new ArgumentException("Beam end must be greater than beam start.");
 
-                supportPositions = supportPositions.OrderBy(x => x).ToList();
-                var supports = new List<Support>();
+                
+                // sort the support locations in order
+                List<Support> supports = supports_unsorted.OrderBy(x => x.Location).ToList();
 
-                for (int i = 0; i < supportPositions.Count; i++)
+                // create a temporary results list
+                List<Support> results = new List<Support>();
+
+                for (int i = 0; i < supports.Count; i++)
                 {
                     double tributaryStart, tributaryEnd;
 
                     if (i == 0)
                     {
                         // First support
-                        double nextMid = (supportPositions[i] + supportPositions[i + 1]) / 2.0;
+                        double nextMid = (supports[i].Location + supports[i + 1].Location) / 2.0;
                         tributaryStart = beamStart;
                         tributaryEnd = nextMid;
                     }
-                    else if (i == supportPositions.Count - 1)
+                    else if (i == supports.Count - 1)
                     {
                         // Last support
-                        double prevMid = (supportPositions[i] + supportPositions[i - 1]) / 2.0;
+                        double prevMid = (supports[i].Location + supports[i - 1].Location) / 2.0;
                         tributaryStart = prevMid;
                         tributaryEnd = beamEnd;
                     }
                     else
                     {
                         // Interior supports
-                        double prevMid = (supportPositions[i] + supportPositions[i - 1]) / 2.0;
-                        double nextMid = (supportPositions[i] + supportPositions[i + 1]) / 2.0;
+                        double prevMid = (supports[i].Location + supports[i - 1].Location) / 2.0;
+                        double nextMid = (supports[i].Location + supports[i + 1].Location) / 2.0;
                         tributaryStart = prevMid;
                         tributaryEnd = nextMid;
                     }
@@ -274,14 +344,15 @@ namespace ShearWallCalculator
                     if (width < 0)
                         throw new InvalidOperationException("Calculated tributary width is negative. Check support positions.");
 
-                    supports.Add(new Support
+                    results.Add(new Support
                     {
-                        Location = supportPositions[i],
+                        ID = supports[i].ID,
+                        Location = supports[i].Location,
                         Load = uniformLoad * width
                     });
                 }
 
-                return supports;
+                return results;
             }
         }
     }

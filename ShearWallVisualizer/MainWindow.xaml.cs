@@ -376,6 +376,7 @@ namespace ShearWallVisualizer
                 CreateCalculationResultsControls_Rigid();
                 CreateCalculationResultsControls_Flexible();
             }
+
             UpdateLoadDisplay();
 
             // notify controls that we have updated

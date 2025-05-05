@@ -61,6 +61,9 @@ namespace ShearWallCalculator
 
         public void Update()
         {
+            _wall_system.Update();
+            _diaphragm_system.Update();
+
             // set the BoundingBox for the model
             BoundingBoxWorld = ComputeBoundingBox_World();
             building_height = ComputeBuildingHeight();
