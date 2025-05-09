@@ -1,7 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace ShearWallCalculator
 {
+    public enum SimpsonCatalogs
+    {
+        SIMPSON_CATALOG_HDU = 0,  // hold down catalog for HDU family of connectoes
+        SIMPSON_CATALOG_STRAP = 1, // hold down catalog for strap ties
+        SIMPSON_CATALOG_HTT = 2, // hold down for HTT and LTT family of hold downs
+    }
     public enum WoodTypes
     {
         WOODTYPE_DF_SP = 0,   // douglas fir / southern pine
@@ -13,19 +20,25 @@ namespace ShearWallCalculator
         // Initialize the HDU dictionary
         public static HDU_Manager HDUManager = new HDU_Manager();
         public static StrapTies_Manager StrapTiesManager = new StrapTies_Manager();
+        public static HTT_Manager HTTManager = new HTT_Manager();
 
-        public SimpsonCatalog()
+        public List<string> GetModelsExceedingReqLoad(double req_load, SimpsonCatalogs catalogType, WoodTypes woodType)
         {
-            foreach (string model in HDUManager.GetHDUModelsExceedingMinLoad(4000, WoodTypes.WOODTYPE_DF_SP))
+            if (catalogType == SimpsonCatalogs.SIMPSON_CATALOG_HDU)
             {
-                Console.WriteLine(model);
+                return HDUManager.GetHDUModelsExceedingMinLoad(req_load, woodType);
             }
-
-            Console.WriteLine("-----------------------------------");
-
-            foreach (string model in StrapTiesManager.GetStrapTieModelsExceedingMinLoad(4000, WoodTypes.WOODTYPE_DF_SP))
+            else if (catalogType == SimpsonCatalogs.SIMPSON_CATALOG_STRAP)
             {
-                Console.WriteLine(model);
+                return StrapTiesManager.GetStrapTieModelsExceedingMinLoad(req_load, woodType);
+            }
+            else if (catalogType == SimpsonCatalogs.SIMPSON_CATALOG_HTT)
+            {
+                return HTTManager.GetHTTModelsExceedingMinLoad(req_load, woodType);
+            }
+            else
+            {
+                throw new ArgumentException("Invalid catalog type." + catalogType + " in SimpsonCatalog.GetModelsExceedingReqLoad()");
             }
         }
     }

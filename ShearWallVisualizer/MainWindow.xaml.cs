@@ -128,8 +128,27 @@ namespace ShearWallVisualizer
                 WindLoadInputControl.WindInputComplete += WindLoadInputControl_WindInputComplete;
 
                 SimpsonCatalog catalog = new SimpsonCatalog();
-                
+                var lst1 = catalog.GetModelsExceedingReqLoad(4000, SimpsonCatalogs.SIMPSON_CATALOG_HDU, WoodTypes.WOODTYPE_DF_SP);
+                Console.WriteLine("----------------");
+                PrintList(lst1);
+                var lst2 = catalog.GetModelsExceedingReqLoad(4000, SimpsonCatalogs.SIMPSON_CATALOG_STRAP, WoodTypes.WOODTYPE_DF_SP);
+                Console.WriteLine("----------------");
+                PrintList(lst2);
+                var lst3 = catalog.GetModelsExceedingReqLoad(4000, SimpsonCatalogs.SIMPSON_CATALOG_HTT, WoodTypes.WOODTYPE_DF_SP);
+                Console.WriteLine("----------------");
+                PrintList(lst3);
+
+
+
             };
+        }
+
+        public void PrintList<T>(List<T> lst)
+        {
+            foreach (var item in lst)
+            {
+                Console.WriteLine(item.ToString());
+            }
         }
 
         /// <summary>

@@ -87,6 +87,7 @@
     <Compile Include="ShearWallCalculatorBase.cs" />
     <Compile Include="ShearWallCalculator_FlexibleDiaphragm.cs" />
     <Compile Include="ShearWallCalculator_RigidDiaphragm.cs" />
+    <Compile Include="SimpsonCatalog\HTT_Data.cs" />
     <Compile Include="SimpsonCatalog\StrapTies_Data.cs" />
     <Compile Include="SimpsonCatalog\HDU_Data.cs" />
     <Compile Include="SimpsonCatalog\SimpsonCatalog.cs" />
