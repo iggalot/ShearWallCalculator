@@ -126,6 +126,9 @@ namespace ShearWallVisualizer
                 // Events for wind load calculation
                 ctrlWindLoadResultsControl.WindCalculated += WindLoadResultsControl_WindCalculated;
                 WindLoadInputControl.WindInputComplete += WindLoadInputControl_WindInputComplete;
+
+                SimpsonCatalog catalog = new SimpsonCatalog();
+                
             };
         }
 

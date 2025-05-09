@@ -19,14 +19,6 @@ namespace ShearWallCalculator
         [JsonIgnore]
         public Dictionary<BracedWallLine, double> DirectShear_Y_BracedLine { get; set; } = new Dictionary<BracedWallLine, double>();
 
-
-        [JsonIgnore]
-        public Dictionary<BracedWallLine, List<double>> DirectShear_X_Groups { get; set; } = new Dictionary<BracedWallLine, List<double>>();
-        
-        [JsonIgnore]
-        public Dictionary<BracedWallLine, List<double>> DirectShear_Y_Groups { get; set; } = new Dictionary<BracedWallLine, List<double>>();
-
-
         [JsonIgnore]
         public Dictionary<int, double> DirectShear_X { get; set; } = new Dictionary<int, double>();
 
@@ -88,9 +80,6 @@ namespace ShearWallCalculator
                 // Perform component calculations to compute shear contributions
                 ComputeDirectShear_X();  // horizontal walls
                 ComputeDirectShear_Y();  // vertical walls
-
-                // compute the total shear activing on the wall
-                ComputeTotalShear();
 
                 // display results
                 Console.WriteLine(DisplayResults());
@@ -187,7 +176,6 @@ namespace ShearWallCalculator
             List<SupportLoadDistributor.Support> loads = SupportLoadDistributor.DistributeLoad(supports, shear_x_plf, beamStart, beamEnd);
 
             // Step 4: Initialize result dictionaries
-            DirectShear_X_Groups.Clear();
             DirectShear_X_BracedLine.Clear();
             DirectShear_X.Clear();
 
@@ -288,7 +276,6 @@ namespace ShearWallCalculator
             List<SupportLoadDistributor.Support> loads = SupportLoadDistributor.DistributeLoad(supports, shear_x_plf, beamStart, beamEnd);
 
             // Step 4: Initialize result dictionaries
-            DirectShear_Y_Groups.Clear();
             DirectShear_Y_BracedLine.Clear();
             DirectShear_Y.Clear();
 
@@ -354,26 +341,6 @@ namespace ShearWallCalculator
                 Console.WriteLine($"Wall ID: {entry.Key}, Total Shear: {entry.Value:F2} kN");
             }
         }
-
-        /// <summary>
-        /// Tallies the total shear acting on a wall as the sum of direct shear and eccentric shear
-        /// </summary>
-        /// <exception cref="NotImplementedException"></exception>
-        private void ComputeTotalShear()
-        {
-            TotalWallShear.Clear();
-            foreach (var result in DirectShear_X)
-            {
-                int id = result.Key;
-                TotalWallShear.Add(id, result.Value);
-            }
-            foreach (var result in DirectShear_Y)
-            {
-                int id = result.Key;
-                TotalWallShear.Add(id, result.Value);
-            }
-        }
-
 
 
         public class SupportLoadDistributor
