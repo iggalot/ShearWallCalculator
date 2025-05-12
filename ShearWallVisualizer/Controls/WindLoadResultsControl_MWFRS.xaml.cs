@@ -8,7 +8,7 @@ using System.Windows.Controls;
 
 namespace ShearWallVisualizer.Controls
 {
-    public partial class WindLoadResultsControl : UserControl
+    public partial class WindLoadResultsControl_MWFRS : UserControl
     {
         public event EventHandler<OnWindCalculatedEventArgs> WindCalculated;  // the event that signals that the drawing has been updated -- controls will listen for this at the time they are created.
 
@@ -36,21 +36,21 @@ namespace ShearWallVisualizer.Controls
         public List<WindPressureResult_Wall> wall_results = new List<WindPressureResult_Wall>();
         public List<WindPressureResult_Roof> roof_results = new List<WindPressureResult_Roof>();
 
-        public WindLoadResultsControl()
+        public WindLoadResultsControl_MWFRS()
         {
             
         }
 
-        public WindLoadResultsControl(WindLoadParameters parameters)
+        public WindLoadResultsControl_MWFRS(WindLoadParameters parameters)
         {
             InitializeComponent();
 
             _parameters = parameters;
 
-            this.Loaded += WindLoadResultsControl_Loaded;
+            this.Loaded += WindLoadResultsControl_MWFRS_Loaded;
         }
 
-        private void WindLoadResultsControl_Loaded(object sender, RoutedEventArgs e)
+        private void WindLoadResultsControl_MWFRS_Loaded(object sender, RoutedEventArgs e)
         {
             Dictionary<string, double> wall_zones = WindLoadCalculator.CalculateMWFRS_WallZones(_parameters);
             Dictionary<string, double> roof_zones = WindLoadCalculator.CalculateMWFRS_RoofZones(_parameters);
@@ -731,13 +731,5 @@ namespace ShearWallVisualizer.Controls
             this.Cp_CaseA_Leeward = interpolated_Cp_CaseA_Leeward;
             this.Cp_CaseB_Leeward = interpolated_Cp_CaseB_Leeward;
         }
-    }
-
-    public class WindLoadResults_PerpToRidge
-    {
-        public double WW { get; set; }
-        public double LW { get; set; }
-        public double SW { get; set; }
-
     }
 }

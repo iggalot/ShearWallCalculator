@@ -124,7 +124,7 @@ namespace ShearWallVisualizer
 
 
                 // Events for wind load calculation
-                ctrlWindLoadResultsControl.WindCalculated += WindLoadResultsControl_WindCalculated;
+                ctrlWindLoadResultsControl_MWFRS.WindCalculated += WindLoadResultsControl_MWFRS_WindCalculated;
                 WindLoadInputControl.WindInputComplete += WindLoadInputControl_WindInputComplete;
 
                 SimpsonCatalog catalog = new SimpsonCatalog();
@@ -137,9 +137,6 @@ namespace ShearWallVisualizer
                 var lst3 = catalog.GetModelsExceedingReqLoad(4000, SimpsonCatalogs.SIMPSON_CATALOG_HTT, WoodTypes.WOODTYPE_DF_SP);
                 Console.WriteLine("----------------");
                 PrintList(lst3);
-
-
-
             };
         }
 
@@ -158,17 +155,17 @@ namespace ShearWallVisualizer
         /// <param name="e"></param>
         private void WindLoadInputControl_WindInputComplete(object sender, WindLoadInputControl.OnWindInputCompleteEventArgs e)
         {
-            if (ctrlWindLoadResultsControl != null)
+            if (ctrlWindLoadResultsControl_MWFRS != null)
             {
-                ctrlWindLoadResultsControl.WindCalculated -= WindLoadResultsControl_WindCalculated;
+                ctrlWindLoadResultsControl_MWFRS.WindCalculated -= WindLoadResultsControl_MWFRS_WindCalculated;
             }
 
-            WindLoadResultsControl ctrl = new WindLoadResultsControl(e._parameters);
+            WindLoadResultsControl_MWFRS ctrl = new WindLoadResultsControl_MWFRS(e._parameters);
 
-            ctrl.WindCalculated += WindLoadResultsControl_WindCalculated;
-            ctrlWindLoadResultsControl.Content = ctrl;
+            ctrl.WindCalculated += WindLoadResultsControl_MWFRS_WindCalculated;
+            ctrlWindLoadResultsControl_MWFRS.Content = ctrl;
 
-            ctrlWindLoadResultsControl = ctrl;
+            ctrlWindLoadResultsControl_MWFRS = ctrl;
 
             tabWindResults.Visibility = Visibility.Visible;
             tabWindResults.IsSelected = true;
@@ -179,7 +176,7 @@ namespace ShearWallVisualizer
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void WindLoadResultsControl_WindCalculated(object sender, WindLoadResultsControl.OnWindCalculatedEventArgs e)
+        private void WindLoadResultsControl_MWFRS_WindCalculated(object sender, WindLoadResultsControl_MWFRS.OnWindCalculatedEventArgs e)
         {
             List<WindPressureResult_Wall> wall_results = e._wall_results;
             List<WindPressureResult_Roof> roof_results = e._roof_results;
