@@ -9,6 +9,48 @@ namespace ShearWallCalculator.WindLoadCalculations
 {
     public static class WindLoadCalculator
     {
+        public enum WindZones_Walls_MWFRS
+        {
+            [Description("Windward Wall - z=0ft")]
+            MWFRS_WW_0 = 0,
+            [Description("Windward Wall - z=15ft")]
+            MWFRS_WW_15 = 1,
+            [Description("Windward Wall - z=h")]
+            MWFRS_WW_h = 2,
+            [Description("Leeward Wall")]
+            MWFRS_LW_h = 3,
+            [Description("Sidewall")]
+            MWFRS_SW_h = 4
+        }
+
+        public enum WindZones_Roof_MWFRS
+        {
+            [Description("Windward Roof 0->h/2")]
+            MWFRS_WR_0_h2 = 0,
+            [Description("Windward Roof h/2->h")]
+            MWFRS_WR_h2_h = 1,
+            [Description("Windward Roof h->2h")]
+            MWFRS_WR_h_2h = 2,
+            [Description("Windward Roof > 2h")]
+            MWFRS_WR_2h_L = 3,
+            [Description("Windward Roof Full")]
+            MWFRS_WR_Full = 4,
+            [Description("Leeward Roof Full")]
+            MWFRS_LR_Full = 5
+        }
+
+        public enum WindZones_CC
+        {
+            CC_1 = 0,       // Roof flat zone
+            CC_2 = 1,       // Roof edge zone
+            CC_3 = 2,       // Roof corner zone
+            CC_4 = 3,       // Wall flat zone
+            CC_5 = 4        // Wall edge zone (width 'a')
+        }
+
+
+
+
         // Wind Load Parameters class
         public class WindLoadParameters
         {
@@ -27,7 +69,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             public string RidgeDirection { get; set; }
         }
 
-        public static List<WindPressureResult_Wall_MWFRS> CalculateWallPressureResults_MWFRS(WindLoadParameters parameters, Dictionary<string, double> wall_zones)
+        public static List<WindPressureResult_Wall_MWFRS> CalculateWallPressureResults_MWFRS(WindLoadParameters parameters, Dictionary<WindZones_Walls_MWFRS, double> wall_zones)
         {
             List<WindPressureResult_Wall_MWFRS> wall_results = new List<WindPressureResult_Wall_MWFRS>();
 
@@ -41,7 +83,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             foreach (var kvp in wall_zones)
             {
                 WindPressureResult_Wall_MWFRS wpr = new WindPressureResult_Wall_MWFRS();
-                wpr.Surface = kvp.Key;
+                wpr.Surface = kvp.Key.ToString();
 
                 // Get the correct Cp value based on the surface type
                 wpr.GCpi_A = +1.0 * WindLoadCalculator_MWFRS.GetGCpiMagnitude(parameters.EnclosureClassification); // suction case
@@ -49,26 +91,26 @@ namespace ShearWallCalculator.WindLoadCalculations
 
                 switch (kvp.Key)
                 {
-                    case "Windward Wall - z=0ft":
+                    case WindZones_Walls_MWFRS.MWFRS_WW_0:
                         wpr.z = 0;
                         wpr.Cp = WindLoadCalculator_MWFRS.GetCpWindwardwall_MWFRS(parameters);
                         break;
-                    case "Windward Wall - z=15ft":
+                    case WindZones_Walls_MWFRS.MWFRS_WW_15:
                         wpr.z = 15;
                         wpr.Cp = WindLoadCalculator_MWFRS.GetCpWindwardwall_MWFRS(parameters);
                         break;
-                    case "Windward Wall - z=h":
+                    case WindZones_Walls_MWFRS.MWFRS_WW_h:
                         wpr.z = parameters.BuildingHeight;
                         wpr.Cp = WindLoadCalculator_MWFRS.GetCpWindwardwall_MWFRS(parameters);
                         break;
 
-                    case "Leeward Wall":
+                    case WindZones_Walls_MWFRS.MWFRS_LW_h:
                         // swap these values since the balloon case is additive for leeward and sidewalls
                         wpr.z = parameters.BuildingHeight;
                         wpr.Cp = WindLoadCalculator_MWFRS.GetCpLeewardWall_MWFRS(parameters);
                         break;
 
-                    case "Sidewall":
+                    case WindZones_Walls_MWFRS.MWFRS_SW_h:
                         // swap these values since the balloon case is additive for leeward and sidewalls
                         wpr.z = parameters.BuildingHeight;
                         wpr.Cp = WindLoadCalculator_MWFRS.GetCpSidewall_MWFRS(parameters);
@@ -101,13 +143,16 @@ namespace ShearWallCalculator.WindLoadCalculations
             return wall_results;
         }
 
-        public static List<WindPressureResult_Roof_MWFRS> CalculateRoofPressureResults_MWFRS(WindLoadParameters parameters, Dictionary<string, double> roof_zones)
+        
+
+
+        public static List<WindPressureResult_Roof_MWFRS> CalculateRoofPressureResults_MWFRS(WindLoadParameters parameters, Dictionary<WindZones_Roof_MWFRS, double> roof_zones)
         {
             List<WindPressureResult_Roof_MWFRS> roof_results = new List<WindPressureResult_Roof_MWFRS>();
             foreach (var kvp in roof_zones)
             {
                 WindPressureResult_Roof_MWFRS wpr = new WindPressureResult_Roof_MWFRS();
-                wpr.Surface = kvp.Key;
+                wpr.Surface = kvp.Key.ToString();
 
                 RoofCpCases_MWFRS cases;
                 if (parameters.RidgeDirection == "Perpendicular to Wind")
@@ -126,28 +171,28 @@ namespace ShearWallCalculator.WindLoadCalculations
                     cases = WindLoadCalculator_MWFRS.CalculateRoofCp_ForFlatRoofOrParallelRidge_MWFRS(parameters.BuildingHeight, parameters.BuildingLength, kvp.Key);
                 }
 
-                if (kvp.Key == "Windward Roof 0->h/2")
+                if (kvp.Key == WindZones_Roof_MWFRS.MWFRS_WR_0_h2)
                 {
                     wpr.Start = 0;
                     wpr.End = parameters.BuildingHeight / 2;
                     wpr.CpA = Math.Round(cases.Cp_CaseA_Windward, 2);
                     wpr.CpB = Math.Round(cases.Cp_CaseB_Windward, 2);
                 }
-                else if (kvp.Key == "Windward Roof h/2->h")
+                else if (kvp.Key == WindZones_Roof_MWFRS.MWFRS_WR_h2_h)
                 {
                     wpr.Start = parameters.BuildingHeight / 2;
                     wpr.End = parameters.BuildingHeight;
                     wpr.CpA = Math.Round(cases.Cp_CaseA_Windward, 2);
                     wpr.CpB = Math.Round(cases.Cp_CaseB_Windward, 2);
                 }
-                else if (kvp.Key == "Windward Roof h->2h")
+                else if (kvp.Key == WindZones_Roof_MWFRS.MWFRS_WR_h_2h)
                 {
                     wpr.Start = parameters.BuildingHeight;
                     wpr.End = 2 * parameters.BuildingHeight;
                     wpr.CpA = Math.Round(cases.Cp_CaseA_Windward, 2);
                     wpr.CpB = Math.Round(cases.Cp_CaseB_Windward, 2);
                 }
-                else if (kvp.Key == "Windward Roof 2h->end")
+                else if (kvp.Key == WindZones_Roof_MWFRS.MWFRS_WR_2h_L)
                 {
                     wpr.Start = 2 * parameters.BuildingHeight;
                     wpr.End = parameters.BuildingLength;
@@ -155,14 +200,14 @@ namespace ShearWallCalculator.WindLoadCalculations
                     wpr.CpB = Math.Round(cases.Cp_CaseB_Windward, 2);
                 }
 
-                else if (kvp.Key == "Windward Roof")
+                else if (kvp.Key == WindZones_Roof_MWFRS.MWFRS_WR_Full)
                 {
                     wpr.Start = 0.0;
                     wpr.End = parameters.BuildingLength / 2;
                     wpr.CpA = Math.Round(cases.Cp_CaseA_Windward, 2);
                     wpr.CpB = Math.Round(cases.Cp_CaseB_Windward, 2);
                 }
-                else if (kvp.Key == "Leeward Roof")
+                else if (kvp.Key == WindZones_Roof_MWFRS.MWFRS_LR_Full)
                 {
                     wpr.Start = parameters.BuildingLength / 2;
                     wpr.End = parameters.BuildingLength;
@@ -247,35 +292,35 @@ namespace ShearWallCalculator.WindLoadCalculations
         // Wind Load Calculator class
         public static class WindLoadCalculator_MWFRS
         {
-            public static Dictionary<string, double> Calculate_WallZones_MWFRS(WindLoadParameters p)
+            public static Dictionary<WindZones_Walls_MWFRS, double> Calculate_WallZones_MWFRS(WindLoadParameters p)
             {
                 double V = p.WindSpeed;
                 double h = p.BuildingHeight;
 
                 if (h >= 15)
                 {
-                    return new Dictionary<string, double>
+                    return new Dictionary<WindZones_Walls_MWFRS, double>
                     {
-                        ["Windward Wall - z=0ft"] = 0,
-                        ["Windward Wall - z=15ft"] = 0,
-                        ["Windward Wall - z=h"] = 0,
-                        ["Leeward Wall"] = 0,
-                        ["Sidewall"] = 0,
+                        [WindZones_Walls_MWFRS.MWFRS_WW_0] = 0,
+                        [WindZones_Walls_MWFRS.MWFRS_WW_15] = 0,
+                        [WindZones_Walls_MWFRS.MWFRS_WW_h] = 0,
+                        [WindZones_Walls_MWFRS.MWFRS_LW_h] = 0,
+                        [WindZones_Walls_MWFRS.MWFRS_SW_h] = 0,
                     };
                 }
                 else
                 {
-                    return new Dictionary<string, double>
+                    return new Dictionary<WindZones_Walls_MWFRS, double>
                     {
-                        ["Windward Wall - z=0ft"] = 0,
-                        ["Windward Wall - z=h"] = 0,
-                        ["Leeward Wall"] = 0,
-                        ["Sidewall"] = 0,
+                        [WindZones_Walls_MWFRS.MWFRS_WW_0] = 0,
+                        [WindZones_Walls_MWFRS.MWFRS_WW_h] = 0,
+                        [WindZones_Walls_MWFRS.MWFRS_LW_h] = 0,
+                        [WindZones_Walls_MWFRS.MWFRS_SW_h] = 0,
                     };
                 }
             }
 
-            public static Dictionary<string, double> CalculateMWFRS_RoofZones(WindLoadParameters p)
+            public static Dictionary<WindZones_Roof_MWFRS, double> CalculateMWFRS_RoofZones(WindLoadParameters p)
             {
                 double theta = p.RoofPitch;
                 double V = p.WindSpeed;
@@ -283,7 +328,7 @@ namespace ShearWallCalculator.WindLoadCalculations
                 double L = p.BuildingLength;
                 double hOverL = h / L;
 
-                Dictionary<string, double> zones = new Dictionary<string, double>();
+                Dictionary<WindZones_Roof_MWFRS, double> zones = new Dictionary<WindZones_Roof_MWFRS, double>();
 
                 if (p.RidgeDirection == "Perpendicular to Wind")
                 {
@@ -292,32 +337,32 @@ namespace ShearWallCalculator.WindLoadCalculations
                         if (L <= 0.5 * h)
                         {
                             // Windward Roof (single pressure)
-                            zones.Add("Windward Roof 0->h/2", 0);
+                            zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_0_h2, 0);
 
                         }
                         else if (L > 0.5 * h && L <= h)
                         {
-                            zones.Add("Windward Roof 0->h/2", 0);
-                            zones.Add("Windward Roof h/2->h", 0);
+                            zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_0_h2, 0);
+                            zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_h2_h, 0);
                         }
                         else if (L > h && L <= 2.0 * h)
                         {
-                            zones.Add("Windward Roof 0->h/2", 0);
-                            zones.Add("Windward Roof h/2->h", 0);
-                            zones.Add("Windward Roof h->2h", 0);
+                            zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_0_h2, 0);
+                            zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_h2_h, 0);
+                            zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_h_2h, 0);
                         }
                         else
                         {
-                            zones.Add("Windward Roof 0->h/2", 0);
-                            zones.Add("Windward Roof h/2->h", 0);
-                            zones.Add("Windward Roof h->2h", 0);
-                            zones.Add("Windward Roof 2h->end", 0);
+                            zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_0_h2, 0);
+                            zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_h2_h, 0);
+                            zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_h_2h, 0);
+                            zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_2h_L, 0);
                         }
                     }
                     else
                     {
-                        zones.Add("Windward Roof", 0);
-                        zones.Add("Leeward Roof", 0);
+                        zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_Full, 0);
+                        zones.Add(WindZones_Roof_MWFRS.MWFRS_LR_Full, 0);
                     }
                 }
                 else
@@ -325,25 +370,26 @@ namespace ShearWallCalculator.WindLoadCalculations
                     if (L <= 0.5 * h)
                     {
                         // Windward Roof (single pressure)
-                        zones.Add("Windward Roof 0->h/2", 0);
+                        zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_0_h2, 0);
+
                     }
                     else if (L > 0.5 * h && L <= h)
                     {
-                        zones.Add("Windward Roof 0->h/2", 0);
-                        zones.Add("Windward Roof h/2->h", 0);
+                        zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_0_h2, 0);
+                        zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_h2_h, 0);
                     }
                     else if (L > h && L <= 2.0 * h)
                     {
-                        zones.Add("Windward Roof 0->h/2", 0);
-                        zones.Add("Windward Roof h/2->h", 0);
-                        zones.Add("Windward Roof h->2h", 0);
+                        zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_0_h2, 0);
+                        zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_h2_h, 0);
+                        zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_h_2h, 0);
                     }
                     else
                     {
-                        zones.Add("Windward Roof 0->h/2", 0);
-                        zones.Add("Windward Roof h/2->h", 0);
-                        zones.Add("Windward Roof h->2h", 0);
-                        zones.Add("Windward Roof 2h->end", 0);
+                        zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_0_h2, 0);
+                        zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_h2_h, 0);
+                            zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_2h_L, 0);
+                        zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_h_2h, 0);
                     }
                 }
 
@@ -425,41 +471,41 @@ namespace ShearWallCalculator.WindLoadCalculations
             public static double GetCpSidewall_MWFRS(WindLoadParameters p) => -0.7;
             public static double GetCpWindwardwall_MWFRS(WindLoadParameters p) => 0.8;
 
-            public static RoofCpCases_MWFRS CalculateRoofCp_ForFlatRoofOrParallelRidge_MWFRS(double h, double L, string zone_name)
+            public static RoofCpCases_MWFRS CalculateRoofCp_ForFlatRoofOrParallelRidge_MWFRS(double h, double L, WindZones_Roof_MWFRS zone_name)
             {
                 double hOverL = h / L;
 
                 // Define the base Cp values for the roof coefficients at different hOverL ranges
-                Dictionary<string, double> RoofCoeff_hOVerL_0_5_CaseA_Windward = new Dictionary<string, double>
+                Dictionary<WindZones_Roof_MWFRS, double> RoofCoeff_hOVerL_0_5_CaseA_Windward = new Dictionary<WindZones_Roof_MWFRS, double>
             {
-                { "Windward Roof 0->h/2", -0.9 },
-                { "Windward Roof h/2->h", -0.9 },
-                { "Windward Roof h->2h", -0.5 },
-                { "Windward Roof 2h->end", -0.3 }
+                { WindZones_Roof_MWFRS.MWFRS_WR_0_h2, -0.9 },
+                { WindZones_Roof_MWFRS.MWFRS_WR_h2_h, -0.9 },
+                { WindZones_Roof_MWFRS.MWFRS_WR_h_2h, -0.5 },
+                { WindZones_Roof_MWFRS.MWFRS_WR_2h_L, -0.3 }
             };
 
-                Dictionary<string, double> RoofCoeff_hOVerL_0_5_CaseB_Windward = new Dictionary<string, double>
+                Dictionary<WindZones_Roof_MWFRS, double> RoofCoeff_hOVerL_0_5_CaseB_Windward = new Dictionary<WindZones_Roof_MWFRS, double>
             {
-                { "Windward Roof 0->h/2", -0.18 },
-                { "Windward Roof h/2->h", -0.18 },
-                { "Windward Roof h->2h", -0.18 },
-                { "Windward Roof 2h->end", -0.18 }
+                { WindZones_Roof_MWFRS.MWFRS_WR_0_h2, -0.18 },
+                { WindZones_Roof_MWFRS.MWFRS_WR_h2_h, -0.18 },
+                { WindZones_Roof_MWFRS.MWFRS_WR_h_2h, -0.18 },
+                { WindZones_Roof_MWFRS.MWFRS_WR_2h_L, -0.18 }
             };
 
-                Dictionary<string, double> RoofCoeff_hOVerL_1_0_CaseA_Windward = new Dictionary<string, double>
+                Dictionary<WindZones_Roof_MWFRS, double> RoofCoeff_hOVerL_1_0_CaseA_Windward = new Dictionary<WindZones_Roof_MWFRS, double>
             {
-                { "Windward Roof 0->h/2", -1.3 },
-                { "Windward Roof h/2->h", -0.7 },
-                { "Windward Roof h->2h", -0.7 },
-                { "Windward Roof 2h->end", -0.7 }
+                { WindZones_Roof_MWFRS.MWFRS_WR_0_h2, -1.3 },
+                { WindZones_Roof_MWFRS.MWFRS_WR_h2_h, -0.7 },
+                { WindZones_Roof_MWFRS.MWFRS_WR_h_2h, -0.7 },
+                { WindZones_Roof_MWFRS.MWFRS_WR_2h_L, -0.7 }
             };
 
-                Dictionary<string, double> RoofCoeff_hOVerL_1_0_CaseB_Windward = new Dictionary<string, double>
+                Dictionary<WindZones_Roof_MWFRS, double> RoofCoeff_hOVerL_1_0_CaseB_Windward = new Dictionary<WindZones_Roof_MWFRS, double>
             {
-                { "Windward Roof 0->h/2", -0.18 },
-                { "Windward Roof h/2->h", -0.18 },
-                { "Windward Roof h->2h", -0.18 },
-                { "Windward Roof 2h->end", -0.18 }
+                { WindZones_Roof_MWFRS.MWFRS_WR_0_h2, -0.18 },
+                { WindZones_Roof_MWFRS.MWFRS_WR_h2_h, -0.18 },
+                { WindZones_Roof_MWFRS.MWFRS_WR_h_2h, -0.18 },
+                { WindZones_Roof_MWFRS.MWFRS_WR_2h_L, -0.18 }
             };
 
                 double CpA, CpB;

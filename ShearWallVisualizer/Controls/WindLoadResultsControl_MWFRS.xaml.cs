@@ -1,9 +1,6 @@
 ﻿using ShearWallCalculator.WindLoadCalculations;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
-using System.Security.Cryptography;
 using System.Windows;
 using System.Windows.Controls;
 using static ShearWallCalculator.WindLoadCalculations.WindLoadCalculator;
@@ -54,8 +51,8 @@ namespace ShearWallVisualizer.Controls
 
         private void WindLoadResultsControl_MWFRS_Loaded(object sender, RoutedEventArgs e)
         {
-            Dictionary<string, double> wall_zones = WindLoadCalculator_MWFRS.Calculate_WallZones_MWFRS(_parameters);
-            Dictionary<string, double> roof_zones = WindLoadCalculator_MWFRS.CalculateMWFRS_RoofZones(_parameters);
+            Dictionary<WindZones_Walls_MWFRS, double> wall_zones = WindLoadCalculator_MWFRS.Calculate_WallZones_MWFRS(_parameters);
+            Dictionary<WindZones_Roof_MWFRS, double> roof_zones = WindLoadCalculator_MWFRS.CalculateMWFRS_RoofZones(_parameters);
 
             // compute the wind load results tables
             wall_results = WindLoadCalculator.CalculateWallPressureResults_MWFRS(_parameters, wall_zones);
