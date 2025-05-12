@@ -28,15 +28,15 @@ namespace ShearWallVisualizer.Controls
         private double cnv_ht_elev, cnv_width_elev, cnv_ht_plan, cnv_width_plan;
 
         WindLoadParameters _parameters;
-        List<WindPressureResult_Wall> _wall_results;
-        List<WindPressureResult_Roof> _roof_results;
+        List<WindPressureResult_Wall_MWFRS> _wall_results;
+        List<WindPressureResult_Roof_MWFRS> _roof_results;
 
         public WindLoadGraphicCanvas()
         {
             InitializeComponent();
         }
 
-        public WindLoadGraphicCanvas( WindLoadParameters parameters, List<WindPressureResult_Wall> wall_results, List<WindPressureResult_Roof> roof_results)
+        public WindLoadGraphicCanvas( WindLoadParameters parameters, List<WindPressureResult_Wall_MWFRS> wall_results, List<WindPressureResult_Roof_MWFRS> roof_results)
         {
             _parameters = parameters;
             _wall_results = wall_results;
@@ -262,7 +262,7 @@ namespace ShearWallVisualizer.Controls
 
             // find how many zones we have on the roof
             int zone_count = 0;
-            foreach (WindPressureResult_Roof result in _roof_results)
+            foreach (WindPressureResult_Roof_MWFRS result in _roof_results)
             {
                 if (result.Surface == "Windward Roof 0->h/2")
                 {
@@ -330,8 +330,8 @@ namespace ShearWallVisualizer.Controls
                 x_ridge = p3.X;
                 y_ridge = p3.Y;
 
-                WindPressureResult_Roof result1 = _roof_results[0];
-                WindPressureResult_Roof result2 = _roof_results[1];
+                WindPressureResult_Roof_MWFRS result1 = _roof_results[0];
+                WindPressureResult_Roof_MWFRS result2 = _roof_results[1];
 
                 double start_x1 = p2.X + SCALE_X * result1.Start;
                 double end_x1 = p2.X + SCALE_X * result1.End;
@@ -408,9 +408,9 @@ namespace ShearWallVisualizer.Controls
                 x_ridge = p3.X;
                 y_ridge = p3.Y;
 
-                WindPressureResult_Roof result1 = _roof_results[0];
-                WindPressureResult_Roof result2 = _roof_results[1];
-                WindPressureResult_Roof result3 = _roof_results[2];
+                WindPressureResult_Roof_MWFRS result1 = _roof_results[0];
+                WindPressureResult_Roof_MWFRS result2 = _roof_results[1];
+                WindPressureResult_Roof_MWFRS result3 = _roof_results[2];
 
                 double start_x1 = p2.X + SCALE_X * result1.Start;
                 double end_x1 = p2.X + SCALE_X * result1.End;

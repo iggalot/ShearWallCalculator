@@ -178,8 +178,8 @@ namespace ShearWallVisualizer
         /// <param name="e"></param>
         private void WindLoadResultsControl_MWFRS_WindCalculated(object sender, WindLoadResultsControl_MWFRS.OnWindCalculatedEventArgs e)
         {
-            List<WindPressureResult_Wall> wall_results = e._wall_results;
-            List<WindPressureResult_Roof> roof_results = e._roof_results;
+            List<WindPressureResult_Wall_MWFRS> wall_results = e._wall_results;
+            List<WindPressureResult_Roof_MWFRS> roof_results = e._roof_results;
             WindLoadParameters parameters = e._parameters;
 
             // find the maximum of the windward and leeward sums at elevation h
