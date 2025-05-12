@@ -93,6 +93,7 @@
     <Compile Include="SimpsonCatalog\SimpsonCatalog.cs" />
     <Compile Include="WallData.cs" />
     <Compile Include="WallSystem.cs" />
+    <Compile Include="WindLoadCalculations\WindLoadCalculator.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

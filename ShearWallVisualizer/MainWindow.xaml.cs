@@ -4,6 +4,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using ShearWallCalculator;
 using ShearWallCalculator.Interfaces;
+using ShearWallCalculator.WindLoadCalculations;
 using ShearWallVisualizer.Controls;
 using ShearWallVisualizer.Dialogs;
 using System;
@@ -178,9 +179,9 @@ namespace ShearWallVisualizer
         /// <param name="e"></param>
         private void WindLoadResultsControl_MWFRS_WindCalculated(object sender, WindLoadResultsControl_MWFRS.OnWindCalculatedEventArgs e)
         {
-            List<WindPressureResult_Wall_MWFRS> wall_results = e._wall_results;
-            List<WindPressureResult_Roof_MWFRS> roof_results = e._roof_results;
-            WindLoadParameters parameters = e._parameters;
+            List<WindLoadCalculator.WindPressureResult_Wall_MWFRS> wall_results = e._wall_results;
+            List<WindLoadCalculator.WindPressureResult_Roof_MWFRS> roof_results = e._roof_results;
+            WindLoadCalculator.WindLoadParameters parameters = e._parameters;
 
             // find the maximum of the windward and leeward sums at elevation h
             double temp_sum = double.MinValue;

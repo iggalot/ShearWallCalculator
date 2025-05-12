@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
+using static ShearWallCalculator.WindLoadCalculations.WindLoadCalculator;
 
 namespace ShearWallVisualizer.Controls
 {
@@ -74,21 +75,5 @@ namespace ShearWallVisualizer.Controls
         }
     }
 
-    // Wind Load Parameters class
-    public class WindLoadParameters
-    {
-        public string RiskCategory { get; set; }
-        public double WindSpeed { get; set; }
-        public string ExposureCategory { get; set; }
-        public double BuildingHeight { get; set; }
-        public string EnclosureClassification { get; set; }
-        public double Kd { get; set; }
-        public double Kzt { get; set; }
-        public double GustFactor { get; set; } = 0.85;
-        public double ImportanceFactor { get; set; }
-        public double BuildingLength { get; set; }
-        public double BuildingWidth { get; set; }
-        public double RoofPitch { get; set; }
-        public string RidgeDirection { get; set; }
-    }
+
 }

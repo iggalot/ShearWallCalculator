@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using static ShearWallCalculator.WindLoadCalculations.WindLoadCalculator;
 
 namespace ShearWallVisualizer.Controls
 {
