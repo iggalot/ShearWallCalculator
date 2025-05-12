@@ -33,7 +33,6 @@ namespace ShearWallVisualizer
 
         private JsonDrawingSerializer _serializer = new JsonDrawingSerializer();
 
-
         /// <summary>
         /// Load data for the calculator
         /// </summary>

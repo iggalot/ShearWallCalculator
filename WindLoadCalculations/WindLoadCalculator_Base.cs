@@ -4,6 +4,16 @@ namespace ShearWallCalculator.WindLoadCalculations
 {
     public class WindLoadCalculator_Base
     {
+        public enum WindLoadCases
+        {
+            WLC_BaseA,
+            WLC_BaseB,
+            WLC_Balloon1,
+            WLC_Balloon2,
+            WLC_Suction1,
+            WLC_Suction2
+        }
+
         public enum WindZones_Walls_MWFRS
         {
             [Description("Windward Wall - z=0ft")]

@@ -3,19 +3,11 @@ using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using static ShearWallCalculator.WindLoadCalculations.WindLoadCalculator_Base;
 using static ShearWallCalculator.WindLoadCalculations.WindLoadCalculator_MWFRS;
 
 namespace ShearWallVisualizer.Controls
 {
-    public enum WindLoadCases
-    {
-        WLC_BaseA,
-        WLC_BaseB,
-        WLC_Balloon1,
-        WLC_Balloon2,
-        WLC_Suction1,
-        WLC_Suction2
-    }
     /// <summary>
     /// Interaction logic for WindLoadGraphicCanvas.xaml
     /// </summary>
@@ -31,6 +23,8 @@ namespace ShearWallVisualizer.Controls
         WindLoadParameters _parameters;
         List<WindPressureResult_Wall_MWFRS> _wall_results;
         List<WindPressureResult_Roof_MWFRS> _roof_results;
+
+        public WindLoadParameters Parameters { get => _parameters; set => _parameters = value; }
 
         public WindLoadGraphicCanvas()
         {

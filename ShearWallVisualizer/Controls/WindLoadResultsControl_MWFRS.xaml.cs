@@ -58,7 +58,7 @@ namespace ShearWallVisualizer.Controls
             wall_results = CalculateWallPressureResults_MWFRS(_parameters, wall_zones);
             roof_results = CalculateRoofPressureResults_MWFRS(_parameters, roof_zones);
 
-            tbl_qh.Text = Math.Round(ShearWallCalculator.WindLoadCalculations.WindLoadCalculator_MWFRS.CalculateDynamicWindPressure(_parameters, _parameters.BuildingHeight), 2).ToString();
+            tbl_qh.Text = Math.Round(CalculateDynamicWindPressure(_parameters, _parameters.BuildingHeight), 2).ToString();
             tbl_theta.Text = Math.Round(_parameters.RoofPitch, 2).ToString();
             tbl_hOverL.Text = Math.Round(_parameters.BuildingHeight / _parameters.BuildingLength, 2).ToString();
             tbl_h.Text = Math.Round(_parameters.BuildingHeight, 2).ToString();
