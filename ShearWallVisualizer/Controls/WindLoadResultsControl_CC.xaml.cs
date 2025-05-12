@@ -12,11 +12,11 @@ namespace ShearWallVisualizer.Controls
 
         public class OnWindCalculatedEventArgs : EventArgs
         {
-            public WindLoadCalculator.WindLoadParameters _parameters { get; }
-            public List<WindLoadCalculator.WindPressureResult_Wall_MWFRS> _wall_results { get; }
-            public List<WindLoadCalculator.WindPressureResult_Roof_MWFRS> _roof_results { get; }
+            public WindLoadCalculator_MWFRS.WindLoadParameters _parameters { get; }
+            public List<WindLoadCalculator_MWFRS.WindPressureResult_Wall_MWFRS> _wall_results { get; }
+            public List<WindLoadCalculator_MWFRS.WindPressureResult_Roof_MWFRS> _roof_results { get; }
 
-            public OnWindCalculatedEventArgs(WindLoadCalculator.WindLoadParameters parameters, List<WindLoadCalculator.WindPressureResult_Wall_MWFRS> wall_results, List<WindLoadCalculator.WindPressureResult_Roof_MWFRS> roof_results)
+            public OnWindCalculatedEventArgs(WindLoadCalculator_MWFRS.WindLoadParameters parameters, List<WindLoadCalculator_MWFRS.WindPressureResult_Wall_MWFRS> wall_results, List<WindLoadCalculator_MWFRS.WindPressureResult_Roof_MWFRS> roof_results)
             {
                 _parameters = parameters;
                 _wall_results = wall_results;
@@ -24,22 +24,22 @@ namespace ShearWallVisualizer.Controls
             }
         }
 
-        protected virtual void OnWindCalculated(WindLoadCalculator.WindLoadParameters parameters, List<WindLoadCalculator.WindPressureResult_Wall_MWFRS> wall_results, List<WindLoadCalculator.WindPressureResult_Roof_MWFRS> roof_results)
+        protected virtual void OnWindCalculated(WindLoadCalculator_MWFRS.WindLoadParameters parameters, List<WindLoadCalculator_MWFRS.WindPressureResult_Wall_MWFRS> wall_results, List<WindLoadCalculator_MWFRS.WindPressureResult_Roof_MWFRS> roof_results)
         {
             WindCalculated?.Invoke(this, new OnWindCalculatedEventArgs(parameters, wall_results, roof_results));
         }
 
-        private WindLoadCalculator.WindLoadParameters _parameters;
+        private WindLoadCalculator_MWFRS.WindLoadParameters _parameters;
 
-        public List<WindLoadCalculator.WindPressureResult_Wall_MWFRS> wall_results = new List<WindLoadCalculator.WindPressureResult_Wall_MWFRS>();
-        public List<WindLoadCalculator.WindPressureResult_Roof_MWFRS> roof_results = new List<WindLoadCalculator.WindPressureResult_Roof_MWFRS>();
+        public List<WindLoadCalculator_MWFRS.WindPressureResult_Wall_MWFRS> wall_results = new List<WindLoadCalculator_MWFRS.WindPressureResult_Wall_MWFRS>();
+        public List<WindLoadCalculator_MWFRS.WindPressureResult_Roof_MWFRS> roof_results = new List<WindLoadCalculator_MWFRS.WindPressureResult_Roof_MWFRS>();
 
         public WindLoadResultsControl_CC()
         {
             
         }
 
-        public WindLoadResultsControl_CC(WindLoadCalculator.WindLoadParameters parameters)
+        public WindLoadResultsControl_CC(WindLoadCalculator_MWFRS.WindLoadParameters parameters)
         {
             InitializeComponent();
 

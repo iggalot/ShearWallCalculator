@@ -1,9 +1,9 @@
-﻿using ShearWallCalculator.WindLoadCalculations;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
-using static ShearWallCalculator.WindLoadCalculations.WindLoadCalculator;
+using static ShearWallCalculator.WindLoadCalculations.WindLoadCalculator_Base;
+using static ShearWallCalculator.WindLoadCalculations.WindLoadCalculator_MWFRS;
 
 namespace ShearWallVisualizer.Controls
 {
@@ -13,9 +13,9 @@ namespace ShearWallVisualizer.Controls
 
         public class OnWindCalculatedEventArgs : EventArgs
         {
-            public WindLoadCalculator.WindLoadParameters _parameters { get; }
-            public List<WindLoadCalculator.WindPressureResult_Wall_MWFRS> _wall_results { get; }
-            public List<WindLoadCalculator.WindPressureResult_Roof_MWFRS> _roof_results { get; }
+            public WindLoadParameters _parameters { get; }
+            public List<WindPressureResult_Wall_MWFRS> _wall_results { get; }
+            public List<WindPressureResult_Roof_MWFRS> _roof_results { get; }
 
             public OnWindCalculatedEventArgs(WindLoadParameters parameters, List<WindPressureResult_Wall_MWFRS> wall_results, List<WindPressureResult_Roof_MWFRS> roof_results)
             {
@@ -40,7 +40,7 @@ namespace ShearWallVisualizer.Controls
             
         }
 
-        public WindLoadResultsControl_MWFRS(WindLoadCalculator.WindLoadParameters parameters)
+        public WindLoadResultsControl_MWFRS(WindLoadParameters parameters)
         {
             InitializeComponent();
 
@@ -51,14 +51,14 @@ namespace ShearWallVisualizer.Controls
 
         private void WindLoadResultsControl_MWFRS_Loaded(object sender, RoutedEventArgs e)
         {
-            Dictionary<WindZones_Walls_MWFRS, double> wall_zones = WindLoadCalculator_MWFRS.Calculate_WallZones_MWFRS(_parameters);
-            Dictionary<WindZones_Roof_MWFRS, double> roof_zones = WindLoadCalculator_MWFRS.CalculateMWFRS_RoofZones(_parameters);
+            Dictionary<WindZones_Walls_MWFRS, double> wall_zones = Calculate_WallZones_MWFRS(_parameters);
+            Dictionary<WindZones_Roof_MWFRS, double> roof_zones = CalculateMWFRS_RoofZones(_parameters);
 
             // compute the wind load results tables
-            wall_results = WindLoadCalculator.CalculateWallPressureResults_MWFRS(_parameters, wall_zones);
-            roof_results = WindLoadCalculator.CalculateRoofPressureResults_MWFRS(_parameters, roof_zones);
+            wall_results = CalculateWallPressureResults_MWFRS(_parameters, wall_zones);
+            roof_results = CalculateRoofPressureResults_MWFRS(_parameters, roof_zones);
 
-            tbl_qh.Text = Math.Round(WindLoadCalculator_MWFRS.CalculateDynamicWindPressure(_parameters, _parameters.BuildingHeight), 2).ToString();
+            tbl_qh.Text = Math.Round(ShearWallCalculator.WindLoadCalculations.WindLoadCalculator_MWFRS.CalculateDynamicWindPressure(_parameters, _parameters.BuildingHeight), 2).ToString();
             tbl_theta.Text = Math.Round(_parameters.RoofPitch, 2).ToString();
             tbl_hOverL.Text = Math.Round(_parameters.BuildingHeight / _parameters.BuildingLength, 2).ToString();
             tbl_h.Text = Math.Round(_parameters.BuildingHeight, 2).ToString();

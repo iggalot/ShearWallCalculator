@@ -2,73 +2,11 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ShearWallCalculator.WindLoadCalculations
 {
-    public static class WindLoadCalculator
+    public class WindLoadCalculator_MWFRS : WindLoadCalculator_Base
     {
-        public enum WindZones_Walls_MWFRS
-        {
-            [Description("Windward Wall - z=0ft")]
-            MWFRS_WW_0 = 0,
-            [Description("Windward Wall - z=15ft")]
-            MWFRS_WW_15 = 1,
-            [Description("Windward Wall - z=h")]
-            MWFRS_WW_h = 2,
-            [Description("Leeward Wall")]
-            MWFRS_LW_h = 3,
-            [Description("Sidewall")]
-            MWFRS_SW_h = 4
-        }
-
-        public enum WindZones_Roof_MWFRS
-        {
-            [Description("Windward Roof 0->h/2")]
-            MWFRS_WR_0_h2 = 0,
-            [Description("Windward Roof h/2->h")]
-            MWFRS_WR_h2_h = 1,
-            [Description("Windward Roof h->2h")]
-            MWFRS_WR_h_2h = 2,
-            [Description("Windward Roof > 2h")]
-            MWFRS_WR_2h_L = 3,
-            [Description("Windward Roof Full")]
-            MWFRS_WR_Full = 4,
-            [Description("Leeward Roof Full")]
-            MWFRS_LR_Full = 5
-        }
-
-        public enum WindZones_CC
-        {
-            CC_1 = 0,       // Roof flat zone
-            CC_2 = 1,       // Roof edge zone
-            CC_3 = 2,       // Roof corner zone
-            CC_4 = 3,       // Wall flat zone
-            CC_5 = 4        // Wall edge zone (width 'a')
-        }
-
-
-
-
-        // Wind Load Parameters class
-        public class WindLoadParameters
-        {
-            public string RiskCategory { get; set; }
-            public double WindSpeed { get; set; }
-            public string ExposureCategory { get; set; }
-            public double BuildingHeight { get; set; }
-            public string EnclosureClassification { get; set; }
-            public double Kd { get; set; }
-            public double Kzt { get; set; }
-            public double GustFactor { get; set; } = 0.85;
-            public double ImportanceFactor { get; set; }
-            public double BuildingLength { get; set; }
-            public double BuildingWidth { get; set; }
-            public double RoofPitch { get; set; }
-            public string RidgeDirection { get; set; }
-        }
-
         public static List<WindPressureResult_Wall_MWFRS> CalculateWallPressureResults_MWFRS(WindLoadParameters parameters, Dictionary<WindZones_Walls_MWFRS, double> wall_zones)
         {
             List<WindPressureResult_Wall_MWFRS> wall_results = new List<WindPressureResult_Wall_MWFRS>();
@@ -142,10 +80,6 @@ namespace ShearWallCalculator.WindLoadCalculations
 
             return wall_results;
         }
-
-        
-
-
         public static List<WindPressureResult_Roof_MWFRS> CalculateRoofPressureResults_MWFRS(WindLoadParameters parameters, Dictionary<WindZones_Roof_MWFRS, double> roof_zones)
         {
             List<WindPressureResult_Roof_MWFRS> roof_results = new List<WindPressureResult_Roof_MWFRS>();
@@ -289,83 +223,48 @@ namespace ShearWallCalculator.WindLoadCalculations
             public double Suction2 { get; set; }
         }
 
-        // Wind Load Calculator class
-        public static class WindLoadCalculator_MWFRS
+
+        public static Dictionary<WindZones_Walls_MWFRS, double> Calculate_WallZones_MWFRS(WindLoadParameters p)
         {
-            public static Dictionary<WindZones_Walls_MWFRS, double> Calculate_WallZones_MWFRS(WindLoadParameters p)
-            {
-                double V = p.WindSpeed;
-                double h = p.BuildingHeight;
+            double V = p.WindSpeed;
+            double h = p.BuildingHeight;
 
-                if (h >= 15)
+            if (h >= 15)
+            {
+                return new Dictionary<WindZones_Walls_MWFRS, double>
                 {
-                    return new Dictionary<WindZones_Walls_MWFRS, double>
-                    {
-                        [WindZones_Walls_MWFRS.MWFRS_WW_0] = 0,
-                        [WindZones_Walls_MWFRS.MWFRS_WW_15] = 0,
-                        [WindZones_Walls_MWFRS.MWFRS_WW_h] = 0,
-                        [WindZones_Walls_MWFRS.MWFRS_LW_h] = 0,
-                        [WindZones_Walls_MWFRS.MWFRS_SW_h] = 0,
-                    };
-                }
-                else
-                {
-                    return new Dictionary<WindZones_Walls_MWFRS, double>
-                    {
-                        [WindZones_Walls_MWFRS.MWFRS_WW_0] = 0,
-                        [WindZones_Walls_MWFRS.MWFRS_WW_h] = 0,
-                        [WindZones_Walls_MWFRS.MWFRS_LW_h] = 0,
-                        [WindZones_Walls_MWFRS.MWFRS_SW_h] = 0,
-                    };
-                }
+                    [WindZones_Walls_MWFRS.MWFRS_WW_0] = 0,
+                    [WindZones_Walls_MWFRS.MWFRS_WW_15] = 0,
+                    [WindZones_Walls_MWFRS.MWFRS_WW_h] = 0,
+                    [WindZones_Walls_MWFRS.MWFRS_LW_h] = 0,
+                    [WindZones_Walls_MWFRS.MWFRS_SW_h] = 0,
+                };
             }
-
-            public static Dictionary<WindZones_Roof_MWFRS, double> CalculateMWFRS_RoofZones(WindLoadParameters p)
+            else
             {
-                double theta = p.RoofPitch;
-                double V = p.WindSpeed;
-                double h = p.BuildingHeight;
-                double L = p.BuildingLength;
-                double hOverL = h / L;
-
-                Dictionary<WindZones_Roof_MWFRS, double> zones = new Dictionary<WindZones_Roof_MWFRS, double>();
-
-                if (p.RidgeDirection == "Perpendicular to Wind")
+                return new Dictionary<WindZones_Walls_MWFRS, double>
                 {
-                    if (theta < 10)
-                    {
-                        if (L <= 0.5 * h)
-                        {
-                            // Windward Roof (single pressure)
-                            zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_0_h2, 0);
+                    [WindZones_Walls_MWFRS.MWFRS_WW_0] = 0,
+                    [WindZones_Walls_MWFRS.MWFRS_WW_h] = 0,
+                    [WindZones_Walls_MWFRS.MWFRS_LW_h] = 0,
+                    [WindZones_Walls_MWFRS.MWFRS_SW_h] = 0,
+                };
+            }
+        }
 
-                        }
-                        else if (L > 0.5 * h && L <= h)
-                        {
-                            zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_0_h2, 0);
-                            zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_h2_h, 0);
-                        }
-                        else if (L > h && L <= 2.0 * h)
-                        {
-                            zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_0_h2, 0);
-                            zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_h2_h, 0);
-                            zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_h_2h, 0);
-                        }
-                        else
-                        {
-                            zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_0_h2, 0);
-                            zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_h2_h, 0);
-                            zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_h_2h, 0);
-                            zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_2h_L, 0);
-                        }
-                    }
-                    else
-                    {
-                        zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_Full, 0);
-                        zones.Add(WindZones_Roof_MWFRS.MWFRS_LR_Full, 0);
-                    }
-                }
-                else
+        public static Dictionary<WindZones_Roof_MWFRS, double> CalculateMWFRS_RoofZones(WindLoadParameters p)
+        {
+            double theta = p.RoofPitch;
+            double V = p.WindSpeed;
+            double h = p.BuildingHeight;
+            double L = p.BuildingLength;
+            double hOverL = h / L;
+
+            Dictionary<WindZones_Roof_MWFRS, double> zones = new Dictionary<WindZones_Roof_MWFRS, double>();
+
+            if (p.RidgeDirection == "Perpendicular to Wind")
+            {
+                if (theta < 10)
                 {
                     if (L <= 0.5 * h)
                     {
@@ -388,95 +287,128 @@ namespace ShearWallCalculator.WindLoadCalculations
                     {
                         zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_0_h2, 0);
                         zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_h2_h, 0);
-                            zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_2h_L, 0);
                         zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_h_2h, 0);
+                        zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_2h_L, 0);
                     }
                 }
-
-                return zones;
-            }
-
-            /// <summary>
-            /// Calculates the dyanmic wind pressure q at a specified height z
-            /// </summary>
-            /// <param name="p"></param>
-            /// <param name="z"></param>
-            /// <returns></returns>
-            public static double CalculateDynamicWindPressure(WindLoadParameters p, double z)
-            {
-                double V = p.WindSpeed;
-                double Kd = p.Kd;
-                double Kzt = p.Kzt;
-                double I = p.ImportanceFactor;
-                double Kz = GetKz(z, p.ExposureCategory);
-                double qz = 0.00256 * Kz * Kzt * Kd * V * V * I;
-                return qz;
-            }
-
-            // Get GCpi based on enclosure classification
-            public static double GetGCpiMagnitude(string enclosure)
-            {
-                if (enclosure == "Enclosed") return 0.18;
-                if (enclosure == "Partially Enclosed") return 0.55;
-                if (enclosure == "Open") return 0.00;
-                return 0.18;
-            }
-
-            // Get Kz approximation based on building height and exposure category
-            public static double GetKz(double z, string exposure)
-            {
-                double zg, alpha;
-
-                switch (exposure)
-                {
-                    case "B":
-                        zg = 1200;
-                        alpha = 7.0;
-                        break;
-                    case "C":
-                        zg = 900;
-                        alpha = 9.5;
-                        break;
-                    case "D":
-                        zg = 700;
-                        alpha = 11.5;
-                        break;
-                    default:
-                        zg = 900;
-                        alpha = 9.5;
-                        break;
-                }
-
-                z = Math.Max(z, 15); // Minimum height for Kz is 15 ft
-                return 2.01 * Math.Pow(z / zg, 2.0 / alpha);
-            }
-
-            // Cp values for different surfaces
-            public static double GetCpLeewardWall_MWFRS(WindLoadParameters p)
-            {
-                double length = p.BuildingLength;
-                double width = p.BuildingWidth;
-
-                // Ensure ratio is length over width (L/B) ≥ 1
-                double ratio = length / width; ;
-
-                // Approximate Cp values based on ASCE 7-16 Figure 27.4-1
-                if (ratio < 2.0)
-                    return -0.5;
-                else if (ratio < 4.0)
-                    return -0.3;
                 else
-                    return -0.2;
+                {
+                    zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_Full, 0);
+                    zones.Add(WindZones_Roof_MWFRS.MWFRS_LR_Full, 0);
+                }
             }
-            public static double GetCpSidewall_MWFRS(WindLoadParameters p) => -0.7;
-            public static double GetCpWindwardwall_MWFRS(WindLoadParameters p) => 0.8;
-
-            public static RoofCpCases_MWFRS CalculateRoofCp_ForFlatRoofOrParallelRidge_MWFRS(double h, double L, WindZones_Roof_MWFRS zone_name)
+            else
             {
-                double hOverL = h / L;
+                if (L <= 0.5 * h)
+                {
+                    // Windward Roof (single pressure)
+                    zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_0_h2, 0);
 
-                // Define the base Cp values for the roof coefficients at different hOverL ranges
-                Dictionary<WindZones_Roof_MWFRS, double> RoofCoeff_hOVerL_0_5_CaseA_Windward = new Dictionary<WindZones_Roof_MWFRS, double>
+                }
+                else if (L > 0.5 * h && L <= h)
+                {
+                    zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_0_h2, 0);
+                    zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_h2_h, 0);
+                }
+                else if (L > h && L <= 2.0 * h)
+                {
+                    zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_0_h2, 0);
+                    zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_h2_h, 0);
+                    zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_h_2h, 0);
+                }
+                else
+                {
+                    zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_0_h2, 0);
+                    zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_h2_h, 0);
+                    zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_2h_L, 0);
+                    zones.Add(WindZones_Roof_MWFRS.MWFRS_WR_h_2h, 0);
+                }
+            }
+
+            return zones;
+        }
+
+        /// <summary>
+        /// Calculates the dyanmic wind pressure q at a specified height z
+        /// </summary>
+        /// <param name="p"></param>
+        /// <param name="z"></param>
+        /// <returns></returns>
+        public static double CalculateDynamicWindPressure(WindLoadParameters p, double z)
+        {
+            double V = p.WindSpeed;
+            double Kd = p.Kd;
+            double Kzt = p.Kzt;
+            double I = p.ImportanceFactor;
+            double Kz = GetKz(z, p.ExposureCategory);
+            double qz = 0.00256 * Kz * Kzt * Kd * V * V * I;
+            return qz;
+        }
+
+        // Get GCpi based on enclosure classification
+        public static double GetGCpiMagnitude(string enclosure)
+        {
+            if (enclosure == "Enclosed") return 0.18;
+            if (enclosure == "Partially Enclosed") return 0.55;
+            if (enclosure == "Open") return 0.00;
+            return 0.18;
+        }
+
+        // Get Kz approximation based on building height and exposure category
+        public static double GetKz(double z, string exposure)
+        {
+            double zg, alpha;
+
+            switch (exposure)
+            {
+                case "B":
+                    zg = 1200;
+                    alpha = 7.0;
+                    break;
+                case "C":
+                    zg = 900;
+                    alpha = 9.5;
+                    break;
+                case "D":
+                    zg = 700;
+                    alpha = 11.5;
+                    break;
+                default:
+                    zg = 900;
+                    alpha = 9.5;
+                    break;
+            }
+
+            z = Math.Max(z, 15); // Minimum height for Kz is 15 ft
+            return 2.01 * Math.Pow(z / zg, 2.0 / alpha);
+        }
+
+        // Cp values for different surfaces
+        public static double GetCpLeewardWall_MWFRS(WindLoadParameters p)
+        {
+            double length = p.BuildingLength;
+            double width = p.BuildingWidth;
+
+            // Ensure ratio is length over width (L/B) ≥ 1
+            double ratio = length / width; ;
+
+            // Approximate Cp values based on ASCE 7-16 Figure 27.4-1
+            if (ratio < 2.0)
+                return -0.5;
+            else if (ratio < 4.0)
+                return -0.3;
+            else
+                return -0.2;
+        }
+        public static double GetCpSidewall_MWFRS(WindLoadParameters p) => -0.7;
+        public static double GetCpWindwardwall_MWFRS(WindLoadParameters p) => 0.8;
+
+        public static RoofCpCases_MWFRS CalculateRoofCp_ForFlatRoofOrParallelRidge_MWFRS(double h, double L, WindZones_Roof_MWFRS zone_name)
+        {
+            double hOverL = h / L;
+
+            // Define the base Cp values for the roof coefficients at different hOverL ranges
+            Dictionary<WindZones_Roof_MWFRS, double> RoofCoeff_hOVerL_0_5_CaseA_Windward = new Dictionary<WindZones_Roof_MWFRS, double>
             {
                 { WindZones_Roof_MWFRS.MWFRS_WR_0_h2, -0.9 },
                 { WindZones_Roof_MWFRS.MWFRS_WR_h2_h, -0.9 },
@@ -484,7 +416,7 @@ namespace ShearWallCalculator.WindLoadCalculations
                 { WindZones_Roof_MWFRS.MWFRS_WR_2h_L, -0.3 }
             };
 
-                Dictionary<WindZones_Roof_MWFRS, double> RoofCoeff_hOVerL_0_5_CaseB_Windward = new Dictionary<WindZones_Roof_MWFRS, double>
+            Dictionary<WindZones_Roof_MWFRS, double> RoofCoeff_hOVerL_0_5_CaseB_Windward = new Dictionary<WindZones_Roof_MWFRS, double>
             {
                 { WindZones_Roof_MWFRS.MWFRS_WR_0_h2, -0.18 },
                 { WindZones_Roof_MWFRS.MWFRS_WR_h2_h, -0.18 },
@@ -492,7 +424,7 @@ namespace ShearWallCalculator.WindLoadCalculations
                 { WindZones_Roof_MWFRS.MWFRS_WR_2h_L, -0.18 }
             };
 
-                Dictionary<WindZones_Roof_MWFRS, double> RoofCoeff_hOVerL_1_0_CaseA_Windward = new Dictionary<WindZones_Roof_MWFRS, double>
+            Dictionary<WindZones_Roof_MWFRS, double> RoofCoeff_hOVerL_1_0_CaseA_Windward = new Dictionary<WindZones_Roof_MWFRS, double>
             {
                 { WindZones_Roof_MWFRS.MWFRS_WR_0_h2, -1.3 },
                 { WindZones_Roof_MWFRS.MWFRS_WR_h2_h, -0.7 },
@@ -500,7 +432,7 @@ namespace ShearWallCalculator.WindLoadCalculations
                 { WindZones_Roof_MWFRS.MWFRS_WR_2h_L, -0.7 }
             };
 
-                Dictionary<WindZones_Roof_MWFRS, double> RoofCoeff_hOVerL_1_0_CaseB_Windward = new Dictionary<WindZones_Roof_MWFRS, double>
+            Dictionary<WindZones_Roof_MWFRS, double> RoofCoeff_hOVerL_1_0_CaseB_Windward = new Dictionary<WindZones_Roof_MWFRS, double>
             {
                 { WindZones_Roof_MWFRS.MWFRS_WR_0_h2, -0.18 },
                 { WindZones_Roof_MWFRS.MWFRS_WR_h2_h, -0.18 },
@@ -508,43 +440,43 @@ namespace ShearWallCalculator.WindLoadCalculations
                 { WindZones_Roof_MWFRS.MWFRS_WR_2h_L, -0.18 }
             };
 
-                double CpA, CpB;
+            double CpA, CpB;
 
-                // Interpolation based on hOverL values (only)
-                if (hOverL <= 0.5)
-                {
-                    CpA = RoofCoeff_hOVerL_0_5_CaseA_Windward.ContainsKey(zone_name) ? RoofCoeff_hOVerL_0_5_CaseA_Windward[zone_name] : 0.0;
-                    CpB = RoofCoeff_hOVerL_0_5_CaseB_Windward.ContainsKey(zone_name) ? RoofCoeff_hOVerL_0_5_CaseB_Windward[zone_name] : 0.0;
-                }
-                else if (hOverL > 0.5 && hOverL <= 1.0)
-                {
-                    // Interpolate Cp values for hOverL range (0.5 to 1.0)
-                    double t = (hOverL - 0.5) / (1.0 - 0.5);
-                    CpA = RoofCoeff_hOVerL_0_5_CaseA_Windward.ContainsKey(zone_name) ? InterpolateCp(RoofCoeff_hOVerL_0_5_CaseA_Windward[zone_name], RoofCoeff_hOVerL_1_0_CaseA_Windward[zone_name], 0.5, 1.0, t) : 0.0;
-                    CpB = RoofCoeff_hOVerL_0_5_CaseA_Windward.ContainsKey(zone_name) ? InterpolateCp(RoofCoeff_hOVerL_0_5_CaseB_Windward[zone_name], RoofCoeff_hOVerL_1_0_CaseB_Windward[zone_name], 0.5, 1.0, t) : 0.0;
-                }
-                else
-                {
-                    CpA = RoofCoeff_hOVerL_1_0_CaseA_Windward.ContainsKey(zone_name) ? RoofCoeff_hOVerL_1_0_CaseA_Windward[zone_name] : 0.0;
-                    CpB = RoofCoeff_hOVerL_1_0_CaseB_Windward.ContainsKey(zone_name) ? RoofCoeff_hOVerL_1_0_CaseB_Windward[zone_name] : 0.0;
-                }
-
-                // Return the Cp values wrapped in RoofCpCases_MWFRS (Leeward values are not relevant for flat roofs)
-                return new RoofCpCases_MWFRS(CpA, CpB, 0, 0);  // No leeward surfaces on a flat roof
+            // Interpolation based on hOverL values (only)
+            if (hOverL <= 0.5)
+            {
+                CpA = RoofCoeff_hOVerL_0_5_CaseA_Windward.ContainsKey(zone_name) ? RoofCoeff_hOVerL_0_5_CaseA_Windward[zone_name] : 0.0;
+                CpB = RoofCoeff_hOVerL_0_5_CaseB_Windward.ContainsKey(zone_name) ? RoofCoeff_hOVerL_0_5_CaseB_Windward[zone_name] : 0.0;
+            }
+            else if (hOverL > 0.5 && hOverL <= 1.0)
+            {
+                // Interpolate Cp values for hOverL range (0.5 to 1.0)
+                double t = (hOverL - 0.5) / (1.0 - 0.5);
+                CpA = RoofCoeff_hOVerL_0_5_CaseA_Windward.ContainsKey(zone_name) ? InterpolateCp(RoofCoeff_hOVerL_0_5_CaseA_Windward[zone_name], RoofCoeff_hOVerL_1_0_CaseA_Windward[zone_name], 0.5, 1.0, t) : 0.0;
+                CpB = RoofCoeff_hOVerL_0_5_CaseA_Windward.ContainsKey(zone_name) ? InterpolateCp(RoofCoeff_hOVerL_0_5_CaseB_Windward[zone_name], RoofCoeff_hOVerL_1_0_CaseB_Windward[zone_name], 0.5, 1.0, t) : 0.0;
+            }
+            else
+            {
+                CpA = RoofCoeff_hOVerL_1_0_CaseA_Windward.ContainsKey(zone_name) ? RoofCoeff_hOVerL_1_0_CaseA_Windward[zone_name] : 0.0;
+                CpB = RoofCoeff_hOVerL_1_0_CaseB_Windward.ContainsKey(zone_name) ? RoofCoeff_hOVerL_1_0_CaseB_Windward[zone_name] : 0.0;
             }
 
-            /// <summary>
-            /// Determines interpolated Cp values for normal to ridge with thetat >= 10degs.
-            /// ASCE7-10 Figure 27.4-1
-            /// </summary>
-            /// <param name="h"></param>
-            /// <param name="L"></param>
-            /// <param name="theta"></param>
-            /// <returns></returns>
-            public static RoofCpCases_MWFRS CalculateRoofCp_PerpendicularRidge_MWFRS(double h, double L, double theta)
-            {
-                // Define roof coefficients for different cases and wind directions
-                var roofCoefficients = new Dictionary<string, Dictionary<double, Dictionary<double, double>>>
+            // Return the Cp values wrapped in RoofCpCases_MWFRS (Leeward values are not relevant for flat roofs)
+            return new RoofCpCases_MWFRS(CpA, CpB, 0, 0);  // No leeward surfaces on a flat roof
+        }
+
+        /// <summary>
+        /// Determines interpolated Cp values for normal to ridge with thetat >= 10degs.
+        /// ASCE7-10 Figure 27.4-1
+        /// </summary>
+        /// <param name="h"></param>
+        /// <param name="L"></param>
+        /// <param name="theta"></param>
+        /// <returns></returns>
+        public static RoofCpCases_MWFRS CalculateRoofCp_PerpendicularRidge_MWFRS(double h, double L, double theta)
+        {
+            // Define roof coefficients for different cases and wind directions
+            var roofCoefficients = new Dictionary<string, Dictionary<double, Dictionary<double, double>>>
             {
                 {
                     "CaseA_Windward", new Dictionary<double, Dictionary<double, double>>()
@@ -580,136 +512,135 @@ namespace ShearWallCalculator.WindLoadCalculations
                 }
             };
 
-                // Compute h/L ratio
-                double hOverL = h / L;
+            // Compute h/L ratio
+            double hOverL = h / L;
 
-                // Determine closest hOverL ranges (0.25, 0.5, or 1.0)
-                double lowHOverL = GetClosestHOverLRange(hOverL);
-                double highHOverL = lowHOverL == 0.25 ? 0.5 : (lowHOverL == 0.5 ? 1.0 : 1.0);
+            // Determine closest hOverL ranges (0.25, 0.5, or 1.0)
+            double lowHOverL = GetClosestHOverLRange(hOverL);
+            double highHOverL = lowHOverL == 0.25 ? 0.5 : (lowHOverL == 0.5 ? 1.0 : 1.0);
 
-                // Calculate interpolation factor for hOverL
-                double t_hOverL;
-                if (highHOverL != lowHOverL)
-                {
-                    t_hOverL = (hOverL - lowHOverL) / (highHOverL - lowHOverL);
-                }
-                else
-                {
-                    t_hOverL = 0.0;
-                }
-
-                // Interpolate theta
-                double[] thetaBreaks = { 10, 15, 20, 25, 30, 35, 45, 60, 90 };
-                double theta_low = thetaBreaks.First(x => x >= theta);
-                double theta_high = thetaBreaks.Last(x => x <= theta);
-
-                double t_theta;
-                if (theta_low == theta_high)
-                {
-                    t_theta = 0.0;
-                }
-                else
-                {
-                    t_theta = (theta - theta_low) / (theta_high - theta_low);
-                }
-
-                // Select windward or leeward case for both A and B
-                string caseKeyA_Windward = "CaseA_Windward";
-                string caseKeyA_Leeward = "CaseA_Leeward";
-                string caseKeyB_Windward = "CaseB_Windward";
-                string caseKeyB_Leeward = "CaseB_Leeward";
-
-                var caseDataA_Windward = roofCoefficients[caseKeyA_Windward];
-                var caseDataA_Leeward = roofCoefficients[caseKeyA_Leeward];
-                var caseDataB_Windward = roofCoefficients[caseKeyB_Windward];
-                var caseDataB_Leeward = roofCoefficients[caseKeyB_Leeward];
-
-                // Step 1: Interpolate over theta for each h/L
-                double CpA_Windward_LowTheta = InterpolateCp(
-                    caseDataA_Windward[lowHOverL][theta_low],
-                    caseDataA_Windward[lowHOverL][theta_high],
-                    theta_low,
-                    theta_high,
-                    t_theta
-                );
-                double CpA_Windward_HighTheta = InterpolateCp(
-                    caseDataA_Windward[highHOverL][theta_low],
-                    caseDataA_Windward[highHOverL][theta_high],
-                    theta_low,
-                    theta_high,
-                    t_theta
-                );
-
-                double CpA_Leeward_LowTheta = InterpolateCp(
-                    caseDataA_Leeward[lowHOverL][theta_low],
-                    caseDataA_Leeward[lowHOverL][theta_high],
-                    theta_low,
-                    theta_high,
-                    t_theta
-                );
-                double CpA_Leeward_HighTheta = InterpolateCp(
-                    caseDataA_Leeward[highHOverL][theta_low],
-                    caseDataA_Leeward[highHOverL][theta_high],
-                    theta_low,
-                    theta_high,
-                    t_theta
-                );
-
-                double CpB_Windward_LowTheta = InterpolateCp(
-                    caseDataB_Windward[lowHOverL][theta_low],
-                    caseDataB_Windward[lowHOverL][theta_high],
-                    theta_low,
-                    theta_high,
-                    t_theta
-                );
-                double CpB_Windward_HighTheta = InterpolateCp(
-                    caseDataB_Windward[highHOverL][theta_low],
-                    caseDataB_Windward[highHOverL][theta_high],
-                    theta_low,
-                    theta_high,
-                    t_theta
-                );
-
-                double CpB_Leeward_LowTheta = InterpolateCp(
-                    caseDataB_Leeward[lowHOverL][theta_low],
-                    caseDataB_Leeward[lowHOverL][theta_high],
-                    theta_low,
-                    theta_high,
-                    t_theta
-                );
-                double CpB_Leeward_HighTheta = InterpolateCp(
-                    caseDataB_Leeward[highHOverL][theta_low],
-                    caseDataB_Leeward[highHOverL][theta_high],
-                    theta_low,
-                    theta_high,
-                    t_theta
-                );
-
-                // Step 2: Interpolate over h/L
-                double CpA_Windward = InterpolateCp(CpA_Windward_LowTheta, CpA_Windward_HighTheta, lowHOverL, highHOverL, t_hOverL);
-                double CpA_Leeward = InterpolateCp(CpA_Leeward_LowTheta, CpA_Leeward_HighTheta, lowHOverL, highHOverL, t_hOverL);
-                double CpB_Windward = InterpolateCp(CpB_Windward_LowTheta, CpB_Windward_HighTheta, lowHOverL, highHOverL, t_hOverL);
-                double CpB_Leeward = InterpolateCp(CpB_Leeward_LowTheta, CpB_Leeward_HighTheta, lowHOverL, highHOverL, t_hOverL);
-
-                // Create and return RoofCpCases_MWFRS object using the new constructor
-                return new RoofCpCases_MWFRS(CpA_Windward, CpB_Windward, CpA_Leeward, CpB_Leeward);
-            }
-
-            public static double InterpolateCp(double lowCp, double highCp, double lowTheta, double highTheta, double t_theta)
+            // Calculate interpolation factor for hOverL
+            double t_hOverL;
+            if (highHOverL != lowHOverL)
             {
-                // Linear interpolation formula
-                return lowCp + (highCp - lowCp) * t_theta;
+                t_hOverL = (hOverL - lowHOverL) / (highHOverL - lowHOverL);
             }
-
-            public static double GetClosestHOverLRange(double hOverL)
+            else
             {
-                // Define the possible ranges for h/L
-                double[] hOverLRanges = { 0.25, 0.5, 1.0 };
-
-                // Find the closest value to hOverL from the predefined ranges
-                double closest = hOverLRanges.OrderBy(range => Math.Abs(range - hOverL)).First();
-                return closest;
+                t_hOverL = 0.0;
             }
+
+            // Interpolate theta
+            double[] thetaBreaks = { 10, 15, 20, 25, 30, 35, 45, 60, 90 };
+            double theta_low = thetaBreaks.First(x => x >= theta);
+            double theta_high = thetaBreaks.Last(x => x <= theta);
+
+            double t_theta;
+            if (theta_low == theta_high)
+            {
+                t_theta = 0.0;
+            }
+            else
+            {
+                t_theta = (theta - theta_low) / (theta_high - theta_low);
+            }
+
+            // Select windward or leeward case for both A and B
+            string caseKeyA_Windward = "CaseA_Windward";
+            string caseKeyA_Leeward = "CaseA_Leeward";
+            string caseKeyB_Windward = "CaseB_Windward";
+            string caseKeyB_Leeward = "CaseB_Leeward";
+
+            var caseDataA_Windward = roofCoefficients[caseKeyA_Windward];
+            var caseDataA_Leeward = roofCoefficients[caseKeyA_Leeward];
+            var caseDataB_Windward = roofCoefficients[caseKeyB_Windward];
+            var caseDataB_Leeward = roofCoefficients[caseKeyB_Leeward];
+
+            // Step 1: Interpolate over theta for each h/L
+            double CpA_Windward_LowTheta = InterpolateCp(
+                caseDataA_Windward[lowHOverL][theta_low],
+                caseDataA_Windward[lowHOverL][theta_high],
+                theta_low,
+                theta_high,
+                t_theta
+            );
+            double CpA_Windward_HighTheta = InterpolateCp(
+                caseDataA_Windward[highHOverL][theta_low],
+                caseDataA_Windward[highHOverL][theta_high],
+                theta_low,
+                theta_high,
+                t_theta
+            );
+
+            double CpA_Leeward_LowTheta = InterpolateCp(
+                caseDataA_Leeward[lowHOverL][theta_low],
+                caseDataA_Leeward[lowHOverL][theta_high],
+                theta_low,
+                theta_high,
+                t_theta
+            );
+            double CpA_Leeward_HighTheta = InterpolateCp(
+                caseDataA_Leeward[highHOverL][theta_low],
+                caseDataA_Leeward[highHOverL][theta_high],
+                theta_low,
+                theta_high,
+                t_theta
+            );
+
+            double CpB_Windward_LowTheta = InterpolateCp(
+                caseDataB_Windward[lowHOverL][theta_low],
+                caseDataB_Windward[lowHOverL][theta_high],
+                theta_low,
+                theta_high,
+                t_theta
+            );
+            double CpB_Windward_HighTheta = InterpolateCp(
+                caseDataB_Windward[highHOverL][theta_low],
+                caseDataB_Windward[highHOverL][theta_high],
+                theta_low,
+                theta_high,
+                t_theta
+            );
+
+            double CpB_Leeward_LowTheta = InterpolateCp(
+                caseDataB_Leeward[lowHOverL][theta_low],
+                caseDataB_Leeward[lowHOverL][theta_high],
+                theta_low,
+                theta_high,
+                t_theta
+            );
+            double CpB_Leeward_HighTheta = InterpolateCp(
+                caseDataB_Leeward[highHOverL][theta_low],
+                caseDataB_Leeward[highHOverL][theta_high],
+                theta_low,
+                theta_high,
+                t_theta
+            );
+
+            // Step 2: Interpolate over h/L
+            double CpA_Windward = InterpolateCp(CpA_Windward_LowTheta, CpA_Windward_HighTheta, lowHOverL, highHOverL, t_hOverL);
+            double CpA_Leeward = InterpolateCp(CpA_Leeward_LowTheta, CpA_Leeward_HighTheta, lowHOverL, highHOverL, t_hOverL);
+            double CpB_Windward = InterpolateCp(CpB_Windward_LowTheta, CpB_Windward_HighTheta, lowHOverL, highHOverL, t_hOverL);
+            double CpB_Leeward = InterpolateCp(CpB_Leeward_LowTheta, CpB_Leeward_HighTheta, lowHOverL, highHOverL, t_hOverL);
+
+            // Create and return RoofCpCases_MWFRS object using the new constructor
+            return new RoofCpCases_MWFRS(CpA_Windward, CpB_Windward, CpA_Leeward, CpB_Leeward);
+        }
+
+        public static double InterpolateCp(double lowCp, double highCp, double lowTheta, double highTheta, double t_theta)
+        {
+            // Linear interpolation formula
+            return lowCp + (highCp - lowCp) * t_theta;
+        }
+
+        public static double GetClosestHOverLRange(double hOverL)
+        {
+            // Define the possible ranges for h/L
+            double[] hOverLRanges = { 0.25, 0.5, 1.0 };
+
+            // Find the closest value to hOverL from the predefined ranges
+            double closest = hOverLRanges.OrderBy(range => Math.Abs(range - hOverL)).First();
+            return closest;
         }
 
         public class RoofCpCases_MWFRS
