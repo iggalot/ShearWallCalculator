@@ -23,8 +23,10 @@ namespace ShearWallCalculator.NDSProvisions
         SHEATH_MAT_PLYWOOD = 2,
         SHEATH_MAT_PARTICLEBOARD = 3,
         SHEATH_MAT_FIBERBOARD = 4,
-        SHEATH_MAT_GYPSUM = 5,
-        SHEATH_MAT_CEMENT_PLASTER = 6,
+        SHEATH_MAT_GYPSUM_WALLBOARD = 5,
+        SHEATH_MAT_GYPSUM_SHEATHING_BOARD = 6,
+        SHEATH_MAT_GYPSUM_LATH_PLASTER = 7,
+        SHEATH_MAT_CEMENT_PLASTER_OVER_METAL = 8,
     }
 
     public enum DiaphragmTypes
@@ -61,8 +63,11 @@ namespace ShearWallCalculator.NDSProvisions
         THICKNESS_15_32IN = 4,
         THICKNESS_19_32IN = 5,
         THICKNESS_5_8IN = 6,
-        THICKNESS_23_32IN = 7,
-        THICKNESS_25_32IN = 8
+        THICKNESS_5_8IN_2PLY = 7, // used in Gypsum Table 4.3C
+        THICKNESS_23_32IN = 8,
+        THICKNESS_25_32IN = 9,
+        THICKNESS_7_8IN = 10
+
 
     }
 
