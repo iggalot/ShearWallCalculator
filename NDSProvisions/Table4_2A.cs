@@ -135,6 +135,9 @@ namespace ShearWallCalculator.NDSProvisions
 
     public class Table4_2Manager
     {
+        public string Title { get; set; } = "Table 4.2A Nominal Unit Shear Capacities for Wood-Frame Diaphragms";
+        public string Description { get; set; } = "Blocked Wood Structural Panel Diaphragms";
+
         private int _current_id = 0;
         public Dictionary<int, Table4_2A> Table4_2ANominalUnitShearCapacities = new Dictionary<int, Table4_2A>();
 

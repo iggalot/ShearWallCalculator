@@ -57,6 +57,9 @@ namespace ShearWallCalculator.NDSProvisions
 
     public class Table4_3Manager
     {
+        public string Title { get; set; } = "Table 4.3A Nominal Unit Shear Capacities for Wood-Frame Shear Walls";
+        public string Description { get; set; } = "Wood based panels";
+
         private int _current_id = 0;
         public Dictionary<int, Table4_3A> Table4_3ANominalUnitShearCapacities = new Dictionary<int, Table4_3A>();
 
