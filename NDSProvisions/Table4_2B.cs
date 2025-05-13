@@ -25,13 +25,12 @@ namespace ShearWallCalculator.NDSProvisions
         public NominalPanelThicknesses NominalPanelThickness { get; set; }
         public double NominalWidthOfNailedFaceAtBoundaries { get; set; }
         public double LinesOfFasteners { get; set; }
-        public double NominalUnitShearCapacity { get; set; }
     }
 
     public class Table4_2BManager
     {
         private int _current_id = 0;
-        public Dictionary<int, Table4_2B> Table4_2NominalUnitShearCapacities = new Dictionary<int, Table4_2B>();
+        public Dictionary<int, Table4_2B> Table4_2BNominalUnitShearCapacities = new Dictionary<int, Table4_2B>();
 
         private int GetNextId()
         {
@@ -45,10 +44,10 @@ namespace ShearWallCalculator.NDSProvisions
 
         private void BuildTable4_2B()
         {
-            Table4_2NominalUnitShearCapacities.Clear();
+            Table4_2BNominalUnitShearCapacities.Clear();
             //Structural 1 entries
             // 10d - 15/32
-            Table4_2NominalUnitShearCapacities.Add(GetNextId(), new Table4_2B
+            Table4_2BNominalUnitShearCapacities.Add(GetNextId(), new Table4_2B
             {
                 SheathingGrade = SheathingGrades.SHEATH_GRADE_STRUCTURAL_1,
                 CommonNailSize = CommonNailSizes.NAILSIZE_10D,
@@ -115,7 +114,7 @@ namespace ShearWallCalculator.NDSProvisions
                 },
 
             });
-            Table4_2NominalUnitShearCapacities.Add(GetNextId(), new Table4_2B
+            Table4_2BNominalUnitShearCapacities.Add(GetNextId(), new Table4_2B
             {
                 SheathingGrade = SheathingGrades.SHEATH_GRADE_STRUCTURAL_1,
                 CommonNailSize = CommonNailSizes.NAILSIZE_10D,
@@ -182,7 +181,7 @@ namespace ShearWallCalculator.NDSProvisions
                 },
 
             });
-            Table4_2NominalUnitShearCapacities.Add(GetNextId(), new Table4_2B
+            Table4_2BNominalUnitShearCapacities.Add(GetNextId(), new Table4_2B
             {
                 SheathingGrade = SheathingGrades.SHEATH_GRADE_STRUCTURAL_1,
                 CommonNailSize = CommonNailSizes.NAILSIZE_10D,
@@ -250,7 +249,7 @@ namespace ShearWallCalculator.NDSProvisions
             });
 
             // 10d - 19/32 panel
-            Table4_2NominalUnitShearCapacities.Add(GetNextId(), new Table4_2B
+            Table4_2BNominalUnitShearCapacities.Add(GetNextId(), new Table4_2B
             {
                 SheathingGrade = SheathingGrades.SHEATH_GRADE_STRUCTURAL_1,
                 CommonNailSize = CommonNailSizes.NAILSIZE_10D,
@@ -317,7 +316,7 @@ namespace ShearWallCalculator.NDSProvisions
                 },
 
             });
-            Table4_2NominalUnitShearCapacities.Add(GetNextId(), new Table4_2B
+            Table4_2BNominalUnitShearCapacities.Add(GetNextId(), new Table4_2B
             {
                 SheathingGrade = SheathingGrades.SHEATH_GRADE_STRUCTURAL_1,
                 CommonNailSize = CommonNailSizes.NAILSIZE_10D,
@@ -384,7 +383,7 @@ namespace ShearWallCalculator.NDSProvisions
                 },
 
             });
-            Table4_2NominalUnitShearCapacities.Add(GetNextId(), new Table4_2B
+            Table4_2BNominalUnitShearCapacities.Add(GetNextId(), new Table4_2B
             {
                 SheathingGrade = SheathingGrades.SHEATH_GRADE_STRUCTURAL_1,
                 CommonNailSize = CommonNailSizes.NAILSIZE_10D,
@@ -453,7 +452,7 @@ namespace ShearWallCalculator.NDSProvisions
             });
 
             // 10d - 23/32 panel
-            Table4_2NominalUnitShearCapacities.Add(GetNextId(), new Table4_2B
+            Table4_2BNominalUnitShearCapacities.Add(GetNextId(), new Table4_2B
             {
                 SheathingGrade = SheathingGrades.SHEATH_GRADE_STRUCTURAL_1,
                 CommonNailSize = CommonNailSizes.NAILSIZE_10D,
@@ -520,7 +519,7 @@ namespace ShearWallCalculator.NDSProvisions
                 },
 
             });
-            Table4_2NominalUnitShearCapacities.Add(GetNextId(), new Table4_2B
+            Table4_2BNominalUnitShearCapacities.Add(GetNextId(), new Table4_2B
             {
                 SheathingGrade = SheathingGrades.SHEATH_GRADE_STRUCTURAL_1,
                 CommonNailSize = CommonNailSizes.NAILSIZE_10D,
@@ -587,7 +586,7 @@ namespace ShearWallCalculator.NDSProvisions
                 },
 
             });
-            Table4_2NominalUnitShearCapacities.Add(GetNextId(), new Table4_2B
+            Table4_2BNominalUnitShearCapacities.Add(GetNextId(), new Table4_2B
             {
                 SheathingGrade = SheathingGrades.SHEATH_GRADE_STRUCTURAL_1,
                 CommonNailSize = CommonNailSizes.NAILSIZE_10D,
@@ -657,7 +656,7 @@ namespace ShearWallCalculator.NDSProvisions
 
             //Sheathing and Single Floor entries
             // 10d - 15/32
-            Table4_2NominalUnitShearCapacities.Add(GetNextId(), new Table4_2B
+            Table4_2BNominalUnitShearCapacities.Add(GetNextId(), new Table4_2B
             {
                 SheathingGrade = SheathingGrades.SHEATH_GRADE_SHEATHING_AND_SINGLE_FLOOR,
                 CommonNailSize = CommonNailSizes.NAILSIZE_10D,
@@ -724,7 +723,7 @@ namespace ShearWallCalculator.NDSProvisions
                 },
 
             });
-            Table4_2NominalUnitShearCapacities.Add(GetNextId(), new Table4_2B
+            Table4_2BNominalUnitShearCapacities.Add(GetNextId(), new Table4_2B
             {
                 SheathingGrade = SheathingGrades.SHEATH_GRADE_SHEATHING_AND_SINGLE_FLOOR,
                 CommonNailSize = CommonNailSizes.NAILSIZE_10D,
@@ -791,7 +790,7 @@ namespace ShearWallCalculator.NDSProvisions
                 },
 
             });
-            Table4_2NominalUnitShearCapacities.Add(GetNextId(), new Table4_2B
+            Table4_2BNominalUnitShearCapacities.Add(GetNextId(), new Table4_2B
             {
                 SheathingGrade = SheathingGrades.SHEATH_GRADE_SHEATHING_AND_SINGLE_FLOOR,
                 CommonNailSize = CommonNailSizes.NAILSIZE_10D,
@@ -859,7 +858,7 @@ namespace ShearWallCalculator.NDSProvisions
             });
 
             // 10d - 19/32
-            Table4_2NominalUnitShearCapacities.Add(GetNextId(), new Table4_2B
+            Table4_2BNominalUnitShearCapacities.Add(GetNextId(), new Table4_2B
             {
                 SheathingGrade = SheathingGrades.SHEATH_GRADE_SHEATHING_AND_SINGLE_FLOOR,
                 CommonNailSize = CommonNailSizes.NAILSIZE_10D,
@@ -926,7 +925,7 @@ namespace ShearWallCalculator.NDSProvisions
                 },
 
             });
-            Table4_2NominalUnitShearCapacities.Add(GetNextId(), new Table4_2B
+            Table4_2BNominalUnitShearCapacities.Add(GetNextId(), new Table4_2B
             {
                 SheathingGrade = SheathingGrades.SHEATH_GRADE_SHEATHING_AND_SINGLE_FLOOR,
                 CommonNailSize = CommonNailSizes.NAILSIZE_10D,
@@ -993,7 +992,7 @@ namespace ShearWallCalculator.NDSProvisions
                 },
 
             });
-            Table4_2NominalUnitShearCapacities.Add(GetNextId(), new Table4_2B
+            Table4_2BNominalUnitShearCapacities.Add(GetNextId(), new Table4_2B
             {
                 SheathingGrade = SheathingGrades.SHEATH_GRADE_SHEATHING_AND_SINGLE_FLOOR,
                 CommonNailSize = CommonNailSizes.NAILSIZE_10D,
@@ -1061,7 +1060,7 @@ namespace ShearWallCalculator.NDSProvisions
             });
 
             // 10d - 23/32
-            Table4_2NominalUnitShearCapacities.Add(GetNextId(), new Table4_2B
+            Table4_2BNominalUnitShearCapacities.Add(GetNextId(), new Table4_2B
             {
                 SheathingGrade = SheathingGrades.SHEATH_GRADE_SHEATHING_AND_SINGLE_FLOOR,
                 CommonNailSize = CommonNailSizes.NAILSIZE_10D,
@@ -1128,7 +1127,7 @@ namespace ShearWallCalculator.NDSProvisions
                 },
 
             });
-            Table4_2NominalUnitShearCapacities.Add(GetNextId(), new Table4_2B
+            Table4_2BNominalUnitShearCapacities.Add(GetNextId(), new Table4_2B
             {
                 SheathingGrade = SheathingGrades.SHEATH_GRADE_SHEATHING_AND_SINGLE_FLOOR,
                 CommonNailSize = CommonNailSizes.NAILSIZE_10D,
@@ -1195,7 +1194,7 @@ namespace ShearWallCalculator.NDSProvisions
                 },
 
             });
-            Table4_2NominalUnitShearCapacities.Add(GetNextId(), new Table4_2B
+            Table4_2BNominalUnitShearCapacities.Add(GetNextId(), new Table4_2B
             {
                 SheathingGrade = SheathingGrades.SHEATH_GRADE_SHEATHING_AND_SINGLE_FLOOR,
                 CommonNailSize = CommonNailSizes.NAILSIZE_10D,
