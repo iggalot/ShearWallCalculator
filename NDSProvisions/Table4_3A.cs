@@ -31,8 +31,8 @@ namespace ShearWallCalculator.NDSProvisions
 
    
     /// <summary>
-    /// Table 4.2A Nominal Unit Shear Capacities for Wood-Frame Diaphragms
-    /// Blocked Wood Structural Panel Diaphragms
+    /// Table 4.3A Nominal Unit Shear Capacities for Wood-Frame Shear Walls
+    /// Wood based panels
     /// </summary>
     public class Table4_3A
     {
