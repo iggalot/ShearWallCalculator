@@ -16,10 +16,15 @@ namespace ShearWallCalculator.NDSProvisions
         ORIENTATION_CASE_6 = 6
     }
 
-    public enum SheathingGrades
+    public enum SheathingMaterials
     {
-        SHEATH_GRADE_STRUCTURAL_1 = 0,
-        SHEATH_GRADE_SHEATHING_AND_SINGLE_FLOOR = 1
+        SHEATH_MAT_STRUCTURAL_1 = 0,
+        SHEATH_MAT_SHEATHING_AND_SINGLE_FLOOR = 1,
+        SHEATH_MAT_PLYWOOD = 2,
+        SHEATH_MAT_PARTICLEBOARD = 3,
+        SHEATH_MAT_FIBERBOARD = 4,
+        SHEATH_MAT_GYPSUM = 5,
+        SHEATH_MAT_CEMENT_PLASTER = 6,
     }
 
     public enum DiaphragmTypes
@@ -33,7 +38,18 @@ namespace ShearWallCalculator.NDSProvisions
     {
         NAILSIZE_6D = 0,
         NAILSIZE_8D = 1,
-        NAILSIZE_10D = 2
+        NAILSIZE_10D = 2,
+        NAILSIZE_11GA_1_75LONG_7_16HEAD = 3,
+        NAILSIZE_11GA_1_75LONG_3_8HEAD = 4
+
+    }
+
+    public enum NailTypes
+    {
+        NAILTYPE_COMMON_BOX_ONLY = 0,
+        NAILTYPE_GALVANZIED_ONLY = 1,
+        NAILTYPE_COMMON_BOX_AND_GALVANIZED = 2,
+        NAILTYPE_GALVANIZED_ROOF = 3
     }
 
     public enum NominalPanelThicknesses
@@ -41,9 +57,13 @@ namespace ShearWallCalculator.NDSProvisions
         THICKNESS_5_16IN = 0,
         THICKNESS_3_8IN = 1,
         THICKNESS_7_16IN = 2,
-        THICKNESS_15_32IN = 3,
-        THICKNESS_19_32IN = 4,
-        THICKNESS_23_32IN = 5
+        THICKNESS_1_2IN = 3,
+        THICKNESS_15_32IN = 4,
+        THICKNESS_19_32IN = 5,
+        THICKNESS_5_8IN = 6,
+        THICKNESS_23_32IN = 7,
+        THICKNESS_25_32IN = 8
+
     }
 
     /// <summary>
@@ -106,7 +126,7 @@ namespace ShearWallCalculator.NDSProvisions
         public Table4_2_WindEntry Wind2_3;  // Case B Wind -- boundaries spa = 2, other edges = 3
 
 
-        public SheathingGrades SheathingGrade { get; set; }
+        public SheathingMaterials SheathingGrade { get; set; }
         public CommonNailSizes CommonNailSize { get; set; }
         public double MinimumFastenerPenetration { get; set; }   // min penetration into framing member or blocking
         public NominalPanelThicknesses NominalPanelThickness { get; set; }
@@ -135,7 +155,7 @@ namespace ShearWallCalculator.NDSProvisions
             // 6d - 5/16 panel
             Table4_2ANominalUnitShearCapacities.Add(GetNextId(), new Table4_2A
             {
-                SheathingGrade = SheathingGrades.SHEATH_GRADE_STRUCTURAL_1,
+                SheathingGrade = SheathingMaterials.SHEATH_MAT_STRUCTURAL_1,
                 CommonNailSize = CommonNailSizes.NAILSIZE_6D,
                 MinimumFastenerPenetration = 1.25,
                 NominalPanelThickness = NominalPanelThicknesses.THICKNESS_5_16IN,
@@ -201,7 +221,7 @@ namespace ShearWallCalculator.NDSProvisions
             });
             Table4_2ANominalUnitShearCapacities.Add(GetNextId(), new Table4_2A
             {
-                SheathingGrade = SheathingGrades.SHEATH_GRADE_STRUCTURAL_1,
+                SheathingGrade = SheathingMaterials.SHEATH_MAT_STRUCTURAL_1,
                 CommonNailSize = CommonNailSizes.NAILSIZE_6D,
                 MinimumFastenerPenetration = 1.25,
                 NominalPanelThickness = NominalPanelThicknesses.THICKNESS_5_16IN,
@@ -269,7 +289,7 @@ namespace ShearWallCalculator.NDSProvisions
             // 8d - 3/8 panel
             Table4_2ANominalUnitShearCapacities.Add(GetNextId(), new Table4_2A
             {
-                SheathingGrade = SheathingGrades.SHEATH_GRADE_STRUCTURAL_1,
+                SheathingGrade = SheathingMaterials.SHEATH_MAT_STRUCTURAL_1,
                 CommonNailSize = CommonNailSizes.NAILSIZE_8D,
                 MinimumFastenerPenetration = 1.375,
                 NominalPanelThickness = NominalPanelThicknesses.THICKNESS_3_8IN,
@@ -335,7 +355,7 @@ namespace ShearWallCalculator.NDSProvisions
             });
             Table4_2ANominalUnitShearCapacities.Add(GetNextId(), new Table4_2A
             {
-                SheathingGrade = SheathingGrades.SHEATH_GRADE_STRUCTURAL_1,
+                SheathingGrade = SheathingMaterials.SHEATH_MAT_STRUCTURAL_1,
                 CommonNailSize = CommonNailSizes.NAILSIZE_8D,
                 MinimumFastenerPenetration = 1.375,
                 NominalPanelThickness = NominalPanelThicknesses.THICKNESS_3_8IN,
@@ -403,7 +423,7 @@ namespace ShearWallCalculator.NDSProvisions
             // 10d - 15/32 panel
             Table4_2ANominalUnitShearCapacities.Add(GetNextId(), new Table4_2A
             {
-                SheathingGrade = SheathingGrades.SHEATH_GRADE_STRUCTURAL_1,
+                SheathingGrade = SheathingMaterials.SHEATH_MAT_STRUCTURAL_1,
                 CommonNailSize = CommonNailSizes.NAILSIZE_10D,
                 MinimumFastenerPenetration = 1.5,
                 NominalPanelThickness = NominalPanelThicknesses.THICKNESS_15_32IN,
@@ -469,7 +489,7 @@ namespace ShearWallCalculator.NDSProvisions
             });
             Table4_2ANominalUnitShearCapacities.Add(GetNextId(), new Table4_2A
             {
-                SheathingGrade = SheathingGrades.SHEATH_GRADE_STRUCTURAL_1,
+                SheathingGrade = SheathingMaterials.SHEATH_MAT_STRUCTURAL_1,
                 CommonNailSize = CommonNailSizes.NAILSIZE_10D,
                 MinimumFastenerPenetration = 1.5,
                 NominalPanelThickness = NominalPanelThicknesses.THICKNESS_15_32IN,
@@ -538,7 +558,7 @@ namespace ShearWallCalculator.NDSProvisions
             // 6d - 5/16 panel
             Table4_2ANominalUnitShearCapacities.Add(GetNextId(), new Table4_2A
             {
-                SheathingGrade = SheathingGrades.SHEATH_GRADE_SHEATHING_AND_SINGLE_FLOOR,
+                SheathingGrade = SheathingMaterials.SHEATH_MAT_SHEATHING_AND_SINGLE_FLOOR,
                 CommonNailSize = CommonNailSizes.NAILSIZE_6D,
                 MinimumFastenerPenetration = 1.25,
                 NominalPanelThickness = NominalPanelThicknesses.THICKNESS_5_16IN,
@@ -604,7 +624,7 @@ namespace ShearWallCalculator.NDSProvisions
             });
             Table4_2ANominalUnitShearCapacities.Add(GetNextId(), new Table4_2A
             {
-                SheathingGrade = SheathingGrades.SHEATH_GRADE_SHEATHING_AND_SINGLE_FLOOR,
+                SheathingGrade = SheathingMaterials.SHEATH_MAT_SHEATHING_AND_SINGLE_FLOOR,
                 CommonNailSize = CommonNailSizes.NAILSIZE_6D,
                 MinimumFastenerPenetration = 1.25,
                 NominalPanelThickness = NominalPanelThicknesses.THICKNESS_5_16IN,
@@ -672,7 +692,7 @@ namespace ShearWallCalculator.NDSProvisions
             // 6d - 3/8 panel
             Table4_2ANominalUnitShearCapacities.Add(GetNextId(), new Table4_2A
             {
-                SheathingGrade = SheathingGrades.SHEATH_GRADE_SHEATHING_AND_SINGLE_FLOOR,
+                SheathingGrade = SheathingMaterials.SHEATH_MAT_SHEATHING_AND_SINGLE_FLOOR,
                 CommonNailSize = CommonNailSizes.NAILSIZE_6D,
                 MinimumFastenerPenetration = 1.25,
                 NominalPanelThickness = NominalPanelThicknesses.THICKNESS_3_8IN,
@@ -738,7 +758,7 @@ namespace ShearWallCalculator.NDSProvisions
             });
             Table4_2ANominalUnitShearCapacities.Add(GetNextId(), new Table4_2A
             {
-                SheathingGrade = SheathingGrades.SHEATH_GRADE_SHEATHING_AND_SINGLE_FLOOR,
+                SheathingGrade = SheathingMaterials.SHEATH_MAT_SHEATHING_AND_SINGLE_FLOOR,
                 CommonNailSize = CommonNailSizes.NAILSIZE_6D,
                 MinimumFastenerPenetration = 1.25,
                 NominalPanelThickness = NominalPanelThicknesses.THICKNESS_3_8IN,
@@ -805,7 +825,7 @@ namespace ShearWallCalculator.NDSProvisions
             // 8d - 3/8 panel
             Table4_2ANominalUnitShearCapacities.Add(GetNextId(), new Table4_2A
             {
-                SheathingGrade = SheathingGrades.SHEATH_GRADE_SHEATHING_AND_SINGLE_FLOOR,
+                SheathingGrade = SheathingMaterials.SHEATH_MAT_SHEATHING_AND_SINGLE_FLOOR,
                 CommonNailSize = CommonNailSizes.NAILSIZE_8D,
                 MinimumFastenerPenetration = 1.375,
                 NominalPanelThickness = NominalPanelThicknesses.THICKNESS_3_8IN,
@@ -871,7 +891,7 @@ namespace ShearWallCalculator.NDSProvisions
             });
             Table4_2ANominalUnitShearCapacities.Add(GetNextId(), new Table4_2A
             {
-                SheathingGrade = SheathingGrades.SHEATH_GRADE_SHEATHING_AND_SINGLE_FLOOR,
+                SheathingGrade = SheathingMaterials.SHEATH_MAT_SHEATHING_AND_SINGLE_FLOOR,
                 CommonNailSize = CommonNailSizes.NAILSIZE_8D,
                 MinimumFastenerPenetration = 1.375,
                 NominalPanelThickness = NominalPanelThicknesses.THICKNESS_3_8IN,
@@ -939,7 +959,7 @@ namespace ShearWallCalculator.NDSProvisions
             // 8d - 7/16 panel
             Table4_2ANominalUnitShearCapacities.Add(GetNextId(), new Table4_2A
             {
-                SheathingGrade = SheathingGrades.SHEATH_GRADE_SHEATHING_AND_SINGLE_FLOOR,
+                SheathingGrade = SheathingMaterials.SHEATH_MAT_SHEATHING_AND_SINGLE_FLOOR,
                 CommonNailSize = CommonNailSizes.NAILSIZE_8D,
                 MinimumFastenerPenetration = 1.375,
                 NominalPanelThickness = NominalPanelThicknesses.THICKNESS_7_16IN,
@@ -1005,7 +1025,7 @@ namespace ShearWallCalculator.NDSProvisions
             });
             Table4_2ANominalUnitShearCapacities.Add(GetNextId(), new Table4_2A
             {
-                SheathingGrade = SheathingGrades.SHEATH_GRADE_SHEATHING_AND_SINGLE_FLOOR,
+                SheathingGrade = SheathingMaterials.SHEATH_MAT_SHEATHING_AND_SINGLE_FLOOR,
                 CommonNailSize = CommonNailSizes.NAILSIZE_8D,
                 MinimumFastenerPenetration = 1.375,
                 NominalPanelThickness = NominalPanelThicknesses.THICKNESS_7_16IN,
@@ -1073,7 +1093,7 @@ namespace ShearWallCalculator.NDSProvisions
             // 8d - 15/32 panel
             Table4_2ANominalUnitShearCapacities.Add(GetNextId(), new Table4_2A
             {
-                SheathingGrade = SheathingGrades.SHEATH_GRADE_SHEATHING_AND_SINGLE_FLOOR,
+                SheathingGrade = SheathingMaterials.SHEATH_MAT_SHEATHING_AND_SINGLE_FLOOR,
                 CommonNailSize = CommonNailSizes.NAILSIZE_8D,
                 MinimumFastenerPenetration = 1.375,
                 NominalPanelThickness = NominalPanelThicknesses.THICKNESS_15_32IN,
@@ -1139,7 +1159,7 @@ namespace ShearWallCalculator.NDSProvisions
             });
             Table4_2ANominalUnitShearCapacities.Add(GetNextId(), new Table4_2A
             {
-                SheathingGrade = SheathingGrades.SHEATH_GRADE_SHEATHING_AND_SINGLE_FLOOR,
+                SheathingGrade = SheathingMaterials.SHEATH_MAT_SHEATHING_AND_SINGLE_FLOOR,
                 CommonNailSize = CommonNailSizes.NAILSIZE_8D,
                 MinimumFastenerPenetration = 1.375,
                 NominalPanelThickness = NominalPanelThicknesses.THICKNESS_15_32IN,
@@ -1207,7 +1227,7 @@ namespace ShearWallCalculator.NDSProvisions
             // 10d - 15/32 panel
             Table4_2ANominalUnitShearCapacities.Add(GetNextId(), new Table4_2A
             {
-                SheathingGrade = SheathingGrades.SHEATH_GRADE_SHEATHING_AND_SINGLE_FLOOR,
+                SheathingGrade = SheathingMaterials.SHEATH_MAT_SHEATHING_AND_SINGLE_FLOOR,
                 CommonNailSize = CommonNailSizes.NAILSIZE_10D,
                 MinimumFastenerPenetration = 1.5,
                 NominalPanelThickness = NominalPanelThicknesses.THICKNESS_15_32IN,
@@ -1273,7 +1293,7 @@ namespace ShearWallCalculator.NDSProvisions
             });
             Table4_2ANominalUnitShearCapacities.Add(GetNextId(), new Table4_2A
             {
-                SheathingGrade = SheathingGrades.SHEATH_GRADE_SHEATHING_AND_SINGLE_FLOOR,
+                SheathingGrade = SheathingMaterials.SHEATH_MAT_SHEATHING_AND_SINGLE_FLOOR,
                 CommonNailSize = CommonNailSizes.NAILSIZE_10D,
                 MinimumFastenerPenetration = 1.5,
                 NominalPanelThickness = NominalPanelThicknesses.THICKNESS_15_32IN,
@@ -1341,7 +1361,7 @@ namespace ShearWallCalculator.NDSProvisions
             // 10d - 19/32 panel
             Table4_2ANominalUnitShearCapacities.Add(GetNextId(), new Table4_2A
             {
-                SheathingGrade = SheathingGrades.SHEATH_GRADE_SHEATHING_AND_SINGLE_FLOOR,
+                SheathingGrade = SheathingMaterials.SHEATH_MAT_SHEATHING_AND_SINGLE_FLOOR,
                 CommonNailSize = CommonNailSizes.NAILSIZE_10D,
                 MinimumFastenerPenetration = 1.5,
                 NominalPanelThickness = NominalPanelThicknesses.THICKNESS_19_32IN,
@@ -1407,7 +1427,7 @@ namespace ShearWallCalculator.NDSProvisions
             });
             Table4_2ANominalUnitShearCapacities.Add(GetNextId(), new Table4_2A
             {
-                SheathingGrade = SheathingGrades.SHEATH_GRADE_SHEATHING_AND_SINGLE_FLOOR,
+                SheathingGrade = SheathingMaterials.SHEATH_MAT_SHEATHING_AND_SINGLE_FLOOR,
                 CommonNailSize = CommonNailSizes.NAILSIZE_10D,
                 MinimumFastenerPenetration = 1.5,
                 NominalPanelThickness = NominalPanelThicknesses.THICKNESS_19_32IN,
