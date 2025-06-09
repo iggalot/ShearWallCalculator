@@ -83,6 +83,13 @@
     <Compile Include="Interfaces\DrawableObjectConverter.cs" />
     <Compile Include="Interfaces\IDrawingSerializer.cs" />
     <Compile Include="Interfaces\JsonDrawingSerializer.cs" />
+    <Compile Include="NDSProvisions\SDPWS_Table4_3_4.cs" />
+    <Compile Include="NDSProvisions\Table4_3C.cs" />
+    <Compile Include="NDSProvisions\Table4_3B.cs" />
+    <Compile Include="NDSProvisions\Table4_3A.cs" />
+    <Compile Include="NDSProvisions\Table4_2C.cs" />
+    <Compile Include="NDSProvisions\Table4_2B.cs" />
+    <Compile Include="NDSProvisions\Table4_2A.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ShearWallCalculatorBase.cs" />
     <Compile Include="ShearWallCalculator_FlexibleDiaphragm.cs" />
