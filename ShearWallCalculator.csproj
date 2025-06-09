@@ -87,10 +87,16 @@
     <Compile Include="ShearWallCalculatorBase.cs" />
     <Compile Include="ShearWallCalculator_FlexibleDiaphragm.cs" />
     <Compile Include="ShearWallCalculator_RigidDiaphragm.cs" />
+    <Compile Include="ShearWallSelector.cs" />
+    <Compile Include="SimpsonCatalog\BaseConnectorManager.cs" />
+    <Compile Include="SimpsonCatalog\BaseSimpsonConnectorData.cs" />
+    <Compile Include="SimpsonCatalog\HDU_Manager.cs" />
     <Compile Include="SimpsonCatalog\HTT_Data.cs" />
+    <Compile Include="SimpsonCatalog\HTT_Manager.cs" />
     <Compile Include="SimpsonCatalog\StrapTies_Data.cs" />
     <Compile Include="SimpsonCatalog\HDU_Data.cs" />
     <Compile Include="SimpsonCatalog\SimpsonCatalog.cs" />
+    <Compile Include="SimpsonCatalog\StrapTies_Manager.cs" />
     <Compile Include="WallData.cs" />
     <Compile Include="WallSystem.cs" />
     <Compile Include="WindLoadCalculations\WindLoadCalculator_MWFRS.cs" />

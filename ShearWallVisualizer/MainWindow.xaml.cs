@@ -31,6 +31,8 @@ namespace ShearWallVisualizer
         private DiaphragmSystem diaphragmSystem = new DiaphragmSystem();
         private WallSystem wallSystem = new WallSystem();
 
+        public SimpsonCatalog simpsonCatalog { get; set; } = new SimpsonCatalog();
+
         private JsonDrawingSerializer _serializer = new JsonDrawingSerializer();
 
         /// <summary>
@@ -117,6 +119,9 @@ namespace ShearWallVisualizer
                 CreateGridVisual();
                 CreateTabs();
 
+                // load the Simpson catalog
+                simpsonCatalog = new SimpsonCatalog();
+
                 Update();
 
                 Draw(ChangeType.Redraw);
@@ -126,14 +131,14 @@ namespace ShearWallVisualizer
                 ctrlWindLoadResultsControl_MWFRS.WindCalculated += WindLoadResultsControl_MWFRS_WindCalculated;
                 WindLoadInputControl.WindInputComplete += WindLoadInputControl_WindInputComplete;
 
-                SimpsonCatalog catalog = new SimpsonCatalog();
-                var lst1 = catalog.GetModelsExceedingReqLoad(4000, SimpsonCatalogs.SIMPSON_CATALOG_HDU, WoodTypes.WOODTYPE_DF_SP);
+                // Display test results.
+                var lst1 = simpsonCatalog.GetModelsExceedingReqLoad(4000, SimpsonCatalogs.SIMPSON_CATALOG_HDU, WoodTypes.WOODTYPE_DF_SP);
                 Console.WriteLine("----------------");
                 PrintList(lst1);
-                var lst2 = catalog.GetModelsExceedingReqLoad(4000, SimpsonCatalogs.SIMPSON_CATALOG_STRAP, WoodTypes.WOODTYPE_DF_SP);
+                var lst2 = simpsonCatalog.GetModelsExceedingReqLoad(4000, SimpsonCatalogs.SIMPSON_CATALOG_STRAP, WoodTypes.WOODTYPE_DF_SP);
                 Console.WriteLine("----------------");
                 PrintList(lst2);
-                var lst3 = catalog.GetModelsExceedingReqLoad(4000, SimpsonCatalogs.SIMPSON_CATALOG_HTT, WoodTypes.WOODTYPE_DF_SP);
+                var lst3 = simpsonCatalog.GetModelsExceedingReqLoad(4000, SimpsonCatalogs.SIMPSON_CATALOG_HTT, WoodTypes.WOODTYPE_DF_SP);
                 Console.WriteLine("----------------");
                 PrintList(lst3);
             };
@@ -141,6 +146,9 @@ namespace ShearWallVisualizer
 
         public void PrintList<T>(List<T> lst)
         {
+            if (lst == null)
+                return;
+
             foreach (var item in lst)
             {
                 Console.WriteLine(item.ToString());
@@ -372,6 +380,7 @@ namespace ShearWallVisualizer
             //Calculator = new ShearWallCalculator_RigidDiaphragm(wallSystem, diaphragmSystem, currentMagX, currentMagY);
             Calculator = new ShearWallCalculator_FlexibleDiaphragm(wallSystem, diaphragmSystem, currentMagX, currentMagY);
 
+            // Update the calculations
             Calculator.Update();
 
             // clear the tabs
