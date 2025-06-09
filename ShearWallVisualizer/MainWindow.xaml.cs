@@ -4,6 +4,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using ShearWallCalculator;
 using ShearWallCalculator.Interfaces;
+using ShearWallCalculator.WindLoadCalculations;
 using ShearWallVisualizer.Controls;
 using ShearWallVisualizer.Dialogs;
 using System;
@@ -19,7 +20,6 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
-using System.Xml.Linq;
 using static ShearWallVisualizer.Controls.DiaphragmDataControl;
 using static ShearWallVisualizer.Controls.WallDataControl;
 
@@ -31,8 +31,9 @@ namespace ShearWallVisualizer
         private DiaphragmSystem diaphragmSystem = new DiaphragmSystem();
         private WallSystem wallSystem = new WallSystem();
 
-        private JsonDrawingSerializer _serializer = new JsonDrawingSerializer();
+        public SimpsonCatalog simpsonCatalog { get; set; } = new SimpsonCatalog();
 
+        private JsonDrawingSerializer _serializer = new JsonDrawingSerializer();
 
         /// <summary>
         /// Load data for the calculator
@@ -118,33 +119,36 @@ namespace ShearWallVisualizer
                 CreateGridVisual();
                 CreateTabs();
 
+                // load the Simpson catalog
+                simpsonCatalog = new SimpsonCatalog();
+
                 Update();
 
                 Draw(ChangeType.Redraw);
 
 
                 // Events for wind load calculation
-                ctrlWindLoadResultsControl.WindCalculated += WindLoadResultsControl_WindCalculated;
+                ctrlWindLoadResultsControl_MWFRS.WindCalculated += WindLoadResultsControl_MWFRS_WindCalculated;
                 WindLoadInputControl.WindInputComplete += WindLoadInputControl_WindInputComplete;
 
-                SimpsonCatalog catalog = new SimpsonCatalog();
-                var lst1 = catalog.GetModelsExceedingReqLoad(4000, SimpsonCatalogs.SIMPSON_CATALOG_HDU, WoodTypes.WOODTYPE_DF_SP);
+                // Display test results.
+                var lst1 = simpsonCatalog.GetModelsExceedingReqLoad(4000, SimpsonCatalogs.SIMPSON_CATALOG_HDU, WoodTypes.WOODTYPE_DF_SP);
                 Console.WriteLine("----------------");
                 PrintList(lst1);
-                var lst2 = catalog.GetModelsExceedingReqLoad(4000, SimpsonCatalogs.SIMPSON_CATALOG_STRAP, WoodTypes.WOODTYPE_DF_SP);
+                var lst2 = simpsonCatalog.GetModelsExceedingReqLoad(4000, SimpsonCatalogs.SIMPSON_CATALOG_STRAP, WoodTypes.WOODTYPE_DF_SP);
                 Console.WriteLine("----------------");
                 PrintList(lst2);
-                var lst3 = catalog.GetModelsExceedingReqLoad(4000, SimpsonCatalogs.SIMPSON_CATALOG_HTT, WoodTypes.WOODTYPE_DF_SP);
+                var lst3 = simpsonCatalog.GetModelsExceedingReqLoad(4000, SimpsonCatalogs.SIMPSON_CATALOG_HTT, WoodTypes.WOODTYPE_DF_SP);
                 Console.WriteLine("----------------");
                 PrintList(lst3);
-
-
-
             };
         }
 
         public void PrintList<T>(List<T> lst)
         {
+            if (lst == null)
+                return;
+
             foreach (var item in lst)
             {
                 Console.WriteLine(item.ToString());
@@ -158,17 +162,17 @@ namespace ShearWallVisualizer
         /// <param name="e"></param>
         private void WindLoadInputControl_WindInputComplete(object sender, WindLoadInputControl.OnWindInputCompleteEventArgs e)
         {
-            if (ctrlWindLoadResultsControl != null)
+            if (ctrlWindLoadResultsControl_MWFRS != null)
             {
-                ctrlWindLoadResultsControl.WindCalculated -= WindLoadResultsControl_WindCalculated;
+                ctrlWindLoadResultsControl_MWFRS.WindCalculated -= WindLoadResultsControl_MWFRS_WindCalculated;
             }
 
-            WindLoadResultsControl ctrl = new WindLoadResultsControl(e._parameters);
+            WindLoadResultsControl_MWFRS ctrl = new WindLoadResultsControl_MWFRS(e._parameters);
 
-            ctrl.WindCalculated += WindLoadResultsControl_WindCalculated;
-            ctrlWindLoadResultsControl.Content = ctrl;
+            ctrl.WindCalculated += WindLoadResultsControl_MWFRS_WindCalculated;
+            ctrlWindLoadResultsControl_MWFRS.Content = ctrl;
 
-            ctrlWindLoadResultsControl = ctrl;
+            ctrlWindLoadResultsControl_MWFRS = ctrl;
 
             tabWindResults.Visibility = Visibility.Visible;
             tabWindResults.IsSelected = true;
@@ -179,11 +183,11 @@ namespace ShearWallVisualizer
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void WindLoadResultsControl_WindCalculated(object sender, WindLoadResultsControl.OnWindCalculatedEventArgs e)
+        private void WindLoadResultsControl_MWFRS_WindCalculated(object sender, WindLoadResultsControl_MWFRS.OnWindCalculatedEventArgs e)
         {
-            List<WindPressureResult_Wall> wall_results = e._wall_results;
-            List<WindPressureResult_Roof> roof_results = e._roof_results;
-            WindLoadParameters parameters = e._parameters;
+            List<WindLoadCalculator_MWFRS.WindPressureResult_Wall_MWFRS> wall_results = e._wall_results;
+            List<WindLoadCalculator_MWFRS.WindPressureResult_Roof_MWFRS> roof_results = e._roof_results;
+            WindLoadCalculator_MWFRS.WindLoadParameters parameters = e._parameters;
 
             // find the maximum of the windward and leeward sums at elevation h
             double temp_sum = double.MinValue;
@@ -376,6 +380,7 @@ namespace ShearWallVisualizer
             //Calculator = new ShearWallCalculator_RigidDiaphragm(wallSystem, diaphragmSystem, currentMagX, currentMagY);
             Calculator = new ShearWallCalculator_FlexibleDiaphragm(wallSystem, diaphragmSystem, currentMagX, currentMagY);
 
+            // Update the calculations
             Calculator.Update();
 
             // clear the tabs
