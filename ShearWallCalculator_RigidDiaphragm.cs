@@ -41,10 +41,6 @@ namespace calculator
         [JsonIgnore]
         public Dictionary<int, double> EccentricShear { get; set; } = new Dictionary<int, double>();
 
-        // dictionary containing the total shear acting on a wall -- resistance at nase pf diaphragm at top of walls
-        [JsonIgnore]
-        public Dictionary<int, double> TotalWallShear { get; set; } = new Dictionary<int, double>();
-
         /// <summary>
         /// default constructor
         /// </summary>

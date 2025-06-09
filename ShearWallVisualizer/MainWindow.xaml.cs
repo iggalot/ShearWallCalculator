@@ -91,9 +91,6 @@ namespace ShearWallVisualizer
         private double worldWidth = 120;
         private double worldHeight = 120;
 
-
-
-
         private Point currentMouseScreenPosition = new Point(0, 0);
 
         public MainWindow()
@@ -131,16 +128,16 @@ namespace ShearWallVisualizer
                 ctrlWindLoadResultsControl_MWFRS.WindCalculated += WindLoadResultsControl_MWFRS_WindCalculated;
                 WindLoadInputControl.WindInputComplete += WindLoadInputControl_WindInputComplete;
 
-                // Display test results.
-                var lst1 = simpsonCatalog.GetModelsExceedingReqLoad(4000, SimpsonCatalogs.SIMPSON_CATALOG_HDU, WoodTypes.WOODTYPE_DF_SP);
-                Console.WriteLine("----------------");
-                PrintList(lst1);
-                var lst2 = simpsonCatalog.GetModelsExceedingReqLoad(4000, SimpsonCatalogs.SIMPSON_CATALOG_STRAP, WoodTypes.WOODTYPE_DF_SP);
-                Console.WriteLine("----------------");
-                PrintList(lst2);
-                var lst3 = simpsonCatalog.GetModelsExceedingReqLoad(4000, SimpsonCatalogs.SIMPSON_CATALOG_HTT, WoodTypes.WOODTYPE_DF_SP);
-                Console.WriteLine("----------------");
-                PrintList(lst3);
+                //// Display test results.
+                //var lst1 = simpsonCatalog.GetModelsExceedingReqLoad(4000, SimpsonCatalogs.SIMPSON_CATALOG_HDU, WoodTypes.WOODTYPE_DF_SP);
+                //Console.WriteLine("----------------");
+                //PrintList(lst1);
+                //var lst2 = simpsonCatalog.GetModelsExceedingReqLoad(4000, SimpsonCatalogs.SIMPSON_CATALOG_STRAP, WoodTypes.WOODTYPE_DF_SP);
+                //Console.WriteLine("----------------");
+                //PrintList(lst2);
+                //var lst3 = simpsonCatalog.GetModelsExceedingReqLoad(4000, SimpsonCatalogs.SIMPSON_CATALOG_HTT, WoodTypes.WOODTYPE_DF_SP);
+                //Console.WriteLine("----------------");
+                //PrintList(lst3);
             };
         }
 
@@ -377,8 +374,8 @@ namespace ShearWallVisualizer
 
             wallSystem = Calculator._wall_system;
             diaphragmSystem = Calculator._diaphragm_system;
-            //Calculator = new ShearWallCalculator_RigidDiaphragm(wallSystem, diaphragmSystem, currentMagX, currentMagY);
-            Calculator = new ShearWallCalculator_FlexibleDiaphragm(wallSystem, diaphragmSystem, currentMagX, currentMagY);
+            Calculator = new ShearWallCalculator_RigidDiaphragm(wallSystem, diaphragmSystem, currentMagX, currentMagY);
+            //Calculator = new ShearWallCalculator_FlexibleDiaphragm(wallSystem, diaphragmSystem, currentMagX, currentMagY);
 
             // Update the calculations
             Calculator.Update();
@@ -411,7 +408,6 @@ namespace ShearWallVisualizer
 
             // redraw the screen
             Draw(ChangeType.Redraw);  // redraw
-
         }
 
         /// <summary>
@@ -2037,6 +2033,30 @@ namespace ShearWallVisualizer
         private void UpdateLoadDisplay()
         {
             LoadInfoTextBlock.Text = $"X: {currentMagX} @ {currentLocX} | Y: {currentMagY} @ {currentLocY}";
+        }
+
+        private void btnTestDesign_Click(object sender, RoutedEventArgs e)
+        {
+            Calculator = new ShearWallCalculator_RigidDiaphragm(wallSystem, diaphragmSystem, 15, 0);
+            Calculator.Update();
+            Update();
+
+            // test wall key
+            int wall_id = 0;
+
+            if (Calculator._wall_system._walls.ContainsKey(wall_id) is true)
+            {
+                WallData test_wall = Calculator._wall_system._walls[wall_id];
+                ShearWallSelector selector = new ShearWallSelector(Calculator.TotalWallShear[wall_id], test_wall, simpsonCatalog, ConnectorTypes.CONNECTOR_STRAP_TIES, WoodTypes.WOODTYPE_DF_SP);
+                Console.WriteLine("--------------------------");
+                Console.WriteLine("Shear: " + Calculator.TotalWallShear[wall_id]);
+                foreach (var key in selector.selectedConnectors)
+                {
+
+                    Console.WriteLine(key.Model);
+                }
+                Console.WriteLine("--------------------------");
+            }
         }
     }
 }

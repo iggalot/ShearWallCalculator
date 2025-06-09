@@ -22,6 +22,11 @@ namespace ShearWallCalculator
         public double V_x { get; set; } = 1; // x direction load (kips) acting at center of mass
         public double V_y { get; set; } = 1;  // y direction load (kips) acting at center of mass
 
+        // dictionary containing the total shear acting on a wall -- resistance at base of diaphragm at top of walls
+        [JsonIgnore]
+        public Dictionary<int, double> TotalWallShear { get; set; } = new Dictionary<int, double>();
+
+
         /// <summary>
         /// A flag that determines if the calculations can be peformed.  Looks
         /// mainlay at CtrMass and CtrRigidity to make sure both are valid numbers

@@ -171,6 +171,24 @@ namespace ShearWallCalculator
             EW_Walls.Clear();
             NS_Walls.Clear();
 
+            // Sort the walls into E/W and N/S groupings
+            foreach(KeyValuePair<int, WallData> kvp in _walls)
+            {
+                int id = kvp.Key;
+                if (_walls[id].WallDir == WallDirs.EastWest)
+                {
+                    if (EW_Walls.ContainsKey(id)) continue;
+                    EW_Walls.Add(id, _walls[id]);
+                }
+
+                else
+                {
+                    if (NS_Walls.ContainsKey(id)) continue;
+                    NS_Walls.Add(id, _walls[id]);
+                }
+            }
+
+
             // Create the braced wall line manager
             BWL_Manager = new BracedWallLineGroupManager(_walls);
 

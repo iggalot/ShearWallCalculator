@@ -15,32 +15,28 @@ namespace ShearWallCalculator
         WOODTYPE_SPF_HF = 1   // spruce pine fir / hem fir
     }
 
+
+
     public class SimpsonCatalog
     {
-        // Initialize the HDU_Dict dictionary
-        public static HDU_Manager HDUManager = new HDU_Manager();
-        public static StrapTies_Manager StrapTiesManager = new StrapTies_Manager();
-        public static HTT_Manager HTTManager = new HTT_Manager();
+        // The mapping of our abstract managers to the approriate connector managers
+        public readonly Dictionary<SimpsonCatalogs, BaseSimpsonConnectorManager> ManagerMap;
 
-        public List<BaseSimpsonConnectorData> GetModelsExceedingReqLoad(double req_load, SimpsonCatalogs catalogType, WoodTypes woodType)
+        // Initialize the HDU_Dict dictionary
+        public HDU_Manager HDUManager = new HDU_Manager();
+        public StrapTies_Manager StrapTiesManager = new StrapTies_Manager();
+        public HTT_Manager HTTManager = new HTT_Manager();
+
+        public SimpsonCatalog()
         {
-            //if (catalogType == SimpsonCatalogs.SIMPSON_CATALOG_HDU)
-            //{
-            //    return HDUManager.GetHDUModelsExceedingMinLoad(req_load, woodType);
-            //}
-            //else if (catalogType == SimpsonCatalogs.SIMPSON_CATALOG_STRAP)
-            //{
-            //    return StrapTiesManager.GetStrapTieModelsExceedingMinLoad(req_load, woodType);
-            //}
-            //else if (catalogType == SimpsonCatalogs.SIMPSON_CATALOG_HTT)
-            //{
-            //    return HTTManager.GetHTTModelsExceedingMinLoad(req_load, woodType);
-            //}
-            //else
-            //{
-            //    throw new ArgumentException("Invalid catalog type." + catalogType + " in SimpsonCatalog.GetModelsExceedingReqLoad()");
-            //}
-            return null;
+            ManagerMap = new Dictionary<SimpsonCatalogs, BaseSimpsonConnectorManager>
+            {
+                { SimpsonCatalogs.SIMPSON_CATALOG_HDU, new HDU_Manager() },
+                { SimpsonCatalogs.SIMPSON_CATALOG_STRAP, new StrapTies_Manager() },
+                { SimpsonCatalogs.SIMPSON_CATALOG_HTT, new HTT_Manager() }
+            };
         }
+
+
     }
 }

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace ShearWallCalculator
 {
-    public class HDU_Manager
+    public class HDU_Manager : BaseSimpsonConnectorManager<HDU_Data>
     {
         public Dictionary<string, HDU_Data> HDU_Dict = new Dictionary<string, HDU_Data>();
 
@@ -429,13 +429,27 @@ namespace ShearWallCalculator
             });
         }
 
+
+
+        public string PrintAllHDUData()
+        {
+            string str = "";
+            foreach (KeyValuePair<string, HDU_Data> hdu in HDU_Dict)
+            {
+                str += hdu.Value.ToString() + "\n\n";
+            }
+            return str;
+        }
+
         /// <summary>
         /// Returns a list of all HDU_Dict models with allowable tension load greater than the minimum load for the given wood type.
         /// </summary>
         /// <param name="minimumLoad">The minimum allowable tension load to filter by.</param>
         /// <param name="woodType">The wood type to filter by (e.g., WOODTYPE_DF_SP or WOODTYPE_SPF_HF).</param>
         /// <returns>A list of HDU_Dict models that exceed the minimum load for the specified wood type.</returns>
-        public List<HDU_Data> GetHDUModelsExceedingMinLoad(double minimumLoad, WoodTypes woodType)
+
+        public override List<HDU_Data> GetTypedModelsExceedingMinLoad(double reqLoad, WoodTypes woodType)
+
         {
             string wood_type_string = "";
             switch (woodType)
@@ -464,7 +478,7 @@ namespace ShearWallCalculator
                         double allowableTensionLoad = fastener.AllowableTensionLoads[wood_type_string];
 
                         // Check if the allowable load exceeds the minimum
-                        if (allowableTensionLoad >= minimumLoad)
+                        if (allowableTensionLoad >= reqLoad)
                         {
                             matchingModels.Add(hduData);
                             break; // No need to check further fasteners for this model
@@ -476,15 +490,11 @@ namespace ShearWallCalculator
             return matchingModels;
         }
 
-        public string PrintAllHDUData()
+        public override List<Dictionary<string, BaseSimpsonConnectorData>> GetValidConnectors()
         {
-            string str = "";
-            foreach (KeyValuePair<string, HDU_Data> hdu in HDU_Dict)
-            {
-                str += hdu.Value.ToString() + "\n\n";
-            }
-            return str;
+            //List<HDU_Data> temp_list = Catalog.HDUManager.GetHDUModelsExceedingMinLoad(req_load, woodType);
+            // Your existing logic
+            return new List<Dictionary<string, BaseSimpsonConnectorData>>(); // Placeholder
         }
-
     }
 }

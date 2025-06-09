@@ -8,11 +8,6 @@ namespace ShearWallCalculator
 {
     public class ShearWallCalculator_FlexibleDiaphragm : ShearWallCalculatorBase
     {
-        // dictionary containing the total shear acting on a wall -- resistance at nase pf diaphragm at top of walls
-        [JsonIgnore]
-        public Dictionary<int, double> TotalWallShear { get; set; } = new Dictionary<int, double>();
-        // shear force from direct shear in X-direction -- resistance at base of diaphragm at top of walls
-
         [JsonIgnore]
         public Dictionary<BracedWallLine, double> DirectShear_X_BracedLine { get; set; } = new Dictionary<BracedWallLine, double>();
         
@@ -25,6 +20,7 @@ namespace ShearWallCalculator
         // shear force from direct shear in Y-direction -- resistance at base of diaphragm at top of walls
         [JsonIgnore]
         public Dictionary<int, double> DirectShear_Y { get; set; } = new Dictionary<int, double>();
+
 
         public new string CalculatorType { get => "Flexible Diaphragm"; }
 

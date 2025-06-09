@@ -3,7 +3,7 @@ using System.Text;
 
 namespace ShearWallCalculator
 {
-    public class HTT_Data
+    public class HTT_Data : BaseSimpsonConnectorData
     {
         // Basic Identification
         public string Model { get; set; }                // e.g., "HDU2-SDS2.5"
