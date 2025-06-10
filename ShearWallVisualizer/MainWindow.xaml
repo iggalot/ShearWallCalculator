@@ -42,6 +42,7 @@
                     <Button Margin="3" Name="btnHideGrid" Content="Hide Grid" Click="btnHideGrid_Click" Width="70" Height="25" HorizontalAlignment="Left"/>
                     <Button Margin="3" Name="btnHideShapes" Content="Hide Shapes" Click="btnHideShapes_Click" Width="70" Height="25" HorizontalAlignment="Left"/>
                     <Button Margin="3" Name="btnSnapToNearest" Foreground="White" Background="Red" Opacity="0.75" Content="Snap" Width="100" Height="25" Click="btnSnapMode_Click"/>
+                    <Button Margin="3" Name="btnTestDesign" Content="Test Design" Foreground="White" Background="MediumBlue" Opacity="0.75" Width="100" Height="25" Click="btnTestDesign_Click"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal">
                     <Button Name="btnRigidityMode" Foreground="White" Background="MediumBlue" Margin="2" Opacity="0.75" FontWeight="Bold" Content="Wall" Width="75" Height="25" Click="btnLineMode_Click"/>
@@ -85,7 +86,7 @@
                         <ctrl:WindLoadInputControl x:Name="WindLoadInputControl" Margin="5 0 0 0"/>
                     </TabItem>
                     <TabItem Name="tabWindResults" Header="WIND Calculations" Visibility="Collapsed">
-                        <ctrl:WindLoadResultsControl x:Name="ctrlWindLoadResultsControl" Margin="5 0 0 0"/>
+                        <ctrl:WindLoadResultsControl_MWFRS x:Name="ctrlWindLoadResultsControl_MWFRS" Margin="5 0 0 0"/>
                     </TabItem>
                     <TabItem Header="Calculations">
                         <StackPanel Orientation="Vertical">
