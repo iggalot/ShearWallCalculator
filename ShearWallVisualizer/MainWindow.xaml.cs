@@ -103,12 +103,13 @@ namespace ShearWallVisualizer
                 ResetView(); // reset the view so that origin 0,0 is at lower left of the corner screen and the model is zoomed to fill the entire window
                 LoadRecentFilesMenu();  // recent files menu
                 CreateGridVisual();
-                CreateTabs();
 
                 // load the Simpson catalog
                 simpsonCatalog = new SimpsonCatalog();
 
                 Update();
+
+                MainTabControl.SelectedIndex = 0; // Show Dimensions tab by default
 
                 // Events for wind load calculation
                 ctrlWindLoadResultsControl_MWFRS.WindCalculated += WindLoadResultsControl_MWFRS_WindCalculated;
@@ -349,20 +350,6 @@ namespace ShearWallVisualizer
 
                 Calculator.Update();  // Update the calculations
 
-                // clear the tabs
-                sp_DimPanel_Diaphragms.Children.Clear();
-                sp_DimPanel_Walls.Children.Clear();
-                sp_RigidCalcPanel.Children.Clear();
-                sp_FlexibleCalcPanel.Children.Clear();
-
-
-                // recreate the data controls
-                CreateWallDataControls();
-                CreateDiaphragmDataControls();
-
-                // list the type of calculator
-                tbCalculatorType.Text = Calculator.GetType().Name;
-
                 // update the calculator
                 if (Calculator.IsValidForCalculation is true)
                 {
@@ -372,9 +359,22 @@ namespace ShearWallVisualizer
 
                 UpdateLoadDisplay();
 
+                // list the type of calculator
+                tbCalculatorType.Text = Calculator.GetType().Name;
+
                 // notify controls that we have updated
                 OnUpdated?.Invoke(this, EventArgs.Empty); // signal that the window has been updated -- so that subcontrols can refresh
             }
+
+            // clear the tabs
+            sp_DimPanel_Diaphragms.Children.Clear();
+            sp_DimPanel_Walls.Children.Clear();
+            sp_RigidCalcPanel.Children.Clear();
+            sp_FlexibleCalcPanel.Children.Clear();
+
+            // recreate the data controls
+            CreateWallDataControls();
+            CreateDiaphragmDataControls();
 
             // redraw the scene
             CreateLayers();
@@ -400,11 +400,6 @@ namespace ShearWallVisualizer
             // Adjust pan offset so (0,0) appears in bottom-left corner (screen X=0, Y=height)
             panOffsetX += screenOrigin.X / zoomFactorX;
             panOffsetY += (dockpanel.ActualHeight - screenOrigin.Y) / zoomFactorY;
-        }
-
-        private void CreateTabs()
-        {
-            MainTabControl.SelectedIndex = 0; // Show Dimensions by default
         }
 
         #region MODE setters
@@ -521,7 +516,7 @@ namespace ShearWallVisualizer
                 InvalidateGrid();
             }
 
-            Draw(ChangeType.Redraw);
+            Update();
         }
 
         private Point GetSnappedPoint(Point worldPoint)

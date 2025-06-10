@@ -26,6 +26,14 @@ namespace ShearWallVisualizer.Controls
             // window.OnUpdated += RefreshAll;
         }
 
+        /// <summary>
+        /// default parameterless constructor
+        /// </summary>
+        public WallSystemControl()
+        {
+
+        }
+
 
         private void CreateSubcontrols()
         {
