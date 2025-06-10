@@ -56,10 +56,7 @@ namespace ShearWallVisualizer
         double majorGridSpacing = 5.0;  // Major grid lines in world units
         double minorGridSpacing = 1.0;  // Minor grid lines in world units
 
-
         public EventHandler OnUpdated;  // the event that signals that the drawing has been updated -- controls will listen for this at the time they are created.
-
-        private bool initialized = false;  // is the initial window setup complete?
 
         bool hideImage = false;
         bool hideGrid = false;
@@ -82,12 +79,6 @@ namespace ShearWallVisualizer
         private double panOffsetY = -25.0;
 
         private Shape previewShape = null;
-        private Shape cursorShape = null;
-
-        private TextBlock previewLengthLabel = null;
-        private TextBlock previewCoordinateLabel = null;
-        private Point lastPanPoint;
-        private bool isPanning = false;
 
         private double worldWidth = 120;
         private double worldHeight = 120;
@@ -105,12 +96,9 @@ namespace ShearWallVisualizer
             this.Focusable = true;
             this.Focus();
 
-
+            // the function to run once the app has loaded.
             this.Loaded += (s, e) =>
             {
-                if (initialized) return;
-
-                initialized = true;
 
                 ResetView(); // reset the view so that origin 0,0 is at lower left of the corner screen and the model is zoomed to fill the entire window
                 LoadRecentFilesMenu();  // recent files menu
@@ -122,23 +110,9 @@ namespace ShearWallVisualizer
 
                 Update();
 
-                Draw(ChangeType.Redraw);
-
-
                 // Events for wind load calculation
                 ctrlWindLoadResultsControl_MWFRS.WindCalculated += WindLoadResultsControl_MWFRS_WindCalculated;
                 WindLoadInputControl.WindInputComplete += WindLoadInputControl_WindInputComplete;
-
-                //// Display test results.
-                //var lst1 = simpsonCatalog.GetModelsExceedingReqLoad(4000, SimpsonCatalogs.SIMPSON_CATALOG_HDU, WoodTypes.WOODTYPE_DF_SP);
-                //Console.WriteLine("----------------");
-                //PrintList(lst1);
-                //var lst2 = simpsonCatalog.GetModelsExceedingReqLoad(4000, SimpsonCatalogs.SIMPSON_CATALOG_STRAP, WoodTypes.WOODTYPE_DF_SP);
-                //Console.WriteLine("----------------");
-                //PrintList(lst2);
-                //var lst3 = simpsonCatalog.GetModelsExceedingReqLoad(4000, SimpsonCatalogs.SIMPSON_CATALOG_HTT, WoodTypes.WOODTYPE_DF_SP);
-                //Console.WriteLine("----------------");
-                //PrintList(lst3);
             };
         }
 
@@ -366,47 +340,45 @@ namespace ShearWallVisualizer
 
         public void Update()
         {
-            if(Calculator is null)
+            if (Calculator != null)
             {
-                // TODO figure out how to handle this case.
+                wallSystem = Calculator._wall_system;
+                diaphragmSystem = Calculator._diaphragm_system;
+                Calculator = new ShearWallCalculator_RigidDiaphragm(wallSystem, diaphragmSystem, currentMagX, currentMagY);
+                //Calculator = new ShearWallCalculator_FlexibleDiaphragm(wallSystem, diaphragmSystem, currentMagX, currentMagY);
+
+                Calculator.Update();  // Update the calculations
+
+                // clear the tabs
+                sp_DimPanel_Diaphragms.Children.Clear();
+                sp_DimPanel_Walls.Children.Clear();
+                sp_RigidCalcPanel.Children.Clear();
+                sp_FlexibleCalcPanel.Children.Clear();
+
+
+                // recreate the data controls
+                CreateWallDataControls();
+                CreateDiaphragmDataControls();
+
+                // list the type of calculator
+                tbCalculatorType.Text = Calculator.GetType().Name;
+
+                // update the calculator
+                if (Calculator.IsValidForCalculation is true)
+                {
+                    CreateCalculationResultsControls_Rigid();
+                    CreateCalculationResultsControls_Flexible();
+                }
+
+                UpdateLoadDisplay();
+
+                // notify controls that we have updated
+                OnUpdated?.Invoke(this, EventArgs.Empty); // signal that the window has been updated -- so that subcontrols can refresh
             }
 
-            wallSystem = Calculator._wall_system;
-            diaphragmSystem = Calculator._diaphragm_system;
-            Calculator = new ShearWallCalculator_RigidDiaphragm(wallSystem, diaphragmSystem, currentMagX, currentMagY);
-            //Calculator = new ShearWallCalculator_FlexibleDiaphragm(wallSystem, diaphragmSystem, currentMagX, currentMagY);
-
-            // Update the calculations
-            Calculator.Update();
-
-            // clear the tabs
-            sp_DimPanel_Diaphragms.Children.Clear();
-            sp_DimPanel_Walls.Children.Clear();
-            sp_RigidCalcPanel.Children.Clear();
-            sp_FlexibleCalcPanel.Children.Clear();
-
-
-            // recreate the data controls
-            CreateWallDataControls();
-            CreateDiaphragmDataControls();
-
-            // list the type of calculator
-            tbCalculatorType.Text = Calculator.GetType().Name;
-
-            // update the calculator
-            if(Calculator.IsValidForCalculation is true)
-            { 
-                CreateCalculationResultsControls_Rigid();
-                CreateCalculationResultsControls_Flexible();
-            }
-
-            UpdateLoadDisplay();
-
-            // notify controls that we have updated
-            OnUpdated?.Invoke(this, EventArgs.Empty); // signal that the window has been updated -- so that subcontrols can refresh
-
-            // redraw the screen
-            Draw(ChangeType.Redraw);  // redraw
+            // redraw the scene
+            CreateLayers();
+            Draw(ChangeType.Redraw);
         }
 
         /// <summary>
@@ -518,24 +490,30 @@ namespace ShearWallVisualizer
         {
             Console.WriteLine($"Key Pressed: {e.Key}");
 
+            // line (wall) mode
             if (e.Key == Key.L)
             {
                 ResetInputMode();
                 SetLineMode();
             }
+
+            // rectangle (diaphragm) mode
             else if (e.Key == Key.R)
             {
                 ResetInputMode();
                 SetRectangleMode();
             }
+            // snap mode
             else if (e.Key == Key.S)
             {
                 SetSnapMode();
             }
+            // debug mode
             else if (e.Key == Key.D)
             {
                 SetDebugMode();
             }
+            // reset view 
             else if (e.Key == Key.Z)
             {
                 ResetInputMode();
@@ -675,8 +653,11 @@ namespace ShearWallVisualizer
         }
 
         // Create the layers
-        private void OnLoaded(object sender, RoutedEventArgs e)
+        private void CreateLayers()
         {
+            // recreate the layers
+          //  m_layers = new LayerManager();
+
             m_layers.AddLayer(0, DrawBackground, ChangeType.Resize);
             m_layers.AddLayer(1, DrawGridInformation);
             m_layers.AddLayer(2, DrawReferenceImage);
@@ -690,10 +671,6 @@ namespace ShearWallVisualizer
             m_layers.AddLayer(50, DrawBracedWallLines);
             m_layers.AddLayer(80, DrawCOMandCOR);
             m_layers.AddLayer(100, DrawDebug);
-
-
-            // Now draw everything
-            Draw(ChangeType.Redraw);
         }
 
 
@@ -1011,6 +988,8 @@ namespace ShearWallVisualizer
 
         private void DrawBoundingBox(DrawingContext ctx)
         {
+            if (Calculator is null) return;
+
             Rect rect = Calculator.BoundingBoxWorld;
 
             var p1 = WorldToScreen(rect.BottomLeft, m_layers);
@@ -1459,7 +1438,9 @@ namespace ShearWallVisualizer
 
         private void DrawCOMandCOR(DrawingContext ctx)
         {
-            // Draw the center of mass
+            if (Calculator is null) return;
+
+            // Draw the center of mass and center of rigidity
             var com = Calculator._diaphragm_system.CtrMass;
             var cor = Calculator._wall_system.CtrRigidity;
 
