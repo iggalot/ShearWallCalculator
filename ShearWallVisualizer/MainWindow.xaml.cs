@@ -481,43 +481,6 @@ namespace ShearWallVisualizer
 
 
 
-        private void MainWindow_KeyDown(object sender, KeyEventArgs e)
-        {
-            Console.WriteLine($"Key Pressed: {e.Key}");
-
-            // line (wall) mode
-            if (e.Key == Key.L)
-            {
-                ResetInputMode();
-                SetLineMode();
-            }
-
-            // rectangle (diaphragm) mode
-            else if (e.Key == Key.R)
-            {
-                ResetInputMode();
-                SetRectangleMode();
-            }
-            // snap mode
-            else if (e.Key == Key.S)
-            {
-                SetSnapMode();
-            }
-            // debug mode
-            else if (e.Key == Key.D)
-            {
-                SetDebugMode();
-            }
-            // reset view 
-            else if (e.Key == Key.Z)
-            {
-                ResetInputMode();
-                ResetView();
-                InvalidateGrid();
-            }
-
-            Update();
-        }
 
         private Point GetSnappedPoint(Point worldPoint)
         {
@@ -668,18 +631,6 @@ namespace ShearWallVisualizer
             m_layers.AddLayer(100, DrawDebug);
         }
 
-
-
-        private void Log(string text)
-        {
-            //m_log.Text = text + "\r\n" + m_log.Text;
-
-            //if (m_log.Text.Length > 1000)
-            //{
-            //    m_log.Text = m_log.Text.Substring(0, 1000);
-            //}
-        }
-
         private void FinalizeShape(Point worldPoint)
         {
             if (currentMode == DrawMode.Line)
@@ -735,10 +686,6 @@ namespace ShearWallVisualizer
 
             // Draw the cached grid bitmap
             ctx.DrawImage(gridBitmap, new Rect(0, 0, dockpanel.ActualWidth, dockpanel.ActualHeight));
-
-
-            //// Draw the cached grid visual
-            //ctx.DrawDrawing(gridVisual.Drawing);
         }
 
         private void CreateGridVisual()
@@ -768,8 +715,6 @@ namespace ShearWallVisualizer
             gridNeedsUpdate = true;
         }
 
-
-
         #region Drawing functions
 
         private void DrawBackground(DrawingContext ctx)
@@ -777,8 +722,6 @@ namespace ShearWallVisualizer
             var pen = new Pen(Brushes.Black, 1);
             var rect = new Rect(0, 0, m_layers.ActualWidth, m_layers.ActualHeight);
             ctx.DrawRoundedRectangle(Brushes.White, pen, rect, 0, 0);
-
-            Log("background");
         }
 
         /// <summary>
@@ -1697,6 +1640,29 @@ namespace ShearWallVisualizer
         #endregion
 
         #region UI Events
+        private void btnTestDesign_Click(object sender, RoutedEventArgs e)
+        {
+            Calculator = new ShearWallCalculator_RigidDiaphragm(wallSystem, diaphragmSystem, 15, 0);
+            Calculator.Update();
+            Update();
+
+            // test wall key
+            int wall_id = 0;
+
+            if (Calculator._wall_system._walls.ContainsKey(wall_id) is true)
+            {
+                WallData test_wall = Calculator._wall_system._walls[wall_id];
+                ShearWallSelector selector = new ShearWallSelector(Calculator.TotalWallShear[wall_id], test_wall, simpsonCatalog, ConnectorTypes.CONNECTOR_STRAP_TIES, WoodTypes.WOODTYPE_DF_SP);
+                Console.WriteLine("--------------------------");
+                Console.WriteLine("Shear: " + Calculator.TotalWallShear[wall_id]);
+                foreach (var key in selector.selectedConnectors)
+                {
+
+                    Console.WriteLine(key.Model);
+                }
+                Console.WriteLine("--------------------------");
+            }
+        }
 
         private void btnHideShapes_Click(object sender, RoutedEventArgs e)
         {
@@ -1759,7 +1725,45 @@ namespace ShearWallVisualizer
 
         #endregion
 
-        #region Menu Events
+        #region Menu and Key Events
+        private void MainWindow_KeyDown(object sender, KeyEventArgs e)
+        {
+            Console.WriteLine($"Key Pressed: {e.Key}");
+
+            // line (wall) mode
+            if (e.Key == Key.L)
+            {
+                ResetInputMode();
+                SetLineMode();
+            }
+
+            // rectangle (diaphragm) mode
+            else if (e.Key == Key.R)
+            {
+                ResetInputMode();
+                SetRectangleMode();
+            }
+            // snap mode
+            else if (e.Key == Key.S)
+            {
+                SetSnapMode();
+            }
+            // debug mode
+            else if (e.Key == Key.D)
+            {
+                SetDebugMode();
+            }
+            // reset view 
+            else if (e.Key == Key.Z)
+            {
+                ResetInputMode();
+                ResetView();
+                InvalidateGrid();
+            }
+
+            Update();
+        }
+
         private void OpenImageTool_Click(object sender, RoutedEventArgs e)
         {
             var dialog = new ImageMeasurementWindow
@@ -2020,30 +2024,6 @@ namespace ShearWallVisualizer
         private void UpdateLoadDisplay()
         {
             LoadInfoTextBlock.Text = $"X: {currentMagX} @ {currentLocX} | Y: {currentMagY} @ {currentLocY}";
-        }
-
-        private void btnTestDesign_Click(object sender, RoutedEventArgs e)
-        {
-            Calculator = new ShearWallCalculator_RigidDiaphragm(wallSystem, diaphragmSystem, 15, 0);
-            Calculator.Update();
-            Update();
-
-            // test wall key
-            int wall_id = 0;
-
-            if (Calculator._wall_system._walls.ContainsKey(wall_id) is true)
-            {
-                WallData test_wall = Calculator._wall_system._walls[wall_id];
-                ShearWallSelector selector = new ShearWallSelector(Calculator.TotalWallShear[wall_id], test_wall, simpsonCatalog, ConnectorTypes.CONNECTOR_STRAP_TIES, WoodTypes.WOODTYPE_DF_SP);
-                Console.WriteLine("--------------------------");
-                Console.WriteLine("Shear: " + Calculator.TotalWallShear[wall_id]);
-                foreach (var key in selector.selectedConnectors)
-                {
-
-                    Console.WriteLine(key.Model);
-                }
-                Console.WriteLine("--------------------------");
-            }
         }
     }
 }
