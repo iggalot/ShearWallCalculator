@@ -118,6 +118,233 @@ namespace ShearWallVisualizer
             };
         }
 
+        public void Update()
+        {
+            if (Calculator == null)
+            {
+                Calculator = new ShearWallCalculator_RigidDiaphragm(wallSystem, diaphragmSystem, currentMagX, currentMagY);
+                //Calculator = new ShearWallCalculator_FlexibleDiaphragm(wallSystem, diaphragmSystem, currentMagX, currentMagY);
+                
+                OnUpdated?.Invoke(this, EventArgs.Empty); // signal that the window has been updated -- so that subcontrols can refresh
+            }
+            else
+            {
+                // update the calculator
+                if (Calculator.IsValidForCalculation is true)
+                {
+                    CreateCalculationResultsControls_Rigid();
+                    CreateCalculationResultsControls_Flexible();
+                }
+
+                // list the type of calculator
+                tbCalculatorType.Text = Calculator.GetType().Name;
+
+                // notify controls that we have updated
+            }
+
+            // update the load info display
+            LoadInfoTextBlock.Text = $"X: {currentMagX} @ {currentLocX} | Y: {currentMagY} @ {currentLocY}";
+
+            // clear the tabs
+            sp_DimPanel_Diaphragms.Children.Clear();
+            sp_DimPanel_Walls.Children.Clear();
+            sp_RigidCalcPanel.Children.Clear();
+            sp_FlexibleCalcPanel.Children.Clear();
+
+            // recreate the data controls
+            CreateWallDataControls();
+            CreateDiaphragmDataControls();
+
+            // redraw the scene
+            Draw(ChangeType.Redraw);
+        }
+
+        /// <summary>
+        /// Reset the view so that the full model scales to the drawing context area and the origin of the world coordinates is at the lower left corner
+        /// </summary>
+        private void ResetView()
+        {
+            // Set zoom factors based on the visible area and world dimensions
+            zoomFactorX = dockpanel.ActualWidth / worldWidth;
+            zoomFactorY = dockpanel.ActualHeight / worldHeight;
+
+            // Set the scale factors so both are the same -- for square grids
+            zoomFactorX = Math.Min(zoomFactorX, zoomFactorY);
+            zoomFactorY = zoomFactorX; 
+
+            // Compute current screen position of world (0,0)
+            Point screenOrigin = WorldToScreen(new Point(0, 0), dockpanel);
+
+            // Adjust pan offset so (0,0) appears in bottom-left corner (screen X=0, Y=height)
+            panOffsetX += screenOrigin.X / zoomFactorX;
+            panOffsetY += (dockpanel.ActualHeight - screenOrigin.Y) / zoomFactorY;
+        }
+
+
+        private Point GetSnappedPoint(Point worldPoint)
+        {
+            foreach (var wall in wallSystem._walls)
+            {
+                if (IsWithinSnapThreshold(worldPoint, wall.Value.Start)) return wall.Value.Start;
+                if (IsWithinSnapThreshold(worldPoint, wall.Value.End)) return wall.Value.End;
+            }
+
+            foreach (var dia in diaphragmSystem._diaphragms)
+            {
+                if (IsWithinSnapThreshold(worldPoint, dia.Value.P1)) return dia.Value.P1;
+                if (IsWithinSnapThreshold(worldPoint, dia.Value.P2)) return dia.Value.P2;
+                if (IsWithinSnapThreshold(worldPoint, dia.Value.P3)) return dia.Value.P3;
+                if (IsWithinSnapThreshold(worldPoint, dia.Value.P4)) return dia.Value.P4;
+            }
+
+            return worldPoint;
+        }
+
+        private bool IsWithinSnapThreshold(Point p1, Point p2)
+        {
+            double dx = p1.X - p2.X;
+            double dy = p1.Y - p2.Y;
+            return Math.Sqrt(dx * dx + dy * dy) <= snapThreshold * (worldWidth / m_layers.ActualWidth);
+        }
+
+        private Point WorldToScreen(Point p, FrameworkElement element)
+        {
+            // Convert world coordinates to screen coordinates
+            double u = (p.X - panOffsetX) * zoomFactorX;
+            double v = (element.ActualHeight - (p.Y - panOffsetY)) * zoomFactorY; // Invert Y for screen space
+
+            return new Point(u, v);
+        }
+
+        private Point ScreenToWorld(Point p, FrameworkElement element)
+        {
+            // Convert screen coordinates to world coordinates
+            double x = (p.X / zoomFactorX) + panOffsetX;
+            double y = ((element.ActualHeight - (p.Y / zoomFactorY)) + panOffsetY);
+
+            return new Point(x, y);
+        }
+
+        private Point GetConstrainedPoint(Point endPoint, Point startPoint)
+        {
+            double dx = Math.Abs(endPoint.X - startPoint.X);
+            double dy = Math.Abs(endPoint.Y - startPoint.Y);
+
+            if (dx > dy)
+            {
+                // Snap to horizontal
+                return new Point(endPoint.X, startPoint.Y);
+            }
+            else
+            {
+                // Snap to vertical
+                return new Point(startPoint.X, endPoint.Y);
+            }
+        }
+
+        /// <summary>
+        /// Helper function to determine if a point is within the bounds of a framework element (ActualWidth and ActualHeight)
+        /// </summary>
+        /// <param name="p1"></param>
+        /// <param name="element"></param>
+        /// <returns></returns>
+        private bool PointIsWithinBounds(Point p1, FrameworkElement element)
+        {
+            return (p1.X > 0 && p1.X < element.ActualWidth && p1.Y > 0 && p1.Y < element.ActualHeight);
+        }
+
+        /// <summary>
+        /// Returns a point that is bounded by the framework element -- used for when a point is out of bounds 
+        /// and needs to be shifted back to the elements boundary when drawing
+        /// </summary>
+        /// <param name="p1"></param>
+        /// <param name="element"></param>
+        /// <returns></returns>
+        private Point GetConstrainedScreenPoint(Point p1, FrameworkElement element)
+        {
+            Point temp = p1;
+            if (temp.X < 0)
+            {
+                temp.X = 0;
+            }
+            if (temp.X > element.ActualWidth)
+            {
+                temp.X = element.ActualWidth;
+            }
+            if (temp.Y < 0)
+            {
+                temp.Y = 0;
+            }
+            if (temp.Y > element.ActualHeight)
+            {
+                temp.Y = element.ActualHeight;
+            }
+            return temp;
+        }
+
+        private void CreatePreviewShape()
+        {
+            if (currentMode == DrawMode.Line)
+                previewShape = new Line { Stroke = Brushes.DarkGreen, StrokeThickness = 5 };
+            else if (currentMode == DrawMode.Rectangle)
+                previewShape = new Rectangle { Stroke = Brushes.DarkGreen, StrokeThickness = 5, Fill = Brushes.Transparent };
+        }
+
+        // Create the layers
+        private void CreateLayers()
+        {
+            m_layers.AddLayer(0, DrawBackground, ChangeType.Resize);
+            m_layers.AddLayer(1, DrawGridInformation);
+            m_layers.AddLayer(2, DrawReferenceImage);
+            m_layers.AddLayer(3, DrawBoundingBox);
+            m_layers.AddLayer(4, DrawLoads);
+
+            m_layers.AddLayer(41, DrawShapes);
+            m_layers.AddLayer(52, DrawCursor);
+            m_layers.AddLayer(51, DrawPreview);
+            m_layers.AddLayer(43, DrawSnapMarkers);
+            m_layers.AddLayer(50, DrawBracedWallLines);
+            m_layers.AddLayer(80, DrawCOMandCOR);
+            m_layers.AddLayer(100, DrawDebug);
+        }
+
+        private void FinalizeShape(Point worldPoint)
+        {
+            if (currentMode == DrawMode.Line)
+            {
+                // For the line to be horizontal or vertical only
+                worldPoint = GetConstrainedPoint(worldPoint, startPoint_world.Value); // Ensure alignment
+
+                // Create the line in world space and store it in the worldShapes list
+                Point startPoint = startPoint_world.Value;
+                Point endPoint = worldPoint;
+
+                if (wallSystem == null)
+                {
+                    wallSystem = new WallSystem();
+                }
+
+                wallSystem.AddWall(new WallData(defaultWallHeight, startPoint.X, startPoint.Y, endPoint.X, endPoint.Y));
+            }
+            else if (currentMode == DrawMode.Rectangle)
+            {
+                if (diaphragmSystem == null)
+                {
+                    diaphragmSystem = new DiaphragmSystem();
+                }
+
+                diaphragmSystem.AddDiaphragm(new DiaphragmData_Rectangular(startPoint_world.Value, endPoint_world.Value));
+            } else
+            {
+                throw new NotImplementedException("Error: FinalizeShape() received an invalid DrawMode variable.");
+            }
+
+            // Clear the preview shape from the screen.
+            previewShape = null;
+            startPoint_world = null;
+            endPoint_world = null;
+        }
+
         public void PrintList<T>(List<T> lst)
         {
             if (lst == null)
@@ -129,6 +356,8 @@ namespace ShearWallVisualizer
             }
         }
 
+
+        #region UI Control Related Events
         /// <summary>
         /// Event listener for when input of the wind loads as been completed
         /// </summary>
@@ -166,7 +395,7 @@ namespace ShearWallVisualizer
             // Get the internal suction windward case
             double ww = 0;
             double lw = 0;
-            
+
             foreach (var wall in wall_results)
             {
                 if (wall.Surface == "Windward Wall - z=h")
@@ -212,13 +441,6 @@ namespace ShearWallVisualizer
             }
         }
 
-        private void CreateDiaphragmDataControls()
-        {
-            DiaphragmSystemControl sysControl = new DiaphragmSystemControl(this, diaphragmSystem);
-            sp_DimPanel_Diaphragms.Children.Add(sysControl);
-            sysControl.OnDiaphragmSubControlDeleted += DiaphragmDeleted;
-        }
-
         private void DiaphragmDeleted(object sender, EventArgs e)
         {
             DiaphragmDataControl control = sender as DiaphragmDataControl;
@@ -237,9 +459,16 @@ namespace ShearWallVisualizer
             }
         }
 
+        private void CreateDiaphragmDataControls()
+        {
+            DiaphragmSystemControl sysControl = new DiaphragmSystemControl(this, diaphragmSystem);
+            sp_DimPanel_Diaphragms.Children.Add(sysControl);
+            sysControl.OnDiaphragmSubControlDeleted += DiaphragmDeleted;
+        }
+
+
         private void CreateCalculationResultsControls_Rigid()
         {
-
             foreach (var wall in wallSystem._walls)
             {
                 int id = wall.Key;
@@ -339,375 +568,7 @@ namespace ShearWallVisualizer
             }
         }
 
-        public void Update()
-        {
-            if (Calculator == null)
-            {
-                Calculator = new ShearWallCalculator_RigidDiaphragm(wallSystem, diaphragmSystem, currentMagX, currentMagY);
-                //Calculator = new ShearWallCalculator_FlexibleDiaphragm(wallSystem, diaphragmSystem, currentMagX, currentMagY);
-                
-                OnUpdated?.Invoke(this, EventArgs.Empty); // signal that the window has been updated -- so that subcontrols can refresh
-            }
-            else
-            {
-                // update the calculator
-                if (Calculator.IsValidForCalculation is true)
-                {
-                    CreateCalculationResultsControls_Rigid();
-                    CreateCalculationResultsControls_Flexible();
-                }
-
-                UpdateLoadDisplay();
-
-                // list the type of calculator
-                tbCalculatorType.Text = Calculator.GetType().Name;
-
-                // notify controls that we have updated
-            }
-
-            // clear the tabs
-            sp_DimPanel_Diaphragms.Children.Clear();
-            sp_DimPanel_Walls.Children.Clear();
-            sp_RigidCalcPanel.Children.Clear();
-            sp_FlexibleCalcPanel.Children.Clear();
-
-            // recreate the data controls
-            CreateWallDataControls();
-            CreateDiaphragmDataControls();
-
-            // redraw the scene
-            Draw(ChangeType.Redraw);
-        }
-
-        /// <summary>
-        /// Reset the view so that the full model scales to the drawing context area and the origin of the world coordinates is at the lower left corner
-        /// </summary>
-        private void ResetView()
-        {
-            // Set zoom factors based on the visible area and world dimensions
-            zoomFactorX = dockpanel.ActualWidth / worldWidth;
-            zoomFactorY = dockpanel.ActualHeight / worldHeight;
-
-            // Set the scale factors so both are the same -- for square grids
-            zoomFactorX = Math.Min(zoomFactorX, zoomFactorY);
-            zoomFactorY = zoomFactorX; 
-
-            // Compute current screen position of world (0,0)
-            Point screenOrigin = WorldToScreen(new Point(0, 0), dockpanel);
-
-            // Adjust pan offset so (0,0) appears in bottom-left corner (screen X=0, Y=height)
-            panOffsetX += screenOrigin.X / zoomFactorX;
-            panOffsetY += (dockpanel.ActualHeight - screenOrigin.Y) / zoomFactorY;
-        }
-
-        #region MODE setters
-
-
-        private void SetLineMode()
-        {
-            ResetUIButtons();
-            btnRigidityMode.BorderThickness = new Thickness(3);
-            btnRigidityMode.BorderBrush = new SolidColorBrush(Colors.White);
-            btnRigidityMode.Background = new SolidColorBrush(Colors.YellowGreen);
-
-            currentMode = DrawMode.Line;  // Set to Line drawing mode
-            MessageBox.Show("Line mode activated.");
-            Console.WriteLine("Line mode activated.");
-        }
-
-        private void SetRectangleMode()
-        {
-            ResetUIButtons();
-            btnMassMode.BorderThickness = new Thickness(3);
-            btnMassMode.BorderBrush = new SolidColorBrush(Colors.White);
-            btnMassMode.Background = new SolidColorBrush(Colors.YellowGreen);
-
-
-            currentMode = DrawMode.Rectangle;  // Set to Rectangle drawing mode
-            MessageBox.Show("Rectangle mode activated.");
-            Console.WriteLine("Rectangle mode activated.");
-        }
-
-        private void SetDebugMode()
-        {
-            ResetUIButtons();
-
-            debugMode = !debugMode;
-            MessageBox.Show($"Debug Mode {(debugMode ? "Enabled" : "Disabled")}");
-            Console.WriteLine($"Debug Mode: {(debugMode ? "Enabled" : "Disabled")}");
-        }
-        private void SetSnapMode()
-        {
-            btnSnapToNearest.BorderThickness = new Thickness(3);
-            btnSnapToNearest.BorderBrush = new SolidColorBrush(Colors.White);
-
-            snapMode = !snapMode;
-            MessageBox.Show($"Snap Mode {(snapMode ? "Enabled" : "Disabled")}");
-            Console.WriteLine($"Snap Mode: {(snapMode ? "Enabled" : "Disabled")}");
-        }
-
-        /// <summary>
-        /// Cancels input mode and clears the previews
-        /// </summary>
-        private void ResetInputMode()
-        {
-            // cancel the input by setting the start point to null
-            startPoint_world = null;
-            endPoint_world = null;
-            previewShape = null;
-        }
-
-        private void ResetUIButtons()
-        {
-            btnRigidityMode.BorderThickness = new Thickness(0);
-            btnRigidityMode.Background = new SolidColorBrush(Colors.MediumBlue);
-            btnMassMode.Background = new SolidColorBrush(Colors.Red);
-            btnMassMode.BorderThickness = new Thickness(0);
-            btnSnapToNearest.BorderThickness = new Thickness(0);
-
-            if (snapMode is true)
-            {
-                btnSnapToNearest.BorderThickness = new Thickness(3);
-            }
-
-            if (debugMode is true)
-            {
-                // TODO:: how should the UI be set in debug mode?
-            }
-        }
         #endregion
-
-
-
-
-        private Point GetSnappedPoint(Point worldPoint)
-        {
-            foreach (var wall in wallSystem._walls)
-            {
-                if (IsWithinSnapThreshold(worldPoint, wall.Value.Start)) return wall.Value.Start;
-                if (IsWithinSnapThreshold(worldPoint, wall.Value.End)) return wall.Value.End;
-            }
-
-            foreach (var dia in diaphragmSystem._diaphragms)
-            {
-                if (IsWithinSnapThreshold(worldPoint, dia.Value.P1)) return dia.Value.P1;
-                if (IsWithinSnapThreshold(worldPoint, dia.Value.P2)) return dia.Value.P2;
-                if (IsWithinSnapThreshold(worldPoint, dia.Value.P3)) return dia.Value.P3;
-                if (IsWithinSnapThreshold(worldPoint, dia.Value.P4)) return dia.Value.P4;
-            }
-
-            return worldPoint;
-        }
-
-        private bool IsWithinSnapThreshold(Point p1, Point p2)
-        {
-            double dx = p1.X - p2.X;
-            double dy = p1.Y - p2.Y;
-            return Math.Sqrt(dx * dx + dy * dy) <= snapThreshold * (worldWidth / m_layers.ActualWidth);
-        }
-
-        private Point WorldToScreen(Point p, FrameworkElement element)
-        {
-            // Convert world coordinates to screen coordinates
-            double u = (p.X - panOffsetX) * zoomFactorX;
-            double v = (element.ActualHeight - (p.Y - panOffsetY)) * zoomFactorY; // Invert Y for screen space
-
-            return new Point(u, v);
-        }
-
-        private Point ScreenToWorld(Point p, FrameworkElement element)
-        {
-            // Convert screen coordinates to world coordinates
-            double x = (p.X / zoomFactorX) + panOffsetX;
-            double y = ((element.ActualHeight - (p.Y / zoomFactorY)) + panOffsetY);
-
-            return new Point(x, y);
-        }
-
-        private void Window_Loaded(object sender, RoutedEventArgs e)
-        {
-            this.Focus();
-        }
-
-        private Point GetConstrainedPoint(Point endPoint, Point startPoint)
-        {
-            double dx = Math.Abs(endPoint.X - startPoint.X);
-            double dy = Math.Abs(endPoint.Y - startPoint.Y);
-
-            if (dx > dy)
-            {
-                // Snap to horizontal
-                return new Point(endPoint.X, startPoint.Y);
-            }
-            else
-            {
-                // Snap to vertical
-                return new Point(startPoint.X, endPoint.Y);
-            }
-        }
-
-        /// <summary>
-        /// Helper function to determine if a point is within the bounds of a framework element (ActualWidth and ActualHeight)
-        /// </summary>
-        /// <param name="p1"></param>
-        /// <param name="element"></param>
-        /// <returns></returns>
-        private bool PointIsWithinBounds(Point p1, FrameworkElement element)
-        {
-            return (p1.X > 0 && p1.X < element.ActualWidth && p1.Y > 0 && p1.Y < element.ActualHeight);
-        }
-
-        /// <summary>
-        /// Returns a point that is bounded by the framework element -- used for when a point is out of bounds 
-        /// and needs to be shifted back to the elements boundary when drawing
-        /// </summary>
-        /// <param name="p1"></param>
-        /// <param name="element"></param>
-        /// <returns></returns>
-        private Point GetConstrainedScreenPoint(Point p1, FrameworkElement element)
-        {
-            Point temp = p1;
-            if (temp.X < 0)
-            {
-                temp.X = 0;
-            }
-            if (temp.X > element.ActualWidth)
-            {
-                temp.X = element.ActualWidth;
-            }
-            if (temp.Y < 0)
-            {
-                temp.Y = 0;
-            }
-            if (temp.Y > element.ActualHeight)
-            {
-                temp.Y = element.ActualHeight;
-            }
-            return temp;
-        }
-
-        private void CreatePreviewShape()
-        {
-            if (currentMode == DrawMode.Line)
-                previewShape = new Line { Stroke = Brushes.DarkGreen, StrokeThickness = 5 };
-            else if (currentMode == DrawMode.Rectangle)
-                previewShape = new Rectangle { Stroke = Brushes.DarkGreen, StrokeThickness = 5, Fill = Brushes.Transparent };
-        }
-
-        protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
-        {
-            base.OnRenderSizeChanged(sizeInfo);
-
-            //m_scroll.Minimum = 0;
-            //m_scroll.Maximum = m_layers.ActualHeight - 70;
-            //Draw(ChangeType.Resize);
-        }
-
-        private void OnScroll(object sender, ScrollEventArgs e)
-        {
-            //Draw(ChangeType.Scroll);
-        }
-
-        // Create the layers
-        private void CreateLayers()
-        {
-            m_layers.AddLayer(0, DrawBackground, ChangeType.Resize);
-            m_layers.AddLayer(1, DrawGridInformation);
-            m_layers.AddLayer(2, DrawReferenceImage);
-            m_layers.AddLayer(3, DrawBoundingBox);
-            m_layers.AddLayer(4, DrawLoads);
-
-            m_layers.AddLayer(41, DrawShapes);
-            m_layers.AddLayer(52, DrawCursor);
-            m_layers.AddLayer(51, DrawPreview);
-            m_layers.AddLayer(43, DrawSnapMarkers);
-            m_layers.AddLayer(50, DrawBracedWallLines);
-            m_layers.AddLayer(80, DrawCOMandCOR);
-            m_layers.AddLayer(100, DrawDebug);
-        }
-
-        private void FinalizeShape(Point worldPoint)
-        {
-            if (currentMode == DrawMode.Line)
-            {
-                // For the line to be horizontal or vertical only
-                worldPoint = GetConstrainedPoint(worldPoint, startPoint_world.Value); // Ensure alignment
-
-                // Create the line in world space and store it in the worldShapes list
-                Point startPoint = startPoint_world.Value;
-                Point endPoint = worldPoint;
-
-                if (wallSystem == null)
-                {
-                    wallSystem = new WallSystem();
-                }
-
-                wallSystem.AddWall(new WallData(defaultWallHeight, startPoint.X, startPoint.Y, endPoint.X, endPoint.Y));
-            }
-            else if (currentMode == DrawMode.Rectangle)
-            {
-                if (diaphragmSystem == null)
-                {
-                    diaphragmSystem = new DiaphragmSystem();
-                }
-
-                diaphragmSystem.AddDiaphragm(new DiaphragmData_Rectangular(startPoint_world.Value, endPoint_world.Value));
-            } else
-            {
-                throw new NotImplementedException("Error: FinalizeShape() received an invalid DrawMode variable.");
-            }
-
-            // Clear the preview shape from the screen.
-            previewShape = null;
-            startPoint_world = null;
-            endPoint_world = null;
-        }
-
-        private void DrawGridInformation(DrawingContext ctx)
-        {
-            if (hideGrid)
-            {
-                return;  // Skip drawing if the grid is hidden
-            }
-
-            // Check if zoom or pan has changed
-            if (gridNeedsUpdate || gridVisual == null || gridBitmap == null)
-            {
-                // Recreate the grid visual when necessary (zoom or pan has changed)
-                CreateGridVisual();
-                gridNeedsUpdate = false;
-            }
-
-            // Draw the cached grid bitmap
-            ctx.DrawImage(gridBitmap, new Rect(0, 0, dockpanel.ActualWidth, dockpanel.ActualHeight));
-        }
-
-        private void CreateGridVisual()
-        {
-            // Define the size of the render target bitmap (same size as your drawing area)
-            double width = dockpanel.ActualWidth;
-            double height = dockpanel.ActualHeight;
-
-            // Create a new RenderTargetBitmap with the same size as the drawing area
-            gridBitmap = new RenderTargetBitmap((int)width, (int)height, 96, 96, PixelFormats.Pbgra32);
-
-            // Create a DrawingVisual to draw the grid
-            gridVisual = new DrawingVisual();
-
-            using (DrawingContext ctx = gridVisual.RenderOpen())
-            {
-                ConstructVisualGrid(ctx);  // This is the method that draws the grid
-            }
-
-            // Render the DrawingVisual to the RenderTargetBitmap
-            gridBitmap.Render(gridVisual);
-        }
-
-        private void InvalidateGrid()
-        {
-            // Mark the grid as needing an update (this should be called when zoom or pan changes)
-            gridNeedsUpdate = true;
-        }
 
         #region Drawing functions
 
@@ -1524,6 +1385,53 @@ namespace ShearWallVisualizer
             }
         }
 
+        private void DrawGridInformation(DrawingContext ctx)
+        {
+            if (hideGrid)
+            {
+                return;  // Skip drawing if the grid is hidden
+            }
+
+            // Check if zoom or pan has changed
+            if (gridNeedsUpdate || gridVisual == null || gridBitmap == null)
+            {
+                // Recreate the grid visual when necessary (zoom or pan has changed)
+                CreateGridVisual();
+                gridNeedsUpdate = false;
+            }
+
+            // Draw the cached grid bitmap
+            ctx.DrawImage(gridBitmap, new Rect(0, 0, dockpanel.ActualWidth, dockpanel.ActualHeight));
+        }
+
+        private void CreateGridVisual()
+        {
+            // Define the size of the render target bitmap (same size as your drawing area)
+            double width = dockpanel.ActualWidth;
+            double height = dockpanel.ActualHeight;
+
+            // Create a new RenderTargetBitmap with the same size as the drawing area
+            gridBitmap = new RenderTargetBitmap((int)width, (int)height, 96, 96, PixelFormats.Pbgra32);
+
+            // Create a DrawingVisual to draw the grid
+            gridVisual = new DrawingVisual();
+
+            using (DrawingContext ctx = gridVisual.RenderOpen())
+            {
+                ConstructVisualGrid(ctx);  // This is the method that draws the grid
+            }
+
+            // Render the DrawingVisual to the RenderTargetBitmap
+            gridBitmap.Render(gridVisual);
+        }
+
+        private void InvalidateGrid()
+        {
+            // Mark the grid as needing an update (this should be called when zoom or pan changes)
+            gridNeedsUpdate = true;
+        }
+
+
         private void Draw(ChangeType change)
         {
             m_layers.Draw(change);
@@ -1635,7 +1543,6 @@ namespace ShearWallVisualizer
         private void btnTestDesign_Click(object sender, RoutedEventArgs e)
         {
             Calculator = new ShearWallCalculator_RigidDiaphragm(wallSystem, diaphragmSystem, 15, 0);
-            Update();
 
             // test wall key
             int wall_id = 0;
@@ -1653,6 +1560,8 @@ namespace ShearWallVisualizer
                 }
                 Console.WriteLine("--------------------------");
             }
+
+            Update();
         }
 
         private void btnHideShapes_Click(object sender, RoutedEventArgs e)
@@ -2012,9 +1921,79 @@ namespace ShearWallVisualizer
 
         #endregion
 
-        private void UpdateLoadDisplay()
+        #region MODE setters
+        private void SetLineMode()
         {
-            LoadInfoTextBlock.Text = $"X: {currentMagX} @ {currentLocX} | Y: {currentMagY} @ {currentLocY}";
+            ResetUIButtons();
+            btnRigidityMode.BorderThickness = new Thickness(3);
+            btnRigidityMode.BorderBrush = new SolidColorBrush(Colors.White);
+            btnRigidityMode.Background = new SolidColorBrush(Colors.YellowGreen);
+
+            currentMode = DrawMode.Line;  // Set to Line drawing mode
+            MessageBox.Show("Line mode activated.");
+            Console.WriteLine("Line mode activated.");
         }
+
+        private void SetRectangleMode()
+        {
+            ResetUIButtons();
+            btnMassMode.BorderThickness = new Thickness(3);
+            btnMassMode.BorderBrush = new SolidColorBrush(Colors.White);
+            btnMassMode.Background = new SolidColorBrush(Colors.YellowGreen);
+
+
+            currentMode = DrawMode.Rectangle;  // Set to Rectangle drawing mode
+            MessageBox.Show("Rectangle mode activated.");
+            Console.WriteLine("Rectangle mode activated.");
+        }
+
+        private void SetDebugMode()
+        {
+            ResetUIButtons();
+
+            debugMode = !debugMode;
+            MessageBox.Show($"Debug Mode {(debugMode ? "Enabled" : "Disabled")}");
+            Console.WriteLine($"Debug Mode: {(debugMode ? "Enabled" : "Disabled")}");
+        }
+        private void SetSnapMode()
+        {
+            btnSnapToNearest.BorderThickness = new Thickness(3);
+            btnSnapToNearest.BorderBrush = new SolidColorBrush(Colors.White);
+
+            snapMode = !snapMode;
+            MessageBox.Show($"Snap Mode {(snapMode ? "Enabled" : "Disabled")}");
+            Console.WriteLine($"Snap Mode: {(snapMode ? "Enabled" : "Disabled")}");
+        }
+
+        /// <summary>
+        /// Cancels input mode and clears the previews
+        /// </summary>
+        private void ResetInputMode()
+        {
+            // cancel the input by setting the start point to null
+            startPoint_world = null;
+            endPoint_world = null;
+            previewShape = null;
+        }
+
+        private void ResetUIButtons()
+        {
+            btnRigidityMode.BorderThickness = new Thickness(0);
+            btnRigidityMode.Background = new SolidColorBrush(Colors.MediumBlue);
+            btnMassMode.Background = new SolidColorBrush(Colors.Red);
+            btnMassMode.BorderThickness = new Thickness(0);
+            btnSnapToNearest.BorderThickness = new Thickness(0);
+
+            if (snapMode is true)
+            {
+                btnSnapToNearest.BorderThickness = new Thickness(3);
+            }
+
+            if (debugMode is true)
+            {
+                // TODO:: how should the UI be set in debug mode?
+            }
+        }
+        #endregion
     }
 }
