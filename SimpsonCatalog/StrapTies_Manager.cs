@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace ShearWallCalculator
 {
-    public class StrapTies_Manager
+    public class StrapTies_Manager : BaseSimpsonConnectorManager<StrapTies_Data>
     {
         Dictionary<string, StrapTies_Data> StrapTies_Dict = new Dictionary<string, StrapTies_Data>();
 
@@ -1198,13 +1198,27 @@ namespace ShearWallCalculator
             });
         }
 
+
+
+
+
+        public string PrintAllStrapTieData()
+        {
+            string str = "";
+            foreach (KeyValuePair<string, StrapTies_Data> hdu in StrapTies_Dict)
+            {
+                str += hdu.Value.ToString() + "\n\n";
+            }
+            return str;
+        }
+
         /// <summary>
         /// Returns a list of all HDU_Dict models with allowable tension load greater than the minimum load for the given wood type.
         /// </summary>
         /// <param name="req_load">The minimum allowable tension load to filter by.</param>
         /// <param name="woodType">The wood type to filter by (e.g., WOODTYPE_DF_SP or WOODTYPE_SPF_HF).</param>
         /// <returns>A list of HDU_Dict models that exceed the minimum load for the specified wood type.</returns>
-        public List<StrapTies_Data> GetStrapTieModelsExceedingMinLoad(double req_load, WoodTypes woodType)
+        public override List<StrapTies_Data> GetTypedModelsExceedingMinLoad(double reqLoad, WoodTypes woodType)
         {
             string wood_type_string = "";
             switch (woodType)
@@ -1233,7 +1247,7 @@ namespace ShearWallCalculator
                         double allowableTensionLoad = fastener.AllowableTensionLoads[wood_type_string];
 
                         // Check if the allowable load exceeds the minimum
-                        if (allowableTensionLoad >= req_load)
+                        if (allowableTensionLoad >= reqLoad)
                         {
                             matchingModels.Add(strapData);
                             break; // No need to check further fasteners for this model
@@ -1245,17 +1259,11 @@ namespace ShearWallCalculator
             return matchingModels;
         }
 
-
-
-        public string PrintAllStrapTieData()
+        public override List<Dictionary<string, BaseSimpsonConnectorData>> GetValidConnectors()
         {
-            string str = "";
-            foreach (KeyValuePair<string, StrapTies_Data> hdu in StrapTies_Dict)
-            {
-                str += hdu.Value.ToString() + "\n\n";
-            }
-            return str;
+            //List<HDU_Data> temp_list = Catalog.HDUManager.GetHDUModelsExceedingMinLoad(req_load, woodType);
+            // Your existing logic
+            return new List<Dictionary<string, BaseSimpsonConnectorData>>(); // Placeholder
         }
-
     }
 }

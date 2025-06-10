@@ -8,11 +8,6 @@ namespace ShearWallCalculator
 {
     public class ShearWallCalculator_FlexibleDiaphragm : ShearWallCalculatorBase
     {
-        // dictionary containing the total shear acting on a wall -- resistance at nase pf diaphragm at top of walls
-        [JsonIgnore]
-        public Dictionary<int, double> TotalWallShear { get; set; } = new Dictionary<int, double>();
-        // shear force from direct shear in X-direction -- resistance at base of diaphragm at top of walls
-
         [JsonIgnore]
         public Dictionary<BracedWallLine, double> DirectShear_X_BracedLine { get; set; } = new Dictionary<BracedWallLine, double>();
         
@@ -25,6 +20,7 @@ namespace ShearWallCalculator
         // shear force from direct shear in Y-direction -- resistance at base of diaphragm at top of walls
         [JsonIgnore]
         public Dictionary<int, double> DirectShear_Y { get; set; } = new Dictionary<int, double>();
+
 
         public new string CalculatorType { get => "Flexible Diaphragm"; }
 
@@ -55,7 +51,7 @@ namespace ShearWallCalculator
         /// <summary>
         /// Function to update calculations.  Should be called everytime data is added, removed, or changed.
         /// </summary>
-        public void Update() 
+        public override void Update() 
         {
             // check if we have data for a wall system and a diaphragm system
             if (_diaphragm_system == null || _wall_system == null)
@@ -144,7 +140,6 @@ namespace ShearWallCalculator
         //    }
             return str;
         }
-
 
         private void ComputeDirectShear_X()
         {
@@ -342,6 +337,24 @@ namespace ShearWallCalculator
             }
         }
 
+        /// <summary>
+        /// Tallies the total shear acting on a wall as the sum of direct shear and eccentric shear
+        /// </summary>
+        /// <exception cref="NotImplementedException"></exception>
+        public override void ComputeTotalShear()
+        {
+            TotalWallShear.Clear();
+            foreach (var result in DirectShear_X)
+            {
+                int id = result.Key;
+                TotalWallShear.Add(id, result.Value);
+            }
+            foreach (var result in DirectShear_Y)
+            {
+                int id = result.Key;
+                TotalWallShear.Add(id, result.Value);
+            }
+        }
 
         public class SupportLoadDistributor
         {

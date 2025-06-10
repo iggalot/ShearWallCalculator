@@ -64,6 +64,9 @@
     <Compile Include="Controls\ShearWallResultsControl_Flexible.xaml.cs">
       <DependentUpon>ShearWallResultsControl_Flexible.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Controls\WallDesignControl.xaml.cs">
+      <DependentUpon>WallDesignControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Controls\WallResultsControl.xaml.cs">
       <DependentUpon>WallResultsControl.xaml</DependentUpon>
     </Compile>
@@ -84,6 +87,10 @@
     <Page Include="Controls\ShearWallResultsControl_Flexible.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Controls\WallDesignControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Controls\WallResultsControl.xaml">
       <SubType>Designer</SubType>

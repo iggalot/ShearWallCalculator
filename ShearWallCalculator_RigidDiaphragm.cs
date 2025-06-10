@@ -2,8 +2,6 @@
 using ShearWallCalculator;
 using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Windows;
 
 namespace calculator
 {
@@ -41,10 +39,6 @@ namespace calculator
         [JsonIgnore]
         public Dictionary<int, double> EccentricShear { get; set; } = new Dictionary<int, double>();
 
-        // dictionary containing the total shear acting on a wall -- resistance at nase pf diaphragm at top of walls
-        [JsonIgnore]
-        public Dictionary<int, double> TotalWallShear { get; set; } = new Dictionary<int, double>();
-
         /// <summary>
         /// default constructor
         /// </summary>
@@ -77,7 +71,7 @@ namespace calculator
         /// <summary>
         /// Function to update calculations.  Should be called everytime data is added, removed, or changed.
         /// </summary>
-        public void Update()
+        public override void Update()
         {
             // check if we have data for a wall system and a diaphragm system
             if (_diaphragm_system == null || _wall_system == null)
@@ -304,7 +298,7 @@ namespace calculator
         /// Tallies the total shear acting on a wall as the sum of direct shear and eccentric shear
         /// </summary>
         /// <exception cref="NotImplementedException"></exception>
-        private void ComputeTotalShear()
+        public override void ComputeTotalShear()
         {
             TotalWallShear.Clear();
             foreach (var result in DirectShear_X)

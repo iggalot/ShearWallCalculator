@@ -3,9 +3,9 @@ using System.Collections.Generic;
 
 namespace ShearWallCalculator
 {
-    public class HTT_Manager
+    public class HTT_Manager : BaseSimpsonConnectorManager<HTT_Data>
     {
-        Dictionary<string, HTT_Data> HTT_Dict = new Dictionary<string, HTT_Data>();
+        public Dictionary<string, HTT_Data> HTT_Dict = new Dictionary<string, HTT_Data>();
 
         public HTT_Manager()
         {
@@ -393,13 +393,26 @@ namespace ShearWallCalculator
             });
 
         }
+
+
+        public string PrintAllHTTData()
+        {
+            string str = "";
+            foreach (KeyValuePair<string, HTT_Data> htt in HTT_Dict)
+            {
+                str += htt.Value.ToString() + "\n\n";
+            }
+            return str;
+        }
+
         /// <summary>
         /// Returns a list of all HDU_Dict models with allowable tension load greater than the minimum load for the given wood type.
         /// </summary>
         /// <param name="minimumLoad">The minimum allowable tension load to filter by.</param>
         /// <param name="woodType">The wood type to filter by (e.g., WOODTYPE_DF_SP or WOODTYPE_SPF_HF).</param>
         /// <returns>A list of HDU_Dict models that exceed the minimum load for the specified wood type.</returns>
-        public List<HTT_Data> GetHTTModelsExceedingMinLoad(double minimumLoad, WoodTypes woodType)
+
+        public override List<HTT_Data> GetTypedModelsExceedingMinLoad(double reqLoad, WoodTypes woodType)
         {
             string wood_type_string = "";
             switch (woodType)
@@ -428,7 +441,7 @@ namespace ShearWallCalculator
                         double allowableTensionLoad = fastener.AllowableTensionLoads[wood_type_string];
 
                         // Check if the allowable load exceeds the minimum
-                        if (allowableTensionLoad >= minimumLoad)
+                        if (allowableTensionLoad >= reqLoad)
                         {
                             matchingModels.Add(httData);
                             break; // No need to check further fasteners for this model
@@ -440,15 +453,10 @@ namespace ShearWallCalculator
             return matchingModels;
         }
 
-        public string PrintAllHTTData()
+        public override List<Dictionary<string, BaseSimpsonConnectorData>> GetValidConnectors()
         {
-            string str = "";
-            foreach (KeyValuePair<string, HTT_Data> htt in HTT_Dict)
-            {
-                str += htt.Value.ToString() + "\n\n";
-            }
-            return str;
+            //    List<HTT_Data> temp_list = Catalog.HTTManager.GetHTTModelsExceedingMinLoad(req_load, woodType);
+            return new List<Dictionary<string, BaseSimpsonConnectorData>>();
         }
-
     }
 }

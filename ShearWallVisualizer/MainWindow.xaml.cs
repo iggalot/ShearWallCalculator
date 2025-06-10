@@ -27,7 +27,8 @@ namespace ShearWallVisualizer
 {
     public partial class MainWindow : Window
     {
-        public ShearWallCalculatorBase Calculator = new ShearWallCalculatorBase();
+        public ShearWallCalculatorBase Calculator;
+
         private DiaphragmSystem diaphragmSystem = new DiaphragmSystem();
         private WallSystem wallSystem = new WallSystem();
 
@@ -91,9 +92,6 @@ namespace ShearWallVisualizer
         private double worldWidth = 120;
         private double worldHeight = 120;
 
-
-
-
         private Point currentMouseScreenPosition = new Point(0, 0);
 
         public MainWindow()
@@ -131,16 +129,16 @@ namespace ShearWallVisualizer
                 ctrlWindLoadResultsControl_MWFRS.WindCalculated += WindLoadResultsControl_MWFRS_WindCalculated;
                 WindLoadInputControl.WindInputComplete += WindLoadInputControl_WindInputComplete;
 
-                // Display test results.
-                var lst1 = simpsonCatalog.GetModelsExceedingReqLoad(4000, SimpsonCatalogs.SIMPSON_CATALOG_HDU, WoodTypes.WOODTYPE_DF_SP);
-                Console.WriteLine("----------------");
-                PrintList(lst1);
-                var lst2 = simpsonCatalog.GetModelsExceedingReqLoad(4000, SimpsonCatalogs.SIMPSON_CATALOG_STRAP, WoodTypes.WOODTYPE_DF_SP);
-                Console.WriteLine("----------------");
-                PrintList(lst2);
-                var lst3 = simpsonCatalog.GetModelsExceedingReqLoad(4000, SimpsonCatalogs.SIMPSON_CATALOG_HTT, WoodTypes.WOODTYPE_DF_SP);
-                Console.WriteLine("----------------");
-                PrintList(lst3);
+                //// Display test results.
+                //var lst1 = simpsonCatalog.GetModelsExceedingReqLoad(4000, SimpsonCatalogs.SIMPSON_CATALOG_HDU, WoodTypes.WOODTYPE_DF_SP);
+                //Console.WriteLine("----------------");
+                //PrintList(lst1);
+                //var lst2 = simpsonCatalog.GetModelsExceedingReqLoad(4000, SimpsonCatalogs.SIMPSON_CATALOG_STRAP, WoodTypes.WOODTYPE_DF_SP);
+                //Console.WriteLine("----------------");
+                //PrintList(lst2);
+                //var lst3 = simpsonCatalog.GetModelsExceedingReqLoad(4000, SimpsonCatalogs.SIMPSON_CATALOG_HTT, WoodTypes.WOODTYPE_DF_SP);
+                //Console.WriteLine("----------------");
+                //PrintList(lst3);
             };
         }
 
@@ -189,8 +187,6 @@ namespace ShearWallVisualizer
             List<WindLoadCalculator_MWFRS.WindPressureResult_Roof_MWFRS> roof_results = e._roof_results;
             WindLoadCalculator_MWFRS.WindLoadParameters parameters = e._parameters;
 
-            // find the maximum of the windward and leeward sums at elevation h
-            double temp_sum = double.MinValue;
             // Get the internal suction windward case
             double ww = 0;
             double lw = 0;
@@ -377,8 +373,8 @@ namespace ShearWallVisualizer
 
             wallSystem = Calculator._wall_system;
             diaphragmSystem = Calculator._diaphragm_system;
-            //Calculator = new ShearWallCalculator_RigidDiaphragm(wallSystem, diaphragmSystem, currentMagX, currentMagY);
-            Calculator = new ShearWallCalculator_FlexibleDiaphragm(wallSystem, diaphragmSystem, currentMagX, currentMagY);
+            Calculator = new ShearWallCalculator_RigidDiaphragm(wallSystem, diaphragmSystem, currentMagX, currentMagY);
+            //Calculator = new ShearWallCalculator_FlexibleDiaphragm(wallSystem, diaphragmSystem, currentMagX, currentMagY);
 
             // Update the calculations
             Calculator.Update();
@@ -411,7 +407,6 @@ namespace ShearWallVisualizer
 
             // redraw the screen
             Draw(ChangeType.Redraw);  // redraw
-
         }
 
         /// <summary>
@@ -1125,8 +1120,14 @@ namespace ShearWallVisualizer
 
                     ctx.DrawEllipse(lineStrokeBrush, pen, centerPoint, center_pt_dia, center_pt_dia); // center point marker
 
-                    idLabel = new FormattedText(wall.Key.ToString(),
-                        CultureInfo.GetCultureInfo("en-us"), FlowDirection.LeftToRight, new Typeface("Consolas"), 14, Brushes.Black);
+                    idLabel = new FormattedText(
+                        wall.Key.ToString(),
+                        CultureInfo.GetCultureInfo("en-us"), 
+                        FlowDirection.LeftToRight, 
+                        new Typeface("Consolas"), 
+                        14, 
+                        Brushes.Black,
+                        VisualTreeHelper.GetDpi(this).PixelsPerDip);
                     ctx.DrawText(idLabel, center_screen);  // id label
                 }
             }
@@ -1168,8 +1169,14 @@ namespace ShearWallVisualizer
 
                     ctx.DrawEllipse(rectFillBrush, pen, centerPoint, center_pt_dia, center_pt_dia); // center point marker
 
-                    idLabel = new FormattedText(rect.Key.ToString(),
-                        CultureInfo.GetCultureInfo("en-us"), FlowDirection.LeftToRight, new Typeface("Consolas"), 14, Brushes.Black);
+                    idLabel = new FormattedText(
+                        rect.Key.ToString(),
+                        CultureInfo.GetCultureInfo("en-us"), 
+                        FlowDirection.LeftToRight, 
+                        new Typeface("Consolas"), 
+                        14, 
+                        Brushes.Black,
+                        VisualTreeHelper.GetDpi(this).PixelsPerDip);
                     ctx.DrawText(idLabel, centerPoint);  // id label
                 }
             }
@@ -2037,6 +2044,30 @@ namespace ShearWallVisualizer
         private void UpdateLoadDisplay()
         {
             LoadInfoTextBlock.Text = $"X: {currentMagX} @ {currentLocX} | Y: {currentMagY} @ {currentLocY}";
+        }
+
+        private void btnTestDesign_Click(object sender, RoutedEventArgs e)
+        {
+            Calculator = new ShearWallCalculator_RigidDiaphragm(wallSystem, diaphragmSystem, 15, 0);
+            Calculator.Update();
+            Update();
+
+            // test wall key
+            int wall_id = 0;
+
+            if (Calculator._wall_system._walls.ContainsKey(wall_id) is true)
+            {
+                WallData test_wall = Calculator._wall_system._walls[wall_id];
+                ShearWallSelector selector = new ShearWallSelector(Calculator.TotalWallShear[wall_id], test_wall, simpsonCatalog, ConnectorTypes.CONNECTOR_STRAP_TIES, WoodTypes.WOODTYPE_DF_SP);
+                Console.WriteLine("--------------------------");
+                Console.WriteLine("Shear: " + Calculator.TotalWallShear[wall_id]);
+                foreach (var key in selector.selectedConnectors)
+                {
+
+                    Console.WriteLine(key.Model);
+                }
+                Console.WriteLine("--------------------------");
+            }
         }
     }
 }
