@@ -26,7 +26,8 @@ namespace ShearWallCalculator
         [JsonIgnore]
         public Dictionary<int, double> TotalWallShear { get; set; } = new Dictionary<int, double>();
 
-        public abstract void ComputeTotalShear();
+        // The primary function calculating the wall shear forces
+        public abstract void PerformCalculations();
 
         /// <summary>
         /// A flag that determines if the calculations can be peformed.  Looks

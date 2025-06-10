@@ -7,7 +7,6 @@ namespace ShearWallCalculator
     public class HDU_Data : BaseSimpsonConnectorData
     {
         // Basic Identification
-        public string Model { get; set; }                // e.g., "HDU2-SDS2.5"
         public int Gauge { get; set; }                   // e.g., 14 gauge
 
         // Dimensions (in inches)

@@ -109,19 +109,23 @@ namespace calculator
                 Console.WriteLine("M_comb: " + Mt_comb + " kips-m");
 
                 // Perform component calculations to compute shear contributions
-                ComputeDirectShear_X();  // horizontal walls
-                ComputeDirectShear_Y();  // vertical walls
-                ComputeEccentricShear(); // shear in line of wall due to rotation eccentricty of structure
+                PerformCalculations();
 
-                // compute the total shear activing on the wall
-                ComputeTotalShear();
 
                 // display results
                 Console.WriteLine(DisplayResults());
             }
         }
 
+        public override void PerformCalculations()
+        {
+            ComputeDirectShear_X();  // horizontal walls
+            ComputeDirectShear_Y();  // vertical walls
+            ComputeEccentricShear(); // shear in line of wall due to rotation eccentricty of structure
 
+            // compute the total shear activing on the wall
+            ComputeTotalShear();
+        }
 
         public string DisplayResults()
         {
@@ -298,7 +302,7 @@ namespace calculator
         /// Tallies the total shear acting on a wall as the sum of direct shear and eccentric shear
         /// </summary>
         /// <exception cref="NotImplementedException"></exception>
-        public override void ComputeTotalShear()
+        public void ComputeTotalShear()
         {
             TotalWallShear.Clear();
             foreach (var result in DirectShear_X)

@@ -74,14 +74,21 @@ namespace ShearWallCalculator
             if (IsValidForCalculation is true)
             {
                 // Perform component calculations to compute shear contributions
-                ComputeDirectShear_X();  // horizontal walls
-                ComputeDirectShear_Y();  // vertical walls
+                PerformCalculations();
 
                 // display results
                 Console.WriteLine(DisplayResults());
             }
         }
 
+        public override void PerformCalculations()
+        {
+            ComputeDirectShear_X();  // horizontal walls
+            ComputeDirectShear_Y();  // vertical walls
+
+            // compute the total shear activing on the wall
+            ComputeTotalShear();
+        }
 
         public string DisplayResults()
         {
@@ -341,7 +348,7 @@ namespace ShearWallCalculator
         /// Tallies the total shear acting on a wall as the sum of direct shear and eccentric shear
         /// </summary>
         /// <exception cref="NotImplementedException"></exception>
-        public override void ComputeTotalShear()
+        public void ComputeTotalShear()
         {
             TotalWallShear.Clear();
             foreach (var result in DirectShear_X)
