@@ -2,6 +2,7 @@
 using ShearWallCalculator;
 using System;
 using System.Collections.Generic;
+using System.Data;
 
 namespace calculator
 {
@@ -44,14 +45,12 @@ namespace calculator
         /// </summary>
         public ShearWallCalculator_RigidDiaphragm()
         {
-            //update calculations once data is loaded
-            Update();
+
         }
 
         public ShearWallCalculator_RigidDiaphragm(WallSystem walls, DiaphragmSystem diaphragm, double v_x, double v_y) : base(walls, diaphragm, v_x, v_y)
         {
-            // update the calculations
-            Update();
+
         }
 
         /// <summary>
@@ -63,16 +62,16 @@ namespace calculator
             _diaphragm_system = copy_calc._diaphragm_system;
             _wall_system = copy_calc._wall_system;
 
-            Update();
-
+            PerformCalculations();
         }
-
 
         /// <summary>
         /// Function to update calculations.  Should be called everytime data is added, removed, or changed.
         /// </summary>
-        public override void Update()
+        public override void PerformCalculations()
         {
+            base.Update();
+
             // check if we have data for a wall system and a diaphragm system
             if (_diaphragm_system == null || _wall_system == null)
             {
@@ -87,20 +86,18 @@ namespace calculator
             Console.WriteLine("Center of Mass -- xr: " + _diaphragm_system.CtrMass.X + " ft.  yr: " + _diaphragm_system.CtrMass.Y + " ft.");
             Console.WriteLine("Center of Rigidity -- xr: " + _wall_system.CtrRigidity.X + " ft.  yr: " + _wall_system.CtrRigidity.Y + " ft.");
 
-            base.Update();  // call the base class to update also.
-            
             // check that our CoM and CoR values are valid and computed -- if not, the calculations don't work
             if (IsValidForCalculation is true)
             {
                 // Set ASCE 7 minimum for building eccentricity.
                 // 5% of building width / Length or 10% of building height
-                double min_ecc_x = Math.Max(0.05 * BoundingBoxWorld.Width, 0.1 * building_height);
-                double min_ecc_y = Math.Max(0.05 * BoundingBoxWorld.Height, 0.1 * building_height);
+                double min_ecc_x = Math.Max(0.05 * BoundingBoxWorld.Width, 0.1 * BuildingHeight);
+                double min_ecc_y = Math.Max(0.05 * BoundingBoxWorld.Height, 0.1 * BuildingHeight);
 
                 // update eccentricty values between center of mass and center of Rigidity
                 // TODO:  this function isnt very efficient.  Can we do better?  Should we signal that the eccentricity is being overridden by the minimum code value?
                 ecc_x = Math.Max(min_ecc_x, (float)(_wall_system.CtrRigidity.X - _diaphragm_system.CtrMass.X));
-                ecc_y = Math.Max(min_ecc_y,(float)(_wall_system.CtrRigidity.Y - _diaphragm_system.CtrMass.Y));
+                ecc_y = Math.Max(min_ecc_y, (float)(_wall_system.CtrRigidity.Y - _diaphragm_system.CtrMass.Y));
 
                 Console.WriteLine("ecc_x: " + ecc_x + " ft.  ecc_y: " + ecc_y + " ft.");
 
@@ -115,10 +112,6 @@ namespace calculator
                 // display results
                 Console.WriteLine(DisplayResults());
             }
-        }
-
-        public override void PerformCalculations()
-        {
             ComputeDirectShear_X();  // horizontal walls
             ComputeDirectShear_Y();  // vertical walls
             ComputeEccentricShear(); // shear in line of wall due to rotation eccentricty of structure

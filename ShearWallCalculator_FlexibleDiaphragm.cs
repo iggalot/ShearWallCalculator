@@ -24,70 +24,51 @@ namespace ShearWallCalculator
 
         public new string CalculatorType { get => "Flexible Diaphragm"; }
 
-        public ShearWallCalculator_FlexibleDiaphragm()
-        {
-            // update calculations once data is loaded
-            Update();
-        }
-
-        public ShearWallCalculator_FlexibleDiaphragm(WallSystem wall_system, DiaphragmSystem diaphragm, double v_x, double v_y) : base(wall_system, diaphragm, v_x, v_y)
-        {
-            // update the calculations
-            Update();
-        }
+        public ShearWallCalculator_FlexibleDiaphragm() : base(null, null, 0, 0) { }
+        public ShearWallCalculator_FlexibleDiaphragm(WallSystem wall_system, DiaphragmSystem diaphragm, double v_x, double v_y) : base(wall_system, diaphragm, v_x, v_y) { }
 
         /// <summary>
         /// copy constructor
         /// </summary>
         /// <param name="copy_calc"></param>
-        public ShearWallCalculator_FlexibleDiaphragm(ShearWallCalculator_FlexibleDiaphragm copy_calc)
+        public ShearWallCalculator_FlexibleDiaphragm(ShearWallCalculator_FlexibleDiaphragm copy_calc) : base(copy_calc._wall_system, copy_calc._diaphragm_system, copy_calc.V_x, copy_calc.V_y)
         {
             _diaphragm_system = copy_calc._diaphragm_system;
             _wall_system = copy_calc._wall_system;
 
-            Update();
-
+            PerformCalculations();
         }
+
         /// <summary>
         /// Function to update calculations.  Should be called everytime data is added, removed, or changed.
         /// </summary>
-        public override void Update() 
+        public override void PerformCalculations() 
         {
+            base.Update(); // update necessary system parts
+
             // check if we have data for a wall system and a diaphragm system
             if (_diaphragm_system == null || _wall_system == null)
             {
-                //TODO:  Display warning if we don't have data.
                 return;
             }
-
-            // Update calculations if necessary for the diaphragm and the wall system            
-            _diaphragm_system.Update();
-            _wall_system.Update();
 
             // TODO:  CODE requires minimum of 5% of largest dimension of building as a minimum for the eccentricity
             Console.WriteLine("Center of Mass -- xr: " + _diaphragm_system.CtrMass.X + " ft.  yr: " + _diaphragm_system.CtrMass.Y + " ft.");
             Console.WriteLine("Center of Rigidity -- xr: " + _wall_system.CtrRigidity.X + " ft.  yr: " + _wall_system.CtrRigidity.Y + " ft.");
 
-            base.Update();  // call the base class to update also.
-
             // check that our CoM and CoR values are valid and computed -- if not, the calculations don't work
             if (IsValidForCalculation is true)
             {
                 // Perform component calculations to compute shear contributions
-                PerformCalculations();
+                ComputeDirectShear_X();  // horizontal walls
+                ComputeDirectShear_Y();  // vertical walls
+
+                // compute the total shear activing on the wall
+                ComputeTotalShear();
 
                 // display results
                 Console.WriteLine(DisplayResults());
             }
-        }
-
-        public override void PerformCalculations()
-        {
-            ComputeDirectShear_X();  // horizontal walls
-            ComputeDirectShear_Y();  // vertical walls
-
-            // compute the total shear activing on the wall
-            ComputeTotalShear();
         }
 
         public string DisplayResults()

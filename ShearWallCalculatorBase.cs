@@ -8,7 +8,7 @@ namespace ShearWallCalculator
     public abstract class ShearWallCalculatorBase
     {
         private const double DEFAULT_BUILDING_HEIGHT = 10.0;
-        public double building_height { get; set; } = DEFAULT_BUILDING_HEIGHT; // TODO:  need to make this sync with the wind load calculations which can potentially override the value
+        public double BuildingHeight { get; set; } = DEFAULT_BUILDING_HEIGHT; // TODO:  need to make this sync with the wind load calculations which can potentially override the value
 
 
         public string CalculatorType { get; }
@@ -35,12 +35,27 @@ namespace ShearWallCalculator
         /// and not NaN or Infinity
         /// </summary>
         [JsonIgnore]
-        public bool IsValidForCalculation { get; set; }
+        public bool IsValidForCalculation 
+        { 
+            get {
+
+                return Validate();
+            }
+            set { } 
+        }
 
         /// <summary>
         /// Contains a Rect that determines the maximum extents of the wall system and diaphragm system of the model
         /// </summary>
-        public Rect BoundingBoxWorld { get; private set; }
+        public Rect BoundingBoxWorld
+        {
+            get
+            {
+
+                return ComputeBoundingBox_World();
+            }
+            set { }
+        }
 
         public ShearWallCalculatorBase()
         {
@@ -59,27 +74,28 @@ namespace ShearWallCalculator
             V_x = shear_x;
             V_y = shear_y;
 
-            //BracedWallLine bracedWallLine = new BracedWallLine(5.0);
-            //            LoadTestWallData();
-            //            LoadTestWallData2();
+            Update();  // update necessary system parts
 
-            Update();
+            PerformCalculations(); // perform calculations
         }
 
-        public virtual void Update()
+        public void Update()
         {
-            _wall_system.Update();
-            _diaphragm_system.Update();
+            if (_wall_system != null)
+            {
+                _wall_system.Update();
+            }
+            if (_diaphragm_system != null)
+            {
+                _diaphragm_system.Update();
+            }
 
             // set the BoundingBox for the model
             BoundingBoxWorld = ComputeBoundingBox_World();
-            building_height = ComputeBuildingHeight();
-
-            // validate the model for calculations
-            IsValidForCalculation = Validate();
+            BuildingHeight = ComputeBuildingHeight();
         }
 
-        /// <summary>
+        /// <summary> != null)
         /// Returns the maximum wall height of the system.
         /// </summary>
         /// <returns></returns>

@@ -29,10 +29,10 @@ namespace ShearWallVisualizer
     {
         public ShearWallCalculatorBase Calculator;
 
-        private DiaphragmSystem diaphragmSystem = new DiaphragmSystem();
-        private WallSystem wallSystem = new WallSystem();
+        private DiaphragmSystem diaphragmSystem = new DiaphragmSystem();  // stores the known diaphragms for the calculator
+        private WallSystem wallSystem = new WallSystem();  // store the know walls for the calculator
 
-        public SimpsonCatalog simpsonCatalog { get; set; } = new SimpsonCatalog();
+        public SimpsonCatalog simpsonCatalog { get; set; } = new SimpsonCatalog();  // contains the Simposon catalog connector and holddown data
 
         private JsonDrawingSerializer _serializer = new JsonDrawingSerializer();
 
@@ -338,18 +338,17 @@ namespace ShearWallVisualizer
             }
         }
 
-
         public void Update()
         {
-            if (Calculator != null)
+            if (Calculator == null)
             {
-                wallSystem = Calculator._wall_system;
-                diaphragmSystem = Calculator._diaphragm_system;
                 Calculator = new ShearWallCalculator_RigidDiaphragm(wallSystem, diaphragmSystem, currentMagX, currentMagY);
                 //Calculator = new ShearWallCalculator_FlexibleDiaphragm(wallSystem, diaphragmSystem, currentMagX, currentMagY);
-
-                Calculator.Update();  // Update the calculations
-
+                
+                OnUpdated?.Invoke(this, EventArgs.Empty); // signal that the window has been updated -- so that subcontrols can refresh
+            }
+            else
+            {
                 // update the calculator
                 if (Calculator.IsValidForCalculation is true)
                 {
@@ -363,7 +362,6 @@ namespace ShearWallVisualizer
                 tbCalculatorType.Text = Calculator.GetType().Name;
 
                 // notify controls that we have updated
-                OnUpdated?.Invoke(this, EventArgs.Empty); // signal that the window has been updated -- so that subcontrols can refresh
             }
 
             // clear the tabs
@@ -648,7 +646,6 @@ namespace ShearWallVisualizer
                 }
 
                 wallSystem.AddWall(new WallData(defaultWallHeight, startPoint.X, startPoint.Y, endPoint.X, endPoint.Y));
-                Update();
             }
             else if (currentMode == DrawMode.Rectangle)
             {
@@ -658,8 +655,12 @@ namespace ShearWallVisualizer
                 }
 
                 diaphragmSystem.AddDiaphragm(new DiaphragmData_Rectangular(startPoint_world.Value, endPoint_world.Value));
-                Update();
+            } else
+            {
+                throw new NotImplementedException("Error: FinalizeShape() received an invalid DrawMode variable.");
             }
+            
+            Update();
 
             // Clear the preview shape from the screen.
             previewShape = null;
@@ -1643,7 +1644,6 @@ namespace ShearWallVisualizer
         private void btnTestDesign_Click(object sender, RoutedEventArgs e)
         {
             Calculator = new ShearWallCalculator_RigidDiaphragm(wallSystem, diaphragmSystem, 15, 0);
-            Calculator.Update();
             Update();
 
             // test wall key
