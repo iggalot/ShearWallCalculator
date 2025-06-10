@@ -5,7 +5,7 @@ using System.Windows;
 
 namespace ShearWallCalculator
 {
-    public class ShearWallCalculatorBase
+    public abstract class ShearWallCalculatorBase
     {
         private const double DEFAULT_BUILDING_HEIGHT = 10.0;
         public double building_height { get; set; } = DEFAULT_BUILDING_HEIGHT; // TODO:  need to make this sync with the wind load calculations which can potentially override the value
@@ -26,6 +26,7 @@ namespace ShearWallCalculator
         [JsonIgnore]
         public Dictionary<int, double> TotalWallShear { get; set; } = new Dictionary<int, double>();
 
+        public abstract void ComputeTotalShear();
 
         /// <summary>
         /// A flag that determines if the calculations can be peformed.  Looks
@@ -64,7 +65,7 @@ namespace ShearWallCalculator
             Update();
         }
 
-        public void Update()
+        public virtual void Update()
         {
             _wall_system.Update();
             _diaphragm_system.Update();

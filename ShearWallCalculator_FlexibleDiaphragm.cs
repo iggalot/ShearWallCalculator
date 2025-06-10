@@ -51,7 +51,7 @@ namespace ShearWallCalculator
         /// <summary>
         /// Function to update calculations.  Should be called everytime data is added, removed, or changed.
         /// </summary>
-        public void Update() 
+        public override void Update() 
         {
             // check if we have data for a wall system and a diaphragm system
             if (_diaphragm_system == null || _wall_system == null)
@@ -140,7 +140,6 @@ namespace ShearWallCalculator
         //    }
             return str;
         }
-
 
         private void ComputeDirectShear_X()
         {
@@ -338,6 +337,24 @@ namespace ShearWallCalculator
             }
         }
 
+        /// <summary>
+        /// Tallies the total shear acting on a wall as the sum of direct shear and eccentric shear
+        /// </summary>
+        /// <exception cref="NotImplementedException"></exception>
+        public override void ComputeTotalShear()
+        {
+            TotalWallShear.Clear();
+            foreach (var result in DirectShear_X)
+            {
+                int id = result.Key;
+                TotalWallShear.Add(id, result.Value);
+            }
+            foreach (var result in DirectShear_Y)
+            {
+                int id = result.Key;
+                TotalWallShear.Add(id, result.Value);
+            }
+        }
 
         public class SupportLoadDistributor
         {

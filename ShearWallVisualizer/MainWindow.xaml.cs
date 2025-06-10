@@ -27,7 +27,8 @@ namespace ShearWallVisualizer
 {
     public partial class MainWindow : Window
     {
-        public ShearWallCalculatorBase Calculator = new ShearWallCalculatorBase();
+        public ShearWallCalculatorBase Calculator;
+
         private DiaphragmSystem diaphragmSystem = new DiaphragmSystem();
         private WallSystem wallSystem = new WallSystem();
 
@@ -186,8 +187,6 @@ namespace ShearWallVisualizer
             List<WindLoadCalculator_MWFRS.WindPressureResult_Roof_MWFRS> roof_results = e._roof_results;
             WindLoadCalculator_MWFRS.WindLoadParameters parameters = e._parameters;
 
-            // find the maximum of the windward and leeward sums at elevation h
-            double temp_sum = double.MinValue;
             // Get the internal suction windward case
             double ww = 0;
             double lw = 0;
@@ -1121,8 +1120,14 @@ namespace ShearWallVisualizer
 
                     ctx.DrawEllipse(lineStrokeBrush, pen, centerPoint, center_pt_dia, center_pt_dia); // center point marker
 
-                    idLabel = new FormattedText(wall.Key.ToString(),
-                        CultureInfo.GetCultureInfo("en-us"), FlowDirection.LeftToRight, new Typeface("Consolas"), 14, Brushes.Black);
+                    idLabel = new FormattedText(
+                        wall.Key.ToString(),
+                        CultureInfo.GetCultureInfo("en-us"), 
+                        FlowDirection.LeftToRight, 
+                        new Typeface("Consolas"), 
+                        14, 
+                        Brushes.Black,
+                        VisualTreeHelper.GetDpi(this).PixelsPerDip);
                     ctx.DrawText(idLabel, center_screen);  // id label
                 }
             }
@@ -1164,8 +1169,14 @@ namespace ShearWallVisualizer
 
                     ctx.DrawEllipse(rectFillBrush, pen, centerPoint, center_pt_dia, center_pt_dia); // center point marker
 
-                    idLabel = new FormattedText(rect.Key.ToString(),
-                        CultureInfo.GetCultureInfo("en-us"), FlowDirection.LeftToRight, new Typeface("Consolas"), 14, Brushes.Black);
+                    idLabel = new FormattedText(
+                        rect.Key.ToString(),
+                        CultureInfo.GetCultureInfo("en-us"), 
+                        FlowDirection.LeftToRight, 
+                        new Typeface("Consolas"), 
+                        14, 
+                        Brushes.Black,
+                        VisualTreeHelper.GetDpi(this).PixelsPerDip);
                     ctx.DrawText(idLabel, centerPoint);  // id label
                 }
             }
