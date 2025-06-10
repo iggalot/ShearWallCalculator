@@ -103,6 +103,7 @@ namespace ShearWallVisualizer
                 ResetView(); // reset the view so that origin 0,0 is at lower left of the corner screen and the model is zoomed to fill the entire window
                 LoadRecentFilesMenu();  // recent files menu
                 CreateGridVisual();
+                CreateLayers();
 
                 // load the Simpson catalog
                 simpsonCatalog = new SimpsonCatalog();
@@ -375,7 +376,6 @@ namespace ShearWallVisualizer
             CreateDiaphragmDataControls();
 
             // redraw the scene
-            CreateLayers();
             Draw(ChangeType.Redraw);
         }
 
@@ -600,20 +600,17 @@ namespace ShearWallVisualizer
 
             //m_scroll.Minimum = 0;
             //m_scroll.Maximum = m_layers.ActualHeight - 70;
-            Draw(ChangeType.Resize);
+            //Draw(ChangeType.Resize);
         }
 
         private void OnScroll(object sender, ScrollEventArgs e)
         {
-            Draw(ChangeType.Scroll);
+            //Draw(ChangeType.Scroll);
         }
 
         // Create the layers
         private void CreateLayers()
         {
-            // recreate the layers
-          //  m_layers = new LayerManager();
-
             m_layers.AddLayer(0, DrawBackground, ChangeType.Resize);
             m_layers.AddLayer(1, DrawGridInformation);
             m_layers.AddLayer(2, DrawReferenceImage);
@@ -659,15 +656,11 @@ namespace ShearWallVisualizer
             {
                 throw new NotImplementedException("Error: FinalizeShape() received an invalid DrawMode variable.");
             }
-            
-            Update();
 
             // Clear the preview shape from the screen.
             previewShape = null;
             startPoint_world = null;
             endPoint_world = null;
-
-            Draw(ChangeType.Redraw);
         }
 
         private void DrawGridInformation(DrawingContext ctx)
@@ -1547,7 +1540,7 @@ namespace ShearWallVisualizer
             if (e.RightButton == MouseButtonState.Pressed)
             {
                 ResetInputMode();
-                Draw(ChangeType.Redraw);
+                Update();
                 return;
             }
 
@@ -1577,7 +1570,7 @@ namespace ShearWallVisualizer
                 FinalizeShape(endPoint_world.Value);
             }
 
-            Draw(ChangeType.Redraw);
+            Update();
         }
 
 
@@ -1589,8 +1582,7 @@ namespace ShearWallVisualizer
             tbScreenCoords.Text = e.GetPosition(m_layers).ToString();
             tbWorldCoords.Text = "World Coords: (" + currentMouseWorldPosition.X.ToString("F2") + ", " + currentMouseWorldPosition.Y.ToString("F2") + ")";  // changed this one too
 
-
-            Draw(ChangeType.Redraw);
+            Update();
         }
 
         private void m_layers_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
@@ -1623,7 +1615,7 @@ namespace ShearWallVisualizer
 
             InvalidateGrid();               // signal that the grid needs updating
 
-            Draw(ChangeType.Redraw);
+            Update();
         }
 
         private void m_layers_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
@@ -1632,8 +1624,7 @@ namespace ShearWallVisualizer
             if (e.RightButton == MouseButtonState.Pressed)
             {
                 ResetInputMode();
-                Draw(ChangeType.Redraw);
-
+                Update();
                 return;
             }
         }
@@ -1667,7 +1658,7 @@ namespace ShearWallVisualizer
         private void btnHideShapes_Click(object sender, RoutedEventArgs e)
         {
             hideShapes = !hideShapes;
-            Draw(ChangeType.Redraw);
+            Update();
             btnHideShapes.Content = hideShapes ? "Show Shapes" : "Hide Shapes";
 
         }
@@ -1675,7 +1666,7 @@ namespace ShearWallVisualizer
         private void btnHideImage_Click(object sender, RoutedEventArgs e)
         {
             hideImage = !hideImage;
-            Draw(ChangeType.Redraw);
+            Update();
 
             btnHideImage.Content = hideImage ? "Show Image" : "Hide Image";
         }
@@ -1683,7 +1674,7 @@ namespace ShearWallVisualizer
         private void btnHideGrid_Click(object sender, RoutedEventArgs e)
         {
             hideGrid = !hideGrid;
-            Draw(ChangeType.Redraw);
+            Update();
             btnHideGrid.Content = hideGrid ? "Show Grid" : "Hide Grid";
         }
 
@@ -2007,7 +1998,7 @@ namespace ShearWallVisualizer
                             $"Real-World Distance: {e.RealWorldDistance:F2}\n" +
                             $"Scale Factor: {e.ScaleFactor:F6}");
 
-            Draw(ChangeType.Redraw); // force a redraw
+            Update();
 
 
             // You can update the MainWindow with the measurement result, if needed
