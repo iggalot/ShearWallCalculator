@@ -1,21 +1,21 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using ShearWallVisualizer.Controls;
+using System;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 
 namespace ShearWallVisualizer.Dialogs
 {
+
     public partial class LoadInputDialog : Window
     {
+        private enum LoadInputModes
+        {
+            MODE_MANUAL = 0,
+            MODE_ASCEWIND = 1
+        }
+
+        private LoadInputModes inputMode;
+
         public double MagnitudeX { get; private set; }
         public double LocationX { get; private set; }
         public double MagnitudeY { get; private set; }
@@ -30,6 +30,45 @@ namespace ShearWallVisualizer.Dialogs
             LocationXBox.Text = initialLocX.ToString();
             MagnitudeYBox.Text = initialMagY.ToString();
             LocationYBox.Text = initialLocY.ToString();
+
+            ctrlWindLoadInputControl.WindInputComplete += WindCalculated; // the listener event for the ASCE wind load calcs
+        }
+
+        private void WindCalculated(object sender, WindLoadInputControl.OnWindInputCompleteEventArgs e)
+        {
+            MagnitudeX = 100;
+            MagnitudeY = 100;
+            LocationX = 50;
+            LocationY = 50;
+
+            DialogResult = true; // signal that the input is complete
+            Close();
+        }
+
+        private void Update()
+        {
+            switch (inputMode)
+            {
+                case LoadInputModes.MODE_MANUAL:
+                    gridManual.Visibility = Visibility.Visible;
+                    gridASCEWind.Visibility = Visibility.Collapsed;
+                    stackPanelButtons.Visibility = Visibility.Visible;
+                    btnManual.BorderThickness = new Thickness(3);
+                    btnManual.Background = new SolidColorBrush(Colors.SeaGreen);
+                    btnASCEWind.BorderThickness = new Thickness(0);
+                    btnASCEWind.Background = new SolidColorBrush(Colors.Transparent);
+                    break;
+                case LoadInputModes.MODE_ASCEWIND:
+                    gridManual.Visibility = Visibility.Collapsed;
+                    gridASCEWind.Visibility = Visibility.Visible;
+                    stackPanelButtons.Visibility = Visibility.Visible;
+
+                    btnManual.BorderThickness = new Thickness(0);
+                    btnManual.Background = new SolidColorBrush(Colors.Transparent);
+                    btnASCEWind.BorderThickness = new Thickness(3);
+                    btnASCEWind.Background = new SolidColorBrush(Colors.SeaGreen);
+                    break;
+            }
         }
 
         private void OkButton_Click(object sender, RoutedEventArgs e)
@@ -60,7 +99,7 @@ namespace ShearWallVisualizer.Dialogs
             MagnitudeY = magY;
             LocationY = locY;
 
-            DialogResult = true;
+            DialogResult = true; // signal that the input is complete
             Close();
         }
 
@@ -68,6 +107,18 @@ namespace ShearWallVisualizer.Dialogs
         {
             DialogResult = false;
             Close();
+        }
+
+        private void btnASCEWind_Click(object sender, RoutedEventArgs e)
+        {
+            inputMode = LoadInputModes.MODE_ASCEWIND;
+            Update();
+        }
+
+        private void btnManual_Click(object sender, RoutedEventArgs e)
+        {
+            inputMode = LoadInputModes.MODE_MANUAL;
+            Update();
         }
     }
 }

@@ -205,8 +205,8 @@ namespace ShearWallCalculator
                 X_bar_walls.Add(wall.Key, (float)(wall.Value.Center.X - CtrRigidity.X));
                 Y_bar_walls.Add(wall.Key, (float)(wall.Value.Center.Y - CtrRigidity.Y));
                 TotalRigidity_X += wall.Value.WallRigidity;
-                Console.WriteLine(wall.Value.DisplayInfo());
-                Console.WriteLine("x_bar: " + X_bar_walls[wall.Key] + " ft.  y_bar: " + Y_bar_walls[wall.Key] + " ft.");
+ //               Console.WriteLine(wall.Value.DisplayInfo());
+//                Console.WriteLine("x_bar: " + X_bar_walls[wall.Key] + " ft.  y_bar: " + Y_bar_walls[wall.Key] + " ft.");
 
             }
 
@@ -217,8 +217,8 @@ namespace ShearWallCalculator
                 Y_bar_walls.Add(wall.Key, (float)(wall.Value.Center.Y - CtrRigidity.Y));
                 TotalRigidity_Y += wall.Value.WallRigidity;
 
-                Console.WriteLine(wall.Value.DisplayInfo());
-                Console.WriteLine("x_bar: " + X_bar_walls[wall.Key] + " ft.  y_bar: " + Y_bar_walls[wall.Key] + " ft.");
+//                Console.WriteLine(wall.Value.DisplayInfo());
+//                Console.WriteLine("x_bar: " + X_bar_walls[wall.Key] + " ft.  y_bar: " + Y_bar_walls[wall.Key] + " ft.");
             }
             //Console.WriteLine("Total Rigidity -- X: " + TotalRigidity_X + " ft.  Y: " + TotalRigidity_Y + " ft.");
 

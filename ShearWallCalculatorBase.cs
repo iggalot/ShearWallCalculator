@@ -101,6 +101,8 @@ namespace ShearWallCalculator
         /// <returns></returns>
         private double ComputeBuildingHeight()
         {
+            if (_wall_system == null) return 0.0;
+
             double height = 0.0;
             foreach (KeyValuePair<int, WallData> wall in _wall_system._walls)
             {

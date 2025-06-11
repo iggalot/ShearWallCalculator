@@ -4,41 +4,54 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ShearWallVisualizer.Dialogs"
+        xmlns:ctrl="clr-namespace:ShearWallVisualizer.Controls"
         mc:Ignorable="d"
         Title="Enter Load Information" SizeToContent="WidthAndHeight">
-    <Grid Margin="10">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
-
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="2*"/>
-        </Grid.ColumnDefinitions>
-
-        <!-- Direction X -->
-        <TextBlock Text="Load Magnitude (kips) X:" Grid.Row="0" Grid.Column="0" Margin="5"/>
-        <TextBox x:Name="MagnitudeXBox" Grid.Row="0" Grid.Column="1" Margin="5"/>
-
-        <TextBlock Text="Location (ft) X:" Grid.Row="1" Grid.Column="0" Margin="5"/>
-        <TextBox x:Name="LocationXBox" Grid.Row="1" Grid.Column="1" Margin="5"/>
-
-        <!-- Direction Y -->
-        <TextBlock Text="Load Magnitude (kips) Y:" Grid.Row="2" Grid.Column="0" Margin="5"/>
-        <TextBox x:Name="MagnitudeYBox" Grid.Row="2" Grid.Column="1" Margin="5"/>
-
-        <TextBlock Text="Location (ft) Y:" Grid.Row="3" Grid.Column="0" Margin="5"/>
-        <TextBox x:Name="LocationYBox" Grid.Row="3" Grid.Column="1" Margin="5"/>
-
-        <!-- Buttons -->
-        <StackPanel Grid.Row="4" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="5">
-            <Button Content="OK" Width="75" Margin="5" Click="OkButton_Click"/>
-            <Button Content="Cancel" Width="75" Margin="5" Click="CancelButton_Click"/>
+    <StackPanel Orientation="Horizontal">
+        <StackPanel Orientation="Vertical">
+            <Button x:Name="btnManual" Content="Manual" Width="75" Height="25" Margin="5" Click="btnManual_Click"/>
+            <Button x:Name="btnASCEWind" Content="ASCE Wind" Width="75" Height="25" Margin="5" Click="btnASCEWind_Click"/>
         </StackPanel>
-    </Grid>
+        <StackPanel Orientation="Vertical">
+            <Grid Name="gridManual" Margin="10" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="2*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Direction X -->
+                <TextBlock Text="Load Magnitude (kips) X:" Grid.Row="0" Grid.Column="0" Margin="5"/>
+                <TextBox x:Name="MagnitudeXBox" Grid.Row="0" Grid.Column="1" Margin="5"/>
+
+                <TextBlock Text="Location (ft) X:" Grid.Row="1" Grid.Column="0" Margin="5"/>
+                <TextBox x:Name="LocationXBox" Grid.Row="1" Grid.Column="1" Margin="5"/>
+
+                <!-- Direction Y -->
+                <TextBlock Text="Load Magnitude (kips) Y:" Grid.Row="2" Grid.Column="0" Margin="5"/>
+                <TextBox x:Name="MagnitudeYBox" Grid.Row="2" Grid.Column="1" Margin="5"/>
+
+                <TextBlock Text="Location (ft) Y:" Grid.Row="3" Grid.Column="0" Margin="5"/>
+                <TextBox x:Name="LocationYBox" Grid.Row="3" Grid.Column="1" Margin="5"/>
+
+
+            </Grid>
+            <Grid Name="gridASCEWind" Margin="10" Visibility="Collapsed">
+                <ctrl:WindLoadInputControl x:Name="ctrlWindLoadInputControl" Margin="5"  />
+            </Grid>
+            <!-- Buttons -->
+            <StackPanel Name="stackPanelButtons" Visibility="Collapsed" Grid.Row="4" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="5">
+                <Button Content="OK" Width="75" Margin="5" Click="OkButton_Click"/>
+                <Button Content="Cancel" Width="75" Margin="5" Click="CancelButton_Click"/>
+            </StackPanel>
+        </StackPanel>
+    </StackPanel>
 </Window>

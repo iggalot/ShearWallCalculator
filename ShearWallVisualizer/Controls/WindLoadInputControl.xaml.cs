@@ -21,7 +21,7 @@ namespace ShearWallVisualizer.Controls
             }
         }
 
-        protected virtual void OnWindInputComplete(WindLoadParameters parameters)
+        public virtual void OnWindInputComplete(WindLoadParameters parameters)
         {
             WindInputComplete?.Invoke(this, new OnWindInputCompleteEventArgs(parameters));
         }

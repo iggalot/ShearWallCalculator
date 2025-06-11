@@ -70,8 +70,6 @@ namespace calculator
         /// </summary>
         public override void PerformCalculations()
         {
-            base.Update();
-
             // check if we have data for a wall system and a diaphragm system
             if (_diaphragm_system == null || _wall_system == null)
             {
@@ -79,9 +77,7 @@ namespace calculator
                 return;
             }
 
-            // Update calculations if necessary for the diaphragm and the wall system            
-            _diaphragm_system.Update();
-            _wall_system.Update();
+            base.Update();
 
             Console.WriteLine("Center of Mass -- xr: " + _diaphragm_system.CtrMass.X + " ft.  yr: " + _diaphragm_system.CtrMass.Y + " ft.");
             Console.WriteLine("Center of Rigidity -- xr: " + _wall_system.CtrRigidity.X + " ft.  yr: " + _wall_system.CtrRigidity.Y + " ft.");
@@ -104,10 +100,6 @@ namespace calculator
                 // compute moment due to eccentric loading between center of mass and center of rigidity
                 Mt_comb = (V_x * ecc_y) - (V_y * ecc_x);
                 Console.WriteLine("M_comb: " + Mt_comb + " kips-m");
-
-                // Perform component calculations to compute shear contributions
-                PerformCalculations();
-
 
                 // display results
                 Console.WriteLine(DisplayResults());

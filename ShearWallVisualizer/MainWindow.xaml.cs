@@ -15,7 +15,6 @@ using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -27,7 +26,7 @@ namespace ShearWallVisualizer
 {
     public partial class MainWindow : Window
     {
-        public ShearWallCalculatorBase Calculator;
+        public ShearWallCalculatorBase Calculator = new ShearWallCalculator_RigidDiaphragm(null, null, 0, 0);
 
         private DiaphragmSystem diaphragmSystem = new DiaphragmSystem();  // stores the known diaphragms for the calculator
         private WallSystem wallSystem = new WallSystem();  // store the know walls for the calculator
@@ -120,15 +119,9 @@ namespace ShearWallVisualizer
 
         public void Update()
         {
-            if (Calculator == null)
+            if (Calculator != null)
             {
-                Calculator = new ShearWallCalculator_RigidDiaphragm(wallSystem, diaphragmSystem, currentMagX, currentMagY);
-                //Calculator = new ShearWallCalculator_FlexibleDiaphragm(wallSystem, diaphragmSystem, currentMagX, currentMagY);
-                
-                OnUpdated?.Invoke(this, EventArgs.Empty); // signal that the window has been updated -- so that subcontrols can refresh
-            }
-            else
-            {
+                Calculator.PerformCalculations();
                 // update the calculator
                 if (Calculator.IsValidForCalculation is true)
                 {
@@ -140,6 +133,7 @@ namespace ShearWallVisualizer
                 tbCalculatorType.Text = Calculator.GetType().Name;
 
                 // notify controls that we have updated
+                OnUpdated?.Invoke(this, EventArgs.Empty); // signal that the window has been updated -- so that subcontrols can refresh
             }
 
             // update the load info display
@@ -339,6 +333,16 @@ namespace ShearWallVisualizer
                 throw new NotImplementedException("Error: FinalizeShape() received an invalid DrawMode variable.");
             }
 
+            // Recreate the calculator with the new items added
+            if(Calculator is ShearWallCalculator_RigidDiaphragm)
+            {
+                Calculator = new ShearWallCalculator_RigidDiaphragm(wallSystem, diaphragmSystem, currentMagX, currentMagX);
+            } else
+            {
+                Calculator = new ShearWallCalculator_FlexibleDiaphragm(wallSystem, diaphragmSystem, currentMagX, currentMagX);
+            }
+            Calculator.PerformCalculations();  // perform the calculations with the new Calculator
+
             // Clear the preview shape from the screen.
             previewShape = null;
             startPoint_world = null;
@@ -355,7 +359,6 @@ namespace ShearWallVisualizer
                 Console.WriteLine(item.ToString());
             }
         }
-
 
         #region UI Control Related Events
         /// <summary>
@@ -1119,8 +1122,6 @@ namespace ShearWallVisualizer
             m_layers.currentReferenceImageLayer.TargetRect = imageScreenRect;
             m_layers.currentReferenceImageLayer.SetPosition(p4_screen.X, p4_screen.Y);
         }
-
-
         private void DrawBracedWallLines(DrawingContext ctx)
         {
             // do we have a wall system or BWL manager created yet?
@@ -1233,84 +1234,17 @@ namespace ShearWallVisualizer
         {
             if (Calculator is null) return;
 
-            // Draw the center of mass and center of rigidity
-            var com = Calculator._diaphragm_system.CtrMass;
-            var cor = Calculator._wall_system.CtrRigidity;
-
-            // display the com as a text
-            FormattedText idLabel = new FormattedText(
-                $"COM ({com.X.ToString("F2")}, {com.Y.ToString("F2")})",
-                CultureInfo.GetCultureInfo("en-us"),
-                FlowDirection.LeftToRight,
-                new Typeface("Consolas"),
-                14,
-                Brushes.Black,
-                VisualTreeHelper.GetDpi(this).PixelsPerDip);
-
-            ctx.DrawText(idLabel, new Point(5, 5));
-
-            // display the com as a text
-            idLabel = new FormattedText(
-                $"COR ({cor.X.ToString("F2")}, {cor.Y.ToString("F2")})",
-                CultureInfo.GetCultureInfo("en-us"),
-                FlowDirection.LeftToRight,
-                new Typeface("Consolas"),
-                14,
-                Brushes.Black,
-                VisualTreeHelper.GetDpi(this).PixelsPerDip);
-
-            ctx.DrawText(idLabel, new Point(5, 19));
-
             // Draw a marker for the center of mass
-            if (Calculator != null && Calculator._diaphragm_system != null)
+            if (Calculator != null)
             {
-                double x_screen = WorldToScreen(com, dockpanel).X;
-                double y_screen = WorldToScreen(com, dockpanel).Y;
-
-                // draw a vertical line since the Y is valid
-                if ((double.IsNaN(com.X) is false) && (double.IsNaN(com.Y) is true))
+                if(Calculator._diaphragm_system != null)
                 {
-                    Pen pen = new Pen(Brushes.Red, 2);
-                    pen.DashStyle = new DashStyle(new double[] { 3, 3 }, 0);
+                    // Draw the center of mass and center of rigidity
+                    var com = Calculator._diaphragm_system.CtrMass;
 
-                    x_screen = 10; // draw it justbelow the top
-                    ctx.DrawLine(pen, new Point(x_screen, 0), new Point(x_screen, dockpanel.ActualHeight));
-                }
-
-                // draw a vertical line since if the X is valid
-                else if ((double.IsNaN(com.Y) is false) && (double.IsNaN(com.X) is true))
-                {
-                    Pen pen = new Pen(Brushes.Red, 2);
-                    pen.DashStyle = new DashStyle(new double[] { 3, 3 }, 0);
-
-                    y_screen = dockpanel.ActualHeight - 10;
-
-                    ctx.DrawLine(pen, new Point(0, y_screen), new Point(dockpanel.ActualHeight, y_screen));
-                }
-
-                // draw two lines since neither value is valid
-                else if ((double.IsNaN(com.X) is true) && (double.IsNaN(com.Y) is true))
-                {
-                    Pen pen = new Pen(Brushes.Red, 2);
-                    pen.DashStyle = new DashStyle(new double[] { 3, 3 }, 0);
-
-                    y_screen = dockpanel.ActualHeight - 10;
-                    x_screen = 10;
-
-                    ctx.DrawLine(pen, new Point(0, y_screen), new Point(dockpanel.ActualWidth, y_screen));
-                    ctx.DrawLine(pen, new Point(x_screen, 0), new Point(x_screen, dockpanel.ActualHeight));
-                }
-
-                // Draw a marker
-                Point pt = new Point(x_screen, y_screen);
-
-                if (PointIsWithinBounds(pt, dockpanel))
-                {
-                    ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 2), pt, 8, 8);
-                    ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 2), pt, 5, 5);
-
-                    idLabel = new FormattedText(
-                        $"COM",
+                    // display the com as a text
+                    FormattedText idLabel = new FormattedText(
+                        $"COM ({com.X.ToString("F2")}, {com.Y.ToString("F2")})",
                         CultureInfo.GetCultureInfo("en-us"),
                         FlowDirection.LeftToRight,
                         new Typeface("Consolas"),
@@ -1318,13 +1252,86 @@ namespace ShearWallVisualizer
                         Brushes.Black,
                         VisualTreeHelper.GetDpi(this).PixelsPerDip);
 
-                    ctx.DrawText(idLabel, new Point(x_screen + 5, y_screen - 20));
-                }
-            }
+                    ctx.DrawText(idLabel, new Point(5, 5));
 
+                    double x_screen = WorldToScreen(com, dockpanel).X;
+                    double y_screen = WorldToScreen(com, dockpanel).Y;
+
+                    // draw a vertical line since the Y is valid
+                    if ((double.IsNaN(com.X) is false) && (double.IsNaN(com.Y) is true))
+                    {
+                        Pen pen = new Pen(Brushes.Red, 2);
+                        pen.DashStyle = new DashStyle(new double[] { 3, 3 }, 0);
+
+                        x_screen = 10; // draw it justbelow the top
+                        ctx.DrawLine(pen, new Point(x_screen, 0), new Point(x_screen, dockpanel.ActualHeight));
+                    }
+
+                    // draw a vertical line since if the X is valid
+                    else if ((double.IsNaN(com.Y) is false) && (double.IsNaN(com.X) is true))
+                    {
+                        Pen pen = new Pen(Brushes.Red, 2);
+                        pen.DashStyle = new DashStyle(new double[] { 3, 3 }, 0);
+
+                        y_screen = dockpanel.ActualHeight - 10;
+
+                        ctx.DrawLine(pen, new Point(0, y_screen), new Point(dockpanel.ActualHeight, y_screen));
+                    }
+
+                    // draw two lines since neither value is valid
+                    else if ((double.IsNaN(com.X) is true) && (double.IsNaN(com.Y) is true))
+                    {
+                        Pen pen = new Pen(Brushes.Red, 2);
+                        pen.DashStyle = new DashStyle(new double[] { 3, 3 }, 0);
+
+                        y_screen = dockpanel.ActualHeight - 10;
+                        x_screen = 10;
+
+                        ctx.DrawLine(pen, new Point(0, y_screen), new Point(dockpanel.ActualWidth, y_screen));
+                        ctx.DrawLine(pen, new Point(x_screen, 0), new Point(x_screen, dockpanel.ActualHeight));
+                    }
+
+                    // Draw a marker
+                    Point pt = new Point(x_screen, y_screen);
+
+                    if (PointIsWithinBounds(pt, dockpanel))
+                    {
+                        ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 2), pt, 8, 8);
+                        ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 2), pt, 5, 5);
+
+                        idLabel = new FormattedText(
+                            $"COM",
+                            CultureInfo.GetCultureInfo("en-us"),
+                            FlowDirection.LeftToRight,
+                            new Typeface("Consolas"),
+                            14,
+                            Brushes.Black,
+                            VisualTreeHelper.GetDpi(this).PixelsPerDip);
+
+                        ctx.DrawText(idLabel, new Point(x_screen + 5, y_screen - 20));
+                    }
+                }
+
+
+
+
+            }
 
             if (Calculator != null && Calculator._wall_system != null)
             {
+                // display the cor as a text
+                var cor = Calculator._wall_system.CtrRigidity;
+
+                FormattedText idLabel = new FormattedText(
+                    $"COR ({cor.X.ToString("F2")}, {cor.Y.ToString("F2")})",
+                    CultureInfo.GetCultureInfo("en-us"),
+                    FlowDirection.LeftToRight,
+                    new Typeface("Consolas"),
+                    14,
+                    Brushes.Black,
+                    VisualTreeHelper.GetDpi(this).PixelsPerDip);
+
+                ctx.DrawText(idLabel, new Point(5, 19));
                 double x_screen = WorldToScreen(cor, dockpanel).X;
                 double y_screen = WorldToScreen(cor, dockpanel).Y;
 
@@ -1542,26 +1549,34 @@ namespace ShearWallVisualizer
         #region UI Events
         private void btnTestDesign_Click(object sender, RoutedEventArgs e)
         {
-            Calculator = new ShearWallCalculator_RigidDiaphragm(wallSystem, diaphragmSystem, 15, 0);
-
-            // test wall key
-            int wall_id = 0;
-
-            if (Calculator._wall_system._walls.ContainsKey(wall_id) is true)
+            if (Calculator == null || Calculator._wall_system == null || Calculator._diaphragm_system == null)
             {
-                WallData test_wall = Calculator._wall_system._walls[wall_id];
-                ShearWallSelector selector = new ShearWallSelector(Calculator.TotalWallShear[wall_id], test_wall, simpsonCatalog, ConnectorTypes.CONNECTOR_STRAP_TIES, WoodTypes.WOODTYPE_DF_SP);
-                Console.WriteLine("--------------------------");
-                Console.WriteLine("Shear: " + Calculator.TotalWallShear[wall_id]);
-                foreach (var key in selector.selectedConnectors)
-                {
-
-                    Console.WriteLine(key.Model);
-                }
-                Console.WriteLine("--------------------------");
+                MessageBox.Show("No valid calculator found in btnTEstDesign_Click.");
+                return;
             }
+            else
+            {
+                Calculator = new ShearWallCalculator_RigidDiaphragm(wallSystem, diaphragmSystem, 15, 0);
 
-            Update();
+                // test wall key
+                int wall_id = 0;
+
+                if (Calculator._wall_system._walls.ContainsKey(wall_id) is true)
+                {
+                    WallData test_wall = Calculator._wall_system._walls[wall_id];
+                    ShearWallSelector selector = new ShearWallSelector(Calculator.TotalWallShear[wall_id], test_wall, simpsonCatalog, ConnectorTypes.CONNECTOR_STRAP_TIES, WoodTypes.WOODTYPE_DF_SP);
+                    Console.WriteLine("--------------------------");
+                    Console.WriteLine("Shear: " + Calculator.TotalWallShear[wall_id]);
+                    foreach (var key in selector.selectedConnectors)
+                    {
+
+                        Console.WriteLine(key.Model);
+                    }
+                    Console.WriteLine("--------------------------");
+                }
+
+                Update();
+            }
         }
 
         private void btnHideShapes_Click(object sender, RoutedEventArgs e)
@@ -1754,8 +1769,12 @@ namespace ShearWallVisualizer
                 {
                     var flex_calc = JsonConvert.DeserializeObject<ShearWallCalculator_FlexibleDiaphragm>(json, _settings);
                     Calculator = new ShearWallCalculator_FlexibleDiaphragm(flex_calc);
+                } else
+                {
+                    throw new Exception("Invalid calculator type in MenuItem_Load_Click()");
                 }
 
+                Calculator.PerformCalculations();  // update the calculator
                 Update();
                 MessageBox.Show("Drawing loaded!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
             }

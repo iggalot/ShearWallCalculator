@@ -54,6 +54,7 @@
                     <TextBlock x:Name="LoadInfoTextBlock" VerticalAlignment="Center" FontSize="14"/>
 
                 </StackPanel>
+                <Button x:Name="btnLoadEntry" HorizontalAlignment="Left" Content="LOADS" Width="50" Height="25" Click="btnOpenLoadDialog_Click"/>
             </StackPanel>
 
             <!-- Main Drawing + Right-side Tabs -->
