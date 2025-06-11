@@ -10,6 +10,10 @@ namespace ShearWallCalculator
         private const double DEFAULT_BUILDING_HEIGHT = 10.0;
         public double BuildingHeight { get; set; } = DEFAULT_BUILDING_HEIGHT; // TODO:  need to make this sync with the wind load calculations which can potentially override the value
 
+        // data for the image overlay
+        public string selectedImageFilePath = null;
+        public double pixelScaleX = 1.0;  // the scale factor for pixels to real-world coords
+        public double pixelScaleY = 1.0;  // the scale factor for pixels to real-world coords
 
         public string CalculatorType { get; }
         public WallSystem _wall_system { get; set;  } = new WallSystem();

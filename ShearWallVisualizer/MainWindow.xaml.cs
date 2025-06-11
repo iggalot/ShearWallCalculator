@@ -43,10 +43,10 @@ namespace ShearWallVisualizer
         private double currentMagY = 0.0;
         private double currentLocY = 0.0;
 
-        // data for the image overlay
-        string selectedImageFilePath = null;
-        double pixelScaleX = 1.0;  // the scale factor for pixels to real-world coords
-        double pixelScaleY = 1.0;  // the scale factor for pixels to real-world coords
+        //// data for the image overlay
+        //string selectedImageFilePath = null;
+        //double pixelScaleX = 1.0;  // the scale factor for pixels to real-world coords
+        //double pixelScaleY = 1.0;  // the scale factor for pixels to real-world coords
 
         // grid stuff
         bool gridNeedsUpdate = true;
@@ -132,6 +132,13 @@ namespace ShearWallVisualizer
                 // list the type of calculator
                 tbCalculatorType.Text = Calculator.GetType().Name;
 
+                string img_str = Calculator.selectedImageFilePath;
+                if(Calculator.selectedImageFilePath == null || Calculator.selectedImageFilePath == String.Empty)
+                {
+                    img_str = "<No file selected>";
+                }
+                tbImageFileName.Text = img_str;
+
                 // notify controls that we have updated
                 OnUpdated?.Invoke(this, EventArgs.Empty); // signal that the window has been updated -- so that subcontrols can refresh
             }
@@ -150,6 +157,8 @@ namespace ShearWallVisualizer
             CreateDiaphragmDataControls();
 
             // redraw the scene
+            
+//            CreateLayers();  // recreate the layer system  //TODO tdoes this need to be here?
             Draw(ChangeType.Redraw);
         }
 
@@ -1088,39 +1097,43 @@ namespace ShearWallVisualizer
                 return;
             }
 
-            if (selectedImageFilePath is null)
+            if (Calculator != null)
             {
-                return;
+
+                if (Calculator.selectedImageFilePath is null)
+                {
+                    return;
+                }
+
+                m_layers.AddImageLayer(Calculator.selectedImageFilePath, Calculator.pixelScaleX, Calculator.pixelScaleY); // scale the image so that pixel scale aligns with world scale.
+                m_layers.currentReferenceImageLayer.SetOpacity(0.30); // fade the image a bit
+
+                double width = m_layers.currentReferenceImageLayer.TargetRect.Width;
+                double height = m_layers.currentReferenceImageLayer.TargetRect.Height;
+
+
+                Rect imageWorldRect = new Rect(0, 0, width, height);
+
+                double y_offset = height;
+
+                Point p4_world = new Point(0, 0 + y_offset);
+                Point p3_world = new Point(width, 0 + y_offset);
+                Point p2_world = new Point(width, height + y_offset);
+                Point p1_world = new Point(0, height + y_offset);
+
+                Point p1_screen = WorldToScreen(p1_world, m_layers);
+                Point p2_screen = WorldToScreen(p2_world, m_layers);
+                Point p3_screen = WorldToScreen(p3_world, m_layers);
+                Point p4_screen = WorldToScreen(p4_world, m_layers);
+
+                double width_screen = p3_screen.X - p1_screen.X;
+                double height_screen = p3_screen.Y - p1_screen.Y;
+
+                Rect imageScreenRect = new Rect(p1_screen.X, p1_screen.Y, width_screen, height_screen);
+
+                m_layers.currentReferenceImageLayer.TargetRect = imageScreenRect;
+                m_layers.currentReferenceImageLayer.SetPosition(p4_screen.X, p4_screen.Y);
             }
-
-            m_layers.AddImageLayer(selectedImageFilePath, pixelScaleX, pixelScaleY); // scale the image so that pixel scale aligns with world scale.
-            m_layers.currentReferenceImageLayer.SetOpacity(0.30); // fade the image a bit
-
-            double width = m_layers.currentReferenceImageLayer.TargetRect.Width;
-            double height = m_layers.currentReferenceImageLayer.TargetRect.Height;
-
-
-            Rect imageWorldRect = new Rect(0, 0, width, height);
-
-            double y_offset = height;
-
-            Point p4_world = new Point(0, 0 + y_offset);
-            Point p3_world = new Point(width, 0 + y_offset);
-            Point p2_world = new Point(width, height + y_offset);
-            Point p1_world = new Point(0, height + y_offset);
-
-            Point p1_screen = WorldToScreen(p1_world, m_layers);
-            Point p2_screen = WorldToScreen(p2_world, m_layers);
-            Point p3_screen = WorldToScreen(p3_world, m_layers);
-            Point p4_screen = WorldToScreen(p4_world, m_layers);
-
-            double width_screen = p3_screen.X - p1_screen.X;
-            double height_screen = p3_screen.Y - p1_screen.Y;
-
-            Rect imageScreenRect = new Rect(p1_screen.X, p1_screen.Y, width_screen, height_screen);
-
-            m_layers.currentReferenceImageLayer.TargetRect = imageScreenRect;
-            m_layers.currentReferenceImageLayer.SetPosition(p4_screen.X, p4_screen.Y);
         }
         private void DrawBracedWallLines(DrawingContext ctx)
         {
@@ -1714,15 +1727,19 @@ namespace ShearWallVisualizer
 
         private void LoadImageFile(string filename, double pixel_scale_x=1.0, double pixel_scale_y=1.0)
         {
-            // Open document
-            selectedImageFilePath = filename;
-            pixelScaleX = pixel_scale_x;
-            pixelScaleY = pixel_scale_y;
+            if (Calculator != null)
+            {
 
-            // You ca now use selectedFilePath as needed
-            MessageBox.Show($"You selected: {selectedImageFilePath}");
+                // Open document
+                Calculator.selectedImageFilePath = filename;
+                Calculator.pixelScaleX = pixel_scale_x;
+                Calculator.pixelScaleY = pixel_scale_y;
 
-            AddToRecentFiles(selectedImageFilePath); // add to recent files list
+                // You ca now use selectedFilePath as needed
+                MessageBox.Show($"You selected: {Calculator.selectedImageFilePath}");
+
+                AddToRecentFiles(Calculator.selectedImageFilePath); // add to recent files list
+            }
         }
 
         private void MenuItem_Save_Click(object sender, RoutedEventArgs e)
@@ -1769,12 +1786,12 @@ namespace ShearWallVisualizer
                 {
                     var flex_calc = JsonConvert.DeserializeObject<ShearWallCalculator_FlexibleDiaphragm>(json, _settings);
                     Calculator = new ShearWallCalculator_FlexibleDiaphragm(flex_calc);
-                } else
+                }
+                else
                 {
                     throw new Exception("Invalid calculator type in MenuItem_Load_Click()");
                 }
 
-                Calculator.PerformCalculations();  // update the calculator
                 Update();
                 MessageBox.Show("Drawing loaded!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
             }
@@ -1865,7 +1882,10 @@ namespace ShearWallVisualizer
                     OpenFile(filePath);
                     AddToRecentFiles(filePath); // Move to top again
 
-                    selectedImageFilePath = filePath;
+                    if(Calculator != null)
+                    {
+                        Calculator.selectedImageFilePath = filePath;
+                    }
                 };
 
                 RecentFilesMenu.Items.Add(menu_item);
@@ -1914,28 +1934,32 @@ namespace ShearWallVisualizer
 
         private void OnMeasurementCompleted(object sender, ImageMeasurementEventArgs e)
         {
-            // set the image parameters so that the DrawRerenceImage function has the items it needs to draw the true image.
-            selectedImageFilePath = e.FilePath;
-            pixelScaleX = e.ScaleFactor;
-            pixelScaleY = e.ScaleFactor;
+            if (Calculator != null)
+            {
 
-            // Handle the measurement data here
-            MessageBox.Show($"Measurement completed!\n" +
-                            $"File: {e.FilePath}\n" +
-                            $"Pixel Distance: {e.PixelDistance:F2}\n" +
-                            $"Real-World Distance: {e.RealWorldDistance:F2}\n" +
-                            $"Scale Factor: {e.ScaleFactor:F6}");
+                // set the image parameters so that the DrawRerenceImage function has the items it needs to draw the true image.
+                Calculator.selectedImageFilePath = e.FilePath;
+                Calculator.pixelScaleX = e.ScaleFactor;
+                Calculator.pixelScaleY = e.ScaleFactor;
 
-            Update();
+                // Handle the measurement data here
+                MessageBox.Show($"Measurement completed!\n" +
+                                $"File: {e.FilePath}\n" +
+                                $"Pixel Distance: {e.PixelDistance:F2}\n" +
+                                $"Real-World Distance: {e.RealWorldDistance:F2}\n" +
+                                $"Scale Factor: {e.ScaleFactor:F6}");
+
+                Update();
 
 
-            // You can update the MainWindow with the measurement result, if needed
-            // For example, showing the scale factor or other data in the UI
+                // You can update the MainWindow with the measurement result, if needed
+                // For example, showing the scale factor or other data in the UI
 
-            // TODO:  We now have the data from the measurement scaler window, but we need to know automatically load
-            // to the window at the appropriate scale as we did before.
+                // TODO:  We now have the data from the measurement scaler window, but we need to know automatically load
+                // to the window at the appropriate scale as we did before.
 
-            // TODO:  Also, need to find a way to save this file and its scale factors to the recent files list.
+                // TODO:  Also, need to find a way to save this file and its scale factors to the recent files list.
+            }
         }
 
         #endregion

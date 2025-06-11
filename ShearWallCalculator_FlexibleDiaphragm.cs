@@ -36,6 +36,11 @@ namespace ShearWallCalculator
             _diaphragm_system = copy_calc._diaphragm_system;
             _wall_system = copy_calc._wall_system;
 
+            // Load image information
+            selectedImageFilePath = copy_calc.selectedImageFilePath;
+            pixelScaleX = copy_calc.pixelScaleX;
+            pixelScaleY = copy_calc.pixelScaleY;
+
             PerformCalculations();
         }
 
