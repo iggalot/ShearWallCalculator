@@ -125,40 +125,66 @@ namespace calculator
             foreach (var result in TotalWallShear)
             {
                 int id = result.Key;
-                str += "\n" + id + "   |   ";
 
-                if (_wall_system.EW_Walls.ContainsKey(id))
+                // rigidity values
+                if (_wall_system._walls.ContainsKey(id) is false)
                 {
-                    str += _wall_system.EW_Walls[id].WallRigidity.ToString("0.00");
+
+                    str += "\n" + id + "   |   ";
+
+                    if (_wall_system.EW_Walls.ContainsKey(id))
+                    {
+                        str += _wall_system.EW_Walls[id].WallRigidity.ToString("0.00");
+                    }
+                    else if (_wall_system.NS_Walls.ContainsKey(id))
+                    {
+                        str += _wall_system.NS_Walls[id].WallRigidity.ToString("0.00");
+                    }
+                    else
+                    {
+                        str += " R. ERROR ";
+                    }
+                    str += "     |   ";
                 }
-                else if (_wall_system.NS_Walls.ContainsKey(id))
+
+                // x-bar and y-bar values
+                if (_wall_system.X_bar_walls.ContainsKey(id) is false)
                 {
-                    str += _wall_system.NS_Walls[id].WallRigidity.ToString("0.00");
+                    str += _wall_system.X_bar_walls[id].ToString("0.00") + "    |   ";
                 }
                 else
                 {
-                    str += " ERROR ";
+                    str += " X_BAR ERROR" + "    |   ";
                 }
-                str += "     |   ";
 
+                if (_wall_system.Y_bar_walls.ContainsKey(id) is false)
+                {
+                    str += _wall_system.Y_bar_walls[id].ToString("0.00") + "   |   ";
+                }
+                else
+                {
+                    str += "Y_BAR ERROR" + "    |   ";
+                }
 
-                str +=  _wall_system.X_bar_walls[id].ToString("0.00") + "    |   " + _wall_system.Y_bar_walls[id].ToString("0.00") + "   |   ";
-
+                // direct shear in X-direction calcs
                 if (DirectShear_X.ContainsKey(id))
                 {
                     str += DirectShear_X[id].ToString("0.00");
-                } else
+                }
+                else
                 {
-                    str += "----";
+                    str += "VX_ERROR";
                 }
                 str += "     |   ";
+
+                // direct shear in Y-direction calcs
                 if (DirectShear_Y.ContainsKey(id))
                 {
                     str += DirectShear_Y[id].ToString("0.00");
                 }
                 else
                 {
-                    str += "----";
+                    str += "VY_ERROR";
                 }
                 str += "      |   ";
 
@@ -168,20 +194,24 @@ namespace calculator
                 }
                 else
                 {
-                    str += "----";
+                    str += "ECC. V_ERROR";
                 }
                 str += "    |   ";
 
+                // Total shear values
                 if (TotalWallShear.ContainsKey(id))
                 {
                     str += TotalWallShear[id].ToString("0.00");
                 }
                 else
                 {
-                    str += "----";
+                    str += "TOTAL V_ERR";
                 }
+                str += "\n";
+
             }
             return str;
+
         }
 
         /// <summary>

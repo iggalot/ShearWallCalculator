@@ -116,6 +116,12 @@ namespace ShearWallVisualizer
 
         public void Update()
         {
+            // clear the tabs
+            sp_DimPanel_Diaphragms.Children.Clear();
+            sp_DimPanel_Walls.Children.Clear();
+            sp_RigidCalcPanel.Children.Clear();
+            sp_FlexibleCalcPanel.Children.Clear();
+
             if (Calculator != null)
             {
                 Calculator.PerformCalculations();
@@ -136,6 +142,10 @@ namespace ShearWallVisualizer
                 }
                 tbImageFileName.Text = img_str;
 
+                // recreate the data controls
+                CreateWallDataControls();
+                CreateDiaphragmDataControls();
+
                 // notify controls that we have updated
                 OnUpdated?.Invoke(this, EventArgs.Empty); // signal that the window has been updated -- so that subcontrols can refresh
             }
@@ -143,19 +153,7 @@ namespace ShearWallVisualizer
             // update the load info display
             LoadInfoTextBlock.Text = $"X: {currentMagX} @ {currentLocX} | Y: {currentMagY} @ {currentLocY}";
 
-            // clear the tabs
-            sp_DimPanel_Diaphragms.Children.Clear();
-            sp_DimPanel_Walls.Children.Clear();
-            sp_RigidCalcPanel.Children.Clear();
-            sp_FlexibleCalcPanel.Children.Clear();
-
-            // recreate the data controls
-            CreateWallDataControls();
-            CreateDiaphragmDataControls();
-
             // redraw the scene
-            
-//            CreateLayers();  // recreate the layer system  //TODO tdoes this need to be here?
             Draw(ChangeType.Redraw);
         }
 
@@ -453,8 +451,6 @@ namespace ShearWallVisualizer
                 if (wall.Key == args.Id)
                 {
                     Calculator._wall_system._walls.Remove(wall.Key);
-                    //MessageBox.Show("Wall #" + args.Id + " deleted.");
-
                     Update();
                     return;
                 }
@@ -465,20 +461,19 @@ namespace ShearWallVisualizer
         {
             if (Calculator == null || Calculator._diaphragm_system == null)
             {
+                return;
+            }
 
-                DiaphragmDataControl control = sender as DiaphragmDataControl;
-                DeleteDiaphragmEventArgs args = e as DeleteDiaphragmEventArgs;
+            DiaphragmDataControl control = sender as DiaphragmDataControl;
+            DeleteDiaphragmEventArgs args = e as DeleteDiaphragmEventArgs;
 
-                foreach (var dia in Calculator._diaphragm_system._diaphragms)
+            foreach (var dia in Calculator._diaphragm_system._diaphragms)
+            {
+                if (dia.Key == args.Id)
                 {
-                    if (dia.Key == args.Id)
-                    {
-                        Calculator._diaphragm_system._diaphragms.Remove(dia.Key);
-                        //MessageBox.Show("Diaphragm #" + args.Id + " deleted.");
-
-                        Update();
-                        return;
-                    }
+                    Calculator._diaphragm_system._diaphragms.Remove(dia.Key);
+                    Update();
+                    return;
                 }
             }
         }
