@@ -44,14 +44,17 @@
 
 
             </Grid>
-            <Grid Name="gridASCEWind" Margin="10" Visibility="Collapsed">
-                <ctrl:WindLoadInputControl x:Name="ctrlWindLoadInputControl" Margin="5"  />
-            </Grid>
+            <StackPanel Orientation="Horizontal">
+                <StackPanel Orientation="Horizontal" Name="gridASCEWind" Margin="10" Visibility="Collapsed">
+                    <ctrl:WindLoadInputControl x:Name="ctrlWindLoadInputControl" Margin="5"  />
+                </StackPanel>
+            </StackPanel>
             <!-- Buttons -->
             <StackPanel Name="stackPanelButtons" Visibility="Collapsed" Grid.Row="4" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="5">
                 <Button Content="OK" Width="75" Margin="5" Click="OkButton_Click"/>
                 <Button Content="Cancel" Width="75" Margin="5" Click="CancelButton_Click"/>
             </StackPanel>
         </StackPanel>
+
     </StackPanel>
 </Window>

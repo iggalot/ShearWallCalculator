@@ -5,6 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:ShearWallVisualizer.Controls"
              mc:Ignorable="d" 
+             Width="Auto" Height="Auto"
              >
     <Grid Margin="10" Background="LightBlue">
         <!-- Define Grid Layout -->

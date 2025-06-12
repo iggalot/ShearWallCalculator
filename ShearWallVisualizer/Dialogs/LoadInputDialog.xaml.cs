@@ -1,5 +1,4 @@
 ﻿using ShearWallVisualizer.Controls;
-using System;
 using System.Windows;
 using System.Windows.Media;
 
@@ -41,8 +40,12 @@ namespace ShearWallVisualizer.Dialogs
             LocationX = 50;
             LocationY = 50;
 
-            DialogResult = true; // signal that the input is complete
-            Close();
+            gridASCEWind.Visibility = Visibility.Visible;
+            WindLoadResultsControl_MWFRS wlrc_MWFRS = new WindLoadResultsControl_MWFRS(e._parameters);
+            gridASCEWind.Children.Add(wlrc_MWFRS);
+
+            //DialogResult = true; // signal that the input is complete
+            //Close();
         }
 
         private void Update()
@@ -53,6 +56,7 @@ namespace ShearWallVisualizer.Dialogs
                     gridManual.Visibility = Visibility.Visible;
                     gridASCEWind.Visibility = Visibility.Collapsed;
                     stackPanelButtons.Visibility = Visibility.Visible;
+
                     btnManual.BorderThickness = new Thickness(3);
                     btnManual.Background = new SolidColorBrush(Colors.SeaGreen);
                     btnASCEWind.BorderThickness = new Thickness(0);
