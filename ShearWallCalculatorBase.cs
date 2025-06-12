@@ -8,7 +8,6 @@ namespace ShearWallCalculator
     public abstract class ShearWallCalculatorBase
     {
         private const double DEFAULT_BUILDING_HEIGHT = 10.0;
-        public double BuildingHeight { get; set; } = DEFAULT_BUILDING_HEIGHT; // TODO:  need to make this sync with the wind load calculations which can potentially override the value
 
         // data for the image overlay
         public string selectedImageFilePath = null;
@@ -33,6 +32,9 @@ namespace ShearWallCalculator
         // The primary function calculating the wall shear forces
         public abstract void PerformCalculations();
 
+        [JsonIgnore]
+        public double BuildingHeight { get; set; } = DEFAULT_BUILDING_HEIGHT; // TODO:  need to make this sync with the wind load calculations which can potentially override the value
+
         /// <summary>
         /// A flag that determines if the calculations can be peformed.  Looks
         /// mainlay at CtrMass and CtrRigidity to make sure both are valid numbers
@@ -51,6 +53,7 @@ namespace ShearWallCalculator
         /// <summary>
         /// Contains a Rect that determines the maximum extents of the wall system and diaphragm system of the model
         /// </summary>
+        [JsonIgnore]
         public Rect BoundingBoxWorld
         {
             get

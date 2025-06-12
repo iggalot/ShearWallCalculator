@@ -870,98 +870,104 @@ namespace ShearWallVisualizer
             }
             double center_pt_dia = 5;
 
-            // Redraw all the shapes in world coordinates
-            foreach (var wall in wallSystem._walls)
+            if ((Calculator != null) && (Calculator._wall_system != null))
             {
-                FormattedText idLabel = null;
-
-                Point p1_world = wall.Value.Start;
-                Point p2_world = wall.Value.End;
-                Point p1_screen = GetConstrainedScreenPoint(WorldToScreen(p1_world, m_layers), m_layers);
-                Point p2_screen = GetConstrainedScreenPoint(WorldToScreen(p2_world, m_layers), m_layers);
-
-                // If the points are the same, then the object was out of bounds and doesn't need to be drawn.
-                if (p1_screen == p2_screen)
-                    continue;
-
-                // Draw the line object
-                SolidColorBrush lineStrokeBrush = new SolidColorBrush(Colors.Blue);
-                Pen pen = new Pen(lineStrokeBrush, 4);
-                ctx.DrawLine(pen, p1_screen, p2_screen);
-
-                Point center_world = new Point((wall.Value.Start.X + wall.Value.End.X) / 2, (wall.Value.Start.Y + wall.Value.End.Y) / 2);
-                Point center_screen = WorldToScreen(center_world, m_layers);
-
-                // draw the center point and label
-                if (PointIsWithinBounds(center_screen, dockpanel) is false)
+                // Redraw all the shapes in world coordinates
+                foreach (var wall in Calculator._wall_system._walls)
                 {
-                    continue;
-                }
-                else
-                {
-                    Point centerPoint = new Point(center_screen.X,
-                            center_screen.Y);
+                    FormattedText idLabel = null;
 
-                    ctx.DrawEllipse(lineStrokeBrush, pen, centerPoint, center_pt_dia, center_pt_dia); // center point marker
+                    Point p1_world = wall.Value.Start;
+                    Point p2_world = wall.Value.End;
+                    Point p1_screen = GetConstrainedScreenPoint(WorldToScreen(p1_world, m_layers), m_layers);
+                    Point p2_screen = GetConstrainedScreenPoint(WorldToScreen(p2_world, m_layers), m_layers);
 
-                    idLabel = new FormattedText(
-                        wall.Key.ToString(),
-                        CultureInfo.GetCultureInfo("en-us"), 
-                        FlowDirection.LeftToRight, 
-                        new Typeface("Consolas"), 
-                        14, 
-                        Brushes.Black,
-                        VisualTreeHelper.GetDpi(this).PixelsPerDip);
-                    ctx.DrawText(idLabel, center_screen);  // id label
+                    // If the points are the same, then the object was out of bounds and doesn't need to be drawn.
+                    if (p1_screen == p2_screen)
+                        continue;
+
+                    // Draw the line object
+                    SolidColorBrush lineStrokeBrush = new SolidColorBrush(Colors.Blue);
+                    Pen pen = new Pen(lineStrokeBrush, 4);
+                    ctx.DrawLine(pen, p1_screen, p2_screen);
+
+                    Point center_world = new Point((wall.Value.Start.X + wall.Value.End.X) / 2, (wall.Value.Start.Y + wall.Value.End.Y) / 2);
+                    Point center_screen = WorldToScreen(center_world, m_layers);
+
+                    // draw the center point and label
+                    if (PointIsWithinBounds(center_screen, dockpanel) is false)
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        Point centerPoint = new Point(center_screen.X,
+                                center_screen.Y);
+
+                        ctx.DrawEllipse(lineStrokeBrush, pen, centerPoint, center_pt_dia, center_pt_dia); // center point marker
+
+                        idLabel = new FormattedText(
+                            wall.Key.ToString(),
+                            CultureInfo.GetCultureInfo("en-us"),
+                            FlowDirection.LeftToRight,
+                            new Typeface("Consolas"),
+                            14,
+                            Brushes.Black,
+                            VisualTreeHelper.GetDpi(this).PixelsPerDip);
+                        ctx.DrawText(idLabel, center_screen);  // id label
+                    }
                 }
             }
 
             // Redraw all the shapes in world coordinates
-            foreach (var rect in diaphragmSystem._diaphragms)
+            if ((Calculator != null) && (Calculator._diaphragm_system != null))
             {
-                FormattedText idLabel = null;
-
-                Point p1_world = rect.Value.P1;
-                Point p3_world = rect.Value.P3;
-                Point p1_screen = GetConstrainedScreenPoint(WorldToScreen(p1_world, m_layers), m_layers);
-                Point p3_screen = GetConstrainedScreenPoint(WorldToScreen(p3_world, m_layers), m_layers);
-
-                // If the points are the same, then the object was out of bounds and doesn't need to be drawn.
-                if (p1_screen == p3_screen)
-                    continue;
-
-                SolidColorBrush rectFillBrush = new SolidColorBrush(Colors.Red);
-                rectFillBrush.Opacity = 0.5;
-                Pen pen = new Pen(rectFillBrush, 1);
-
-                Point insertPoint_screen = new Point(p1_screen.X, p3_screen.Y);  // TODO: Need a better way to get P4 point of rectangle
-
-                double width = Math.Abs(p3_screen.X - p1_screen.X);
-                double height = Math.Abs(p3_screen.Y - p1_screen.Y);
-                ctx.DrawRectangle(rectFillBrush, pen, new Rect(insertPoint_screen.X, insertPoint_screen.Y, width, height));
-
-                Point center_world = new Point((rect.Value.P1.X + rect.Value.P3.X) / 2, (rect.Value.P1.Y + rect.Value.P3.Y) / 2);
-                Point center_screen = WorldToScreen(center_world, m_layers);
-
-                // draw the center point and label
-                if (PointIsWithinBounds(center_screen, dockpanel) is false)
-                    continue;
-                else
+                foreach (var rect in Calculator._diaphragm_system._diaphragms)
                 {
-                    Point centerPoint = new Point(center_screen.X,
-                        center_screen.Y);
+                    FormattedText idLabel = null;
 
-                    ctx.DrawEllipse(rectFillBrush, pen, centerPoint, center_pt_dia, center_pt_dia); // center point marker
+                    Point p1_world = rect.Value.P1;
+                    Point p3_world = rect.Value.P3;
+                    Point p1_screen = GetConstrainedScreenPoint(WorldToScreen(p1_world, m_layers), m_layers);
+                    Point p3_screen = GetConstrainedScreenPoint(WorldToScreen(p3_world, m_layers), m_layers);
 
-                    idLabel = new FormattedText(
-                        rect.Key.ToString(),
-                        CultureInfo.GetCultureInfo("en-us"), 
-                        FlowDirection.LeftToRight, 
-                        new Typeface("Consolas"), 
-                        14, 
-                        Brushes.Black,
-                        VisualTreeHelper.GetDpi(this).PixelsPerDip);
-                    ctx.DrawText(idLabel, centerPoint);  // id label
+                    // If the points are the same, then the object was out of bounds and doesn't need to be drawn.
+                    if (p1_screen == p3_screen)
+                        continue;
+
+                    SolidColorBrush rectFillBrush = new SolidColorBrush(Colors.Red);
+                    rectFillBrush.Opacity = 0.5;
+                    Pen pen = new Pen(rectFillBrush, 1);
+
+                    Point insertPoint_screen = new Point(p1_screen.X, p3_screen.Y);  // TODO: Need a better way to get P4 point of rectangle
+
+                    double width = Math.Abs(p3_screen.X - p1_screen.X);
+                    double height = Math.Abs(p3_screen.Y - p1_screen.Y);
+                    ctx.DrawRectangle(rectFillBrush, pen, new Rect(insertPoint_screen.X, insertPoint_screen.Y, width, height));
+
+                    Point center_world = new Point((rect.Value.P1.X + rect.Value.P3.X) / 2, (rect.Value.P1.Y + rect.Value.P3.Y) / 2);
+                    Point center_screen = WorldToScreen(center_world, m_layers);
+
+                    // draw the center point and label
+                    if (PointIsWithinBounds(center_screen, dockpanel) is false)
+                        continue;
+                    else
+                    {
+                        Point centerPoint = new Point(center_screen.X,
+                            center_screen.Y);
+
+                        ctx.DrawEllipse(rectFillBrush, pen, centerPoint, center_pt_dia, center_pt_dia); // center point marker
+
+                        idLabel = new FormattedText(
+                            rect.Key.ToString(),
+                            CultureInfo.GetCultureInfo("en-us"),
+                            FlowDirection.LeftToRight,
+                            new Typeface("Consolas"),
+                            14,
+                            Brushes.Black,
+                            VisualTreeHelper.GetDpi(this).PixelsPerDip);
+                        ctx.DrawText(idLabel, centerPoint);  // id label
+                    }
                 }
             }
         }
@@ -1111,15 +1117,14 @@ namespace ShearWallVisualizer
                 double width = m_layers.currentReferenceImageLayer.TargetRect.Width;
                 double height = m_layers.currentReferenceImageLayer.TargetRect.Height;
 
-
                 Rect imageWorldRect = new Rect(0, 0, width, height);
 
                 double y_offset = height;
 
-                Point p4_world = new Point(0, 0 + y_offset);
-                Point p3_world = new Point(width, 0 + y_offset);
-                Point p2_world = new Point(width, height + y_offset);
-                Point p1_world = new Point(0, height + y_offset);
+                Point p4_world = new Point(imageWorldRect.TopLeft.X, imageWorldRect.TopLeft.Y + y_offset);
+                Point p3_world = new Point(imageWorldRect.TopRight.X, imageWorldRect.TopRight.Y + y_offset);
+                Point p2_world = new Point(imageWorldRect.BottomRight.X, imageWorldRect.BottomRight.Y + y_offset);
+                Point p1_world = new Point(imageWorldRect.BottomLeft.X, imageWorldRect.BottomLeft.Y + y_offset);
 
                 Point p1_screen = WorldToScreen(p1_world, m_layers);
                 Point p2_screen = WorldToScreen(p2_world, m_layers);
