@@ -28,9 +28,6 @@ namespace ShearWallVisualizer
     {
         public ShearWallCalculatorBase Calculator = new ShearWallCalculator_RigidDiaphragm(null, null, 0, 0);
 
-        private DiaphragmSystem diaphragmSystem = new DiaphragmSystem();  // stores the known diaphragms for the calculator
-        private WallSystem wallSystem = new WallSystem();  // store the know walls for the calculator
-
         public SimpsonCatalog simpsonCatalog { get; set; } = new SimpsonCatalog();  // contains the Simposon catalog connector and holddown data
 
         private JsonDrawingSerializer _serializer = new JsonDrawingSerializer();
@@ -135,7 +132,7 @@ namespace ShearWallVisualizer
                 string img_str = Calculator.selectedImageFilePath;
                 if(Calculator.selectedImageFilePath == null || Calculator.selectedImageFilePath == String.Empty)
                 {
-                    img_str = "<No file selected>";
+                    img_str = "Image File: <No file selected>";
                 }
                 tbImageFileName.Text = img_str;
 
@@ -186,13 +183,13 @@ namespace ShearWallVisualizer
 
         private Point GetSnappedPoint(Point worldPoint)
         {
-            foreach (var wall in wallSystem._walls)
+            foreach (var wall in Calculator._wall_system._walls)
             {
                 if (IsWithinSnapThreshold(worldPoint, wall.Value.Start)) return wall.Value.Start;
                 if (IsWithinSnapThreshold(worldPoint, wall.Value.End)) return wall.Value.End;
             }
 
-            foreach (var dia in diaphragmSystem._diaphragms)
+            foreach (var dia in Calculator._diaphragm_system._diaphragms)
             {
                 if (IsWithinSnapThreshold(worldPoint, dia.Value.P1)) return dia.Value.P1;
                 if (IsWithinSnapThreshold(worldPoint, dia.Value.P2)) return dia.Value.P2;
@@ -322,21 +319,21 @@ namespace ShearWallVisualizer
                 Point startPoint = startPoint_world.Value;
                 Point endPoint = worldPoint;
 
-                if (wallSystem == null)
+                if (Calculator._wall_system == null)
                 {
-                    wallSystem = new WallSystem();
+                    Calculator._wall_system = new WallSystem();
                 }
 
-                wallSystem.AddWall(new WallData(defaultWallHeight, startPoint.X, startPoint.Y, endPoint.X, endPoint.Y));
+                Calculator._wall_system.AddWall(new WallData(defaultWallHeight, startPoint.X, startPoint.Y, endPoint.X, endPoint.Y));
             }
             else if (currentMode == DrawMode.Rectangle)
             {
-                if (diaphragmSystem == null)
+                if (Calculator._diaphragm_system == null)
                 {
-                    diaphragmSystem = new DiaphragmSystem();
+                        Calculator._diaphragm_system = new DiaphragmSystem();
                 }
 
-                diaphragmSystem.AddDiaphragm(new DiaphragmData_Rectangular(startPoint_world.Value, endPoint_world.Value));
+                    Calculator._diaphragm_system.AddDiaphragm(new DiaphragmData_Rectangular(startPoint_world.Value, endPoint_world.Value));
             } else
             {
                 throw new NotImplementedException("Error: FinalizeShape() received an invalid DrawMode variable.");
@@ -345,10 +342,10 @@ namespace ShearWallVisualizer
             // Recreate the calculator with the new items added
             if(Calculator is ShearWallCalculator_RigidDiaphragm)
             {
-                Calculator = new ShearWallCalculator_RigidDiaphragm(wallSystem, diaphragmSystem, currentMagX, currentMagX);
+                Calculator = new ShearWallCalculator_RigidDiaphragm(Calculator._wall_system, Calculator._diaphragm_system, currentMagX, currentMagX);
             } else
             {
-                Calculator = new ShearWallCalculator_FlexibleDiaphragm(wallSystem, diaphragmSystem, currentMagX, currentMagX);
+                Calculator = new ShearWallCalculator_FlexibleDiaphragm(Calculator._wall_system, Calculator._diaphragm_system, currentMagX, currentMagX);
             }
             Calculator.PerformCalculations();  // perform the calculations with the new Calculator
 
@@ -430,21 +427,31 @@ namespace ShearWallVisualizer
 
         private void CreateWallDataControls()
         {
-            WallSystemControl sysControl = new WallSystemControl(this, wallSystem);
+            if (Calculator == null || Calculator._wall_system == null)
+            {
+                return;
+            }
+            WallSystemControl sysControl = new WallSystemControl(this, Calculator._wall_system);
             sp_DimPanel_Walls.Children.Add(sysControl);
             sysControl.OnWallSubControlDeleted += WallDeleted;
         }
 
         private void WallDeleted(object sender, EventArgs e)
         {
+
+            if (Calculator == null || Calculator._wall_system == null)
+            {
+                return;
+            }
+
             WallDataControl control = sender as WallDataControl;
             DeleteWallEventArgs args = e as DeleteWallEventArgs;
 
-            foreach (var wall in wallSystem._walls)
+            foreach (var wall in Calculator._wall_system._walls)
             {
                 if (wall.Key == args.Id)
                 {
-                    wallSystem._walls.Remove(wall.Key);
+                    Calculator._wall_system._walls.Remove(wall.Key);
                     //MessageBox.Show("Wall #" + args.Id + " deleted.");
 
                     Update();
@@ -455,127 +462,141 @@ namespace ShearWallVisualizer
 
         private void DiaphragmDeleted(object sender, EventArgs e)
         {
-            DiaphragmDataControl control = sender as DiaphragmDataControl;
-            DeleteDiaphragmEventArgs args = e as DeleteDiaphragmEventArgs;
-
-            foreach (var dia in diaphragmSystem._diaphragms)
+            if (Calculator == null || Calculator._diaphragm_system == null)
             {
-                if (dia.Key == args.Id)
-                {
-                    diaphragmSystem._diaphragms.Remove(dia.Key);
-                    //MessageBox.Show("Diaphragm #" + args.Id + " deleted.");
 
-                    Update();
-                    return;
+                DiaphragmDataControl control = sender as DiaphragmDataControl;
+                DeleteDiaphragmEventArgs args = e as DeleteDiaphragmEventArgs;
+
+                foreach (var dia in Calculator._diaphragm_system._diaphragms)
+                {
+                    if (dia.Key == args.Id)
+                    {
+                        Calculator._diaphragm_system._diaphragms.Remove(dia.Key);
+                        //MessageBox.Show("Diaphragm #" + args.Id + " deleted.");
+
+                        Update();
+                        return;
+                    }
                 }
             }
         }
 
         private void CreateDiaphragmDataControls()
         {
-            DiaphragmSystemControl sysControl = new DiaphragmSystemControl(this, diaphragmSystem);
-            sp_DimPanel_Diaphragms.Children.Add(sysControl);
-            sysControl.OnDiaphragmSubControlDeleted += DiaphragmDeleted;
+            if (Calculator == null || Calculator._diaphragm_system == null)
+            {
+                DiaphragmSystemControl sysControl = new DiaphragmSystemControl(this, Calculator._diaphragm_system);
+                sp_DimPanel_Diaphragms.Children.Add(sysControl);
+                sysControl.OnDiaphragmSubControlDeleted += DiaphragmDeleted;
+            }
         }
 
 
         private void CreateCalculationResultsControls_Rigid()
         {
-            foreach (var wall in wallSystem._walls)
+            if (Calculator == null || Calculator._wall_system == null)
             {
-                int id = wall.Key;
-                var rigidity = wall.Value.WallRigidity;
-
-                double xbar = double.NaN;
-                double ybar = double.NaN;
-
-                if (Calculator._wall_system.X_bar_walls.ContainsKey(id) is true)
+                foreach (var wall in Calculator._wall_system._walls)
                 {
-                    xbar = Calculator._wall_system.X_bar_walls[id];
-                }
+                    int id = wall.Key;
+                    var rigidity = wall.Value.WallRigidity;
 
-                if (Calculator._wall_system.Y_bar_walls.ContainsKey(id) is true)
-                {
-                    ybar = Calculator._wall_system.Y_bar_walls[id];
-                }
+                    double xbar = double.NaN;
+                    double ybar = double.NaN;
 
-                if (Calculator is ShearWallCalculator_RigidDiaphragm)
-                {
-                    ShearWallCalculator_RigidDiaphragm calc = Calculator as ShearWallCalculator_RigidDiaphragm;
-                    // Must check validity of numbers since some walls may be in X direction and others in Y direction
-                    double vi_x = double.NaN;
-                    if (calc.DirectShear_X.ContainsKey(id) is true)
+                    if (Calculator._wall_system.X_bar_walls.ContainsKey(id) is true)
                     {
-                        vi_x = calc.DirectShear_X[id];
+                        xbar = Calculator._wall_system.X_bar_walls[id];
                     }
 
-                    var vi_y = double.NaN;
-                    if (calc.DirectShear_Y.ContainsKey(id) is true)
+                    if (Calculator._wall_system.Y_bar_walls.ContainsKey(id) is true)
                     {
-                        vi_y = calc.DirectShear_Y[id];
+                        ybar = Calculator._wall_system.Y_bar_walls[id];
                     }
 
-                    var v_ecc = double.NaN;
-                    if (calc.EccentricShear.ContainsKey(id) is true)
+                    if (Calculator is ShearWallCalculator_RigidDiaphragm)
                     {
-                        v_ecc = calc.EccentricShear[id];
-                    }
+                        ShearWallCalculator_RigidDiaphragm calc = Calculator as ShearWallCalculator_RigidDiaphragm;
+                        // Must check validity of numbers since some walls may be in X direction and others in Y direction
+                        double vi_x = double.NaN;
+                        if (calc.DirectShear_X.ContainsKey(id) is true)
+                        {
+                            vi_x = calc.DirectShear_X[id];
+                        }
 
-                    var v_tot = double.NaN;
-                    if (calc.TotalWallShear.ContainsKey(id) is true)
-                    {
-                        v_tot = calc.TotalWallShear[id];
-                    }
+                        var vi_y = double.NaN;
+                        if (calc.DirectShear_Y.ContainsKey(id) is true)
+                        {
+                            vi_y = calc.DirectShear_Y[id];
+                        }
 
-                    ShearWallResultsControl_Rigid control = new ShearWallResultsControl_Rigid(id, rigidity, xbar, ybar, vi_x, vi_y, v_ecc, v_tot);
-                    sp_RigidCalcPanel.Children.Add(control);
+                        var v_ecc = double.NaN;
+                        if (calc.EccentricShear.ContainsKey(id) is true)
+                        {
+                            v_ecc = calc.EccentricShear[id];
+                        }
+
+                        var v_tot = double.NaN;
+                        if (calc.TotalWallShear.ContainsKey(id) is true)
+                        {
+                            v_tot = calc.TotalWallShear[id];
+                        }
+
+                        ShearWallResultsControl_Rigid control = new ShearWallResultsControl_Rigid(id, rigidity, xbar, ybar, vi_x, vi_y, v_ecc, v_tot);
+                        sp_RigidCalcPanel.Children.Add(control);
+                    }
                 }
             }
         }
 
         private void CreateCalculationResultsControls_Flexible()
         {
-            foreach (var wall in wallSystem._walls)
+            if (Calculator == null || Calculator._wall_system == null)
             {
-                int id = wall.Key;
-                var rigidity = wall.Value.WallRigidity;
 
-                double xbar = double.NaN;
-                double ybar = double.NaN;
+                foreach (var wall in Calculator._wall_system._walls)
+                {
+                    int id = wall.Key;
+                    var rigidity = wall.Value.WallRigidity;
 
-                if (Calculator._wall_system.X_bar_walls.ContainsKey(id) is true)
-                {
-                    xbar = Calculator._wall_system.X_bar_walls[id];
-                }
+                    double xbar = double.NaN;
+                    double ybar = double.NaN;
 
-                if (Calculator._wall_system.Y_bar_walls.ContainsKey(id) is true)
-                {
-                    ybar = Calculator._wall_system.Y_bar_walls[id];
-                }
-                if (Calculator is ShearWallCalculator_FlexibleDiaphragm)
-                {
-                    ShearWallCalculator_FlexibleDiaphragm calc = Calculator as ShearWallCalculator_FlexibleDiaphragm;
-                    // Must check validity of numbers since some walls may be in X direction and others in Y direction
-                    double vi_x = double.NaN;
-                    if (calc.DirectShear_X.ContainsKey(id) is true)
+                    if (Calculator._wall_system.X_bar_walls.ContainsKey(id) is true)
                     {
-                        vi_x = calc.DirectShear_X[id];
+                        xbar = Calculator._wall_system.X_bar_walls[id];
                     }
 
-                    var vi_y = double.NaN;
-                    if (calc.DirectShear_Y.ContainsKey(id) is true)
+                    if (Calculator._wall_system.Y_bar_walls.ContainsKey(id) is true)
                     {
-                        vi_y = calc.DirectShear_Y[id];
+                        ybar = Calculator._wall_system.Y_bar_walls[id];
                     }
-
-                    var v_tot = double.NaN;
-                    if (calc.TotalWallShear.ContainsKey(id) is true)
+                    if (Calculator is ShearWallCalculator_FlexibleDiaphragm)
                     {
-                        v_tot = calc.TotalWallShear[id];
-                    }
+                        ShearWallCalculator_FlexibleDiaphragm calc = Calculator as ShearWallCalculator_FlexibleDiaphragm;
+                        // Must check validity of numbers since some walls may be in X direction and others in Y direction
+                        double vi_x = double.NaN;
+                        if (calc.DirectShear_X.ContainsKey(id) is true)
+                        {
+                            vi_x = calc.DirectShear_X[id];
+                        }
 
-                    ShearWallResultsControl_Flexible control = new ShearWallResultsControl_Flexible(id, vi_x, vi_y);
-                    sp_FlexibleCalcPanel.Children.Add(control);
+                        var vi_y = double.NaN;
+                        if (calc.DirectShear_Y.ContainsKey(id) is true)
+                        {
+                            vi_y = calc.DirectShear_Y[id];
+                        }
+
+                        var v_tot = double.NaN;
+                        if (calc.TotalWallShear.ContainsKey(id) is true)
+                        {
+                            v_tot = calc.TotalWallShear[id];
+                        }
+
+                        ShearWallResultsControl_Flexible control = new ShearWallResultsControl_Flexible(id, vi_x, vi_y);
+                        sp_FlexibleCalcPanel.Children.Add(control);
+                    }
                 }
             }
         }
@@ -977,121 +998,131 @@ namespace ShearWallVisualizer
             if (debugMode == false)
                 return;
 
-            // Redraw all the shapes in world coordinates
-            FormattedText idLabel = null;
-            foreach (var wall in wallSystem._walls)
+            if (Calculator == null) return;
+
+            if (Calculator._wall_system == null && Calculator._wall_system._walls != null)
             {
-                Point p1_world = wall.Value.Start;
-                Point p2_world = wall.Value.End;
-                Point p1_screen = WorldToScreen(p1_world, m_layers);
-                Point p2_screen = WorldToScreen(p2_world, m_layers);
-
-                // START POINT
-                if (PointIsWithinBounds(p1_screen, dockpanel) is true)
+                // Redraw all the shapes in world coordinates
+                FormattedText idLabel = null;
+                foreach (var wall in Calculator._wall_system._walls)
                 {
-                    ctx.DrawEllipse(Brushes.MediumBlue, new Pen(Brushes.Black, 1), p1_screen, 5, 5);
-                    idLabel = new FormattedText(
-                            $"({p1_world.X:F2}, {p1_world.Y:F2})",
-                            CultureInfo.GetCultureInfo("en-us"),
-                            FlowDirection.LeftToRight,
-                            new Typeface("Consolas"),
-                            14,
-                            Brushes.Black,
-                            VisualTreeHelper.GetDpi(this).PixelsPerDip);
+                    Point p1_world = wall.Value.Start;
+                    Point p2_world = wall.Value.End;
+                    Point p1_screen = WorldToScreen(p1_world, m_layers);
+                    Point p2_screen = WorldToScreen(p2_world, m_layers);
 
-                    ctx.DrawText(idLabel, p1_screen);  // id label
-                }
+                    // START POINT
+                    if (PointIsWithinBounds(p1_screen, dockpanel) is true)
+                    {
+                        ctx.DrawEllipse(Brushes.MediumBlue, new Pen(Brushes.Black, 1), p1_screen, 5, 5);
+                        idLabel = new FormattedText(
+                                $"({p1_world.X:F2}, {p1_world.Y:F2})",
+                                CultureInfo.GetCultureInfo("en-us"),
+                                FlowDirection.LeftToRight,
+                                new Typeface("Consolas"),
+                                14,
+                                Brushes.Black,
+                                VisualTreeHelper.GetDpi(this).PixelsPerDip);
 
-                // END POINT
-                if (PointIsWithinBounds(p2_screen, dockpanel) is true)
-                {
-                    ctx.DrawEllipse(Brushes.MediumBlue, new Pen(Brushes.Black, 1), p2_screen, 5, 5);
-                    idLabel = new FormattedText(
-                            $"({p2_world.X:F2}, {p2_world.Y:F2})",
-                            CultureInfo.GetCultureInfo("en-us"),
-                            FlowDirection.LeftToRight,
-                            new Typeface("Consolas"),
-                            14,
-                            Brushes.Black,
-                            VisualTreeHelper.GetDpi(this).PixelsPerDip);
-                    ctx.DrawText(idLabel, p2_screen);  // id label
+                        ctx.DrawText(idLabel, p1_screen);  // id label
+                    }
+
+                    // END POINT
+                    if (PointIsWithinBounds(p2_screen, dockpanel) is true)
+                    {
+                        ctx.DrawEllipse(Brushes.MediumBlue, new Pen(Brushes.Black, 1), p2_screen, 5, 5);
+                        idLabel = new FormattedText(
+                                $"({p2_world.X:F2}, {p2_world.Y:F2})",
+                                CultureInfo.GetCultureInfo("en-us"),
+                                FlowDirection.LeftToRight,
+                                new Typeface("Consolas"),
+                                14,
+                                Brushes.Black,
+                                VisualTreeHelper.GetDpi(this).PixelsPerDip);
+                        ctx.DrawText(idLabel, p2_screen);  // id label
+                    }
                 }
             }
 
-            foreach (var dia in diaphragmSystem._diaphragms)
+            if (Calculator._diaphragm_system != null && Calculator._diaphragm_system._diaphragms != null)
             {
-                Point p1_world = dia.Value.P1;
-                Point p2_world = dia.Value.P2;
-                Point p3_world = dia.Value.P3;
-                Point p4_world = dia.Value.P4;
-                Point p1_screen = WorldToScreen(p1_world, m_layers);
-                Point p2_screen = WorldToScreen(p2_world, m_layers);
-                Point p3_screen = WorldToScreen(p3_world, m_layers);
-                Point p4_screen = WorldToScreen(p4_world, m_layers);
+                FormattedText idLabel = null;
 
-                // P1
-                if (PointIsWithinBounds(p1_screen, dockpanel) is true)
+                foreach (var dia in Calculator._diaphragm_system._diaphragms)
                 {
+                    Point p1_world = dia.Value.P1;
+                    Point p2_world = dia.Value.P2;
+                    Point p3_world = dia.Value.P3;
+                    Point p4_world = dia.Value.P4;
+                    Point p1_screen = WorldToScreen(p1_world, m_layers);
+                    Point p2_screen = WorldToScreen(p2_world, m_layers);
+                    Point p3_screen = WorldToScreen(p3_world, m_layers);
+                    Point p4_screen = WorldToScreen(p4_world, m_layers);
 
-                    ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 1), p1_screen, 5, 5);
-                    idLabel = new FormattedText(
-                            $"({p1_world.X:F2}, {p1_world.Y:F2})",
-                            CultureInfo.GetCultureInfo("en-us"),
-                            FlowDirection.LeftToRight,
-                            new Typeface("Consolas"),
-                            14,
-                            Brushes.Black,
-                            VisualTreeHelper.GetDpi(this).PixelsPerDip);
+                    // P1
+                    if (PointIsWithinBounds(p1_screen, dockpanel) is true)
+                    {
 
-                    ctx.DrawText(idLabel, p1_screen);  // id label
+                        ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 1), p1_screen, 5, 5);
+                        idLabel = new FormattedText(
+                                $"({p1_world.X:F2}, {p1_world.Y:F2})",
+                                CultureInfo.GetCultureInfo("en-us"),
+                                FlowDirection.LeftToRight,
+                                new Typeface("Consolas"),
+                                14,
+                                Brushes.Black,
+                                VisualTreeHelper.GetDpi(this).PixelsPerDip);
+
+                        ctx.DrawText(idLabel, p1_screen);  // id label
+                    }
+
+                    // P2
+                    if (PointIsWithinBounds(p2_screen, dockpanel) is true)
+                    {
+                        ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 1), p2_screen, 5, 5);
+                        idLabel = new FormattedText(
+                                $"({p2_world.X:F2}, {p2_world.Y:F2})",
+                                CultureInfo.GetCultureInfo("en-us"),
+                                FlowDirection.LeftToRight,
+                                new Typeface("Consolas"),
+                                14,
+                                Brushes.Black,
+                                VisualTreeHelper.GetDpi(this).PixelsPerDip);
+                        ctx.DrawText(idLabel, p2_screen);  // id label
+                    }
+
+                    // P3
+                    if (PointIsWithinBounds(p3_screen, dockpanel) is true)
+                    {
+                        ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 1), p3_screen, 5, 5);
+                        idLabel = new FormattedText(
+                                $"({p3_world.X:F2}, {p3_world.Y:F2})",
+                                CultureInfo.GetCultureInfo("en-us"),
+                                FlowDirection.LeftToRight,
+                                new Typeface("Consolas"),
+                                14,
+                                Brushes.Black,
+                                VisualTreeHelper.GetDpi(this).PixelsPerDip);
+                        ctx.DrawText(idLabel, p3_screen);  // id label
+                    }
+
+                    // P4
+                    if (PointIsWithinBounds(p4_screen, dockpanel) is true)
+                    {
+                        ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 1), p4_screen, 5, 5);
+                        idLabel = new FormattedText(
+                                $"({p4_world.X:F2}, {p4_world.Y:F2})",
+                                CultureInfo.GetCultureInfo("en-us"),
+                                FlowDirection.LeftToRight,
+                                new Typeface("Consolas"),
+                                14,
+                                Brushes.Black,
+                                VisualTreeHelper.GetDpi(this).PixelsPerDip);
+
+                        ctx.DrawText(idLabel, p4_screen);  // id label
+                    }
+
                 }
-
-                // P2
-                if (PointIsWithinBounds(p2_screen, dockpanel) is true)
-                {
-                    ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 1), p2_screen, 5, 5);
-                    idLabel = new FormattedText(
-                            $"({p2_world.X:F2}, {p2_world.Y:F2})",
-                            CultureInfo.GetCultureInfo("en-us"),
-                            FlowDirection.LeftToRight,
-                            new Typeface("Consolas"),
-                            14,
-                            Brushes.Black,
-                            VisualTreeHelper.GetDpi(this).PixelsPerDip);
-                    ctx.DrawText(idLabel, p2_screen);  // id label
-                }
-
-                // P3
-                if (PointIsWithinBounds(p3_screen, dockpanel) is true)
-                {
-                    ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 1), p3_screen, 5, 5);
-                    idLabel = new FormattedText(
-                            $"({p3_world.X:F2}, {p3_world.Y:F2})",
-                            CultureInfo.GetCultureInfo("en-us"),
-                            FlowDirection.LeftToRight,
-                            new Typeface("Consolas"),
-                            14,
-                            Brushes.Black,
-                            VisualTreeHelper.GetDpi(this).PixelsPerDip);
-                    ctx.DrawText(idLabel, p3_screen);  // id label
-                }
-
-                // P4
-                if (PointIsWithinBounds(p4_screen, dockpanel) is true)
-                {
-                    ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 1), p4_screen, 5, 5);
-                    idLabel = new FormattedText(
-                            $"({p4_world.X:F2}, {p4_world.Y:F2})",
-                            CultureInfo.GetCultureInfo("en-us"),
-                            FlowDirection.LeftToRight,
-                            new Typeface("Consolas"),
-                            14,
-                            Brushes.Black,
-                            VisualTreeHelper.GetDpi(this).PixelsPerDip);
-
-                    ctx.DrawText(idLabel, p4_screen);  // id label
-                }
-
             }
         }
 
@@ -1142,18 +1173,20 @@ namespace ShearWallVisualizer
         }
         private void DrawBracedWallLines(DrawingContext ctx)
         {
+            if (Calculator == null) return;
             // do we have a wall system or BWL manager created yet?
-            if(wallSystem is null || wallSystem.BWL_Manager is null)
+            if(Calculator._wall_system is null || Calculator._wall_system.BWL_Manager is null)
             {
                 return;
             }
 
-            // for east west walls
+            // the counter for uniquely numbering the brace wall lines
+            // TODO should this be handled by the Calculator instead of when its being drawn?
             int bwl_count = 1;
 
-            for (int i = 0; i < wallSystem.BWL_Manager.BracedWallLines.Count; i++)
+            for (int i = 0; i < Calculator._wall_system.BWL_Manager.BracedWallLines.Count; i++)
             {
-                BracedWallLine bwl = wallSystem.BWL_Manager.BracedWallLines[i];
+                BracedWallLine bwl = Calculator._wall_system.BWL_Manager.BracedWallLines[i];
                 int bwl_id = bwl.GroupNumber;
 
                 if (bwl.WallDir == WallDirs.EastWest)
@@ -1219,32 +1252,40 @@ namespace ShearWallVisualizer
                 return;
             }
 
-            foreach (var wall in wallSystem._walls)
+            if (Calculator == null) return;
+
+            if (Calculator._wall_system != null)
             {
-                Point p1_world = wall.Value.Start;
-                Point p2_world = wall.Value.End;
-                Point p1_screen = WorldToScreen(p1_world, m_layers);
-                Point p2_screen = WorldToScreen(p2_world, m_layers);
+                foreach (var wall in Calculator._wall_system._walls)
+                {
+                    Point p1_world = wall.Value.Start;
+                    Point p2_world = wall.Value.End;
+                    Point p1_screen = WorldToScreen(p1_world, m_layers);
+                    Point p2_screen = WorldToScreen(p2_world, m_layers);
 
-                ctx.DrawEllipse(Brushes.MediumBlue, new Pen(Brushes.MediumBlue, 1), p1_screen, 3, 3);
-                ctx.DrawEllipse(Brushes.MediumBlue, new Pen(Brushes.MediumBlue, 1), p2_screen, 3, 3);
-
+                    ctx.DrawEllipse(Brushes.MediumBlue, new Pen(Brushes.MediumBlue, 1), p1_screen, 3, 3);
+                    ctx.DrawEllipse(Brushes.MediumBlue, new Pen(Brushes.MediumBlue, 1), p2_screen, 3, 3);
+                }
             }
-            foreach (var dia in diaphragmSystem._diaphragms)
-            {
-                Point p1_world = dia.Value.P1;
-                Point p2_world = dia.Value.P2;
-                Point p3_world = dia.Value.P3;
-                Point p4_world = dia.Value.P4;
-                Point p1_screen = WorldToScreen(p1_world, m_layers);
-                Point p2_screen = WorldToScreen(p2_world, m_layers);
-                Point p3_screen = WorldToScreen(p3_world, m_layers);
-                Point p4_screen = WorldToScreen(p4_world, m_layers);
 
-                ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Red, 1), p1_screen, 3, 3);
-                ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Red, 1), p2_screen, 3, 3);
-                ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Red, 1), p3_screen, 3, 3);
-                ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Red, 1), p4_screen, 3, 3);
+            if (Calculator._diaphragm_system != null)
+            {
+                foreach (var dia in Calculator._diaphragm_system._diaphragms)
+                {
+                    Point p1_world = dia.Value.P1;
+                    Point p2_world = dia.Value.P2;
+                    Point p3_world = dia.Value.P3;
+                    Point p4_world = dia.Value.P4;
+                    Point p1_screen = WorldToScreen(p1_world, m_layers);
+                    Point p2_screen = WorldToScreen(p2_world, m_layers);
+                    Point p3_screen = WorldToScreen(p3_world, m_layers);
+                    Point p4_screen = WorldToScreen(p4_world, m_layers);
+
+                    ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Red, 1), p1_screen, 3, 3);
+                    ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Red, 1), p2_screen, 3, 3);
+                    ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Red, 1), p3_screen, 3, 3);
+                    ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Red, 1), p4_screen, 3, 3);
+                }
             }
         }
 
@@ -1574,7 +1615,7 @@ namespace ShearWallVisualizer
             }
             else
             {
-                Calculator = new ShearWallCalculator_RigidDiaphragm(wallSystem, diaphragmSystem, 15, 0);
+                Calculator = new ShearWallCalculator_RigidDiaphragm(Calculator._wall_system, Calculator._diaphragm_system, 15, 0);
 
                 // test wall key
                 int wall_id = 0;

@@ -12,7 +12,7 @@ namespace ShearWallVisualizer.Controls
     {
         public EventHandler OnDiaphragmSubControlDeleted;
         Window MainWin { get; set; }
-        DiaphragmSystem Data;
+        DiaphragmSystem Data = new DiaphragmSystem();
 
         public DiaphragmSystemControl(MainWindow window, DiaphragmSystem data)
         {
@@ -29,6 +29,8 @@ namespace ShearWallVisualizer.Controls
 
         private void CreateSubcontrols()
         {
+            if (Data == null) return;
+
             // clear previous events
             foreach(var child in sp_Diaphragms.Children)
             {
@@ -40,11 +42,14 @@ namespace ShearWallVisualizer.Controls
             sp_Diaphragms.Children.Clear();
 
             // recreate the children
-            foreach (var diaphragm in Data._diaphragms)
+            if (Data._diaphragms != null)
             {
-                DiaphragmDataControl diaphragm_control = new DiaphragmDataControl(diaphragm.Key, diaphragm.Value);
-                diaphragm_control.DeleteDiaphragm += DiaphragmDeleted;
-                sp_Diaphragms.Children.Add(diaphragm_control);
+                foreach (var diaphragm in Data._diaphragms)
+                {
+                    DiaphragmDataControl diaphragm_control = new DiaphragmDataControl(diaphragm.Key, diaphragm.Value);
+                    diaphragm_control.DeleteDiaphragm += DiaphragmDeleted;
+                    sp_Diaphragms.Children.Add(diaphragm_control);
+                }
             }
         }
 

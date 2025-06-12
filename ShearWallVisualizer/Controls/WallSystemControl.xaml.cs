@@ -12,7 +12,7 @@ namespace ShearWallVisualizer.Controls
     {
         public EventHandler OnWallSubControlDeleted;
         Window MainWin { get; set; }
-        WallSystem Data;
+        WallSystem Data = new WallSystem();
 
         public WallSystemControl(MainWindow window, WallSystem data)
         {
@@ -37,6 +37,8 @@ namespace ShearWallVisualizer.Controls
 
         private void CreateSubcontrols()
         {
+            if (Data == null) return;
+
             // clear previous events
             foreach(var child in sp_Walls.Children)
             {
@@ -47,12 +49,15 @@ namespace ShearWallVisualizer.Controls
             // clear the children
             sp_Walls.Children.Clear();
 
-            // recreate the children
-            foreach (var wall in Data._walls)
+            if (Data._walls != null)
             {
-                WallDataControl wall_control = new WallDataControl(wall.Key, wall.Value);
-                wall_control.DeleteWall += WallDeleted;
-                sp_Walls.Children.Add(wall_control);
+                // recreate the children
+                foreach (var wall in Data._walls)
+                {
+                    WallDataControl wall_control = new WallDataControl(wall.Key, wall.Value);
+                    wall_control.DeleteWall += WallDeleted;
+                    sp_Walls.Children.Add(wall_control);
+                }
             }
         }
 
