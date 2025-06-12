@@ -431,6 +431,7 @@ namespace ShearWallVisualizer
             {
                 return;
             }
+
             WallSystemControl sysControl = new WallSystemControl(this, Calculator._wall_system);
             sp_DimPanel_Walls.Children.Add(sysControl);
             sysControl.OnWallSubControlDeleted += WallDeleted;
@@ -486,10 +487,12 @@ namespace ShearWallVisualizer
         {
             if (Calculator == null || Calculator._diaphragm_system == null)
             {
-                DiaphragmSystemControl sysControl = new DiaphragmSystemControl(this, Calculator._diaphragm_system);
-                sp_DimPanel_Diaphragms.Children.Add(sysControl);
-                sysControl.OnDiaphragmSubControlDeleted += DiaphragmDeleted;
+                return;
             }
+
+            DiaphragmSystemControl sysControl = new DiaphragmSystemControl(this, Calculator._diaphragm_system);
+            sp_DimPanel_Diaphragms.Children.Add(sysControl);
+            sysControl.OnDiaphragmSubControlDeleted += DiaphragmDeleted;
         }
 
 
