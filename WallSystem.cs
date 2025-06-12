@@ -261,7 +261,10 @@ namespace ShearWallCalculator
         /// </summary>
         public void ComputeCenterOfRigidity()
         {
-            if(BWL_Manager is null || BWL_Manager.BracedWallLines.Count == 0)
+            // clear the previous value
+            CtrRigidity = new System.Windows.Point(double.NaN, double.NaN);
+
+            if (BWL_Manager is null || BWL_Manager.BracedWallLines.Count == 0)
             {
                 return;
             }

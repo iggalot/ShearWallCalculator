@@ -106,8 +106,8 @@ namespace calculator
                 Mt_comb = (V_x * ecc_y) - (V_y * ecc_x);
                 Console.WriteLine("M_comb: " + Mt_comb + " kips-m");
 
-                // display results
-                Console.WriteLine(DisplayResults());
+                //// display results
+                //Console.WriteLine(DisplayResults());
             }
             ComputeDirectShear_X();  // horizontal walls
             ComputeDirectShear_Y();  // vertical walls

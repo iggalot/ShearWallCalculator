@@ -155,6 +155,10 @@ namespace ShearWallCalculator
         /// </summary>
         public void ComputeCenterOfMassAndTotalArea()
         {
+            // clear previous values
+            CtrMass = new System.Windows.Point(double.NaN, double.NaN);
+            TotalArea = 0;
+
             float sum_x_A = 0;
             float sum_y_A = 0;
             float sum_A = 0;
