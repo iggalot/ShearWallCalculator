@@ -47,8 +47,16 @@ namespace ShearWallVisualizer
 
         // grid stuff
         bool gridNeedsUpdate = true;
+        bool imageNeedsUpdate = true;
         DrawingVisual gridVisual = null;
+        DrawingVisual imageVisual = null;
         private RenderTargetBitmap gridBitmap;
+        private RenderTargetBitmap imageBitmap;
+        private BitmapImage cachedReferenceImageBitmap;
+        private string cachedImagePath;
+        private Rect cachedReferenceImageScreenRect;
+        private bool hasCachedReferenceImageScreenRect = false;
+
         double majorGridSpacing = 5.0;  // Major grid lines in world units
         double minorGridSpacing = 1.0;  // Minor grid lines in world units
 
@@ -1127,51 +1135,10 @@ namespace ShearWallVisualizer
             }
         }
 
-        private void DrawReferenceImage(DrawingContext context)
-        {
-            if (hideImage is true)
-            {
-                m_layers.RemoveImageLayer(0);
-                return;
-            }
 
-            if (Calculator != null)
-            {
 
-                if (Calculator.selectedImageFilePath is null)
-                {
-                    return;
-                }
 
-                m_layers.AddImageLayer(Calculator.selectedImageFilePath, Calculator.pixelScaleX, Calculator.pixelScaleY); // scale the image so that pixel scale aligns with world scale.
-                m_layers.currentReferenceImageLayer.SetOpacity(0.30); // fade the image a bit
 
-                double width = m_layers.currentReferenceImageLayer.TargetRect.Width;
-                double height = m_layers.currentReferenceImageLayer.TargetRect.Height;
-
-                Rect imageWorldRect = new Rect(0, 0, width, height);
-
-                double y_offset = height;
-
-                Point p4_world = new Point(imageWorldRect.TopLeft.X, imageWorldRect.TopLeft.Y + y_offset);
-                Point p3_world = new Point(imageWorldRect.TopRight.X, imageWorldRect.TopRight.Y + y_offset);
-                Point p2_world = new Point(imageWorldRect.BottomRight.X, imageWorldRect.BottomRight.Y + y_offset);
-                Point p1_world = new Point(imageWorldRect.BottomLeft.X, imageWorldRect.BottomLeft.Y + y_offset);
-
-                Point p1_screen = WorldToScreen(p1_world, m_layers);
-                Point p2_screen = WorldToScreen(p2_world, m_layers);
-                Point p3_screen = WorldToScreen(p3_world, m_layers);
-                Point p4_screen = WorldToScreen(p4_world, m_layers);
-
-                double width_screen = p3_screen.X - p1_screen.X;
-                double height_screen = p3_screen.Y - p1_screen.Y;
-
-                Rect imageScreenRect = new Rect(p1_screen.X, p1_screen.Y, width_screen, height_screen);
-
-                m_layers.currentReferenceImageLayer.TargetRect = imageScreenRect;
-                m_layers.currentReferenceImageLayer.SetPosition(p4_screen.X, p4_screen.Y);
-            }
-        }
         private void DrawBracedWallLines(DrawingContext ctx)
         {
             if (Calculator == null) return;
@@ -1450,6 +1417,121 @@ namespace ShearWallVisualizer
                     ctx.DrawText(idLabel, new Point(x_screen - 30, y_screen + 5));
                 }
             }
+        }
+
+        private void DrawReferenceImage(DrawingContext ctx)
+        {
+            if (hideImage)
+                return;
+
+            if (cachedReferenceImageBitmap == null || imageNeedsUpdate is true)
+            {
+                CreateReferenceImageVisual();
+                imageNeedsUpdate = false;
+            }
+
+            // Check again in case image loading failed or no file selected
+            if (cachedReferenceImageBitmap == null)
+                return;
+
+
+
+            ctx.DrawImage(cachedReferenceImageBitmap, CalculateScreenRect());
+
+        }
+
+        private Rect CalculateScreenRect()
+        {
+            // Draw image scaled to fit canvas
+            double scale_x = Calculator.pixelScaleX;
+            double scale_y = Calculator.pixelScaleY;
+
+            Point p1_world = new Point(0, 0);
+            Point p2_world = new Point(cachedReferenceImageBitmap.PixelWidth * scale_x, 0);
+            Point p3_world = new Point(cachedReferenceImageBitmap.PixelWidth * scale_x, cachedReferenceImageBitmap.PixelHeight * scale_y);
+            Point p4_world = new Point(0, cachedReferenceImageBitmap.PixelHeight * scale_y);
+
+            Point p1_screen = WorldToScreen(p1_world, m_layers);
+            Point p2_screen = WorldToScreen(p2_world, m_layers);
+            Point p3_screen = WorldToScreen(p3_world, m_layers);
+            Point p4_screen = WorldToScreen(p4_world, m_layers);
+
+            double width_screen = Math.Abs(p3_screen.X - p1_screen.X);
+            double height_screen = Math.Abs(p3_screen.Y - p1_screen.Y);
+
+            return new Rect(p4_screen.X, p4_screen.Y, width_screen, height_screen);
+        }
+
+        private void InvalidateCachedImageIfChanged()
+        {
+            if (cachedImagePath != Calculator.selectedImageFilePath)
+            {
+                cachedReferenceImageBitmap = null;
+                cachedImagePath = Calculator.selectedImageFilePath;
+                hasCachedReferenceImageScreenRect = false;
+            }
+        }
+
+        private void CreateReferenceImageVisual()
+        {
+            if (hideImage || string.IsNullOrEmpty(Calculator.selectedImageFilePath) || !File.Exists(Calculator.selectedImageFilePath))
+                return;
+
+            InvalidateCachedImageIfChanged();
+
+            double width = dockpanel.ActualWidth;
+            double height = dockpanel.ActualHeight;
+
+            imageBitmap = new RenderTargetBitmap((int)Math.Ceiling(width), (int)Math.Ceiling(height), 96, 96, PixelFormats.Pbgra32);
+            imageVisual = new DrawingVisual();
+
+            using (DrawingContext ctx = imageVisual.RenderOpen())
+            {
+                try
+                {
+                    // Always load image if not yet loaded
+                    if (cachedReferenceImageBitmap == null)
+                    {
+                        cachedReferenceImageBitmap = new BitmapImage();
+                        cachedReferenceImageBitmap.BeginInit();
+                        cachedReferenceImageBitmap.UriSource = new Uri(Calculator.selectedImageFilePath, UriKind.Absolute);
+                        cachedReferenceImageBitmap.CacheOption = BitmapCacheOption.OnLoad;
+                        cachedReferenceImageBitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
+                        cachedReferenceImageBitmap.EndInit();
+                        cachedReferenceImageBitmap.Freeze();
+                    }
+
+                    if (!hasCachedReferenceImageScreenRect)
+                    {
+
+                        // Always draw the image to the new bitmap
+                        double scale_x = Calculator.pixelScaleX;
+                        double scale_y = Calculator.pixelScaleY;
+
+                        Point p1_world = new Point(0, 0);
+                        Point p3_world = new Point(cachedReferenceImageBitmap.PixelWidth * scale_x, cachedReferenceImageBitmap.PixelHeight * scale_y);
+                        Point p4_world = new Point(0, cachedReferenceImageBitmap.PixelHeight * scale_y);
+
+                        Point p1_screen = WorldToScreen(p1_world, m_layers);
+                        Point p3_screen = WorldToScreen(p3_world, m_layers);
+                        Point p4_screen = WorldToScreen(p4_world, m_layers);
+
+                        double width_screen = Math.Abs(p3_screen.X - p1_screen.X);
+                        double height_screen = Math.Abs(p3_screen.Y - p1_screen.Y);
+
+                        cachedReferenceImageScreenRect = new Rect(p4_screen.X, p4_screen.Y, width_screen, height_screen);
+                        hasCachedReferenceImageScreenRect = true;
+                    }
+
+                    ctx.DrawImage(cachedReferenceImageBitmap, cachedReferenceImageScreenRect);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Failed to load image: " + ex.Message);
+                }
+            }
+
+            imageBitmap.Render(imageVisual);
         }
 
         private void DrawGridInformation(DrawingContext ctx)
@@ -1983,7 +2065,6 @@ namespace ShearWallVisualizer
         {
             if (Calculator != null)
             {
-
                 // set the image parameters so that the DrawRerenceImage function has the items it needs to draw the true image.
                 Calculator.selectedImageFilePath = e.FilePath;
                 Calculator.pixelScaleX = e.ScaleFactor;
@@ -1997,15 +2078,6 @@ namespace ShearWallVisualizer
                                 $"Scale Factor: {e.ScaleFactor:F6}");
 
                 Update();
-
-
-                // You can update the MainWindow with the measurement result, if needed
-                // For example, showing the scale factor or other data in the UI
-
-                // TODO:  We now have the data from the measurement scaler window, but we need to know automatically load
-                // to the window at the appropriate scale as we did before.
-
-                // TODO:  Also, need to find a way to save this file and its scale factors to the recent files list.
             }
         }
 
