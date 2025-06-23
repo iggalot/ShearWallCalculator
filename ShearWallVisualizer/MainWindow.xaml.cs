@@ -61,7 +61,7 @@ namespace ShearWallVisualizer
         private double defaultWallHeight = 9.0;
 
         private enum DrawMode { None, Line, Rectangle }
-        private DrawMode currentMode = DrawMode.None;
+        private DrawMode currentMode = DrawMode.Line;
         private bool snapMode = false;
         private double snapThreshold = 50; // Pixels
         private bool debugMode = false;
@@ -152,6 +152,9 @@ namespace ShearWallVisualizer
 
             // update the load info display
             LoadInfoTextBlock.Text = $"X: {currentMagX} @ {currentLocX} | Y: {currentMagY} @ {currentLocY}";
+
+            // Update the button appearances
+            SetButtonModes();
 
             // redraw the scene
             Draw(ChangeType.Redraw);
@@ -1661,12 +1664,12 @@ namespace ShearWallVisualizer
 
         private void btnLineMode_Click(object sender, RoutedEventArgs e)
         {
-            SetLineMode();
+            currentMode = DrawMode.Line;
         }
 
         private void btnRectangleMode_Click(object sender, RoutedEventArgs e)
         {
-            SetRectangleMode();
+            currentMode = DrawMode.Rectangle;
         }
 
         private void btnSnapMode_Click(object sender, RoutedEventArgs e)
@@ -1706,14 +1709,14 @@ namespace ShearWallVisualizer
             if (e.Key == Key.L)
             {
                 ResetInputMode();
-                SetLineMode();
+                currentMode = DrawMode.Line;
             }
 
             // rectangle (diaphragm) mode
             else if (e.Key == Key.R)
             {
                 ResetInputMode();
-                SetRectangleMode();
+                currentMode = DrawMode.Rectangle;
             }
             // snap mode
             else if (e.Key == Key.S)
@@ -2009,6 +2012,21 @@ namespace ShearWallVisualizer
         #endregion
 
         #region MODE setters
+        public void SetButtonModes()
+        {
+            switch (currentMode)
+            {
+                case DrawMode.Line:
+                    SetLineMode();
+                    break;
+                case DrawMode.Rectangle:
+                    SetRectangleMode();
+                    break;
+                default:
+                    return;
+            }
+        }
+
         private void SetLineMode()
         {
             ResetUIButtons();
@@ -2017,8 +2035,6 @@ namespace ShearWallVisualizer
             btnRigidityMode.Background = new SolidColorBrush(Colors.YellowGreen);
 
             currentMode = DrawMode.Line;  // Set to Line drawing mode
-            MessageBox.Show("Line mode activated.");
-            Console.WriteLine("Line mode activated.");
         }
 
         private void SetRectangleMode()
@@ -2028,10 +2044,7 @@ namespace ShearWallVisualizer
             btnMassMode.BorderBrush = new SolidColorBrush(Colors.White);
             btnMassMode.Background = new SolidColorBrush(Colors.YellowGreen);
 
-
             currentMode = DrawMode.Rectangle;  // Set to Rectangle drawing mode
-            MessageBox.Show("Rectangle mode activated.");
-            Console.WriteLine("Rectangle mode activated.");
         }
 
         private void SetDebugMode()
