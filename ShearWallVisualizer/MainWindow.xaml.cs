@@ -26,7 +26,7 @@ namespace ShearWallVisualizer
 {
     public partial class MainWindow : Window
     {
-        public ShearWallCalculatorBase Calculator = new ShearWallCalculator_RigidDiaphragm(null, null, 0, 0);
+        public ShearWallCalculatorBase Calculator = new ShearWallCalculator_RigidDiaphragm();
 
         public SimpsonCatalog simpsonCatalog { get; set; } = new SimpsonCatalog();  // contains the Simposon catalog connector and holddown data
 
@@ -348,14 +348,9 @@ namespace ShearWallVisualizer
                 throw new NotImplementedException("Error: FinalizeShape() received an invalid DrawMode variable.");
             }
 
-            // Recreate the calculator with the new items added
-            if(Calculator is ShearWallCalculator_RigidDiaphragm)
-            {
-                Calculator = new ShearWallCalculator_RigidDiaphragm(Calculator._wall_system, Calculator._diaphragm_system, currentMagX, currentMagX);
-            } else
-            {
-                Calculator = new ShearWallCalculator_FlexibleDiaphragm(Calculator._wall_system, Calculator._diaphragm_system, currentMagX, currentMagX);
-            }
+            Calculator.V_x = currentMagX;
+            Calculator.V_y = currentMagY;
+
             Calculator.PerformCalculations();  // perform the calculations with the new Calculator
 
             // Clear the preview shape from the screen.
@@ -1698,7 +1693,9 @@ namespace ShearWallVisualizer
             }
             else
             {
-                Calculator = new ShearWallCalculator_RigidDiaphragm(Calculator._wall_system, Calculator._diaphragm_system, 15, 0);
+                // test load data
+                Calculator.V_x = 15;
+                Calculator.V_y = 0;
 
                 // test wall key
                 int wall_id = 0;

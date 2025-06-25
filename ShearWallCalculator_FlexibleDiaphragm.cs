@@ -8,6 +8,11 @@ namespace ShearWallCalculator
 {
     public class ShearWallCalculator_FlexibleDiaphragm : ShearWallCalculatorBase
     {
+        private WallSystem wall_system;
+        private DiaphragmSystem diaphragm_system;
+        private double currentMagX1;
+        private double currentMagX2;
+
         [JsonIgnore]
         public Dictionary<BracedWallLine, double> DirectShear_X_BracedLine { get; set; } = new Dictionary<BracedWallLine, double>();
         
@@ -24,24 +29,16 @@ namespace ShearWallCalculator
 
         public new string CalculatorType { get => "Flexible Diaphragm"; }
 
-        public ShearWallCalculator_FlexibleDiaphragm() : base(null, null, 0, 0) { }
-        public ShearWallCalculator_FlexibleDiaphragm(WallSystem wall_system, DiaphragmSystem diaphragm, double v_x, double v_y) : base(wall_system, diaphragm, v_x, v_y) { }
-
+        public ShearWallCalculator_FlexibleDiaphragm() : base()
+        {
+        }
         /// <summary>
         /// copy constructor
         /// </summary>
         /// <param name="copy_calc"></param>
-        public ShearWallCalculator_FlexibleDiaphragm(ShearWallCalculator_FlexibleDiaphragm copy_calc) : base(copy_calc._wall_system, copy_calc._diaphragm_system, copy_calc.V_x, copy_calc.V_y)
+        public ShearWallCalculator_FlexibleDiaphragm(ShearWallCalculatorBase copy_calc) : base(copy_calc)
         {
-            _diaphragm_system = copy_calc._diaphragm_system;
-            _wall_system = copy_calc._wall_system;
 
-            // Load image information
-            selectedImageFilePath = copy_calc.selectedImageFilePath;
-            pixelScaleX = copy_calc.pixelScaleX;
-            pixelScaleY = copy_calc.pixelScaleY;
-
-            PerformCalculations();
         }
 
         /// <summary>

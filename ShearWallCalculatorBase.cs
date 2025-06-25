@@ -22,8 +22,8 @@ namespace ShearWallCalculator
         /// Loads and eccentricty values 
         /// Uses Cartesian coordinate and right-hand rule -- x+ right, y+ up, rot+ = CCW
         /// </summary>
-        public double V_x { get; set; } = 1; // x direction load (kips) acting at center of mass
-        public double V_y { get; set; } = 1;  // y direction load (kips) acting at center of mass
+        public double V_x { get; set; } = 0; // x direction load (kips) acting at center of mass
+        public double V_y { get; set; } = 0;  // y direction load (kips) acting at center of mass
 
         // dictionary containing the total shear acting on a wall -- resistance at base of diaphragm at top of walls
         [JsonIgnore]
@@ -74,12 +74,29 @@ namespace ShearWallCalculator
         /// </summary>
         /// <param name="wall_system"></param>
         /// <param name="diaphragm_system"></param>
-        public ShearWallCalculatorBase(WallSystem wall_system, DiaphragmSystem diaphragm_system, double shear_x, double shear_y)
+        public ShearWallCalculatorBase(ShearWallCalculatorBase copy_calc)
         {
-            _diaphragm_system = diaphragm_system;
+            _diaphragm_system = copy_calc._diaphragm_system;
+            _wall_system = copy_calc._wall_system;
+            V_x = copy_calc.V_x;
+            V_y = copy_calc.V_y;
+
+            // Loaded image information
+            selectedImageFilePath = copy_calc.selectedImageFilePath;
+            pixelScaleX = copy_calc.pixelScaleX;
+            pixelScaleY = copy_calc.pixelScaleY;
+
+            Update();  // update necessary system parts
+
+            PerformCalculations(); // perform calculations
+        }
+
+        public ShearWallCalculatorBase(WallSystem wall_system, DiaphragmSystem diaphragm_system, double currentMagX1, double currentMagX2)
+        {
+            _diaphragm_system = _diaphragm_system;
             _wall_system = wall_system;
-            V_x = shear_x;
-            V_y = shear_y;
+            V_x = V_x;
+            V_y = V_y;
 
             Update();  // update necessary system parts
 

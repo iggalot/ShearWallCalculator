@@ -43,12 +43,7 @@ namespace calculator
         /// <summary>
         /// default constructor
         /// </summary>
-        public ShearWallCalculator_RigidDiaphragm()
-        {
-
-        }
-
-        public ShearWallCalculator_RigidDiaphragm(WallSystem walls, DiaphragmSystem diaphragm, double v_x, double v_y) : base(walls, diaphragm, v_x, v_y)
+        public ShearWallCalculator_RigidDiaphragm() : base()
         {
 
         }
@@ -57,17 +52,9 @@ namespace calculator
         /// copy constructor
         /// </summary>
         /// <param name="copy_calc"></param>
-        public ShearWallCalculator_RigidDiaphragm(ShearWallCalculator_RigidDiaphragm copy_calc)
+        public ShearWallCalculator_RigidDiaphragm(ShearWallCalculatorBase copy_calc) : base(copy_calc)
         {
-            _diaphragm_system = copy_calc._diaphragm_system;
-            _wall_system = copy_calc._wall_system;
 
-            // Load image information
-            selectedImageFilePath = copy_calc.selectedImageFilePath;
-            pixelScaleX = copy_calc.pixelScaleX;
-            pixelScaleY = copy_calc.pixelScaleY;
-
-            PerformCalculations();
         }
 
         /// <summary>
