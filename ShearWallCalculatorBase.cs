@@ -87,8 +87,6 @@ namespace ShearWallCalculator
             pixelScaleY = copy_calc.pixelScaleY;
 
             Update();  // update necessary system parts
-
-            PerformCalculations(); // perform calculations
         }
 
         public ShearWallCalculatorBase(WallSystem wall_system, DiaphragmSystem diaphragm_system, double currentMagX1, double currentMagX2)
@@ -99,8 +97,6 @@ namespace ShearWallCalculator
             V_y = V_y;
 
             Update();  // update necessary system parts
-
-            PerformCalculations(); // perform calculations
         }
 
         public void Update()

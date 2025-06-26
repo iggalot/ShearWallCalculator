@@ -29,9 +29,6 @@ namespace ShearWallCalculator
 
         public new string CalculatorType { get => "Flexible Diaphragm"; }
 
-        public ShearWallCalculator_FlexibleDiaphragm() : base()
-        {
-        }
         /// <summary>
         /// copy constructor
         /// </summary>

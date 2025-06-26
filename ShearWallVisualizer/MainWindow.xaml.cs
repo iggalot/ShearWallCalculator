@@ -10,6 +10,7 @@ using ShearWallVisualizer.Dialogs;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -1416,8 +1417,18 @@ namespace ShearWallVisualizer
 
         private void DrawReferenceImage(DrawingContext ctx)
         {
+
             if (hideImage)
                 return;
+
+            // If no calculator, clear the cached image and return
+            if (Calculator == null)
+            {
+                cachedReferenceImageBitmap = null;
+                imageNeedsUpdate = true;
+                return;
+            }
+
 
             if (cachedReferenceImageBitmap == null || imageNeedsUpdate is true)
             {
@@ -1469,6 +1480,8 @@ namespace ShearWallVisualizer
 
         private void CreateReferenceImageVisual()
         {
+            if (Calculator == null) return;
+
             if (hideImage || string.IsNullOrEmpty(Calculator.selectedImageFilePath) || !File.Exists(Calculator.selectedImageFilePath))
                 return;
 
@@ -1851,23 +1864,6 @@ namespace ShearWallVisualizer
             MessageBox.Show("Refresh triggered!", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
-        private void LoadImageFile(string filename, double pixel_scale_x=1.0, double pixel_scale_y=1.0)
-        {
-            if (Calculator != null)
-            {
-
-                // Open document
-                Calculator.selectedImageFilePath = filename;
-                Calculator.pixelScaleX = pixel_scale_x;
-                Calculator.pixelScaleY = pixel_scale_y;
-
-                // You ca now use selectedFilePath as needed
-                MessageBox.Show($"You selected: {Calculator.selectedImageFilePath}");
-
-                AddToRecentFiles(Calculator.selectedImageFilePath); // add to recent files list
-            }
-        }
-
         private void MenuItem_Save_Click(object sender, RoutedEventArgs e)
         {
             var saveFileDialog = new SaveFileDialog
@@ -1885,6 +1881,13 @@ namespace ShearWallVisualizer
 
         private void MenuItem_Load_Click(object sender, RoutedEventArgs e)
         {
+            if (Calculator != null)
+            {
+                Calculator = null;  // delete any previous calculators we have
+            }
+
+            Update();
+
             var openFileDialog = new OpenFileDialog
             {
                 Filter = "JSON Drawing (*.json)|*.json"
