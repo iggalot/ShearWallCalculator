@@ -32,16 +32,9 @@
                 <TextBlock Text="Load Magnitude (kips) X:" Grid.Row="0" Grid.Column="0" Margin="5"/>
                 <TextBox x:Name="MagnitudeXBox" Grid.Row="0" Grid.Column="1" Margin="5"/>
 
-                <TextBlock Text="Location (ft) X:" Grid.Row="1" Grid.Column="0" Margin="5"/>
-                <TextBox x:Name="LocationXBox" Grid.Row="1" Grid.Column="1" Margin="5"/>
-
                 <!-- Direction Y -->
                 <TextBlock Text="Load Magnitude (kips) Y:" Grid.Row="2" Grid.Column="0" Margin="5"/>
                 <TextBox x:Name="MagnitudeYBox" Grid.Row="2" Grid.Column="1" Margin="5"/>
-
-                <TextBlock Text="Location (ft) Y:" Grid.Row="3" Grid.Column="0" Margin="5"/>
-                <TextBox x:Name="LocationYBox" Grid.Row="3" Grid.Column="1" Margin="5"/>
-
 
             </Grid>
             <StackPanel Orientation="Horizontal">

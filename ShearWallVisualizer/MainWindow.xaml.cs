@@ -10,7 +10,6 @@ using ShearWallVisualizer.Dialogs;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -32,14 +31,6 @@ namespace ShearWallVisualizer
         public SimpsonCatalog simpsonCatalog { get; set; } = new SimpsonCatalog();  // contains the Simposon catalog connector and holddown data
 
         private JsonDrawingSerializer _serializer = new JsonDrawingSerializer();
-
-        /// <summary>
-        /// Load data for the calculator
-        /// </summary>
-        private double currentMagX = 0.0;
-        private double currentLocX = 0.0;
-        private double currentMagY = 0.0;
-        private double currentLocY = 0.0;
 
         //// data for the image overlay
         //string selectedImageFilePath = null;
@@ -145,7 +136,7 @@ namespace ShearWallVisualizer
                 tbCalculatorType.Text = Calculator.GetType().Name;
 
                 string img_str = Calculator.selectedImageFilePath;
-                if(Calculator.selectedImageFilePath == null || Calculator.selectedImageFilePath == String.Empty)
+                if (Calculator.selectedImageFilePath == null || Calculator.selectedImageFilePath == String.Empty)
                 {
                     img_str = "Image File: <No file selected>";
                 }
@@ -157,10 +148,10 @@ namespace ShearWallVisualizer
 
                 // notify controls that we have updated
                 OnUpdated?.Invoke(this, EventArgs.Empty); // signal that the window has been updated -- so that subcontrols can refresh
-            }
 
-            // update the load info display
-            LoadInfoTextBlock.Text = $"X: {currentMagX} @ {currentLocX} | Y: {currentMagY} @ {currentLocY}";
+                // update the load info display
+                LoadInfoTextBlock.Text = $"X: {Calculator.V_x} | Y: {Calculator.V_y}";
+            }
 
             // Update the button appearances
             SetButtonModes();
@@ -343,14 +334,11 @@ namespace ShearWallVisualizer
                         Calculator._diaphragm_system = new DiaphragmSystem();
                 }
 
-                    Calculator._diaphragm_system.AddDiaphragm(new DiaphragmData_Rectangular(startPoint_world.Value, endPoint_world.Value));
+                Calculator._diaphragm_system.AddDiaphragm(new DiaphragmData_Rectangular(startPoint_world.Value, endPoint_world.Value));
             } else
             {
                 throw new NotImplementedException("Error: FinalizeShape() received an invalid DrawMode variable.");
             }
-
-            Calculator.V_x = currentMagX;
-            Calculator.V_y = currentMagY;
 
             Calculator.PerformCalculations();  // perform the calculations with the new Calculator
 
@@ -406,6 +394,9 @@ namespace ShearWallVisualizer
             List<WindLoadCalculator_MWFRS.WindPressureResult_Roof_MWFRS> roof_results = e._roof_results;
             WindLoadCalculator_MWFRS.WindLoadParameters parameters = e._parameters;
 
+            // now that we've used the event, unhook it
+            ((WindLoadResultsControl_MWFRS)sender).WindCalculated-= WindLoadResultsControl_MWFRS_WindCalculated;
+
             // Get the internal suction windward case
             double ww = 0;
             double lw = 0;
@@ -424,8 +415,13 @@ namespace ShearWallVisualizer
             }
 
             // worst x case will be +WW and -LW -- internal suction should offset each other.
-            currentMagX = (ww - lw) * parameters.BuildingHeight * parameters.BuildingWidth / 1000; // net sum at elevation h
-            currentMagY = 0;
+            double load_x = (ww - lw) * parameters.BuildingHeight * parameters.BuildingWidth / 1000; // net sum at elevation h
+            double load_y = 0;
+
+            if (Calculator != null)
+            {
+                Calculator.AddLoads(load_x, load_y);
+            }
 
             Update();
         }
@@ -1130,11 +1126,6 @@ namespace ShearWallVisualizer
                 }
             }
         }
-
-
-
-
-
         private void DrawBracedWallLines(DrawingContext ctx)
         {
             if (Calculator == null) return;
@@ -1252,7 +1243,6 @@ namespace ShearWallVisualizer
                 }
             }
         }
-
         private void DrawCOMandCOR(DrawingContext ctx)
         {
             if (Calculator is null) return;
@@ -1414,7 +1404,6 @@ namespace ShearWallVisualizer
                 }
             }
         }
-
         private void DrawReferenceImage(DrawingContext ctx)
         {
 
@@ -1442,11 +1431,11 @@ namespace ShearWallVisualizer
 
 
 
-            ctx.DrawImage(cachedReferenceImageBitmap, CalculateScreenRect());
+            ctx.DrawImage(cachedReferenceImageBitmap, CalculateImageScreenRect());
 
         }
 
-        private Rect CalculateScreenRect()
+        private Rect CalculateImageScreenRect()
         {
             // Draw image scaled to fit canvas
             double scale_x = Calculator.pixelScaleX;
@@ -1771,20 +1760,23 @@ namespace ShearWallVisualizer
 
         private void btnOpenLoadDialog_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new LoadInputDialog(currentMagX, currentLocX, currentMagY, currentLocY)
+            if(Calculator == null)
+            {
+                Console.WriteLine("No valid calculator found in btnOpenLoadDialog_Click.");
+                return;
+            }
+            var dialog = new LoadInputDialog(Calculator.V_x, Calculator.V_y)
             {
                 Owner = this
             };
 
             if (dialog.ShowDialog() == true)
             {
-                currentMagX = dialog.MagnitudeX;
-                currentLocX = dialog.LocationX;
-                currentMagY = dialog.MagnitudeY;
-                currentLocY = dialog.LocationY;
+                Calculator.V_x = dialog.MagnitudeX;
+                Calculator.V_y = dialog.MagnitudeY;
 
                 // Do something with the updated values
-                MessageBox.Show($"Updated Load Info:\nX: {currentMagX} @ {currentLocX}\nY: {currentMagY} @ {currentLocY}");
+                MessageBox.Show($"Updated Load Info:\nX: {Calculator.V_x} Y: {Calculator.V_y}");
 
                 Update();  // update the calculator
             }

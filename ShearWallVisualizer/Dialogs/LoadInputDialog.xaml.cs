@@ -16,9 +16,7 @@ namespace ShearWallVisualizer.Dialogs
         private LoadInputModes inputMode;
 
         public double MagnitudeX { get; private set; }
-        public double LocationX { get; private set; }
         public double MagnitudeY { get; private set; }
-        public double LocationY { get; private set; }
 
         public LoadInputDialog(double initialMagX = 0, double initialLocX = 0,
                                double initialMagY = 0, double initialLocY = 0)
@@ -26,9 +24,7 @@ namespace ShearWallVisualizer.Dialogs
             InitializeComponent();
 
             MagnitudeXBox.Text = initialMagX.ToString();
-            LocationXBox.Text = initialLocX.ToString();
             MagnitudeYBox.Text = initialMagY.ToString();
-            LocationYBox.Text = initialLocY.ToString();
 
             ctrlWindLoadInputControl.WindInputComplete += WindCalculated; // the listener event for the ASCE wind load calcs
         }
@@ -37,8 +33,6 @@ namespace ShearWallVisualizer.Dialogs
         {
             MagnitudeX = 100;
             MagnitudeY = 100;
-            LocationX = 50;
-            LocationY = 50;
 
             gridASCEWind.Visibility = Visibility.Visible;
             WindLoadResultsControl_MWFRS wlrc_MWFRS = new WindLoadResultsControl_MWFRS(e._parameters);
@@ -82,26 +76,14 @@ namespace ShearWallVisualizer.Dialogs
                 MessageBox.Show("Invalid input for Load Magnitude X", "Input Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
-            if (!double.TryParse(LocationXBox.Text, out double locX))
-            {
-                MessageBox.Show("Invalid input for Location X", "Input Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
-            }
             if (!double.TryParse(MagnitudeYBox.Text, out double magY))
             {
                 MessageBox.Show("Invalid input for Load Magnitude Y", "Input Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
-            if (!double.TryParse(LocationYBox.Text, out double locY))
-            {
-                MessageBox.Show("Invalid input for Location Y", "Input Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
-            }
 
             MagnitudeX = magX;
-            LocationX = locX;
             MagnitudeY = magY;
-            LocationY = locY;
 
             DialogResult = true; // signal that the input is complete
             Close();
