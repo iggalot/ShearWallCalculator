@@ -437,6 +437,17 @@ namespace ShearWallVisualizer
             sp_DimPanel_Walls.Children.Add(sysControl);
             sysControl.OnWallSubControlDeleted += WallDeleted;
         }
+        private void CreateDiaphragmDataControls()
+        {
+            if (Calculator == null || Calculator._diaphragm_system == null)
+            {
+                return;
+            }
+
+            DiaphragmSystemControl sysControl = new DiaphragmSystemControl(this, Calculator._diaphragm_system);
+            sp_DimPanel_Diaphragms.Children.Add(sysControl);
+            sysControl.OnDiaphragmSubControlDeleted += DiaphragmDeleted;
+        }
 
         private void WallDeleted(object sender, EventArgs e)
         {
@@ -446,7 +457,6 @@ namespace ShearWallVisualizer
                 return;
             }
 
-            WallDataControl control = sender as WallDataControl;
             DeleteWallEventArgs args = e as DeleteWallEventArgs;
 
             foreach (var wall in Calculator._wall_system._walls)
@@ -467,7 +477,6 @@ namespace ShearWallVisualizer
                 return;
             }
 
-            DiaphragmDataControl control = sender as DiaphragmDataControl;
             DeleteDiaphragmEventArgs args = e as DeleteDiaphragmEventArgs;
 
             foreach (var dia in Calculator._diaphragm_system._diaphragms)
@@ -480,19 +489,6 @@ namespace ShearWallVisualizer
                 }
             }
         }
-
-        private void CreateDiaphragmDataControls()
-        {
-            if (Calculator == null || Calculator._diaphragm_system == null)
-            {
-                return;
-            }
-
-            DiaphragmSystemControl sysControl = new DiaphragmSystemControl(this, Calculator._diaphragm_system);
-            sp_DimPanel_Diaphragms.Children.Add(sysControl);
-            sysControl.OnDiaphragmSubControlDeleted += DiaphragmDeleted;
-        }
-
 
         private void CreateCalculationResultsControls_Rigid()
         {
@@ -1696,8 +1692,7 @@ namespace ShearWallVisualizer
             else
             {
                 // test load data
-                Calculator.V_x = 15;
-                Calculator.V_y = 0;
+                Calculator.AddLoads(15, 15);
 
                 // test wall key
                 int wall_id = 0;
@@ -1772,12 +1767,7 @@ namespace ShearWallVisualizer
 
             if (dialog.ShowDialog() == true)
             {
-                Calculator.V_x = dialog.MagnitudeX;
-                Calculator.V_y = dialog.MagnitudeY;
-
-                // Do something with the updated values
-                MessageBox.Show($"Updated Load Info:\nX: {Calculator.V_x} Y: {Calculator.V_y}");
-
+                Calculator.AddLoads(dialog.MagnitudeX, dialog.MagnitudeY);
                 Update();  // update the calculator
             }
         }
