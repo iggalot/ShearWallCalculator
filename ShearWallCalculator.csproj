@@ -109,7 +109,8 @@
     <Compile Include="SimpsonCatalog\StrapTies_Manager.cs" />
     <Compile Include="WallData.cs" />
     <Compile Include="WallSystem.cs" />
-    <Compile Include="WindLoadCalculations\WindLoadCalculator_MWFRS.cs" />
+    <Compile Include="WindLoadCalculations\WindLoadCalculator_CC_ASCE7_16.cs" />
+    <Compile Include="WindLoadCalculations\WindLoadCalculator_MWFRS_ASCE7_10.cs" />
     <Compile Include="WindLoadCalculations\WindLoadCalculator_Base.cs" />
   </ItemGroup>
   <ItemGroup>

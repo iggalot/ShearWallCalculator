@@ -1,7 +1,7 @@
-﻿using System;
+﻿using ShearWallCalculator.WindLoadCalculations;
+using System;
 using System.Windows;
 using System.Windows.Controls;
-using static ShearWallCalculator.WindLoadCalculations.WindLoadCalculator_Base;
 
 namespace ShearWallVisualizer.Controls
 {
@@ -51,9 +51,27 @@ namespace ShearWallVisualizer.Controls
             double pitch = double.Parse(RoofPitchTextBox.Text);
 
             string risk = ((ComboBoxItem)RiskCategoryComboBox.SelectedItem).Content.ToString();
-            string exposure = ((ComboBoxItem)ExposureCategoryComboBox.SelectedItem).Content.ToString();
             string enclosure = ((ComboBoxItem)EnclosureComboBox.SelectedItem).Content.ToString();
             string ridgeDir = ((ComboBoxItem)RidgeDirectionComboBox.SelectedItem).Content.ToString();
+
+            string exposure_string = ((ComboBoxItem)ExposureCategoryComboBox.SelectedItem).Content.ToString();
+            WindExposureCategories exposure;
+            switch (exposure_string)
+            {
+                case "B":
+                    exposure = WindExposureCategories.WIND_EXP_CAT_B;
+                    break;
+                case "C":
+                    exposure = WindExposureCategories.WIND_EXP_CAT_C;
+                    break;
+                case "D":
+                    exposure = WindExposureCategories.WIND_EXP_CAT_D;
+                    break;
+                default:
+                    exposure = WindExposureCategories.WIND_EXP_CAT_C;
+                    break;
+            }
+
 
             return new WindLoadParameters
             {

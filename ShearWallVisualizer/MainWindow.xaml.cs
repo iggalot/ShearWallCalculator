@@ -390,9 +390,9 @@ namespace ShearWallVisualizer
         /// <param name="e"></param>
         private void WindLoadResultsControl_MWFRS_WindCalculated(object sender, WindLoadResultsControl_MWFRS.OnWindCalculatedEventArgs e)
         {
-            List<WindLoadCalculator_MWFRS.WindPressureResult_Wall_MWFRS> wall_results = e._wall_results;
-            List<WindLoadCalculator_MWFRS.WindPressureResult_Roof_MWFRS> roof_results = e._roof_results;
-            WindLoadCalculator_MWFRS.WindLoadParameters parameters = e._parameters;
+            List<WindLoadCalculator_MWFRS_ASCE7_10.WindPressureResult_Wall_MWFRS> wall_results = e._wall_results;
+            List<WindLoadCalculator_MWFRS_ASCE7_10.WindPressureResult_Roof_MWFRS> roof_results = e._roof_results;
+            WindLoadParameters parameters = e._parameters;
 
             // now that we've used the event, unhook it
             ((WindLoadResultsControl_MWFRS)sender).WindCalculated-= WindLoadResultsControl_MWFRS_WindCalculated;
@@ -414,6 +414,7 @@ namespace ShearWallVisualizer
                 }
             }
 
+            // TODO:  This calculation needs to be improved
             // worst x case will be +WW and -LW -- internal suction should offset each other.
             double load_x = (ww - lw) * parameters.BuildingHeight * parameters.BuildingWidth / 1000; // net sum at elevation h
             double load_y = 0;

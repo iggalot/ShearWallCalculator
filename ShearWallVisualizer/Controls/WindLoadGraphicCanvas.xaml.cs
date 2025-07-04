@@ -1,10 +1,11 @@
-﻿using System;
+﻿using ShearWallCalculator.WindLoadCalculations;
+using System;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using static ShearWallCalculator.WindLoadCalculations.WindLoadCalculator_Base;
-using static ShearWallCalculator.WindLoadCalculations.WindLoadCalculator_MWFRS;
+using static ShearWallCalculator.WindLoadCalculations.WindLoadCalculator_MWFRS_ASCE7_10;
 
 namespace ShearWallVisualizer.Controls
 {

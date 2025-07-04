@@ -1,9 +1,10 @@
-﻿using System;
+﻿using ShearWallCalculator.WindLoadCalculations;
+using System;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using static ShearWallCalculator.WindLoadCalculations.WindLoadCalculator_Base;
-using static ShearWallCalculator.WindLoadCalculations.WindLoadCalculator_MWFRS;
+using static ShearWallCalculator.WindLoadCalculations.WindLoadCalculator_MWFRS_ASCE7_10;
 
 namespace ShearWallVisualizer.Controls
 {
@@ -58,10 +59,10 @@ namespace ShearWallVisualizer.Controls
             wall_results = CalculateWallPressureResults_MWFRS(_parameters, wall_zones);
             roof_results = CalculateRoofPressureResults_MWFRS(_parameters, roof_zones);
 
-            tbl_qh.Text = Math.Round(CalculateDynamicWindPressure(_parameters, _parameters.BuildingHeight), 2).ToString();
+            tbl_qh.Text = Math.Round(CalculateDynamicWindPressure(_parameters, _parameters.MeanRoofHeight), 2).ToString();
             tbl_theta.Text = Math.Round(_parameters.RoofPitch, 2).ToString();
-            tbl_hOverL.Text = Math.Round(_parameters.BuildingHeight / _parameters.BuildingLength, 2).ToString();
-            tbl_h.Text = Math.Round(_parameters.BuildingHeight, 2).ToString();
+            tbl_hOverL.Text = Math.Round(_parameters.MeanRoofHeight / _parameters.BuildingLength, 2).ToString();
+            tbl_h.Text = Math.Round(_parameters.MeanRoofHeight, 2).ToString();
             tbl_windOrientation.Text = _parameters.RidgeDirection;
 
             // Display wall results in the DataGrids
