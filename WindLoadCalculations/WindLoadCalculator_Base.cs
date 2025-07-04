@@ -95,20 +95,33 @@ namespace ShearWallCalculator.WindLoadCalculations
         /// <summary>
         /// The mean roof height of the building, h per ASCE7
         /// </summary>
-        public double MeanRoofHeight { get; set; }
+        public double MeanRoofHeight { get => GetMeanRoofHeight(); }
 
         /// <summary>
         /// The critical width dimenstion "a" used throughout chapter 30
         /// -- minimum of 0.4 * building height and 0.1 * min(building Length, building width)
         /// </summary>
-        public double CritDim_a { get; set; } = 0.0;
+        public double CritDim_a { get => GetCritDim_a(); }
 
         /// <summary>
-        /// Constructor
+        /// Zone areas
         /// </summary>
-        public WindLoadParameters()
+        public double A1 { get; set; } = -1.0;  // zone 1
+        public double A1_prime { get; set; } = -1.0; // zone 1' -- Fig 30.3-2A
+        public double A2 { get; set; } = -1.0;  // zone 2
+        public double A2_n { get; set; } = -1.0;  // zone 2n -- Fig 30.3-2B // normal to ridge at edge of roof
+        public double A2_e { get; set; } = -1.0;  // zone 2e -- Fig 30.3-2B // parallel to ridge at edge of roof
+        public double A2_r { get; set; } = -1.0;  // zone 2r -- Fig 30.3-2B // parallel to ridge at peak
+        public double A3 { get; set; } = -1.0;  // zone 3
+        public double A3_e { get; set; } = -1.0;  // zone 3e -- Fig 30.3-2B
+        public double A3_r { get; set; } = -1.0;  // zone 3r -- Fig 30.3-2B
+        public double A4_1 { get; set; } = -1.0;  // zone 4 -- area of Zone 4 on end wall
+        public double A4_2 { get; set; } = -1.0;  // zone 4 -- area of Zone 4 on side wall
+        public double A5 { get; set; } = -1.0;  // zone 5
+
+        private double GetCritDim_a()
         {
-            MeanRoofHeight = GetMeanRoofHeight();
+            return Math.Min(0.4 * MeanRoofHeight, 0.1 * Math.Min(BuildingLength, BuildingWidth));
         }
 
         /// <summary>
@@ -134,10 +147,70 @@ namespace ShearWallCalculator.WindLoadCalculations
         public void ComputeEffectiveWindAreas()
         {
             // Compute Wall Effective Areas
-            A4_1 = Parameters.BuildingHeight * (Parameters.BuildingWidth - 2.0 * CritDim_a);
-            A4_2 = Parameters.BuildingHeight * (Parameters.BuildingLength - 2.0 * CritDim_a);
+            A4_1 = BuildingHeight * (BuildingWidth - 2.0 * CritDim_a);
+            A4_2 = BuildingHeight * (BuildingLength - 2.0 * CritDim_a);
 
-            A5 = Parameters.BuildingHeight * CritDim_a;
+            A5 = BuildingHeight * CritDim_a;
+
+            // Figure 30.3-2A -- Flat roof and Gable / Hip with slope less than 7
+            if(RoofType == RoofTypes.ROOF_TYPE_FLAT ||
+                (RoofType == RoofTypes.ROOF_TYPE_GABLE && RoofPitch < 7) ||
+                (RoofType == RoofTypes.ROOF_TYPE_HIP && RoofPitch < 7)){
+
+                // central flat region
+                A1_prime = BuildingLength * BuildingWidth - (BuildingLength - 1.2 * MeanRoofHeight)*(BuildingWidth - 1.2 * MeanRoofHeight);
+                // outer ring around building
+                A1 = ((BuildingLength-0.6*MeanRoofHeight) * (BuildingWidth-0.6*MeanRoofHeight)) -A1_prime;
+                A2 = (BuildingLength * BuildingWidth) - (BuildingLength - 0.6 * MeanRoofHeight) * (BuildingWidth - 0.6 * MeanRoofHeight) - A1_prime;
+                A3 = 2.0 * (0.6 * MeanRoofHeight) * (0.2 * MeanRoofHeight);
+                return;
+            }
+
+            // Figure 30.3-2B / 2C / 2D -- Flat roof and Gable with slope greater than 7
+            if  (RoofType == RoofTypes.ROOF_TYPE_GABLE && RoofPitch > 7) 
+            {
+                A3_e = CritDim_a * CritDim_a;
+                A3_r = CritDim_a * CritDim_a;
+
+                // TODO:  Fix these so that A2_e is parallel to ridge
+                // Building length assumed parallel to ridge
+                A2_e = (BuildingLength - 2.0 * CritDim_a) * CritDim_a;
+                A2_n = CritDim_a * BuildingWidth - 2.0 * A3_e - 2.0 * A3_r;
+                A2_r = A2_e;
+
+                // central flat region
+                A1 = 0.5 * ((BuildingLength - CritDim_a) * (BuildingWidth - CritDim_a) - 2.0*A2_r);
+                return;
+            }
+
+            // Figure 30.3-2E / 2F / 2G / 2H / 2I -- Flat roof and Gable with slope greater than 7
+            if (RoofType == RoofTypes.ROOF_TYPE_HIP && RoofPitch > 7)
+            {
+                A3 = CritDim_a * CritDim_a;
+
+                // TODO:  Fix these so that A2_e is parallel to ridge
+                // Building length assumed parallel to ridge
+                A2_e = (BuildingLength - 2.0 * CritDim_a) * CritDim_a;
+                A2_n = CritDim_a * BuildingWidth - 2.0 * A3;  // this is an A2_e also on the chart
+
+                // TODO:  Calculate A1 values
+                // A1 on short side (perp to ridge) is a triangle
+                // A1 on long side (parallel to ridge) is a rectangle
+
+
+                throw new NotImplementedException("TODO:  Implement Hip with slope > 7");
+                //A3_e = CritDim_a * CritDim_a;
+                //A3_r = CritDim_a * CritDim_a;
+
+                //// TODO:  Fix these so that A2_e is parallel to ridge
+                //A2_e = (BuildingLength - 2.0 * CritDim_a) * CritDim_a;
+                //A2_n = CritDim_a * BuildingWidth - 2.0 * A3_e - 2.0 * A3_r;
+                //A2_r = A2_e;
+
+                //// central flat region
+                //A1 = 0.5 * ((BuildingLength - CritDim_a) * (BuildingWidth - CritDim_a) - 2.0 * A2_r);
+                //return;
+            }
         }
 
     }
