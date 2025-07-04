@@ -1,6 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
-using System.Security.Cryptography;
+using System.Windows;
 
 namespace ShearWallCalculator.WindLoadCalculations
 {
@@ -104,17 +105,19 @@ namespace ShearWallCalculator.WindLoadCalculations
         public double CritDim_a { get => GetCritDim_a(); }
 
         /// <summary>
-        /// Zone areas
+        /// Effective wind areas for roof
         /// </summary>
-        public double A1 { get; set; } = -1.0;  // zone 1
-        public double A1_prime { get; set; } = -1.0; // zone 1' -- Fig 30.3-2A
-        public double A2 { get; set; } = -1.0;  // zone 2
-        public double A2_n { get; set; } = -1.0;  // zone 2n -- Fig 30.3-2B // normal to ridge at edge of roof
-        public double A2_e { get; set; } = -1.0;  // zone 2e -- Fig 30.3-2B // parallel to ridge at edge of roof
-        public double A2_r { get; set; } = -1.0;  // zone 2r -- Fig 30.3-2B // parallel to ridge at peak
-        public double A3 { get; set; } = -1.0;  // zone 3
-        public double A3_e { get; set; } = -1.0;  // zone 3e -- Fig 30.3-2B
-        public double A3_r { get; set; } = -1.0;  // zone 3r -- Fig 30.3-2B
+        public Dictionary<int, EffectiveWindArea_Roof> effWindAreas_Roof { get; set; }
+        //public double A1 { get; set; } = -1.0;  // zone 1
+        //public double A1_prime { get; set; } = -1.0; // zone 1' -- Fig 30.3-2A
+        //public double A2 { get; set; } = -1.0;  // zone 2
+        //public double A2_n { get; set; } = -1.0;  // zone 2n -- Fig 30.3-2B // normal to ridge at edge of roof
+        //public double A2_e { get; set; } = -1.0;  // zone 2e -- Fig 30.3-2B // parallel to ridge at edge of roof
+        //public double A2_r { get; set; } = -1.0;  // zone 2r -- Fig 30.3-2B // parallel to ridge at peak
+        //public double A3 { get; set; } = -1.0;  // zone 3
+        //public double A3_e { get; set; } = -1.0;  // zone 3e -- Fig 30.3-2B
+        //public double A3_r { get; set; } = -1.0;  // zone 3r -- Fig 30.3-2B
+        
         public double A4_1 { get; set; } = -1.0;  // zone 4 -- area of Zone 4 on end wall
         public double A4_2 { get; set; } = -1.0;  // zone 4 -- area of Zone 4 on side wall
         public double A5 { get; set; } = -1.0;  // zone 5
@@ -146,6 +149,8 @@ namespace ShearWallCalculator.WindLoadCalculations
 
         public void ComputeEffectiveWindAreas()
         {
+            effWindAreas_Roof = new Dictionary<int, EffectiveWindArea_Roof>();
+
             // Compute Wall Effective Areas
             A4_1 = BuildingHeight * (BuildingWidth - 2.0 * CritDim_a);
             A4_2 = BuildingHeight * (BuildingLength - 2.0 * CritDim_a);
@@ -155,64 +160,262 @@ namespace ShearWallCalculator.WindLoadCalculations
             // Figure 30.3-2A -- Flat roof and Gable / Hip with slope less than 7
             if(RoofType == RoofTypes.ROOF_TYPE_FLAT ||
                 (RoofType == RoofTypes.ROOF_TYPE_GABLE && RoofPitch < 7) ||
-                (RoofType == RoofTypes.ROOF_TYPE_HIP && RoofPitch < 7)){
+                (RoofType == RoofTypes.ROOF_TYPE_HIP && RoofPitch < 7))
+            {
 
-                // central flat region
-                A1_prime = BuildingLength * BuildingWidth - (BuildingLength - 1.2 * MeanRoofHeight)*(BuildingWidth - 1.2 * MeanRoofHeight);
-                // outer ring around building
-                A1 = ((BuildingLength-0.6*MeanRoofHeight) * (BuildingWidth-0.6*MeanRoofHeight)) -A1_prime;
-                A2 = (BuildingLength * BuildingWidth) - (BuildingLength - 0.6 * MeanRoofHeight) * (BuildingWidth - 0.6 * MeanRoofHeight) - A1_prime;
-                A3 = 2.0 * (0.6 * MeanRoofHeight) * (0.2 * MeanRoofHeight);
+                // central flat region 1' out perimieter in CCW
+                Point p1 = new Point(1.2 * MeanRoofHeight, 1.2 * MeanRoofHeight);
+                Point p2 = new Point(BuildingLength - (1.2 * MeanRoofHeight), 1.2 * MeanRoofHeight);
+                Point p3 = new Point(BuildingLength - (1.2 * MeanRoofHeight), BuildingWidth - (1.2 * MeanRoofHeight));
+                Point p4 = new Point(1.2 * MeanRoofHeight, BuildingWidth - (1.2 * MeanRoofHeight));
+
+                var roof_area_1_prime = new EffectiveWindArea_Roof(
+                    "1'",
+                    new List<Point> { p1, p2, p3, p4 },
+                    null);
+
+                //  region 1 middle band in CCW -- holes are CW p4,p3, p2, p1
+                Point p5 = new Point(0.6 * MeanRoofHeight, 0.6 * MeanRoofHeight);
+                Point p6 = new Point(BuildingLength - 0.6 * MeanRoofHeight, 0.6 * MeanRoofHeight);
+                Point p7 = new Point(BuildingLength - 0.6 * MeanRoofHeight, BuildingWidth - 0.6 * MeanRoofHeight);
+                Point p8 = new Point(0.6 * MeanRoofHeight, BuildingWidth - 0.6 * MeanRoofHeight);
+
+                var roof_area_1 = new EffectiveWindArea_Roof(
+                    "1'",
+                    new List<Point> { p5, p6, p7, p8 },
+                    new[] { new List<Point> { p4, p3, p2, p1 } }
+                    );
+
+                // region 2 outer band in CCW -- holes are CW p8, p7, p6, p5
+                Point p9 = new Point(0, 0);
+                Point p10 = new Point(BuildingLength, 0);
+                Point p11 = new Point(BuildingLength, BuildingWidth);
+                Point p12 = new Point(0, BuildingWidth);
+
+                var roof_area_2 = new EffectiveWindArea_Roof(
+                    "2",
+                    new List<Point> { p9, p10, p11, p12 },
+                    new[] { new List<Point> { p8, p7, p6, p5 } }
+                    );
+
+                // region 3 corner zones
+                // lower left
+                Point p13 = new Point(0, 0);
+                Point p14 = new Point(0.6 * MeanRoofHeight, 0);
+                Point p15 = new Point(0.6 * MeanRoofHeight, 0.2 * MeanRoofHeight);
+                Point p16 = new Point(0.2 * MeanRoofHeight, 0.2 * MeanRoofHeight);
+                Point p17 = new Point(0.2 * MeanRoofHeight, 0.6 * MeanRoofHeight);
+                Point p18 = new Point(0, 0.6 * MeanRoofHeight);
+
+                var roof_area_3_1 = new EffectiveWindArea_Roof(
+                    "3_1",
+                    new List<Point> { p13, p14, p15, p16, p17, p18 },
+                    null
+                    );
+
+                // lower right
+                Point p19 = new Point(BuildingLength, 0);
+                Point p20 = new Point(BuildingLength, 0.6 * MeanRoofHeight);
+                Point p21 = new Point(BuildingLength - 0.2 * MeanRoofHeight, 0.6 * MeanRoofHeight);
+                Point p22 = new Point(BuildingLength - 0.2 * MeanRoofHeight, 0.2 * MeanRoofHeight);
+                Point p23 = new Point(BuildingLength - 0.6 * MeanRoofHeight, 0.2 * MeanRoofHeight);
+                Point p24 = new Point(BuildingLength - 0.6 * MeanRoofHeight, 0);
+
+
+                var roof_area_3_2 = new EffectiveWindArea_Roof(
+                    "3_2",
+                    new List<Point> { p19, p20, p21, p22, p23, p24 },
+                    null
+                    );
+
+                // upper right
+                Point p25 = new Point(BuildingLength - 0.6 * MeanRoofHeight, BuildingWidth - 0.6 * MeanRoofHeight);
+                Point p26 = new Point(BuildingLength, BuildingWidth - 0.6 * MeanRoofHeight);
+                Point p27 = new Point(BuildingLength, BuildingWidth);
+                Point p28 = new Point(BuildingLength - 0.6 * MeanRoofHeight, BuildingWidth);
+                Point p29 = new Point(BuildingLength - 0.6 * MeanRoofHeight, BuildingWidth - 0.2 * MeanRoofHeight);
+                Point p30 = new Point(BuildingLength - 0.2 * MeanRoofHeight, BuildingWidth - 0.2 * MeanRoofHeight);
+
+                var roof_area_3_3 = new EffectiveWindArea_Roof(
+                    "3_3",
+                    new List<Point> { p25, p26, p27, p28, p29, p30 },
+                    null
+                    );
+
+                // upper left
+                Point p31 = new Point(0, BuildingWidth);
+                Point p32 = new Point(0, BuildingWidth - 0.6 * MeanRoofHeight);
+                Point p33 = new Point(0.6 * MeanRoofHeight, BuildingWidth - 0.6 * MeanRoofHeight);
+                Point p34 = new Point(0.6 * MeanRoofHeight, BuildingWidth - 0.2 * MeanRoofHeight);
+                Point p35 = new Point(0.2 * MeanRoofHeight, BuildingWidth - 0.2 * MeanRoofHeight);
+                Point p36 = new Point(0.6 * MeanRoofHeight, BuildingWidth);
+
+                var roof_area_3_4 = new EffectiveWindArea_Roof(
+                    "3_4",
+                    new List<Point> { p31, p32, p33, p34, p35, p36 },
+                    null
+                    );
+
+                effWindAreas_Roof.Add(1, roof_area_1_prime); //z1_prime
+                effWindAreas_Roof.Add(2, roof_area_1);  //z1
+                effWindAreas_Roof.Add(3, roof_area_2);  //z2
+                effWindAreas_Roof.Add(4, roof_area_3_1);  //z3
+                effWindAreas_Roof.Add(5, roof_area_3_2);  //z3
+                effWindAreas_Roof.Add(6, roof_area_3_3);  //z3
+                effWindAreas_Roof.Add(7, roof_area_3_4);  //z3
+
                 return;
             }
 
             // Figure 30.3-2B / 2C / 2D -- Flat roof and Gable with slope greater than 7
             if  (RoofType == RoofTypes.ROOF_TYPE_GABLE && RoofPitch > 7) 
             {
-                A3_e = CritDim_a * CritDim_a;
-                A3_r = CritDim_a * CritDim_a;
+                Point p1 = new Point(0, 0);
+                Point p2 = new Point(CritDim_a, 0);
+                Point p3 = new Point(0.5 * BuildingLength - CritDim_a, 0);
+                Point p4 = new Point(0.5 * BuildingLength, 0);
+                Point p5 = new Point(0.5 * BuildingLength + CritDim_a, 0);
+                Point p6 = new Point(BuildingLength - CritDim_a, 0);
+                Point p7 = new Point(BuildingLength, 0);
 
-                // TODO:  Fix these so that A2_e is parallel to ridge
-                // Building length assumed parallel to ridge
-                A2_e = (BuildingLength - 2.0 * CritDim_a) * CritDim_a;
-                A2_n = CritDim_a * BuildingWidth - 2.0 * A3_e - 2.0 * A3_r;
-                A2_r = A2_e;
+                Point p11 = new Point(0, CritDim_a);
+                Point p12 = new Point(CritDim_a, CritDim_a);
+                Point p13 = new Point(0.5 * BuildingLength - CritDim_a, CritDim_a);
+                Point p14 = new Point(0.5 * BuildingLength, CritDim_a);
+                Point p15 = new Point(0.5 * BuildingLength + CritDim_a, CritDim_a);
+                Point p16 = new Point(BuildingLength - CritDim_a, CritDim_a);
+                Point p17 = new Point(BuildingLength, CritDim_a);
 
-                // central flat region
-                A1 = 0.5 * ((BuildingLength - CritDim_a) * (BuildingWidth - CritDim_a) - 2.0*A2_r);
+                Point p21 = new Point(0, BuildingWidth - CritDim_a);
+                Point p22 = new Point(CritDim_a, BuildingWidth - CritDim_a);
+                Point p23 = new Point(0.5 * BuildingLength - CritDim_a, BuildingWidth - CritDim_a);
+                Point p24 = new Point(0.5 * BuildingLength, BuildingWidth - CritDim_a);
+                Point p25 = new Point(0.5 * BuildingLength + CritDim_a, BuildingWidth - CritDim_a);
+                Point p26 = new Point(BuildingLength - CritDim_a, BuildingWidth - CritDim_a);
+                Point p27 = new Point(BuildingLength, BuildingWidth - CritDim_a);
+
+                Point p31 = new Point(0, BuildingWidth);
+                Point p32 = new Point(CritDim_a, BuildingWidth);
+                Point p33 = new Point(0.5 * BuildingLength - CritDim_a, BuildingWidth);
+                Point p34 = new Point(0.5 * BuildingLength, BuildingWidth);
+                Point p35 = new Point(0.5 * BuildingLength + CritDim_a, BuildingWidth);
+                Point p36 = new Point(BuildingLength - CritDim_a, BuildingWidth);
+                Point p37 = new Point(BuildingLength, BuildingWidth);
+
+                // Bottom row of rectangles
+                effWindAreas_Roof.Add(1, new EffectiveWindArea_Roof("3e", new List<Point> { p1, p2, p12, p11 }, null));
+                effWindAreas_Roof.Add(2, new EffectiveWindArea_Roof("2n", new List<Point> { p2, p3, p13, p12 }, null));
+                effWindAreas_Roof.Add(3, new EffectiveWindArea_Roof("3r", new List<Point> { p3, p4, p14, p13 }, null));
+                effWindAreas_Roof.Add(4, new EffectiveWindArea_Roof("3r", new List<Point> { p4, p5, p15, p14 }, null));
+                effWindAreas_Roof.Add(5, new EffectiveWindArea_Roof("2n", new List<Point> { p5, p6, p16, p15 }, null));
+                effWindAreas_Roof.Add(6, new EffectiveWindArea_Roof("3e", new List<Point> { p6, p7, p17, p16 }, null));
+
+                // Middle row of rectangles
+                effWindAreas_Roof.Add(7, new EffectiveWindArea_Roof("2e", new List<Point> { p11, p12, p22, p21 }, null));
+                effWindAreas_Roof.Add(8, new EffectiveWindArea_Roof("1", new List<Point> { p12, p13, p23, p22 }, null));
+                effWindAreas_Roof.Add(9, new EffectiveWindArea_Roof("2r", new List<Point> { p13, p14, p24, p23 }, null));
+                effWindAreas_Roof.Add(10, new EffectiveWindArea_Roof("2r", new List<Point> { p14, p15, p25, p24 }, null));
+                effWindAreas_Roof.Add(11, new EffectiveWindArea_Roof("1", new List<Point> { p15, p16, p26, p25 }, null));
+                effWindAreas_Roof.Add(12, new EffectiveWindArea_Roof("2e", new List<Point> { p16, p17, p27, p26 }, null));
+
+                // Top row of rectangles
+                effWindAreas_Roof.Add(13, new EffectiveWindArea_Roof("3e", new List<Point> { p21, p22, p32, p31 }, null));
+                effWindAreas_Roof.Add(14, new EffectiveWindArea_Roof("2n", new List<Point> { p22, p23, p33, p32 }, null));
+                effWindAreas_Roof.Add(15, new EffectiveWindArea_Roof("3r", new List<Point> { p23, p24, p34, p33 }, null));
+                effWindAreas_Roof.Add(16, new EffectiveWindArea_Roof("3r", new List<Point> { p24, p25, p35, p34 }, null));
+                effWindAreas_Roof.Add(17, new EffectiveWindArea_Roof("2n", new List<Point> { p25, p26, p36, p35 }, null));
+                effWindAreas_Roof.Add(18, new EffectiveWindArea_Roof("3e", new List<Point> { p26, p27, p37, p36 }, null));
+
                 return;
             }
 
             // Figure 30.3-2E / 2F / 2G / 2H / 2I -- Flat roof and Gable with slope greater than 7
+            // Map if Length is less than width -- ridge is vertical on map
+            //  E-----F
+            //  |\   /|
+            //  | \ / |
+            //  |  D  |
+            //  |  |  |
+            //  |  |  |
+            //  |  C  |
+            //  | / \ |
+            //  |/   \|
+            //  A=----B 
+
             if (RoofType == RoofTypes.ROOF_TYPE_HIP && RoofPitch > 7)
             {
-                A3 = CritDim_a * CritDim_a;
+                // Corners of the hip roof planes
+                Point A = new Point(0, 0);
+                Point B = new Point(BuildingLength, 0);
+                Point C = new Point(0.5 * BuildingLength, 0.5 * BuildingLength);
+                Point D = new Point(0.5 * BuildingLength, BuildingWidth - 0.5 * BuildingLength);
+                Point E = new Point(0, BuildingWidth);
+                Point F = new Point(BuildingLength, BuildingWidth);
 
-                // TODO:  Fix these so that A2_e is parallel to ridge
-                // Building length assumed parallel to ridge
-                A2_e = (BuildingLength - 2.0 * CritDim_a) * CritDim_a;
-                A2_n = CritDim_a * BuildingWidth - 2.0 * A3;  // this is an A2_e also on the chart
+                Point p1 = new Point(0, 0);
+                Point p2 = new Point(CritDim_a, 0);
+                Point p3 = new Point(BuildingLength - CritDim_a, 0);
+                Point p4 = new Point(BuildingLength, 0);
 
-                // TODO:  Calculate A1 values
-                // A1 on short side (perp to ridge) is a triangle
-                // A1 on long side (parallel to ridge) is a rectangle
+                Point p11 = new Point(0, CritDim_a);
+                Point p12 = new Point(CritDim_a, CritDim_a);
+                Point p13 = new Point(BuildingLength - CritDim_a, CritDim_a);
+                Point p14 = new Point(BuildingLength, CritDim_a);
 
+                Point p21 = new Point(0, BuildingWidth - CritDim_a);
+                Point p22 = new Point(CritDim_a, BuildingWidth - CritDim_a);
+                Point p23 = new Point(BuildingLength - CritDim_a, BuildingWidth - CritDim_a);
+                Point p24 = new Point(BuildingLength, BuildingWidth - CritDim_a);
 
-                throw new NotImplementedException("TODO:  Implement Hip with slope > 7");
-                //A3_e = CritDim_a * CritDim_a;
-                //A3_r = CritDim_a * CritDim_a;
+                Point p31 = new Point(0, BuildingWidth);
+                Point p32 = new Point(CritDim_a, BuildingWidth);
+                Point p33 = new Point(BuildingLength - CritDim_a, BuildingWidth);
+                Point p34 = new Point(BuildingLength, BuildingWidth);
 
-                //// TODO:  Fix these so that A2_e is parallel to ridge
-                //A2_e = (BuildingLength - 2.0 * CritDim_a) * CritDim_a;
-                //A2_n = CritDim_a * BuildingWidth - 2.0 * A3_e - 2.0 * A3_r;
-                //A2_r = A2_e;
+                effWindAreas_Roof.Add(1, new EffectiveWindArea_Roof("3", new List<Point> { p1, p2, p12, p11 }, null));
+                effWindAreas_Roof.Add(2, new EffectiveWindArea_Roof("2e", new List<Point> { p2, p3, p13, p12 }, null));
+                effWindAreas_Roof.Add(3, new EffectiveWindArea_Roof("3", new List<Point> { p3, p4, p14, p13 }, null));
+                effWindAreas_Roof.Add(4, new EffectiveWindArea_Roof("2e", new List<Point> { p11, p12, p22, p21 }, null));
+                effWindAreas_Roof.Add(5, new EffectiveWindArea_Roof("2e", new List<Point> { p13, p14, p24, p23 }, null));
+                effWindAreas_Roof.Add(6, new EffectiveWindArea_Roof("3", new List<Point> { p21, p22, p32, p31 }, null));
+                effWindAreas_Roof.Add(7, new EffectiveWindArea_Roof("2e", new List<Point> { p22, p23, p33, p32 }, null));
+                effWindAreas_Roof.Add(8, new EffectiveWindArea_Roof("3", new List<Point> { p23, p24, p34, p33 }, null));
 
-                //// central flat region
-                //A1 = 0.5 * ((BuildingLength - CritDim_a) * (BuildingWidth - CritDim_a) - 2.0 * A2_r);
-                //return;
+                // for finding the inset points
+                var inset_dist = 1.414 * CritDim_a;
+
+                // lower triangle
+                Point p40 = new Point(p12.X + inset_dist, p12.Y);
+                Point p41 = new Point(p13.X - inset_dist, p13.Y);
+                Point p42 = new Point(C.X, C.Y - inset_dist);
+                effWindAreas_Roof.Add(9, new EffectiveWindArea_Roof("1", new List<Point> { p40, p41, p42 }, null));
+                effWindAreas_Roof.Add(10, new EffectiveWindArea_Roof("2r", new List<Point> { p12, p40, p42, p41, p13, C }, null));
+
+                // left trapezoid
+                Point p50 = new Point(p12.X, p12.Y + inset_dist);
+                Point p51 = new Point(C.X - CritDim_a, C.Y + (inset_dist - CritDim_a));
+                Point p52 = new Point(D.X - CritDim_a, D.Y - (inset_dist - CritDim_a));
+                Point p53 = new Point(p22.X, p22.Y - inset_dist);
+                effWindAreas_Roof.Add(11, new EffectiveWindArea_Roof("1", new List<Point> { p50, p51, p52, p53 }, null));
+                effWindAreas_Roof.Add(12, new EffectiveWindArea_Roof("2r", new List<Point> { p12, C, D, p22, p53, p52, p51, p50 }, null));
+
+                // left trapezoid
+                Point p60 = new Point(p13.X, p13.Y + inset_dist);
+                Point p61 = new Point(p23.X, p23.Y - inset_dist);
+                Point p62 = new Point(D.X + CritDim_a, D.Y - (inset_dist - CritDim_a));
+                Point p63 = new Point(C.X + CritDim_a, C.Y + (inset_dist - CritDim_a));
+                effWindAreas_Roof.Add(13, new EffectiveWindArea_Roof("1", new List<Point> { p60, p61, p62, p63 }, null));
+                effWindAreas_Roof.Add(14, new EffectiveWindArea_Roof("2r", new List<Point> { p13, p60, p63, p62, p61, p23, D, C }, null));
+
+                // top triangle
+                Point p70 = new Point(p22.X + inset_dist, p22.Y);
+                Point p71 = new Point(p23.X - inset_dist, p23.Y);
+                Point p72 = new Point(D.X, D.Y + inset_dist);
+                effWindAreas_Roof.Add(15, new EffectiveWindArea_Roof("1", new List<Point> { p70, p72, p71 }, null));
+                effWindAreas_Roof.Add(16, new EffectiveWindArea_Roof("2r", new List<Point> { p22, D, p23, p71, p72, p70 }, null));
+
             }
         }
-
     }
 
     public class WindLoadCalculator_Base

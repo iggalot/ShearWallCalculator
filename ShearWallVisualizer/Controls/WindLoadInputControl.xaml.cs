@@ -1,7 +1,10 @@
 ﻿using ShearWallCalculator.WindLoadCalculations;
 using System;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Shapes;
 
 namespace ShearWallVisualizer.Controls
 {
@@ -23,8 +26,82 @@ namespace ShearWallVisualizer.Controls
 
         public virtual void OnWindInputComplete(WindLoadParameters parameters)
         {
+            cnvCanvas.Children.Clear();
+            foreach (var kvp in parameters.effWindAreas_Roof)
+            {
+                DrawEffectiveWindArea(cnvCanvas, kvp.Value, 5);
+            }
+
+            MessageBox.Show("Paused");
+
             WindInputComplete?.Invoke(this, new OnWindInputCompleteEventArgs(parameters));
         }
+
+        public static void DrawEffectiveWindArea(Canvas canvas, EffectiveWindArea_Roof area, double scaleFactor)
+        {
+            if (canvas == null || area == null)
+                return;
+
+            //canvas.Children.Clear();
+
+            // Helper function to create a WPF polygon
+            Polygon CreatePolygon(IEnumerable<Point> pts, Brush stroke, Brush fill)
+            {
+                if(area.Label == "1" || area.Label == "1'")
+                {
+                    fill = Brushes.Red;
+                }
+
+                var polygon = new Polygon
+                {
+                    Stroke = stroke,
+                    Fill = fill,
+                    StrokeThickness = 1,
+                    Points = new PointCollection(),
+                    Opacity = 0.5
+                };
+
+                foreach (var pt in pts)
+                    polygon.Points.Add(new Point(pt.X * scaleFactor, pt.Y * scaleFactor));
+
+                return polygon;
+            }
+
+            // Draw outer boundary (light blue fill, blue border)
+            var outerPolygon = CreatePolygon(
+                area.OuterBoundary,
+                Brushes.Blue,
+                Brushes.LightBlue
+            );
+            canvas.Children.Add(outerPolygon);
+
+            // Draw each hole (transparent fill, red border)
+            foreach (var hole in area.Holes)
+            {
+                var holePolygon = CreatePolygon(
+                    hole,
+                    Brushes.Red,
+                    Brushes.Transparent
+                );
+                canvas.Children.Add(holePolygon);
+            }
+
+            // Optional: Draw centroid as a small ellipse
+            var center = area.Centroid;
+            double radius = 3;
+
+            var centroidDot = new Ellipse
+            {
+                Width = radius * 2,
+                Height = radius * 2,
+                Fill = Brushes.Black
+            };
+
+            Canvas.SetLeft(centroidDot, center.X * scaleFactor - radius);
+            Canvas.SetTop(centroidDot, center.Y * scaleFactor - radius);
+            canvas.Children.Add(centroidDot);
+        }
+
 
         public WindLoadInputControl()
         {
@@ -35,6 +112,7 @@ namespace ShearWallVisualizer.Controls
         private void ComputeButton_Click(object sender, RoutedEventArgs e)
         {
             WindLoadParameters parameters = GetWindLoadParameters();
+            parameters.ComputeEffectiveWindAreas();
             OnWindInputComplete(parameters); // raise the event where input has been completed
         }
 

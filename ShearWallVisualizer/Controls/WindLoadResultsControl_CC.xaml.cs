@@ -1,8 +1,11 @@
 ﻿using ShearWallCalculator.WindLoadCalculations;
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Shapes;
 
 namespace ShearWallVisualizer.Controls
 {
@@ -48,8 +51,11 @@ namespace ShearWallVisualizer.Controls
             this.Loaded += WindLoadResultsControl_CC_Loaded;
         }
 
+
+
         private void WindLoadResultsControl_CC_Loaded(object sender, RoutedEventArgs e)
         {
+
             //Dictionary<string, double> wall_zones = WindLoadCalculator_MWFRS.Calculate_WallZones_MWFRS(_parameters);
             //Dictionary<string, double> roof_zones = WindLoadCalculator_MWFRS.CalculateMWFRS_RoofZones(_parameters);
 

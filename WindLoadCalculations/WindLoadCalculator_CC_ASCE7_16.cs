@@ -9,37 +9,14 @@ namespace ShearWallCalculator.WindLoadCalculations
     {
         public double Lambda { get; set; } = 1.0;
 
-        /// <summary>
-        /// The critical width dimenstion "a" used throughout chapter 30
-        /// -- minimum of 0.4 * building height and 0.1 * min(building Length, building width)
-        /// </summary>
-        public double CritDim_a { get; set; } = 0.0;
 
-        /// <summary>
-        /// The plate height of the outer wall -- assumed the same on all sides
-        /// </summary>
-        public double PlateHeight { get => ComputePlateHeight(); }
 
-        private double ComputePlateHeight()
-        {
 
-        }
-
-        /// <summary>
-        /// Zone areas
-        /// </summary>
-        public double A1 { get; set; } = 1.0;  // zone 1
-        public double A2 { get; set; } = 1.0;  // zone 2
-        public double A3 { get; set; } = 1.0;  // zone 3
-        public double A4 { get; set; } = 1.0;  // zone 4
-        public double A5 { get; set; } = 1.0;  // zone 5
 
         public WindLoadCalculator_CC_ASCE7_16(WindLoadParameters p)
         {
             Parameters = p;
             Lambda = GetAdjustmentFactorForBuildingHeightAndExposure(p.MeanRoofHeight, p.ExposureCategory);
-
-            CritDim_a = Math.Min(0.4 * p.MeanRoofHeight, 0.1 * Math.Min(p.BuildingLength, p.BuildingWidth));
         }
 
         /// <summary>
@@ -170,7 +147,7 @@ namespace ShearWallCalculator.WindLoadCalculations
         /// </summary>
         private void GetGCp_Gable_Walls()
         {
-            double eave_height
+
             // Zone 4 Negative:
             // Ae = 1 --> GCp = -1.1
             // Ae = 10 --> GCp = -1.1
