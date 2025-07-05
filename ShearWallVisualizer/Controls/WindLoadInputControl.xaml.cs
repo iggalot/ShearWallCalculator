@@ -24,17 +24,69 @@ namespace ShearWallVisualizer.Controls
             }
         }
 
+        public WindLoadInputControl()
+        {
+            InitializeComponent();
+
+            this.Loaded += WindLoadInputControl_Loaded;
+        }
+
+        private void WindLoadInputControl_Loaded(object sender, RoutedEventArgs e)
+        {
+            foreach (var value in Enum.GetValues(typeof(RoofTypes)))
+            {
+                cmbRoofType.Items.Add(value);
+            }
+
+            cmbRoofType.SelectedIndex = 0;
+        }
+
         public virtual void OnWindInputComplete(WindLoadParameters parameters)
         {
             cnvCanvas.Children.Clear();
             foreach (var kvp in parameters.effWindAreas_Roof)
             {
-                DrawEffectiveWindArea(cnvCanvas, kvp.Value, 5);
+                try
+                {
+                    DrawEffectiveWindArea(cnvCanvas, kvp.Value, 5);
+                } catch
+                {
+                    MessageBox.Show("Error in area: " + kvp.Key.ToString());
+                }
             }
 
-            MessageBox.Show("Paused");
-
             WindInputComplete?.Invoke(this, new OnWindInputCompleteEventArgs(parameters));
+        }
+
+        public static Brush GetColorForRegion(string region)
+        {
+            switch (region)
+            {
+                case "1":
+                    return Brushes.Red;
+                case "1'":
+                    return Brushes.IndianRed;
+                case "2":
+                    return Brushes.Yellow;
+                case "2e":
+                    return Brushes.LightYellow;
+                case "2r":
+                    return Brushes.Goldenrod;
+                case "2n":
+                    return Brushes.YellowGreen;
+                case "3":
+                    return Brushes.Green;
+                case "3e":
+                    return Brushes.GreenYellow;
+                case "3r":
+                    return Brushes.LightGreen;
+                case "4":
+                    return Brushes.MediumOrchid;
+                case "5":
+                    return Brushes.Purple;
+                default:
+                    return Brushes.Black;
+            }
         }
 
         public static void DrawEffectiveWindArea(Canvas canvas, EffectiveWindArea_Roof area, double scaleFactor)
@@ -47,10 +99,7 @@ namespace ShearWallVisualizer.Controls
             // Helper function to create a WPF polygon
             Polygon CreatePolygon(IEnumerable<Point> pts, Brush stroke, Brush fill)
             {
-                if(area.Label == "1" || area.Label == "1'")
-                {
-                    fill = Brushes.Red;
-                }
+
 
                 var polygon = new Polygon
                 {
@@ -70,8 +119,8 @@ namespace ShearWallVisualizer.Controls
             // Draw outer boundary (light blue fill, blue border)
             var outerPolygon = CreatePolygon(
                 area.OuterBoundary,
-                Brushes.Blue,
-                Brushes.LightBlue
+                Brushes.Black,
+                GetColorForRegion(area.Label)
             );
             canvas.Children.Add(outerPolygon);
 
@@ -103,11 +152,6 @@ namespace ShearWallVisualizer.Controls
         }
 
 
-        public WindLoadInputControl()
-        {
-            InitializeComponent();
-        }
-
         // Event handler for the Compute Button click
         private void ComputeButton_Click(object sender, RoutedEventArgs e)
         {
@@ -131,9 +175,11 @@ namespace ShearWallVisualizer.Controls
             string risk = ((ComboBoxItem)RiskCategoryComboBox.SelectedItem).Content.ToString();
             string enclosure = ((ComboBoxItem)EnclosureComboBox.SelectedItem).Content.ToString();
             string ridgeDir = ((ComboBoxItem)RidgeDirectionComboBox.SelectedItem).Content.ToString();
+            RoofTypes roof_type = (RoofTypes)cmbRoofType.SelectedIndex;
 
             string exposure_string = ((ComboBoxItem)ExposureCategoryComboBox.SelectedItem).Content.ToString();
             WindExposureCategories exposure;
+
             switch (exposure_string)
             {
                 case "B":
@@ -165,7 +211,8 @@ namespace ShearWallVisualizer.Controls
                 BuildingLength = length,
                 BuildingWidth = width,
                 RoofPitch = pitch,
-                RidgeDirection = ridgeDir
+                RidgeDirection = ridgeDir,
+                RoofType = roof_type
             };
         }
     }

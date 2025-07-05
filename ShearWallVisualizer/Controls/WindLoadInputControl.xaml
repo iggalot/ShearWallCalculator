@@ -61,6 +61,11 @@
                     <TextBox x:Name="BuildingWidthTextBox" Width="150" Margin="5" Text="30"/>
                 </StackPanel>
 
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                    <TextBlock Text="Roof Type" VerticalAlignment="Center" Margin="5"/>
+                    <ComboBox x:Name="cmbRoofType" Width="150" Margin="5"/>
+                </StackPanel>
+                
                 <!-- Roof Pitch -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                     <TextBlock Text="Roof Pitch (θ)" VerticalAlignment="Center" Margin="5"/>
