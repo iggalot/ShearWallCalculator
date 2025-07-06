@@ -108,15 +108,6 @@ namespace ShearWallCalculator.WindLoadCalculations
         /// Effective wind areas for roof
         /// </summary>
         public Dictionary<int, EffectiveWindArea_Roof> effWindAreas_Roof { get; set; }
-        //public double A1 { get; set; } = -1.0;  // zone 1
-        //public double A1_prime { get; set; } = -1.0; // zone 1' -- Fig 30.3-2A
-        //public double A2 { get; set; } = -1.0;  // zone 2
-        //public double A2_n { get; set; } = -1.0;  // zone 2n -- Fig 30.3-2B // normal to ridge at edge of roof
-        //public double A2_e { get; set; } = -1.0;  // zone 2e -- Fig 30.3-2B // parallel to ridge at edge of roof
-        //public double A2_r { get; set; } = -1.0;  // zone 2r -- Fig 30.3-2B // parallel to ridge at peak
-        //public double A3 { get; set; } = -1.0;  // zone 3
-        //public double A3_e { get; set; } = -1.0;  // zone 3e -- Fig 30.3-2B
-        //public double A3_r { get; set; } = -1.0;  // zone 3r -- Fig 30.3-2B
         
         public double A4_1 { get; set; } = -1.0;  // zone 4 -- area of Zone 4 on end wall
         public double A4_2 { get; set; } = -1.0;  // zone 4 -- area of Zone 4 on side wall
@@ -166,18 +157,18 @@ namespace ShearWallCalculator.WindLoadCalculations
 
             if(RoofType == RoofTypes.ROOF_TYPE_GABLE)
             {
-                ComputeGableAreas();
+                ComputeGableRoofAreas();
             } 
             else if (RoofType == RoofTypes.ROOF_TYPE_HIP)
             {
-                ComputeHipAreas();
+                ComputeHipRoofAreas();
             } else
             {
                 throw new NotImplementedException("Error in ComputeEffectiveWindAreas() -- Invalid roof type: " + RoofType);
             }
         }
 
-        private void ComputeHipAreas()
+        private void ComputeHipRoofAreas()
         {
             // Figure 30.3-2E / 2F / 2G / 2H / 2I -- Flat roof and Gable with slope greater than 7
             // Map if Length is less than width -- ridge is vertical on map
@@ -423,7 +414,7 @@ namespace ShearWallCalculator.WindLoadCalculations
                 effWindAreas_Roof.Add(16, new EffectiveWindArea_Roof("2r", new List<Point> { p13, p70, p72, p71, p23, C }, null));
             }
         }
-        private void ComputeGableAreas()
+        private void ComputeGableRoofAreas()
         {
             if (BuildingLength < BuildingWidth)
             {
@@ -636,112 +627,318 @@ namespace ShearWallCalculator.WindLoadCalculations
                 }
             }
         }
+
         private void ComputeFlatRoofAreas()
         {
+            effWindAreas_Roof.Clear();
 
-            // central flat region 1' out perimieter in CCW
-            Point p1 = new Point(1.2 * MeanRoofHeight, 1.2 * MeanRoofHeight);
-            Point p2 = new Point(BuildingLength - (1.2 * MeanRoofHeight), 1.2 * MeanRoofHeight);
-            Point p3 = new Point(BuildingLength - (1.2 * MeanRoofHeight), BuildingWidth - (1.2 * MeanRoofHeight));
-            Point p4 = new Point(1.2 * MeanRoofHeight, BuildingWidth - (1.2 * MeanRoofHeight));
+            double halfMinDim = Math.Min(BuildingLength, BuildingWidth) / 2.0;
 
-            var roof_area_1_prime = new EffectiveWindArea_Roof(
-                "1'",
-                new List<Point> { p1, p2, p3, p4 },
-                null);
+            // Compute zone offsets based on MRH, clamped to avoid overlap
+            double d12 = Math.Min(1.2 * MeanRoofHeight, halfMinDim - 0.01);
+            double d06 = Math.Min(0.6 * MeanRoofHeight, halfMinDim - 0.01);
+            double d02 = Math.Min(0.2 * MeanRoofHeight, d06 - 0.01);
 
-            //  region 1 middle band in CCW -- holes are CW p4,p3, p2, p1
-            Point p5 = new Point(0.6 * MeanRoofHeight, 0.6 * MeanRoofHeight);
-            Point p6 = new Point(BuildingLength - 0.6 * MeanRoofHeight, 0.6 * MeanRoofHeight);
-            Point p7 = new Point(BuildingLength - 0.6 * MeanRoofHeight, BuildingWidth - 0.6 * MeanRoofHeight);
-            Point p8 = new Point(0.6 * MeanRoofHeight, BuildingWidth - 0.6 * MeanRoofHeight);
+            int id = 1;
 
-            var roof_area_1 = new EffectiveWindArea_Roof(
-                "1'",
-                new List<Point> { p5, p6, p7, p8 },
-                new[] { new List<Point> { p4, p3, p2, p1 } }
-                );
+            // === Zone 1′ (interior zone)
+            if (d12 < halfMinDim)
+            {
+                Point p1 = new Point(d12, d12);
+                Point p2 = new Point(BuildingLength - d12, d12);
+                Point p3 = new Point(BuildingLength - d12, BuildingWidth - d12);
+                Point p4 = new Point(d12, BuildingWidth - d12);
 
-            // region 2 outer band in CCW -- holes are CW p8, p7, p6, p5
-            Point p9 = new Point(0, 0);
-            Point p10 = new Point(BuildingLength, 0);
-            Point p11 = new Point(BuildingLength, BuildingWidth);
-            Point p12 = new Point(0, BuildingWidth);
+                var zone1p = new EffectiveWindArea_Roof("Zone_1p",
+                    new List<Point> { p1, p2, p3, p4 }, null);
 
-            var roof_area_2 = new EffectiveWindArea_Roof(
-                "2",
-                new List<Point> { p9, p10, p11, p12 },
-                new[] { new List<Point> { p8, p7, p6, p5 } }
-                );
+                effWindAreas_Roof.Add(id++, zone1p);
+            }
 
-            // region 3 corner zones
-            // lower left
-            Point p13 = new Point(0, 0);
-            Point p14 = new Point(0.6 * MeanRoofHeight, 0);
-            Point p15 = new Point(0.6 * MeanRoofHeight, 0.2 * MeanRoofHeight);
-            Point p16 = new Point(0.2 * MeanRoofHeight, 0.2 * MeanRoofHeight);
-            Point p17 = new Point(0.2 * MeanRoofHeight, 0.6 * MeanRoofHeight);
-            Point p18 = new Point(0, 0.6 * MeanRoofHeight);
+            // === Zone 1 (middle band)
+            if (d06 < halfMinDim)
+            {
+                Point p5 = new Point(d06, d06);
+                Point p6 = new Point(BuildingLength - d06, d06);
+                Point p7 = new Point(BuildingLength - d06, BuildingWidth - d06);
+                Point p8 = new Point(d06, BuildingWidth - d06);
 
-            var roof_area_3_1 = new EffectiveWindArea_Roof(
-                "3_1",
-                new List<Point> { p13, p14, p15, p16, p17, p18 },
-                null
-                );
+                List<Point> outer1 = new List<Point> { p5, p6, p7, p8 };
+                List<Point> inner1 = null;
 
-            // lower right
-            Point p19 = new Point(BuildingLength, 0);
-            Point p20 = new Point(BuildingLength, 0.6 * MeanRoofHeight);
-            Point p21 = new Point(BuildingLength - 0.2 * MeanRoofHeight, 0.6 * MeanRoofHeight);
-            Point p22 = new Point(BuildingLength - 0.2 * MeanRoofHeight, 0.2 * MeanRoofHeight);
-            Point p23 = new Point(BuildingLength - 0.6 * MeanRoofHeight, 0.2 * MeanRoofHeight);
-            Point p24 = new Point(BuildingLength - 0.6 * MeanRoofHeight, 0);
+                if (d12 < halfMinDim)
+                {
+                    Point p1 = new Point(d12, d12);
+                    Point p2 = new Point(BuildingLength - d12, d12);
+                    Point p3 = new Point(BuildingLength - d12, BuildingWidth - d12);
+                    Point p4 = new Point(d12, BuildingWidth - d12);
+                    inner1 = new List<Point> { p4, p3, p2, p1 }; // CW hole
+                }
 
+                var zone1 = new EffectiveWindArea_Roof("Zone_1", outer1, inner1 != null ? new[] { inner1 } : null);
+                effWindAreas_Roof.Add(id++, zone1);
 
-            var roof_area_3_2 = new EffectiveWindArea_Roof(
-                "3_2",
-                new List<Point> { p19, p20, p21, p22, p23, p24 },
-                null
-                );
+                // === Zone 2 (outer band around zone 1)
+                Point p9 = new Point(0, 0);
+                Point p10 = new Point(BuildingLength, 0);
+                Point p11 = new Point(BuildingLength, BuildingWidth);
+                Point p12 = new Point(0, BuildingWidth);
 
-            // upper right
-            Point p25 = new Point(BuildingLength - 0.6 * MeanRoofHeight, BuildingWidth);
-            Point p26 = new Point(BuildingLength - 0.6 * MeanRoofHeight, BuildingWidth - 0.2 * MeanRoofHeight);
-            Point p27 = new Point(BuildingLength - 0.2 * MeanRoofHeight, BuildingWidth - 0.2 * MeanRoofHeight);
-            Point p28 = new Point(BuildingLength - 0.2 * MeanRoofHeight, BuildingWidth - 0.6 * MeanRoofHeight);
-            Point p29 = new Point(BuildingLength, BuildingWidth - 0.6 * MeanRoofHeight);
-            Point p30 = new Point(BuildingLength, BuildingWidth);
+                var zone2 = new EffectiveWindArea_Roof("Zone_2",
+                    new List<Point> { p9, p10, p11, p12 },
+                    new[] { new List<Point> { p8, p7, p6, p5 } }); // CW hole
 
-            var roof_area_3_3 = new EffectiveWindArea_Roof(
-                "3_3",
-                new List<Point> { p25, p26, p27, p28, p29, p30 },
-                null
-                );
+                effWindAreas_Roof.Add(id++, zone2);
+            }
 
-            // upper left
-            Point p31 = new Point(0, BuildingWidth);
-            Point p32 = new Point(0, BuildingWidth - 0.6 * MeanRoofHeight);
-            Point p33 = new Point(0.2 * MeanRoofHeight, BuildingWidth - 0.6 * MeanRoofHeight);
-            Point p34 = new Point(0.2 * MeanRoofHeight, BuildingWidth - 0.2 * MeanRoofHeight);
-            Point p35 = new Point(0.6 * MeanRoofHeight, BuildingWidth - 0.2 * MeanRoofHeight);
-            Point p36 = new Point(0.6 * MeanRoofHeight, BuildingWidth);
+            // === Zone 3 (corner zones), only if d02 < d06
+            if (d02 < d06 - 0.01)
+            {
+                // Lower-left corner
+                var zone3_1 = new EffectiveWindArea_Roof("Zone_3_LL",
+                    new List<Point>
+                    {
+                new Point(0, 0),
+                new Point(d06, 0),
+                new Point(d06, d02),
+                new Point(d02, d02),
+                new Point(d02, d06),
+                new Point(0, d06)
+                    },
+                    null);
+                effWindAreas_Roof.Add(id++, zone3_1);
 
-            var roof_area_3_4 = new EffectiveWindArea_Roof(
-                "3_4",
-                new List<Point> { p31, p32, p33, p34, p35, p36 },
-                null
-                );
+                // Lower-right corner
+                var zone3_2 = new EffectiveWindArea_Roof("Zone_3_LR",
+                    new List<Point>
+                    {
+                new Point(BuildingLength, 0),
+                new Point(BuildingLength, d06),
+                new Point(BuildingLength - d02, d06),
+                new Point(BuildingLength - d02, d02),
+                new Point(BuildingLength - d06, d02),
+                new Point(BuildingLength - d06, 0)
+                    },
+                    null);
+                effWindAreas_Roof.Add(id++, zone3_2);
 
-            effWindAreas_Roof.Add(1, roof_area_1_prime); //z1_prime
-            effWindAreas_Roof.Add(2, roof_area_1);  //z1
-            effWindAreas_Roof.Add(3, roof_area_2);  //z2
-            effWindAreas_Roof.Add(4, roof_area_3_1);  //z3
-            effWindAreas_Roof.Add(5, roof_area_3_2);  //z3
-            effWindAreas_Roof.Add(6, roof_area_3_3);  //z3
-            effWindAreas_Roof.Add(7, roof_area_3_4);  //z3
+                // Upper-right corner
+                var zone3_3 = new EffectiveWindArea_Roof("Zone_3_UR",
+                    new List<Point>
+                    {
+                new Point(BuildingLength - d06, BuildingWidth),
+                new Point(BuildingLength - d06, BuildingWidth - d02),
+                new Point(BuildingLength - d02, BuildingWidth - d02),
+                new Point(BuildingLength - d02, BuildingWidth - d06),
+                new Point(BuildingLength, BuildingWidth - d06),
+                new Point(BuildingLength, BuildingWidth)
+                    },
+                    null);
+                effWindAreas_Roof.Add(id++, zone3_3);
+
+                // Upper-left corner
+                var zone3_4 = new EffectiveWindArea_Roof("Zone_3_UL",
+                    new List<Point>
+                    {
+                new Point(0, BuildingWidth),
+                new Point(0, BuildingWidth - d06),
+                new Point(d02, BuildingWidth - d06),
+                new Point(d02, BuildingWidth - d02),
+                new Point(d06, BuildingWidth - d02),
+                new Point(d06, BuildingWidth)
+                    },
+                    null);
+                effWindAreas_Roof.Add(id++, zone3_4);
+            }
 
             return;
         }
+
+        //private void ComputeFlatRoofAreas()
+        //{
+        //    effWindAreas_Roof.Clear(); // Optional: clear any existing zones
+
+        //    double d12 = 1.2 * MeanRoofHeight;
+        //    double d06 = 0.6 * MeanRoofHeight;
+        //    double d02 = 0.2 * MeanRoofHeight;
+
+        //    double maxOffset = Math.Min(BuildingLength, BuildingWidth) / 2.0;
+
+        //    // Basic validation to prevent invalid geometry
+        //    if (d12 >= maxOffset)
+        //        throw new InvalidOperationException($"MeanRoofHeight is too large: 1.2 * H = {d12:F2} exceeds half of the shortest building dimension ({maxOffset:F2}).");
+
+        //    if (d06 >= maxOffset)
+        //        throw new InvalidOperationException($"MeanRoofHeight is too large: 0.6 * H = {d06:F2} exceeds half of the shortest building dimension ({maxOffset:F2}).");
+
+        //    if (d02 >= d06)
+        //        throw new InvalidOperationException($"MeanRoofHeight is too large: 0.2 * H = {d02:F2} is greater than or equal to 0.6 * H = {d06:F2}, causing invalid zone 3 corner geometry.");
+
+        //    // === Proceed with safe calculations ===
+
+        //    Point p1 = new Point(d12, d12);
+        //    Point p2 = new Point(BuildingLength - d12, d12);
+        //    Point p3 = new Point(BuildingLength - d12, BuildingWidth - d12);
+        //    Point p4 = new Point(d12, BuildingWidth - d12);
+
+        //    var roof_area_1_prime = new EffectiveWindArea_Roof(
+        //        "Zone_1p",
+        //        new List<Point> { p1, p2, p3, p4 },
+        //        null);
+
+        //    Point p5 = new Point(d06, d06);
+        //    Point p6 = new Point(BuildingLength - d06, d06);
+        //    Point p7 = new Point(BuildingLength - d06, BuildingWidth - d06);
+        //    Point p8 = new Point(d06, BuildingWidth - d06);
+
+        //    var roof_area_1 = new EffectiveWindArea_Roof(
+        //        "Zone_1",
+        //        new List<Point> { p5, p6, p7, p8 },
+        //        new[] { new List<Point> { p4, p3, p2, p1 } }
+        //    );
+
+        //    Point p9 = new Point(0, 0);
+        //    Point p10 = new Point(BuildingLength, 0);
+        //    Point p11 = new Point(BuildingLength, BuildingWidth);
+        //    Point p12 = new Point(0, BuildingWidth);
+
+        //    var roof_area_2 = new EffectiveWindArea_Roof(
+        //        "Zone_2",
+        //        new List<Point> { p9, p10, p11, p12 },
+        //        new[] { new List<Point> { p8, p7, p6, p5 } }
+        //    );
+
+        //    // Region 3 zones (only show one for brevity; copy for others)
+        //    Point p13 = new Point(0, 0);
+        //    Point p14 = new Point(d06, 0);
+        //    Point p15 = new Point(d06, d02);
+        //    Point p16 = new Point(d02, d02);
+        //    Point p17 = new Point(d02, d06);
+        //    Point p18 = new Point(0, d06);
+
+        //    var roof_area_3_1 = new EffectiveWindArea_Roof(
+        //        "Zone_3_LL",
+        //        new List<Point> { p13, p14, p15, p16, p17, p18 },
+        //        null);
+
+        //    // TODO: Repeat for 3_2, 3_3, 3_4
+
+        //    effWindAreas_Roof.Add(1, roof_area_1_prime);
+        //    effWindAreas_Roof.Add(2, roof_area_1);
+        //    effWindAreas_Roof.Add(3, roof_area_2);
+        //    effWindAreas_Roof.Add(4, roof_area_3_1);
+        //    // effWindAreas_Roof.Add(5, ...);
+
+        //    return;
+        //}
+
+
+
+        //private void ComputeFlatRoofAreas()
+        //{
+        //    // central flat region 1' outer perimeter in CCW
+        //    Point p1 = new Point(1.2 * MeanRoofHeight, 1.2 * MeanRoofHeight);
+        //    Point p2 = new Point(BuildingLength - (1.2 * MeanRoofHeight), 1.2 * MeanRoofHeight);
+        //    Point p3 = new Point(BuildingLength - (1.2 * MeanRoofHeight), BuildingWidth - (1.2 * MeanRoofHeight));
+        //    Point p4 = new Point(1.2 * MeanRoofHeight, BuildingWidth - (1.2 * MeanRoofHeight));
+
+        //    var roof_area_1_prime = new EffectiveWindArea_Roof(
+        //        "1'",
+        //        new List<Point> { p1, p2, p3, p4 },
+        //        null);
+
+        //    //  region 1 middle band in CCW -- holes are CW p4,p3, p2, p1
+        //    Point p5 = new Point(0.6 * MeanRoofHeight, 0.6 * MeanRoofHeight);
+        //    Point p6 = new Point(BuildingLength - 0.6 * MeanRoofHeight, 0.6 * MeanRoofHeight);
+        //    Point p7 = new Point(BuildingLength - 0.6 * MeanRoofHeight, BuildingWidth - 0.6 * MeanRoofHeight);
+        //    Point p8 = new Point(0.6 * MeanRoofHeight, BuildingWidth - 0.6 * MeanRoofHeight);
+
+        //    var roof_area_1 = new EffectiveWindArea_Roof(
+        //        "1",
+        //        new List<Point> { p5, p6, p7, p8 },
+        //        new[] { new List<Point> { p4, p3, p2, p1 } }
+        //        );
+
+        //    // region 2 outer band in CCW -- holes are CW p8, p7, p6, p5
+        //    Point p9 = new Point(0, 0);
+        //    Point p10 = new Point(BuildingLength, 0);
+        //    Point p11 = new Point(BuildingLength, BuildingWidth);
+        //    Point p12 = new Point(0, BuildingWidth);
+
+        //    var roof_area_2 = new EffectiveWindArea_Roof(
+        //        "2",
+        //        new List<Point> { p9, p10, p11, p12 },
+        //        new[] { new List<Point> { p8, p7, p6, p5 } }
+        //        );
+
+        //    // region 3 corner zones
+        //    // lower left
+        //    Point p13 = new Point(0, 0);
+        //    Point p14 = new Point(0.6 * MeanRoofHeight, 0);
+        //    Point p15 = new Point(0.6 * MeanRoofHeight, 0.2 * MeanRoofHeight);
+        //    Point p16 = new Point(0.2 * MeanRoofHeight, 0.2 * MeanRoofHeight);
+        //    Point p17 = new Point(0.2 * MeanRoofHeight, 0.6 * MeanRoofHeight);
+        //    Point p18 = new Point(0, 0.6 * MeanRoofHeight);
+
+        //    var roof_area_3_1 = new EffectiveWindArea_Roof(
+        //        "3_1",
+        //        new List<Point> { p13, p14, p15, p16, p17, p18 },
+        //        null
+        //        );
+
+        //    // lower right
+        //    Point p19 = new Point(BuildingLength, 0);
+        //    Point p20 = new Point(BuildingLength, 0.6 * MeanRoofHeight);
+        //    Point p21 = new Point(BuildingLength - 0.2 * MeanRoofHeight, 0.6 * MeanRoofHeight);
+        //    Point p22 = new Point(BuildingLength - 0.2 * MeanRoofHeight, 0.2 * MeanRoofHeight);
+        //    Point p23 = new Point(BuildingLength - 0.6 * MeanRoofHeight, 0.2 * MeanRoofHeight);
+        //    Point p24 = new Point(BuildingLength - 0.6 * MeanRoofHeight, 0);
+
+
+        //    var roof_area_3_2 = new EffectiveWindArea_Roof(
+        //        "3_2",
+        //        new List<Point> { p19, p20, p21, p22, p23, p24 },
+        //        null
+        //        );
+
+        //    // upper right
+        //    Point p25 = new Point(BuildingLength - 0.6 * MeanRoofHeight, BuildingWidth);
+        //    Point p26 = new Point(BuildingLength - 0.6 * MeanRoofHeight, BuildingWidth - 0.2 * MeanRoofHeight);
+        //    Point p27 = new Point(BuildingLength - 0.2 * MeanRoofHeight, BuildingWidth - 0.2 * MeanRoofHeight);
+        //    Point p28 = new Point(BuildingLength - 0.2 * MeanRoofHeight, BuildingWidth - 0.6 * MeanRoofHeight);
+        //    Point p29 = new Point(BuildingLength, BuildingWidth - 0.6 * MeanRoofHeight);
+        //    Point p30 = new Point(BuildingLength, BuildingWidth);
+
+        //    var roof_area_3_3 = new EffectiveWindArea_Roof(
+        //        "3_3",
+        //        new List<Point> { p25, p26, p27, p28, p29, p30 },
+        //        null
+        //        );
+
+        //    // upper left
+        //    Point p31 = new Point(0, BuildingWidth);
+        //    Point p32 = new Point(0, BuildingWidth - 0.6 * MeanRoofHeight);
+        //    Point p33 = new Point(0.2 * MeanRoofHeight, BuildingWidth - 0.6 * MeanRoofHeight);
+        //    Point p34 = new Point(0.2 * MeanRoofHeight, BuildingWidth - 0.2 * MeanRoofHeight);
+        //    Point p35 = new Point(0.6 * MeanRoofHeight, BuildingWidth - 0.2 * MeanRoofHeight);
+        //    Point p36 = new Point(0.6 * MeanRoofHeight, BuildingWidth);
+
+        //    var roof_area_3_4 = new EffectiveWindArea_Roof(
+        //        "3_4",
+        //        new List<Point> { p31, p32, p33, p34, p35, p36 },
+        //        null
+        //        );
+
+        //    effWindAreas_Roof.Add(1, roof_area_1_prime); //z1_prime
+        //    effWindAreas_Roof.Add(2, roof_area_1);  //z1
+        //    effWindAreas_Roof.Add(3, roof_area_2);  //z2
+        //    effWindAreas_Roof.Add(4, roof_area_3_1);  //z3
+        //    effWindAreas_Roof.Add(5, roof_area_3_2);  //z3
+        //    effWindAreas_Roof.Add(6, roof_area_3_3);  //z3
+        //    effWindAreas_Roof.Add(7, roof_area_3_4);  //z3
+
+        //    return;
+        //}
     }
 
     public class WindLoadCalculator_Base

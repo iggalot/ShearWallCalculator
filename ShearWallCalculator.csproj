@@ -109,6 +109,16 @@
     <Compile Include="SimpsonCatalog\StrapTies_Manager.cs" />
     <Compile Include="WallData.cs" />
     <Compile Include="WallSystem.cs" />
+    <Compile Include="WindLoadCalculations\Chapter30\ExternalGCpCurve.cs" />
+    <Compile Include="WindLoadCalculations\Chapter30\Figure30_3_2A.cs" />
+    <Compile Include="WindLoadCalculations\Chapter30\Figure30_3_2B.cs" />
+    <Compile Include="WindLoadCalculations\Chapter30\Figure30_3_2C.cs" />
+    <Compile Include="WindLoadCalculations\Chapter30\Figure30_3_2D.cs" />
+    <Compile Include="WindLoadCalculations\Chapter30\Figure30_3_2E_part2.cs" />
+    <Compile Include="WindLoadCalculations\Chapter30\Figure30_3_2E_part1.cs" />
+    <Compile Include="WindLoadCalculations\Chapter30\Figure30_3_2F_part1.cs" />
+    <Compile Include="WindLoadCalculations\Chapter30\Figure30_3_2F_part2.cs" />
+    <Compile Include="WindLoadCalculations\Chapter30\Figure30_3_2G.cs" />
     <Compile Include="WindLoadCalculations\EffectiveWindArea_Roof.cs" />
     <Compile Include="WindLoadCalculations\WindLoadCalculator_CC_ASCE7_16.cs" />
     <Compile Include="WindLoadCalculations\WindLoadCalculator_MWFRS_ASCE7_10.cs" />
