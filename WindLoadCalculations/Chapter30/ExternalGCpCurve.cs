@@ -6,18 +6,34 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30
 {
     public class ExternalGCpCurve
     {
+        public double Amin = 1.0;
+        public double Amax = 1000.0;
+
+
         public Dictionary<double, double> Curve = new Dictionary<double, double>();
 
-        public ExternalGCpCurve(double x1, double y1, double x2, double y2)
+        public ExternalGCpCurve(double x1, double y1, double x2, double y2, double amin = 1.0, double amax = 1000.0)
         {
-            Curve.Add(1, y1);
+            Amin = amin;
+            Amax = amax;
+
+            Curve.Add(amin, y1);
             Curve.Add(x1, y1);
             Curve.Add(x2, y2);
-            Curve.Add(2000, y2);
+            Curve.Add(amax, y2);
         }
 
         public double GetGCP(double x)
         {
+            // Handle out-of-bounds
+            if(x <= Amin)
+            {
+                x = Amin;
+            } else if(x >= Amax)
+            {
+                x = Amax;
+            }
+
             if (Curve == null || Curve.Count == 0)
                 throw new ArgumentException("Data points cannot be null or empty.");
 

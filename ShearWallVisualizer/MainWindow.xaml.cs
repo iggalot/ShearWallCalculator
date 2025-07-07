@@ -10,6 +10,7 @@ using ShearWallVisualizer.Dialogs;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Diagnostics.Eventing.Reader;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -27,6 +28,7 @@ namespace ShearWallVisualizer
     public partial class MainWindow : Window
     {
         public ShearWallCalculatorBase Calculator = new ShearWallCalculator_RigidDiaphragm();
+        public WindLoadParameters windLoadParams { get; set; } = new WindLoadParameters();
 
         public SimpsonCatalog simpsonCatalog { get; set; } = new SimpsonCatalog();  // contains the Simposon catalog connector and holddown data
 
@@ -372,15 +374,36 @@ namespace ShearWallVisualizer
                 ctrlWindLoadResultsControl_MWFRS.WindCalculated -= WindLoadResultsControl_MWFRS_WindCalculated;
             }
 
-            WindLoadResultsControl_MWFRS ctrl = new WindLoadResultsControl_MWFRS(e._parameters);
+            // save the input parameters for wind input
+            windLoadParams = e._parameters;
+            
 
-            ctrl.WindCalculated += WindLoadResultsControl_MWFRS_WindCalculated;
-            ctrlWindLoadResultsControl_MWFRS.Content = ctrl;
+            if (windLoadParams.AnalysisType == WindLoadCalculationTypes.MWFRS)
+            {
+                WindLoadResultsControl_MWFRS ctrl = new WindLoadResultsControl_MWFRS(e._parameters);
 
-            ctrlWindLoadResultsControl_MWFRS = ctrl;
+                ctrl.WindCalculated += WindLoadResultsControl_MWFRS_WindCalculated;
+                ctrlWindLoadResultsControl_MWFRS.Content = ctrl;
 
-            tabWindResults.Visibility = Visibility.Visible;
-            tabWindResults.IsSelected = true;
+                ctrlWindLoadResultsControl_MWFRS = ctrl;
+            } else if (windLoadParams.AnalysisType == WindLoadCalculationTypes.COMPONENT_AND_CLADDING)
+            {
+                WindLoadResultsControl_CC ctrl = new WindLoadResultsControl_CC(e._parameters);
+
+                ctrl.WindCalculated += WindLoadResultsControl_CC_WindCalculated;
+                ctrlWindLoadResultsControl_CC.Content = ctrl;
+            }
+
+
+            tabWindResults1.Visibility = Visibility.Visible;
+
+            tabWindResults2.Visibility = Visibility.Visible;
+            tabWindResults2.IsSelected = true;
+        }
+
+        private void WindLoadResultsControl_CC_WindCalculated(object sender, WindLoadResultsControl_CC.OnWindCalculatedEventArgs e)
+        {
+            throw new NotImplementedException();
         }
 
         /// <summary>

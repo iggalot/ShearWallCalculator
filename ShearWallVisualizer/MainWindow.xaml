@@ -86,8 +86,11 @@
                     <TabItem Header="WIND Input">
                         <ctrl:WindLoadInputControl x:Name="WindLoadInputControl" Margin="5 0 0 0"/>
                     </TabItem>
-                    <TabItem Name="tabWindResults" Header="WIND Calculations" Visibility="Collapsed">
+                    <TabItem Name="tabWindResults1" Header="MWFRS Wind Calcs" Visibility="Collapsed">
                         <ctrl:WindLoadResultsControl_MWFRS x:Name="ctrlWindLoadResultsControl_MWFRS" Margin="5 0 0 0"/>
+                    </TabItem>
+                    <TabItem Name="tabWindResults2"  Header="CC Wind Calcs" Visibility="Collapsed">
+                        <ctrl:WindLoadResultsControl_CC x:Name="ctrlWindLoadResultsControl_CC" Margin="5 0 0 0"/>
                     </TabItem>
                     <TabItem Header="Calculations">
                         <StackPanel Orientation="Vertical">

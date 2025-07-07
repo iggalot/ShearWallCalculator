@@ -39,7 +39,7 @@
                 <TextBlock Name="tbl_windOrientation" Width="150" Text=""/>
             </StackPanel>
             <!-- Display Results of MWFRS Calculation -->
-            <TextBlock Text="Results (MWFRS)" Margin="10"/>
+            <TextBlock Text="Results (Comp. And Clad.)" Margin="10"/>
             <DataGrid x:Name="WallResultsDataGrid" 
                   AutoGenerateColumns="True"
                   HeadersVisibility="Column"

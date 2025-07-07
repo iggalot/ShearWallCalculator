@@ -19,6 +19,12 @@
         <StackPanel Orientation="Vertical">
 
             <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Vertical" HorizontalAlignment="Left" Margin="5">
+                <!-- WindAnalysis Type -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                    <TextBlock Text="Analysis: Type" VerticalAlignment="Center" Margin="5"/>
+                    <ComboBox x:Name="cmbWindAnalysisType" Width="150" Margin="5"/>
+                </StackPanel>
+                
                 <!-- Wind Speed (Default to 115) -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                     <TextBlock Text="Wind Speed (V)" VerticalAlignment="Center" Margin="5"/>
@@ -61,6 +67,7 @@
                     <TextBox x:Name="BuildingWidthTextBox" Width="150" Margin="5" Text="30"/>
                 </StackPanel>
 
+                <!-- Roof Type -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                     <TextBlock Text="Roof Type" VerticalAlignment="Center" Margin="5"/>
                     <ComboBox x:Name="cmbRoofType" Width="150" Margin="5"/>

@@ -39,6 +39,13 @@ namespace ShearWallVisualizer.Controls
             }
 
             cmbRoofType.SelectedIndex = 0;
+
+            foreach (var value in Enum.GetValues(typeof(WindLoadCalculationTypes)))
+            {
+                cmbWindAnalysisType.Items.Add(value);
+            }
+
+            cmbWindAnalysisType.SelectedIndex = 0;
         }
 
         public virtual void OnWindInputComplete(WindLoadParameters parameters)
@@ -156,7 +163,8 @@ namespace ShearWallVisualizer.Controls
         private void ComputeButton_Click(object sender, RoutedEventArgs e)
         {
             WindLoadParameters parameters = GetWindLoadParameters();
-            parameters.ComputeEffectiveWindAreas();
+            parameters.ComputeEffectiveWindAreas_Roof();
+
             OnWindInputComplete(parameters); // raise the event where input has been completed
         }
 
@@ -176,6 +184,7 @@ namespace ShearWallVisualizer.Controls
             string enclosure = ((ComboBoxItem)EnclosureComboBox.SelectedItem).Content.ToString();
             string ridgeDir = ((ComboBoxItem)RidgeDirectionComboBox.SelectedItem).Content.ToString();
             RoofTypes roof_type = (RoofTypes)cmbRoofType.SelectedIndex;
+            WindLoadCalculationTypes analysis_type = (WindLoadCalculationTypes)cmbWindAnalysisType.SelectedIndex;
 
             string exposure_string = ((ComboBoxItem)ExposureCategoryComboBox.SelectedItem).Content.ToString();
             WindExposureCategories exposure;
@@ -212,7 +221,10 @@ namespace ShearWallVisualizer.Controls
                 BuildingWidth = width,
                 RoofPitch = pitch,
                 RidgeDirection = ridgeDir,
-                RoofType = roof_type
+                RoofType = roof_type,
+                AnalysisType = analysis_type
+                
+
             };
         }
     }
