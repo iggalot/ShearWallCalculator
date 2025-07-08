@@ -9,7 +9,7 @@ namespace ShearWallCalculator.WindLoadCalculations
     public class WindLoadCalculator_CC_ASCE7_16: WindLoadCalculator_Base
     {
         // Which figure of Ch30_3_2A thru I to use for CC
-        public Chapter30_BaseFigure ExternalGCpCurve {get; set;} 
+        public Chapter30_BaseFigure extGCpCurve{get; set;} 
 
         public WindLoadCalculator_CC_ASCE7_16(WindLoadParameters p)
         {
@@ -33,6 +33,12 @@ namespace ShearWallCalculator.WindLoadCalculations
                         throw new Exception("ERROR: Invalid roof type: " + p.RoofType + " in WindLoadCalculator_CC_ASCE7_16 constructor.");
                 }
             } 
+
+            foreach (var kvp in Parameters.effWindAreas_Roof)
+            {
+                Console.WriteLine(kvp.Key + " " + kvp.Value.Area+"\n");
+                //double val = ExternalGCpCurve.GetGCp(kvp.Value.Area);
+            }
         }
 
 
@@ -40,7 +46,7 @@ namespace ShearWallCalculator.WindLoadCalculations
 
         private void GetExtGCpCurve_FlatRoof(WindLoadParameters p)
         {
-            ExternalGCpCurve = new Figure30_3_2A();
+            extGCpCurve = new Figure30_3_2A();
         }
 
         private void GetExtGCpCurve_GableRoof(WindLoadParameters p)
@@ -51,19 +57,19 @@ namespace ShearWallCalculator.WindLoadCalculations
             }
             else if (p.RoofPitch <= 7)
             {
-                ExternalGCpCurve = new Figure30_3_2A();
+                extGCpCurve = new Figure30_3_2A();
             }
             else if (p.RoofPitch <= 20)
             {
-                ExternalGCpCurve = new Figure30_3_2B();
+                extGCpCurve = new Figure30_3_2B();
             }
             else if (p.RoofPitch <= 27)
             {
-                ExternalGCpCurve = new Figure30_3_2C();
+                extGCpCurve = new Figure30_3_2C();
             }
             else if (p.RoofPitch <= 45)
             {
-                ExternalGCpCurve = new Figure30_3_2D();
+                extGCpCurve = new Figure30_3_2D();
             }
             else
             {
@@ -79,19 +85,19 @@ namespace ShearWallCalculator.WindLoadCalculations
             }
             else if (p.RoofPitch <= 7)
             {
-                ExternalGCpCurve = new Figure30_3_2A();
+                extGCpCurve = new Figure30_3_2A();
             }
             else if (p.RoofPitch <= 20)
             {
-                ExternalGCpCurve = new Figure30_3_2E_2F(p.MeanRoofHeight, p.BuildingWidth);
+                extGCpCurve = new Figure30_3_2E_2F(p.MeanRoofHeight, p.BuildingWidth);
             }
             else if (p.RoofPitch <= 27)
             {
-                ExternalGCpCurve = new Figure30_3_2G(p.MeanRoofHeight, p.BuildingWidth);
+                extGCpCurve = new Figure30_3_2G(p.MeanRoofHeight, p.BuildingWidth);
             }
             else if (p.RoofPitch <= 45)
             {
-                ExternalGCpCurve = new Figure30_3_2H_2I(p.MeanRoofHeight, p.BuildingWidth, p.RoofPitch);
+                extGCpCurve = new Figure30_3_2H_2I(p.MeanRoofHeight, p.BuildingWidth, p.RoofPitch);
             }
             else
             {

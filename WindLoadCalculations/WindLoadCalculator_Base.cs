@@ -92,7 +92,11 @@ namespace ShearWallCalculator.WindLoadCalculations
         /// <returns></returns>
         public static double CalculateDynamicWindPressure(double z)
         {
+            if (Parameters == null)
+                return -1000;
+
             WindLoadParameters p = Parameters;
+
 
             double V = p.WindSpeed;
             double Kd = p.Kd;

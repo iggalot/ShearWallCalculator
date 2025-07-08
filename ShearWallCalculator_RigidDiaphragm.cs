@@ -45,7 +45,7 @@ namespace calculator
         /// </summary>
         public ShearWallCalculator_RigidDiaphragm() : base()
         {
-
+ 
         }
 
         /// <summary>

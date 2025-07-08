@@ -388,6 +388,7 @@ namespace ShearWallVisualizer
                 ctrlWindLoadResultsControl_MWFRS = ctrl;
             } else if (windLoadParams.AnalysisType == WindLoadCalculationTypes.COMPONENT_AND_CLADDING)
             {
+                WindLoadCalculator_CC_ASCE7_16 calc = new WindLoadCalculator_CC_ASCE7_16(e._parameters);
                 WindLoadResultsControl_CC ctrl = new WindLoadResultsControl_CC(e._parameters);
 
                 ctrl.WindCalculated += WindLoadResultsControl_CC_WindCalculated;

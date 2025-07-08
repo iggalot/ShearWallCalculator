@@ -12,7 +12,7 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30
 
         public Dictionary<double, double> Curve = new Dictionary<double, double>();
 
-        public ExternalGCpCurve(double x1, double y1, double x2, double y2, double amin = 1.0, double amax = 1000.0)
+        public ExternalGCpCurve(double x1, double y1, double x2, double y2, double amin = 1.0, double amax = 1000)
         {
             Amin = amin;
             Amax = amax;
