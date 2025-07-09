@@ -33,6 +33,9 @@ namespace ShearWallVisualizer.Controls
 
         private void WindLoadInputControl_Loaded(object sender, RoutedEventArgs e)
         {
+            cmbRoofType.Items.Clear();
+            cmbWindAnalysisType.Items.Clear();
+
             foreach (var value in Enum.GetValues(typeof(RoofTypes)))
             {
                 cmbRoofType.Items.Add(value);
