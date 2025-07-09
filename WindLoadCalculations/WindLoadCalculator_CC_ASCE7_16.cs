@@ -11,7 +11,7 @@ namespace ShearWallCalculator.WindLoadCalculations
         // Which figure of Ch30_3_2A thru I to use for CC
         public Chapter30_BaseFigure extGCpCurve{get; set;} 
 
-        public WindLoadCalculator_CC_ASCE7_16(WindLoadParameters p)
+        public WindLoadCalculator_CC_ASCE7_16(WindLoadParameters_Base p)
         {
             Parameters = p;
 
@@ -44,12 +44,12 @@ namespace ShearWallCalculator.WindLoadCalculations
 
 
 
-        private void GetExtGCpCurve_FlatRoof(WindLoadParameters p)
+        private void GetExtGCpCurve_FlatRoof(WindLoadParameters_Base p)
         {
             extGCpCurve = new Figure30_3_2A();
         }
 
-        private void GetExtGCpCurve_GableRoof(WindLoadParameters p)
+        private void GetExtGCpCurve_GableRoof(WindLoadParameters_Base p)
         {
             if (p.RoofPitch < 0)
             {
@@ -77,7 +77,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             }
         }
 
-        private void GetExtGCpCurve_HipRoof(WindLoadParameters p)
+        private void GetExtGCpCurve_HipRoof(WindLoadParameters_Base p)
         {
             if (p.RoofPitch < 0)
             {

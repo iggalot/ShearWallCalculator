@@ -28,7 +28,7 @@ namespace ShearWallVisualizer
     public partial class MainWindow : Window
     {
         public ShearWallCalculatorBase Calculator = new ShearWallCalculator_RigidDiaphragm();
-        public WindLoadParameters windLoadParams { get; set; } = new WindLoadParameters();
+        public WindLoadParameters_Base windLoadParams { get; set; } = new WindLoadParameters_Base();
 
         public SimpsonCatalog simpsonCatalog { get; set; } = new SimpsonCatalog();  // contains the Simposon catalog connector and holddown data
 
@@ -416,7 +416,7 @@ namespace ShearWallVisualizer
         {
             List<WindLoadCalculator_MWFRS_ASCE7_10.WindPressureResult_Wall_MWFRS> wall_results = e._wall_results;
             List<WindLoadCalculator_MWFRS_ASCE7_10.WindPressureResult_Roof_MWFRS> roof_results = e._roof_results;
-            WindLoadParameters parameters = e._parameters;
+            WindLoadParameters_Base parameters = e._parameters;
 
             // now that we've used the event, unhook it
             ((WindLoadResultsControl_MWFRS)sender).WindCalculated-= WindLoadResultsControl_MWFRS_WindCalculated;

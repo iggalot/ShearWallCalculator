@@ -10,15 +10,15 @@ namespace ShearWallVisualizer.Controls
 {
     public partial class WindLoadInputControl : UserControl
     {
-        private WindLoadParameters parameters;
+        private WindLoadParameters_Base parameters;
 
         public event EventHandler<OnWindInputCompleteEventArgs> WindInputComplete;  // the event that signals that the drawing has been updated -- controls will listen for this at the time they are created.
 
         public class OnWindInputCompleteEventArgs : EventArgs
         {
-            public WindLoadParameters _parameters { get; }
+            public WindLoadParameters_Base _parameters { get; }
 
-            public OnWindInputCompleteEventArgs(WindLoadParameters parameters)
+            public OnWindInputCompleteEventArgs(WindLoadParameters_Base parameters)
             {
                 _parameters = parameters;
             }
@@ -51,7 +51,7 @@ namespace ShearWallVisualizer.Controls
             cmbWindAnalysisType.SelectedIndex = 0;
         }
 
-        public virtual void OnWindInputComplete(WindLoadParameters parameters)
+        public virtual void OnWindInputComplete(WindLoadParameters_Base parameters)
         {
             cnvCanvas.Children.Clear();
             foreach (var kvp in parameters.effWindAreas_Roof)
@@ -165,14 +165,14 @@ namespace ShearWallVisualizer.Controls
         // Event handler for the Compute Button click
         private void ComputeButton_Click(object sender, RoutedEventArgs e)
         {
-            WindLoadParameters parameters = GetWindLoadParameters();
+            WindLoadParameters_Base parameters = GetWindLoadParameters();
             parameters.ComputeEffectiveWindAreas_Roof();
 
             OnWindInputComplete(parameters); // raise the event where input has been completed
         }
 
         // Method to retrieve parameters from the input fields
-        private WindLoadParameters GetWindLoadParameters()
+        private WindLoadParameters_Base GetWindLoadParameters()
         {
             double windSpeed = double.Parse(WindSpeedTextBox.Text);
             double buildingHeight = double.Parse(BuildingHeightTextBox.Text);
@@ -209,7 +209,7 @@ namespace ShearWallVisualizer.Controls
             }
 
 
-            return new WindLoadParameters
+            return new WindLoadParameters_Base
             {
                 RiskCategory = risk,
                 WindSpeed = windSpeed,

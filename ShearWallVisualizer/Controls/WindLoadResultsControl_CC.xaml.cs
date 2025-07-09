@@ -15,11 +15,11 @@ namespace ShearWallVisualizer.Controls
 
         public class OnWindCalculatedEventArgs : EventArgs
         {
-            public WindLoadParameters _parameters { get; }
+            public WindLoadParameters_Base _parameters { get; }
             public List<WindLoadCalculator_MWFRS_ASCE7_10.WindPressureResult_Wall_MWFRS> _wall_results { get; }
             public List<WindLoadCalculator_MWFRS_ASCE7_10.WindPressureResult_Roof_MWFRS> _roof_results { get; }
 
-            public OnWindCalculatedEventArgs(WindLoadParameters parameters, List<WindLoadCalculator_MWFRS_ASCE7_10.WindPressureResult_Wall_MWFRS> wall_results, List<WindLoadCalculator_MWFRS_ASCE7_10.WindPressureResult_Roof_MWFRS> roof_results)
+            public OnWindCalculatedEventArgs(WindLoadParameters_Base parameters, List<WindLoadCalculator_MWFRS_ASCE7_10.WindPressureResult_Wall_MWFRS> wall_results, List<WindLoadCalculator_MWFRS_ASCE7_10.WindPressureResult_Roof_MWFRS> roof_results)
             {
                 _parameters = parameters;
                 _wall_results = wall_results;
@@ -27,12 +27,12 @@ namespace ShearWallVisualizer.Controls
             }
         }
 
-        protected virtual void OnWindCalculated(WindLoadParameters parameters, List<WindLoadCalculator_MWFRS_ASCE7_10.WindPressureResult_Wall_MWFRS> wall_results, List<WindLoadCalculator_MWFRS_ASCE7_10.WindPressureResult_Roof_MWFRS> roof_results)
+        protected virtual void OnWindCalculated(WindLoadParameters_Base parameters, List<WindLoadCalculator_MWFRS_ASCE7_10.WindPressureResult_Wall_MWFRS> wall_results, List<WindLoadCalculator_MWFRS_ASCE7_10.WindPressureResult_Roof_MWFRS> roof_results)
         {
             WindCalculated?.Invoke(this, new OnWindCalculatedEventArgs(parameters, wall_results, roof_results));
         }
 
-        private WindLoadParameters _parameters;
+        private WindLoadParameters_Base _parameters;
 
         public List<WindLoadCalculator_MWFRS_ASCE7_10.WindPressureResult_Wall_MWFRS> wall_results = new List<WindLoadCalculator_MWFRS_ASCE7_10.WindPressureResult_Wall_MWFRS>();
         public List<WindLoadCalculator_MWFRS_ASCE7_10.WindPressureResult_Roof_MWFRS> roof_results = new List<WindLoadCalculator_MWFRS_ASCE7_10.WindPressureResult_Roof_MWFRS>();
@@ -42,7 +42,7 @@ namespace ShearWallVisualizer.Controls
             
         }
 
-        public WindLoadResultsControl_CC(WindLoadParameters parameters)
+        public WindLoadResultsControl_CC(WindLoadParameters_Base parameters)
         {
             InitializeComponent();
 

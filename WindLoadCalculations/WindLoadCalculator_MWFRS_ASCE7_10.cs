@@ -9,7 +9,7 @@ namespace ShearWallCalculator.WindLoadCalculations
     {
         public override ASCE7_Versions ASCEVersion { get => ASCE7_Versions.ASCE_VER_7_10; }
 
-        public static List<WindPressureResult_Wall_MWFRS> CalculateWallPressureResults_MWFRS(WindLoadParameters parameters, Dictionary<WindZones_Walls_MWFRS, double> wall_zones)
+        public static List<WindPressureResult_Wall_MWFRS> CalculateWallPressureResults_MWFRS(WindLoadParameters_Base parameters, Dictionary<WindZones_Walls_MWFRS, double> wall_zones)
         {
             List<WindPressureResult_Wall_MWFRS> wall_results = new List<WindPressureResult_Wall_MWFRS>();
 
@@ -82,7 +82,7 @@ namespace ShearWallCalculator.WindLoadCalculations
 
             return wall_results;
         }
-        public static List<WindPressureResult_Roof_MWFRS> CalculateRoofPressureResults_MWFRS(WindLoadParameters parameters, Dictionary<WindZones_Roof_MWFRS, double> roof_zones)
+        public static List<WindPressureResult_Roof_MWFRS> CalculateRoofPressureResults_MWFRS(WindLoadParameters_Base parameters, Dictionary<WindZones_Roof_MWFRS, double> roof_zones)
         {
             List<WindPressureResult_Roof_MWFRS> roof_results = new List<WindPressureResult_Roof_MWFRS>();
             foreach (var kvp in roof_zones)
@@ -226,7 +226,7 @@ namespace ShearWallCalculator.WindLoadCalculations
         }
 
 
-        public static Dictionary<WindZones_Walls_MWFRS, double> Calculate_WallZones_MWFRS(WindLoadParameters p)
+        public static Dictionary<WindZones_Walls_MWFRS, double> Calculate_WallZones_MWFRS(WindLoadParameters_Base p)
         {
             double V = p.WindSpeed;
             double h = p.MeanRoofHeight;
@@ -254,7 +254,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             }
         }
 
-        public static Dictionary<WindZones_Roof_MWFRS, double> CalculateMWFRS_RoofZones(WindLoadParameters p)
+        public static Dictionary<WindZones_Roof_MWFRS, double> CalculateMWFRS_RoofZones(WindLoadParameters_Base p)
         {
             double theta = p.RoofPitch;
             double V = p.WindSpeed;
@@ -340,7 +340,7 @@ namespace ShearWallCalculator.WindLoadCalculations
         }
 
         // Cp values for different surfaces
-        public static double GetCpLeewardWall_MWFRS(WindLoadParameters p)
+        public static double GetCpLeewardWall_MWFRS(WindLoadParameters_Base p)
         {
             double length = p.BuildingLength;
             double width = p.BuildingWidth;
@@ -356,8 +356,8 @@ namespace ShearWallCalculator.WindLoadCalculations
             else
                 return -0.2;
         }
-        public static double GetCpSidewall_MWFRS(WindLoadParameters p) => -0.7;
-        public static double GetCpWindwardwall_MWFRS(WindLoadParameters p) => 0.8;
+        public static double GetCpSidewall_MWFRS(WindLoadParameters_Base p) => -0.7;
+        public static double GetCpWindwardwall_MWFRS(WindLoadParameters_Base p) => 0.8;
 
         public static RoofCpCases_MWFRS CalculateRoofCp_ForFlatRoofOrParallelRidge_MWFRS(double h, double L, WindZones_Roof_MWFRS zone_name)
         {

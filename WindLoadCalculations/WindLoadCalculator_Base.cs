@@ -82,7 +82,7 @@ namespace ShearWallCalculator.WindLoadCalculations
     public class WindLoadCalculator_Base
     {
         public virtual ASCE7_Versions ASCEVersion { get; }
-        public static WindLoadParameters Parameters { get; set; }
+        public static WindLoadParameters_Base Parameters { get; set; }
 
         /// <summary>
         /// Calculates the dyanmic wind pressure q at a specified height z
@@ -95,7 +95,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             if (Parameters == null)
                 return -1000;
 
-            WindLoadParameters p = Parameters;
+            WindLoadParameters_Base p = Parameters;
 
 
             double V = p.WindSpeed;

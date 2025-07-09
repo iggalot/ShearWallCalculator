@@ -14,11 +14,11 @@ namespace ShearWallVisualizer.Controls
 
         public class OnWindCalculatedEventArgs : EventArgs
         {
-            public WindLoadParameters _parameters { get; }
+            public WindLoadParameters_Base _parameters { get; }
             public List<WindPressureResult_Wall_MWFRS> _wall_results { get; }
             public List<WindPressureResult_Roof_MWFRS> _roof_results { get; }
 
-            public OnWindCalculatedEventArgs(WindLoadParameters parameters, List<WindPressureResult_Wall_MWFRS> wall_results, List<WindPressureResult_Roof_MWFRS> roof_results)
+            public OnWindCalculatedEventArgs(WindLoadParameters_Base parameters, List<WindPressureResult_Wall_MWFRS> wall_results, List<WindPressureResult_Roof_MWFRS> roof_results)
             {
                 _parameters = parameters;
                 _wall_results = wall_results;
@@ -26,12 +26,12 @@ namespace ShearWallVisualizer.Controls
             }
         }
 
-        protected virtual void OnWindCalculated(WindLoadParameters parameters, List<WindPressureResult_Wall_MWFRS> wall_results, List<WindPressureResult_Roof_MWFRS> roof_results)
+        protected virtual void OnWindCalculated(WindLoadParameters_Base parameters, List<WindPressureResult_Wall_MWFRS> wall_results, List<WindPressureResult_Roof_MWFRS> roof_results)
         {
             WindCalculated?.Invoke(this, new OnWindCalculatedEventArgs(parameters, wall_results, roof_results));
         }
 
-        private WindLoadParameters _parameters;
+        private WindLoadParameters_Base _parameters;
 
         public List<WindPressureResult_Wall_MWFRS> wall_results = new List<WindPressureResult_Wall_MWFRS>();
         public List<WindPressureResult_Roof_MWFRS> roof_results = new List<WindPressureResult_Roof_MWFRS>();
@@ -41,7 +41,7 @@ namespace ShearWallVisualizer.Controls
             
         }
 
-        public WindLoadResultsControl_MWFRS(WindLoadParameters parameters)
+        public WindLoadResultsControl_MWFRS(WindLoadParameters_Base parameters)
         {
             InitializeComponent();
 
