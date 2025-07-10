@@ -18,12 +18,13 @@ namespace ShearWallVisualizer.Controls
             public WindLoadParameters_Base _parameters { get; }
             public BuildingData _bldg_data { get; }
 
-            public OnWindInputCompleteEventArgs(WindLoadParameters_Base parameters, BuildingData bldg_data)
+            public OnWindInputCompleteEventArgs(WindLoadParameters_Base parameters)
             {
                 _parameters = parameters;
-                _bldg_data = bldg_data;
             }
         }
+
+        public BuildingData bldgData { get; set; } = null;
 
         public WindLoadInputControl()
         {
@@ -32,18 +33,41 @@ namespace ShearWallVisualizer.Controls
             this.Loaded += WindLoadInputControl_Loaded;
         }
 
+        public WindLoadInputControl(BuildingData bldg_data)
+        {
+            InitializeComponent();
+
+            this.bldgData = bldg_data;
+
+            this.Loaded += WindLoadInputControl_Loaded;
+        }
+
         private void WindLoadInputControl_Loaded(object sender, RoutedEventArgs e)
         {
-            cmbRoofType.Items.Clear();
+
+            if(this.bldgData == null)
+            {
+                spBuildingData.Visibility = Visibility.Collapsed;
+            } else
+            {
+                spBuildingData.Visibility = Visibility.Visible;
+                tbRoofType.Text = this.bldgData.RoofType.ToString();
+                tbBuildingLength.Text = this.bldgData.BuildingLength.ToString("F2");
+                tbBuildingWidth.Text = this.bldgData.BuildingWidth.ToString("F2");
+                tbBuildingHeight.Text = this.bldgData.BuildingHeight.ToString("F2");
+                tbRoofPitch.Text = this.bldgData.RoofPitch.ToString("F2");
+                tbMeanRoofHeight.Text = this.bldgData.MeanRoofHeight.ToString("F2");
+            }
+
             cmbWindAnalysisType.Items.Clear();
             cmbASCEVersion.Items.Clear();
 
-            foreach (var value in Enum.GetValues(typeof(RoofTypes)))
+            foreach (var value in Enum.GetValues(typeof(ASCE7_Versions))) 
             {
-                cmbRoofType.Items.Add(value);
+                cmbASCEVersion.Items.Add(value);
             }
 
-            cmbRoofType.SelectedIndex = 0;
+            cmbASCEVersion.SelectedIndex = 1;
 
             foreach (var value in Enum.GetValues(typeof(WindLoadCalculationTypes)))
             {
@@ -51,18 +75,11 @@ namespace ShearWallVisualizer.Controls
             }
 
             cmbWindAnalysisType.SelectedIndex = 0;
-
-            foreach (var value in Enum.GetValues(typeof(ASCE7_Versions))) 
-            {
-                cmbASCEVersion.Items.Add(value);
-            }
-
-            cmbASCEVersion.SelectedIndex = 2;
         }
 
-        public virtual void OnWindInputComplete(WindLoadParameters_Base parameters, BuildingData bldg_data)
+        public virtual void OnWindInputComplete(WindLoadParameters_Base parameters)
         {
-            WindInputComplete?.Invoke(this, new OnWindInputCompleteEventArgs(parameters, bldg_data));
+            WindInputComplete?.Invoke(this, new OnWindInputCompleteEventArgs(parameters));
         }
 
         public static Brush GetColorForRegion(string region)
@@ -162,15 +179,22 @@ namespace ShearWallVisualizer.Controls
         // Event handler for the Compute Button click
         private void ComputeButton_Click(object sender, RoutedEventArgs e)
         {
-            var (parameters, bldg_data) = GetWindLoadParameters();
-            parameters.ComputeEffectiveWindAreas_Roof(bldg_data);
+            if(bldgData == null)
+            {
+                MessageBox.Show("Please input building data first");
+                return;
+            }
 
-            OnWindInputComplete(parameters, bldg_data); // raise the event where input has been completed
+            var parameters = GetWindLoadParameters(bldgData.RoofType);
+            parameters.ComputeEffectiveWindAreas_Roof(bldgData);
+
+            OnWindInputComplete(parameters); // raise the event where input has been completed
         }
 
         // Method to retrieve parameters from the input fields
-        private (WindLoadParameters_Base, BuildingData) GetWindLoadParameters()
+        private WindLoadParameters_Base GetWindLoadParameters(RoofTypes roof_type)
         {
+
             double windSpeed = double.Parse(WindSpeedTextBox.Text);
             double kd = double.Parse(KdTextBox.Text);
             double kzt = double.Parse(KztTextBox.Text);
@@ -181,13 +205,6 @@ namespace ShearWallVisualizer.Controls
 
             string exposure_string = ((ComboBoxItem)ExposureCategoryComboBox.SelectedItem).Content.ToString();
             WindExposureCategories exposure;
-
-            double buildingHeight = double.Parse(BuildingHeightTextBox.Text);
-            double length = double.Parse(BuildingLengthTextBox.Text);
-            double width = double.Parse(BuildingWidthTextBox.Text);
-            double pitch = double.Parse(RoofPitchTextBox.Text);
-            string ridgeDir = ((ComboBoxItem)RidgeDirectionComboBox.SelectedItem).Content.ToString();
-            RoofTypes roof_type = (RoofTypes)cmbRoofType.SelectedIndex;
 
             switch (exposure_string)
             {
@@ -216,20 +233,15 @@ namespace ShearWallVisualizer.Controls
                 importance, 
                 analysis_type
                 );
-
-            var buildingData = new BuildingData()
+            if(bldgData != null)
             {
-                BuildingHeight = buildingHeight,
-                BuildingLength = length,
-                BuildingWidth = width,
-                RoofPitch = pitch,
-                RidgeDirection = ridgeDir,
-                RoofType = roof_type
-            };
+                windParams.ComputeEffectiveWindAreas_Roof(bldgData);
+            } else
+            {
+                windParams = null;
+            }
 
-            windParams.ComputeEffectiveWindAreas_Roof(buildingData);
-
-            return (windParams, buildingData);
+            return windParams;
         }
     }
 }

@@ -25,11 +25,24 @@ using static ShearWallVisualizer.Controls.WallDataControl;
 
 namespace ShearWallVisualizer
 {
+    /// <summary>
+    /// The enum that controls the ordering of the information tabs in the main application
+    /// </summary>
+    public enum MenuTabs
+    {
+        WallInfo = 0,
+        BuildingData = 1,
+        WindLoadInput = 2,
+        WindLoadResultsMWFRS = 3,
+        WindLoadResultsCC = 4,
+        ShearWallCalculations = 5
+
+    }
     public partial class MainWindow : Window
     {
         public ShearWallCalculatorBase Calculator = new ShearWallCalculator_RigidDiaphragm();
         public WindLoadParameters_Base windLoadParams { get; set; }
-        public BuildingData buildingData { get; set; }
+        public BuildingData buildingData { get; set; } = null;
 
         public SimpsonCatalog simpsonCatalog { get; set; } = new SimpsonCatalog();  // contains the Simposon catalog connector and holddown data
 
@@ -98,6 +111,9 @@ namespace ShearWallVisualizer
             // the function to run once the app has loaded.
             this.Loaded += (s, e) =>
             {
+                //buildingData = new BuildingData();
+
+                UpdateTabs();
 
                 ResetView(); // reset the view so that origin 0,0 is at lower left of the corner screen and the model is zoomed to fill the entire window
                 LoadRecentFilesMenu();  // recent files menu
@@ -111,10 +127,39 @@ namespace ShearWallVisualizer
 
                 MainTabControl.SelectedIndex = 0; // Show Dimensions tab by default
 
-                // Events for wind load calculation
-                ctrlWindLoadResultsControl_MWFRS.WindCalculated += WindLoadResultsControl_MWFRS_WindCalculated;
-                WindLoadInputControl.WindInputComplete += WindLoadInputControl_WindInputComplete;
+                if (buildingData != null)
+                {
+                    MainTabControl.SelectedIndex = 1;
+                }
+                else
+                {
+                    MainTabControl.SelectedIndex = 0;
+                }
+
             };
+        }
+
+        private void UpdateTabs()
+        {
+            var ctrol_bldg_input = new BuildingDataInputControl(buildingData);
+            ctrol_bldg_input.BuildingDataInputComplete += BuildingDataInputControl_BuildingDataInputComplete;
+            tabBuildingDataControlTabItem.Content = ctrol_bldg_input;
+
+            // create the wind load input control
+            var ctrol_wind_input = new WindLoadInputControl(buildingData);
+            ctrol_wind_input.WindInputComplete += WindLoadInputControl_WindInputComplete;
+            tabWindInputControlTabItem.Content = ctrol_wind_input;
+
+            if (buildingData != null)
+            {
+                tabWindInputControlTabItem.Visibility = Visibility.Visible;
+                MainTabControl.SelectedIndex = 1;
+            }
+            else
+            {
+                tabWindInputControlTabItem.Visibility = Visibility.Collapsed;
+                MainTabControl.SelectedIndex = 0;
+            }
         }
 
         public void Update()
@@ -363,6 +408,14 @@ namespace ShearWallVisualizer
         }
 
         #region UI Control Related Events
+        private void BuildingDataInputControl_BuildingDataInputComplete(object sender, BuildingDataInputControl.OnBuildingDataInputCompleteEventArgs e)
+        {
+            buildingData = e._bldg_data;
+            UpdateTabs();
+            MainTabControl.SelectedIndex = 2;
+
+            Update();
+        }
         /// <summary>
         /// Event listener for when input of the wind loads as been completed
         /// </summary>
@@ -370,11 +423,6 @@ namespace ShearWallVisualizer
         /// <param name="e"></param>
         private void WindLoadInputControl_WindInputComplete(object sender, WindLoadInputControl.OnWindInputCompleteEventArgs e)
         {
-            if (ctrlWindLoadResultsControl_MWFRS != null)
-            {
-                ctrlWindLoadResultsControl_MWFRS.WindCalculated -= WindLoadResultsControl_MWFRS_WindCalculated;
-            }
-
             // save the input parameters for wind input
             windLoadParams = e._parameters;
             buildingData = e._bldg_data;
@@ -402,6 +450,8 @@ namespace ShearWallVisualizer
 
             tabWindResults2.Visibility = Visibility.Visible;
             tabWindResults2.IsSelected = true;
+
+            Update();
         }
 
         private void WindLoadResultsControl_CC_WindCalculated(object sender, WindLoadResultsControl_CC.OnWindCalculatedEventArgs e)

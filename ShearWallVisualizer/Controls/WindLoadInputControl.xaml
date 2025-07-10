@@ -13,120 +13,138 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="400"/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+
         </Grid.ColumnDefinitions>
 
-        <StackPanel Orientation="Vertical">
+        <StackPanel Orientation="Horizontal">
+            <StackPanel Orientation="Vertical">
+                <StackPanel x:Name="spBuildingData" Background="LightGray" Margin="5">
+                    <StackPanel Orientation="Horizontal">
 
-            <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Vertical" HorizontalAlignment="Left" Margin="5">
-                <!-- WindAnalysis Type -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                    <TextBlock Text="ASCE 7 Version" VerticalAlignment="Center" Margin="5"/>
-                    <ComboBox x:Name="cmbASCEVersion" Width="150" Margin="5"/>
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                    <TextBlock Text="Analysis Type" VerticalAlignment="Center" Margin="5"/>
-                    <ComboBox x:Name="cmbWindAnalysisType" Width="150" Margin="5"/>
-                </StackPanel>
-                
-                <!-- Wind Speed (Default to 115) -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                    <TextBlock Text="Wind Speed (V)" VerticalAlignment="Center" Margin="5"/>
-                    <TextBox x:Name="WindSpeedTextBox" Width="150" Margin="5" Text="115"/>
-                </StackPanel>
+                        <StackPanel Orientation="Vertical">
+                            <!-- Building Height -->
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                <TextBlock Text="Building Height (h)" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="tbBuildingHeight" Width="150" />
+                            </StackPanel>
 
-                <!-- Building Height -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                    <TextBlock Text="Building Height (h)" VerticalAlignment="Center" Margin="5"/>
-                    <TextBox x:Name="BuildingHeightTextBox" Width="150" Margin="5" Text="30"/>
-                </StackPanel>
+                            <!-- Building Length -->
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                <TextBlock Text="Building Length (L)" VerticalAlignment="Center" Margin="5"/>
+                                <TextBlock x:Name="tbBuildingLength" Width="150"/>
+                            </StackPanel>
 
-                <!-- Kd -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                    <TextBlock Text="Kd" VerticalAlignment="Center" Margin="5"/>
-                    <TextBox x:Name="KdTextBox" Width="150" Margin="5" Text="0.85"/>
-                </StackPanel>
+                            <!-- Building Width -->
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                <TextBlock Text="Building Width (B)" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="tbBuildingWidth" Width="150" />
+                            </StackPanel>
 
-                <!-- Kzt -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                    <TextBlock Text="Kzt" VerticalAlignment="Center" Margin="5"/>
-                    <TextBox x:Name="KztTextBox" Width="150" Margin="5" Text="1.0"/>
-                </StackPanel>
+                            <!-- Roof Type -->
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                <TextBlock Text="Roof Type" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="tbRoofType" Width="150"/>
+                            </StackPanel>
 
-                <!-- Importance Factor -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                    <TextBlock Text="Importance Factor (I)" VerticalAlignment="Center" Margin="5"/>
-                    <TextBox x:Name="ImportanceFactorTextBox" Width="150" Margin="5" Text="1.0"/>
-                </StackPanel>
-
-                <!-- Building Length -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                    <TextBlock Text="Building Length (L)" VerticalAlignment="Center" Margin="5"/>
-                    <TextBox x:Name="BuildingLengthTextBox" Width="150" Margin="5" Text="60"/>
+                            <!-- Roof Pitch -->
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                <TextBlock Text="Roof Pitch (θ)" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="tbRoofPitch" Width="150"/>
+                            </StackPanel>
+                        </StackPanel>
+                        <StackPanel Orientation="Vertical" Background="LightBlue">
+                            <TextBlock Text="Mean Roof ht (ft)"/>
+                            <TextBlock x:Name="tbMeanRoofHeight"/>
+                        </StackPanel>
+                    </StackPanel>
                 </StackPanel>
 
-                <!-- Building Width -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                    <TextBlock Text="Building Width (B)" VerticalAlignment="Center" Margin="5"/>
-                    <TextBox x:Name="BuildingWidthTextBox" Width="150" Margin="5" Text="30"/>
-                </StackPanel>
+                <!-- Wind Load Inputs -->
+                <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Vertical" HorizontalAlignment="Left" Margin="5">
+                    <!-- WindAnalysis Type -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <TextBlock Text="ASCE 7 Version" VerticalAlignment="Center"/>
+                        <ComboBox x:Name="cmbASCEVersion" Width="150" Margin="5"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <TextBlock Text="Analysis Type" VerticalAlignment="Center" />
+                        <ComboBox x:Name="cmbWindAnalysisType" Width="150" Margin="5" />
+                    </StackPanel>
 
-                <!-- Roof Type -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                    <TextBlock Text="Roof Type" VerticalAlignment="Center" Margin="5"/>
-                    <ComboBox x:Name="cmbRoofType" Width="150" Margin="5"/>
-                </StackPanel>
-                
-                <!-- Roof Pitch -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                    <TextBlock Text="Roof Pitch (θ)" VerticalAlignment="Center" Margin="5"/>
-                    <TextBox x:Name="RoofPitchTextBox" Width="150" Margin="5" Text="15"/>
-                </StackPanel>
+                    <!-- Wind Speed (Default to 115) -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <TextBlock Text="Wind Speed (V)" VerticalAlignment="Center" Margin="5"/>
+                        <TextBox x:Name="WindSpeedTextBox" Width="150" Margin="5" Text="115"/>
+                    </StackPanel>
 
-                <!-- Risk Category (Default to II) -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                    <TextBlock Text="Risk Category" VerticalAlignment="Center" Margin="5"/>
-                    <ComboBox x:Name="RiskCategoryComboBox" Width="150" Margin="5">
-                        <ComboBoxItem Content="I"/>
-                        <ComboBoxItem Content="II" IsSelected="True"/>
-                        <ComboBoxItem Content="III"/>
-                        <ComboBoxItem Content="IV"/>
-                    </ComboBox>
-                </StackPanel>
 
-                <!-- Exposure Category (Default to C) -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                    <TextBlock Text="Exposure Category" VerticalAlignment="Center" Margin="5"/>
-                    <ComboBox x:Name="ExposureCategoryComboBox" Width="150" Margin="5">
-                        <ComboBoxItem Content="B"/>
-                        <ComboBoxItem Content="C" IsSelected="True"/>
-                        <ComboBoxItem Content="D"/>
-                    </ComboBox>
-                </StackPanel>
+                    <!-- Kd -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <TextBlock Text="Kd" VerticalAlignment="Center" Margin="5"/>
+                        <TextBox x:Name="KdTextBox" Width="150" Margin="5" Text="0.85"/>
+                    </StackPanel>
 
-                <!-- Enclosure Classification (Default to Partially Enclosed) -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                    <TextBlock Text="Enclosure Classification" VerticalAlignment="Center" Margin="5"/>
-                    <ComboBox x:Name="EnclosureComboBox" Width="150" Margin="5">
-                        <ComboBoxItem Content="Enclosed"/>
-                        <ComboBoxItem Content="Partially Enclosed" IsSelected="True"/>
-                        <ComboBoxItem Content="Open"/>
-                    </ComboBox>
-                </StackPanel>
+                    <!-- Kzt -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <TextBlock Text="Kzt" VerticalAlignment="Center" Margin="5"/>
+                        <TextBox x:Name="KztTextBox" Width="150" Margin="5" Text="1.0"/>
+                    </StackPanel>
 
-                <!-- Ridge Direction (Default to Perpendicular to Wind) -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                    <TextBlock Text="Ridge Direction" VerticalAlignment="Center" Margin="5"/>
-                    <ComboBox x:Name="RidgeDirectionComboBox" Width="150" Margin="5">
-                        <ComboBoxItem Content="Parallel to Wind"/>
-                        <ComboBoxItem Content="Perpendicular to Wind" IsSelected="True"/>
-                    </ComboBox>
-                </StackPanel>
+                    <!-- Importance Factor -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <TextBlock Text="Importance Factor (I)" VerticalAlignment="Center" Margin="5"/>
+                        <TextBox x:Name="ImportanceFactorTextBox" Width="150" Margin="5" Text="1.0"/>
+                    </StackPanel>
 
-                <!-- Compute Button -->
-                <Button Content="Compute Wind Loads" Width="150" Margin="10" Grid.ColumnSpan="2" Click="ComputeButton_Click"/>
+
+
+                    <!-- Risk Category (Default to II) -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <TextBlock Text="Risk Category" VerticalAlignment="Center" Margin="5"/>
+                        <ComboBox x:Name="RiskCategoryComboBox" Width="150" Margin="5">
+                            <ComboBoxItem Content="I"/>
+                            <ComboBoxItem Content="II" IsSelected="True"/>
+                            <ComboBoxItem Content="III"/>
+                            <ComboBoxItem Content="IV"/>
+                        </ComboBox>
+                    </StackPanel>
+
+                    <!-- Exposure Category (Default to C) -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <TextBlock Text="Exposure Category" VerticalAlignment="Center" Margin="5"/>
+                        <ComboBox x:Name="ExposureCategoryComboBox" Width="150" Margin="5">
+                            <ComboBoxItem Content="B"/>
+                            <ComboBoxItem Content="C" IsSelected="True"/>
+                            <ComboBoxItem Content="D"/>
+                        </ComboBox>
+                    </StackPanel>
+
+                    <!-- Enclosure Classification (Default to Partially Enclosed) -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <TextBlock Text="Enclosure Classification" VerticalAlignment="Center" Margin="5"/>
+                        <ComboBox x:Name="EnclosureComboBox" Width="150" Margin="5">
+                            <ComboBoxItem Content="Enclosed"/>
+                            <ComboBoxItem Content="Partially Enclosed" IsSelected="True"/>
+                            <ComboBoxItem Content="Open"/>
+                        </ComboBox>
+                    </StackPanel>
+
+                    <!-- Ridge Direction (Default to Perpendicular to Wind) -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <TextBlock Text="Ridge Direction" VerticalAlignment="Center" Margin="5"/>
+                        <ComboBox x:Name="RidgeDirectionComboBox" Width="150" Margin="5">
+                            <ComboBoxItem Content="Parallel to Wind"/>
+                            <ComboBoxItem Content="Perpendicular to Wind" IsSelected="True"/>
+                        </ComboBox>
+                    </StackPanel>
+
+                    <!-- Compute Button -->
+                    <Button Content="Compute Wind Loads" Width="150" Margin="10" Grid.ColumnSpan="2" Click="ComputeButton_Click"/>
+                </StackPanel>
             </StackPanel>
-            <Canvas Name="cnvCanvas" Width="300" Height="300" Margin="10"  Background="LightGray"></Canvas>
+            <Canvas Name="cnvCanvas" Grid.Column="1" Width="300" Height="300" Margin="10"  Background="LightGray"></Canvas>
         </StackPanel>
     </Grid>
 </UserControl>

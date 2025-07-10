@@ -83,9 +83,13 @@
                             </ScrollViewer>
                         </StackPanel>
                     </TabItem>
-                    <TabItem Header="WIND Input">
-                        <ctrl:WindLoadInputControl x:Name="WindLoadInputControl" Margin="5 0 0 0"/>
-                    </TabItem>
+                    <!-- Building Data control -->
+                    <TabItem x:Name="tabBuildingDataControlTabItem" Header="BuildingData" />
+
+
+                    <!-- Wind Input control-->
+                    <TabItem Header="WIND Input" x:Name="tabWindInputControlTabItem" Margin="5 0 0 0" Visibility="Collapsed"/>
+
                     <TabItem Name="tabWindResults1" Header="MWFRS Wind Calcs" Visibility="Collapsed">
                         <ctrl:WindLoadResultsControl_MWFRS x:Name="ctrlWindLoadResultsControl_MWFRS" Margin="5 0 0 0"/>
                     </TabItem>
