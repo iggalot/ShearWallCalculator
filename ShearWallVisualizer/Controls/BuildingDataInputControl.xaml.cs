@@ -73,6 +73,7 @@ namespace ShearWallVisualizer.Controls
                 case "Parallel to Wind": RidgeDirectionComboBox.SelectedIndex = 1; break;
             }
 
+            cmbRoofType.SelectedIndex = (int)bldgData.RoofType;
             switch (bldgData.RoofType)
             {
                 case RoofTypes.ROOF_TYPE_FLAT: cmbRoofType.SelectedIndex = 0; break;

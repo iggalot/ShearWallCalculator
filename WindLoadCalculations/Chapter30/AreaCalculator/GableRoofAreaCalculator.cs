@@ -1,17 +1,13 @@
 ﻿using ShearWallCalculator.BuildingInfo;
+using ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator;
 using System;
 using System.Collections.Generic;
 using System.Windows;
 
 namespace ShearWallCalculator.WindLoadCalculations
 {
-    public static class GableRoofAreaCalculator
+    public class GableRoofAreaCalculator : RoofAreaCalculator_Base
     {
-        /// <summary>
-        /// Effective wind areas for roof
-        /// </summary>
-        public static Dictionary<int, EffectiveWindArea_Roof> effWindAreas_Roof { get; set; } = new Dictionary<int, EffectiveWindArea_Roof>();
-
         public static double CritDim_a { get; set; }
 
         public static void Compute(WindLoadParameters_Base parameters, BuildingData bldg_data)

@@ -110,6 +110,8 @@
     <Compile Include="SimpsonCatalog\StrapTies_Manager.cs" />
     <Compile Include="WallData.cs" />
     <Compile Include="WallSystem.cs" />
+    <Compile Include="WindLoadCalculations\Chapter30\AreaCalculator\RoofAreaCalculatorFactory.cs" />
+    <Compile Include="WindLoadCalculations\Chapter30\AreaCalculator\RoofAreaCalculator_Base.cs" />
     <Compile Include="WindLoadCalculations\Chapter30\Chapter30_BaseFigure.cs" />
     <Compile Include="WindLoadCalculations\Chapter30\ExternalGCpCurve.cs" />
     <Compile Include="WindLoadCalculations\Chapter30\Figure30_3_2A.cs" />

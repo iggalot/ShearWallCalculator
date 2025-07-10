@@ -1,17 +1,13 @@
 ﻿using ShearWallCalculator.BuildingInfo;
+using ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator;
 using System;
 using System.Collections.Generic;
 using System.Windows;
 
 namespace ShearWallCalculator.WindLoadCalculations
 {
-    public static class FlatRoofAreaCalculator
+    public class FlatRoofAreaCalculator : RoofAreaCalculator_Base
     {
-        /// <summary>
-        /// Effective wind areas for roof
-        /// </summary>
-        public static Dictionary<int, EffectiveWindArea_Roof> effWindAreas_Roof { get; set; } = new Dictionary<int, EffectiveWindArea_Roof>();
-
         /// <summary>
         /// Try to create a zone with positive area.  Otherwise return null;
         /// </summary>

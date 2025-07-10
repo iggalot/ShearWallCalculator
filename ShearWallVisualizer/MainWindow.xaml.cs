@@ -6,6 +6,7 @@ using ShearWallCalculator;
 using ShearWallCalculator.BuildingInfo;
 using ShearWallCalculator.Interfaces;
 using ShearWallCalculator.WindLoadCalculations;
+using ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator;
 using ShearWallVisualizer.Controls;
 using ShearWallVisualizer.Dialogs;
 using System;
@@ -43,6 +44,7 @@ namespace ShearWallVisualizer
         public ShearWallCalculatorBase Calculator = new ShearWallCalculator_RigidDiaphragm();
         public WindLoadParameters_Base windLoadParams { get; set; }
         public BuildingData buildingData { get; set; } = null;
+        public RoofAreaCalculator_Base roofAreaCalculator { get; set; }
 
         public SimpsonCatalog simpsonCatalog { get; set; } = new SimpsonCatalog();  // contains the Simposon catalog connector and holddown data
 
@@ -423,9 +425,18 @@ namespace ShearWallVisualizer
         /// <param name="e"></param>
         private void WindLoadInputControl_WindInputComplete(object sender, WindLoadInputControl.OnWindInputCompleteEventArgs e)
         {
+            MessageBox.Show("Wind Input Complete");
             // save the input parameters for wind input
             windLoadParams = e._parameters;
-            buildingData = e._bldg_data;
+
+            roofAreaCalculator = RoofAreaCalculatorFactory.Create(buildingData, windLoadParams);
+            Console.WriteLine(buildingData.RoofType);
+            Console.WriteLine(windLoadParams.AnalysisType);
+            Console.WriteLine(roofAreaCalculator.DisplayResults());
+
+            Console.WriteLine(roofAreaCalculator.TotalRoofArea());
+
+            
             
 
             //if (windLoadParams.AnalysisType == WindLoadCalculationTypes.MWFRS)
