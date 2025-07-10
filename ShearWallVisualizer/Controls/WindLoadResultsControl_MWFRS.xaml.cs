@@ -1,4 +1,5 @@
-﻿using ShearWallCalculator.WindLoadCalculations;
+﻿using ShearWallCalculator.BuildingInfo;
+using ShearWallCalculator.WindLoadCalculations;
 using System;
 using System.Collections.Generic;
 using System.Windows;
@@ -15,20 +16,23 @@ namespace ShearWallVisualizer.Controls
         public class OnWindCalculatedEventArgs : EventArgs
         {
             public WindLoadParameters_Base _parameters { get; }
+            public BuildingData _bldg_data { get; }
             public List<WindPressureResult_Wall_MWFRS> _wall_results { get; }
             public List<WindPressureResult_Roof_MWFRS> _roof_results { get; }
 
-            public OnWindCalculatedEventArgs(WindLoadParameters_Base parameters, List<WindPressureResult_Wall_MWFRS> wall_results, List<WindPressureResult_Roof_MWFRS> roof_results)
+            public OnWindCalculatedEventArgs(WindLoadParameters_Base parameters, BuildingData bldg_data, List<WindPressureResult_Wall_MWFRS> wall_results, List<WindPressureResult_Roof_MWFRS> roof_results)
             {
                 _parameters = parameters;
+                _bldg_data = bldg_data;
+                
                 _wall_results = wall_results;
                 _roof_results = roof_results;
             }
         }
 
-        protected virtual void OnWindCalculated(WindLoadParameters_Base parameters, List<WindPressureResult_Wall_MWFRS> wall_results, List<WindPressureResult_Roof_MWFRS> roof_results)
+        protected virtual void OnWindCalculated(WindLoadParameters_Base parameters, BuildingData bldg_data, List<WindPressureResult_Wall_MWFRS> wall_results, List<WindPressureResult_Roof_MWFRS> roof_results)
         {
-            WindCalculated?.Invoke(this, new OnWindCalculatedEventArgs(parameters, wall_results, roof_results));
+            WindCalculated?.Invoke(this, new OnWindCalculatedEventArgs(parameters, bldg_data, wall_results, roof_results));
         }
 
         private WindLoadParameters_Base _parameters;
@@ -41,7 +45,7 @@ namespace ShearWallVisualizer.Controls
             
         }
 
-        public WindLoadResultsControl_MWFRS(WindLoadParameters_Base parameters)
+        public WindLoadResultsControl_MWFRS(WindLoadParameters_Base parameters, BuildingData bldg_data)
         {
             InitializeComponent();
 
@@ -52,29 +56,29 @@ namespace ShearWallVisualizer.Controls
 
         private void WindLoadResultsControl_MWFRS_Loaded(object sender, RoutedEventArgs e)
         {
-            Dictionary<WindZones_Walls_MWFRS, double> wall_zones = Calculate_WallZones_MWFRS(_parameters);
-            Dictionary<WindZones_Roof_MWFRS, double> roof_zones = CalculateMWFRS_RoofZones(_parameters);
+            //Dictionary<WindZones_Walls_MWFRS, double> wall_zones = Calculate_WallZones_MWFRS(_parameters);
+            //Dictionary<WindZones_Roof_MWFRS, double> roof_zones = CalculateMWFRS_RoofZones(_parameters);
 
-            // compute the wind load results tables
-            wall_results = CalculateWallPressureResults_MWFRS(_parameters, wall_zones);
-            roof_results = CalculateRoofPressureResults_MWFRS(_parameters, roof_zones);
+            //// compute the wind load results tables
+            //wall_results = CalculateWallPressureResults_MWFRS(_parameters, wall_zones);
+            //roof_results = CalculateRoofPressureResults_MWFRS(_parameters, roof_zones);
 
-            tbl_qh.Text = Math.Round(CalculateDynamicWindPressure(_parameters.MeanRoofHeight), 2).ToString();
-            tbl_theta.Text = Math.Round(_parameters.RoofPitch, 2).ToString();
-            tbl_hOverL.Text = Math.Round(_parameters.MeanRoofHeight / _parameters.BuildingLength, 2).ToString();
-            tbl_h.Text = Math.Round(_parameters.MeanRoofHeight, 2).ToString();
-            tbl_windOrientation.Text = _parameters.RidgeDirection;
+            //tbl_qh.Text = Math.Round(CalculateDynamicWindPressure(_parameters.MeanRoofHeight), 2).ToString();
+            //tbl_theta.Text = Math.Round(_parameters.RoofPitch, 2).ToString();
+            //tbl_hOverL.Text = Math.Round(_parameters.MeanRoofHeight / _parameters.BuildingLength, 2).ToString();
+            //tbl_h.Text = Math.Round(_parameters.MeanRoofHeight, 2).ToString();
+            //tbl_windOrientation.Text = _parameters.RidgeDirection;
 
-            // Display wall results in the DataGrids
-            WallResultsDataGrid.ItemsSource = null;
-            WallResultsDataGrid.ItemsSource = wall_results;
+            //// Display wall results in the DataGrids
+            //WallResultsDataGrid.ItemsSource = null;
+            //WallResultsDataGrid.ItemsSource = wall_results;
 
-            RoofResultsDataGrid.ItemsSource = null;
-            RoofResultsDataGrid.ItemsSource = roof_results;
+            //RoofResultsDataGrid.ItemsSource = null;
+            //RoofResultsDataGrid.ItemsSource = roof_results;
 
-            spResultsAndCanvas.Children.Add(new WindLoadGraphicCanvas(_parameters, wall_results, roof_results));
+            //spResultsAndCanvas.Children.Add(new WindLoadGraphicCanvas(_parameters, wall_results, roof_results));
 
-            OnWindCalculated(_parameters, wall_results, roof_results);
+            //OnWindCalculated(_parameters, wall_results, roof_results);
         }
     }
 }

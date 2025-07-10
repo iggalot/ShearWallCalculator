@@ -9,15 +9,10 @@ namespace ShearWallCalculator.WindLoadCalculations
             string riskCategory,
             double windSpeed,
             WindExposureCategories exposureCategory,
-            double buildingHeight,
             string enclosureClassification,
             double kd,
             double kzt,
             double importanceFactor,
-            double buildingLength,
-            double buildingWidth,
-            double roofPitch,
-            string ridgeDirection,
             WindLoadCalculationTypes analysisType)
         {
             WindLoadParameters_Base parameters;
@@ -42,17 +37,13 @@ namespace ShearWallCalculator.WindLoadCalculations
             parameters.RiskCategory = riskCategory;
             parameters.WindSpeed = windSpeed;
             parameters.ExposureCategory = exposureCategory;
-            parameters.BuildingHeight = buildingHeight;
             parameters.EnclosureClassification = enclosureClassification;
             parameters.Kd = kd;
             parameters.Kzt = kzt;
             parameters.ImportanceFactor = importanceFactor;
-            parameters.BuildingLength = buildingLength;
-            parameters.BuildingWidth = buildingWidth;
-            parameters.RoofPitch = roofPitch;
-            parameters.RidgeDirection = ridgeDirection;
             parameters.AnalysisType = analysisType;
 
             return parameters;
         }
     }
+}

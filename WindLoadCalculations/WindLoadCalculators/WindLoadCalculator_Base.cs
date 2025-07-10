@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ShearWallCalculator.BuildingInfo;
+using System;
 using System.ComponentModel;
 
 namespace ShearWallCalculator.WindLoadCalculations
@@ -11,7 +12,6 @@ namespace ShearWallCalculator.WindLoadCalculations
     }
     public enum ASCE7_Versions
     {
-        ASCE_VER_7_05 = 0,
         ASCE_VER_7_10 = 1,
         ASCE_VER_7_16 = 2,
         ASCE_VER_7_22 = 3
@@ -82,7 +82,8 @@ namespace ShearWallCalculator.WindLoadCalculations
     public class WindLoadCalculator_Base
     {
         public virtual ASCE7_Versions ASCEVersion { get; }
-        public static WindLoadParameters_Base Parameters { get; set; }
+        public WindLoadParameters_Base Parameters { get; set; }
+        public BuildingData buildingData { get; set; }
 
         /// <summary>
         /// Calculates the dyanmic wind pressure q at a specified height z
@@ -90,13 +91,12 @@ namespace ShearWallCalculator.WindLoadCalculations
         /// <param name="p"></param>
         /// <param name="z"></param>
         /// <returns></returns>
-        public static double CalculateDynamicWindPressure(double z)
+        public double CalculateDynamicWindPressure(double z)
         {
             if (Parameters == null)
                 return -1000;
 
             WindLoadParameters_Base p = Parameters;
-
 
             double V = p.WindSpeed;
             double Kd = p.Kd;

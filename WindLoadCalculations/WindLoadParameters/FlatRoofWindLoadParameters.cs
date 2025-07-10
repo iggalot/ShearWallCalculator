@@ -1,15 +1,12 @@
-﻿namespace ShearWallCalculator.WindLoadCalculations
+﻿using ShearWallCalculator.BuildingInfo;
+
+namespace ShearWallCalculator.WindLoadCalculations
 {
     public class FlatRoofWindLoadParameters : WindLoadParameters_Base
     {
-        public override double MeanRoofHeight
+        public override void ComputeEffectiveWindAreas_Roof(BuildingData bldg_data)
         {
-            get { return BuildingHeight; }
-        }
-
-        public override void ComputeEffectiveWindAreas_Roof()
-        {
-            FlatRoofAreaCalculator.Compute(this);
+            FlatRoofAreaCalculator.Compute(this, bldg_data);
         }
     }
 }

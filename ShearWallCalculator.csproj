@@ -77,6 +77,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BracedWallLine.cs" />
+    <Compile Include="BuildingInfo\BuildingData.cs" />
     <Compile Include="DiaphragmData_Rectangular.cs" />
     <Compile Include="DiaphragmSystem.cs" />
     <Compile Include="DrawableObject.cs" />
@@ -118,11 +119,21 @@
     <Compile Include="WindLoadCalculations\Chapter30\Figure30_3_2E_2F.cs" />
     <Compile Include="WindLoadCalculations\Chapter30\Figure30_3_2G.cs" />
     <Compile Include="WindLoadCalculations\Chapter30\Figure30_3_2H_2I.cs" />
-    <Compile Include="WindLoadCalculations\EffectiveWindArea_Roof.cs" />
-    <Compile Include="WindLoadCalculations\WindLoadCalculator_CC_ASCE7_16.cs" />
-    <Compile Include="WindLoadCalculations\WindLoadCalculator_MWFRS_ASCE7_10.cs" />
-    <Compile Include="WindLoadCalculations\WindLoadCalculator_Base.cs" />
-    <Compile Include="WindLoadCalculations\WindLoadParameters.cs" />
+    <Compile Include="WindLoadCalculations\Chapter30\AreaCalculator\EffectiveWindArea_Roof.cs" />
+    <Compile Include="WindLoadCalculations\Chapter30\AreaCalculator\FlatRoofAreaCalculator.cs" />
+    <Compile Include="WindLoadCalculations\WindLoadCalculators\WindLoadCalculatorFactory.cs" />
+    <Compile Include="WindLoadCalculations\WindLoadCalculators\WindLoadCalculator_CC_ASCE7_10.cs" />
+    <Compile Include="WindLoadCalculations\WindLoadCalculators\WindLoadCalculator_MWFRS_ASCE7_16.cs" />
+    <Compile Include="WindLoadCalculations\WindLoadParameters\FlatRoofWindLoadParameters.cs" />
+    <Compile Include="WindLoadCalculations\Chapter30\AreaCalculator\GableRoofAreaCalculator.cs" />
+    <Compile Include="WindLoadCalculations\WindLoadParameters\GableRoofWindLoadParameters.cs" />
+    <Compile Include="WindLoadCalculations\Chapter30\AreaCalculator\HipRoofAreaCalculator.cs" />
+    <Compile Include="WindLoadCalculations\WindLoadParameters\HipRoofWindLoadParameters.cs" />
+    <Compile Include="WindLoadCalculations\WindLoadCalculators\WindLoadCalculator_CC_ASCE7_16.cs" />
+    <Compile Include="WindLoadCalculations\WindLoadCalculators\WindLoadCalculator_MWFRS_ASCE7_10.cs" />
+    <Compile Include="WindLoadCalculations\WindLoadCalculators\WindLoadCalculator_Base.cs" />
+    <Compile Include="WindLoadCalculations\WindLoadParameters\WindLoadParameterFactory.cs" />
+    <Compile Include="WindLoadCalculations\WindLoadParameters\WindLoadParameters_Base.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

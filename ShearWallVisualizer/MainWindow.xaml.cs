@@ -3,6 +3,7 @@ using Microsoft.Win32;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using ShearWallCalculator;
+using ShearWallCalculator.BuildingInfo;
 using ShearWallCalculator.Interfaces;
 using ShearWallCalculator.WindLoadCalculations;
 using ShearWallVisualizer.Controls;
@@ -10,7 +11,6 @@ using ShearWallVisualizer.Dialogs;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Diagnostics.Eventing.Reader;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -28,7 +28,8 @@ namespace ShearWallVisualizer
     public partial class MainWindow : Window
     {
         public ShearWallCalculatorBase Calculator = new ShearWallCalculator_RigidDiaphragm();
-        public WindLoadParameters_Base windLoadParams { get; set; } = new WindLoadParameters_Base();
+        public WindLoadParameters_Base windLoadParams { get; set; }
+        public BuildingData buildingData { get; set; }
 
         public SimpsonCatalog simpsonCatalog { get; set; } = new SimpsonCatalog();  // contains the Simposon catalog connector and holddown data
 
@@ -376,24 +377,25 @@ namespace ShearWallVisualizer
 
             // save the input parameters for wind input
             windLoadParams = e._parameters;
+            buildingData = e._bldg_data;
             
 
-            if (windLoadParams.AnalysisType == WindLoadCalculationTypes.MWFRS)
-            {
-                WindLoadResultsControl_MWFRS ctrl = new WindLoadResultsControl_MWFRS(e._parameters);
+            //if (windLoadParams.AnalysisType == WindLoadCalculationTypes.MWFRS)
+            //{
+            //    WindLoadResultsControl_MWFRS ctrl = new WindLoadResultsControl_MWFRS(e._parameters);
 
-                ctrl.WindCalculated += WindLoadResultsControl_MWFRS_WindCalculated;
-                ctrlWindLoadResultsControl_MWFRS.Content = ctrl;
+            //    ctrl.WindCalculated += WindLoadResultsControl_MWFRS_WindCalculated;
+            //    ctrlWindLoadResultsControl_MWFRS.Content = ctrl;
 
-                ctrlWindLoadResultsControl_MWFRS = ctrl;
-            } else if (windLoadParams.AnalysisType == WindLoadCalculationTypes.COMPONENT_AND_CLADDING)
-            {
-                WindLoadCalculator_CC_ASCE7_16 calc = new WindLoadCalculator_CC_ASCE7_16(e._parameters);
-                WindLoadResultsControl_CC ctrl = new WindLoadResultsControl_CC(e._parameters);
+            //    ctrlWindLoadResultsControl_MWFRS = ctrl;
+            //} else if (windLoadParams.AnalysisType == WindLoadCalculationTypes.COMPONENT_AND_CLADDING)
+            //{
+            //    WindLoadCalculator_CC_ASCE7_16 calc = new WindLoadCalculator_CC_ASCE7_16(e._parameters, e._bldg_data);
+            //    WindLoadResultsControl_CC ctrl = new WindLoadResultsControl_CC(e._parameters);
 
-                ctrl.WindCalculated += WindLoadResultsControl_CC_WindCalculated;
-                ctrlWindLoadResultsControl_CC.Content = ctrl;
-            }
+            //    ctrl.WindCalculated += WindLoadResultsControl_CC_WindCalculated;
+            //    ctrlWindLoadResultsControl_CC.Content = ctrl;
+            //}
 
 
             tabWindResults1.Visibility = Visibility.Visible;
@@ -440,7 +442,7 @@ namespace ShearWallVisualizer
 
             // TODO:  This calculation needs to be improved
             // worst x case will be +WW and -LW -- internal suction should offset each other.
-            double load_x = (ww - lw) * parameters.BuildingHeight * parameters.BuildingWidth / 1000; // net sum at elevation h
+            double load_x = (ww - lw) * buildingData.BuildingHeight * buildingData.BuildingWidth / 1000; // net sum at elevation h
             double load_y = 0;
 
             if (Calculator != null)

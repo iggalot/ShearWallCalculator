@@ -21,7 +21,11 @@
             <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Vertical" HorizontalAlignment="Left" Margin="5">
                 <!-- WindAnalysis Type -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                    <TextBlock Text="Analysis: Type" VerticalAlignment="Center" Margin="5"/>
+                    <TextBlock Text="ASCE 7 Version" VerticalAlignment="Center" Margin="5"/>
+                    <ComboBox x:Name="cmbASCEVersion" Width="150" Margin="5"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                    <TextBlock Text="Analysis Type" VerticalAlignment="Center" Margin="5"/>
                     <ComboBox x:Name="cmbWindAnalysisType" Width="150" Margin="5"/>
                 </StackPanel>
                 

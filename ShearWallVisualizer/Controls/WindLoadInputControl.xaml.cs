@@ -1,4 +1,5 @@
-﻿using ShearWallCalculator.WindLoadCalculations;
+﻿using ShearWallCalculator.BuildingInfo;
+using ShearWallCalculator.WindLoadCalculations;
 using System;
 using System.Collections.Generic;
 using System.Windows;
@@ -10,17 +11,17 @@ namespace ShearWallVisualizer.Controls
 {
     public partial class WindLoadInputControl : UserControl
     {
-        private WindLoadParameters_Base parameters;
-
         public event EventHandler<OnWindInputCompleteEventArgs> WindInputComplete;  // the event that signals that the drawing has been updated -- controls will listen for this at the time they are created.
 
         public class OnWindInputCompleteEventArgs : EventArgs
         {
             public WindLoadParameters_Base _parameters { get; }
+            public BuildingData _bldg_data { get; }
 
-            public OnWindInputCompleteEventArgs(WindLoadParameters_Base parameters)
+            public OnWindInputCompleteEventArgs(WindLoadParameters_Base parameters, BuildingData bldg_data)
             {
                 _parameters = parameters;
+                _bldg_data = bldg_data;
             }
         }
 
@@ -35,6 +36,7 @@ namespace ShearWallVisualizer.Controls
         {
             cmbRoofType.Items.Clear();
             cmbWindAnalysisType.Items.Clear();
+            cmbASCEVersion.Items.Clear();
 
             foreach (var value in Enum.GetValues(typeof(RoofTypes)))
             {
@@ -49,23 +51,18 @@ namespace ShearWallVisualizer.Controls
             }
 
             cmbWindAnalysisType.SelectedIndex = 0;
-        }
 
-        public virtual void OnWindInputComplete(WindLoadParameters_Base parameters)
-        {
-            cnvCanvas.Children.Clear();
-            foreach (var kvp in parameters.effWindAreas_Roof)
+            foreach (var value in Enum.GetValues(typeof(ASCE7_Versions))) 
             {
-                try
-                {
-                    DrawEffectiveWindArea(cnvCanvas, kvp.Value, 5);
-                } catch
-                {
-                    MessageBox.Show("Error in area: " + kvp.Key.ToString());
-                }
+                cmbASCEVersion.Items.Add(value);
             }
 
-            WindInputComplete?.Invoke(this, new OnWindInputCompleteEventArgs(parameters));
+            cmbASCEVersion.SelectedIndex = 2;
+        }
+
+        public virtual void OnWindInputComplete(WindLoadParameters_Base parameters, BuildingData bldg_data)
+        {
+            WindInputComplete?.Invoke(this, new OnWindInputCompleteEventArgs(parameters, bldg_data));
         }
 
         public static Brush GetColorForRegion(string region)
@@ -165,32 +162,32 @@ namespace ShearWallVisualizer.Controls
         // Event handler for the Compute Button click
         private void ComputeButton_Click(object sender, RoutedEventArgs e)
         {
-            WindLoadParameters_Base parameters = GetWindLoadParameters();
-            parameters.ComputeEffectiveWindAreas_Roof();
+            var (parameters, bldg_data) = GetWindLoadParameters();
+            parameters.ComputeEffectiveWindAreas_Roof(bldg_data);
 
-            OnWindInputComplete(parameters); // raise the event where input has been completed
+            OnWindInputComplete(parameters, bldg_data); // raise the event where input has been completed
         }
 
         // Method to retrieve parameters from the input fields
-        private WindLoadParameters_Base GetWindLoadParameters()
+        private (WindLoadParameters_Base, BuildingData) GetWindLoadParameters()
         {
             double windSpeed = double.Parse(WindSpeedTextBox.Text);
-            double buildingHeight = double.Parse(BuildingHeightTextBox.Text);
             double kd = double.Parse(KdTextBox.Text);
             double kzt = double.Parse(KztTextBox.Text);
             double importance = double.Parse(ImportanceFactorTextBox.Text);
-            double length = double.Parse(BuildingLengthTextBox.Text);
-            double width = double.Parse(BuildingWidthTextBox.Text);
-            double pitch = double.Parse(RoofPitchTextBox.Text);
-
             string risk = ((ComboBoxItem)RiskCategoryComboBox.SelectedItem).Content.ToString();
             string enclosure = ((ComboBoxItem)EnclosureComboBox.SelectedItem).Content.ToString();
-            string ridgeDir = ((ComboBoxItem)RidgeDirectionComboBox.SelectedItem).Content.ToString();
-            RoofTypes roof_type = (RoofTypes)cmbRoofType.SelectedIndex;
             WindLoadCalculationTypes analysis_type = (WindLoadCalculationTypes)cmbWindAnalysisType.SelectedIndex;
 
             string exposure_string = ((ComboBoxItem)ExposureCategoryComboBox.SelectedItem).Content.ToString();
             WindExposureCategories exposure;
+
+            double buildingHeight = double.Parse(BuildingHeightTextBox.Text);
+            double length = double.Parse(BuildingLengthTextBox.Text);
+            double width = double.Parse(BuildingWidthTextBox.Text);
+            double pitch = double.Parse(RoofPitchTextBox.Text);
+            string ridgeDir = ((ComboBoxItem)RidgeDirectionComboBox.SelectedItem).Content.ToString();
+            RoofTypes roof_type = (RoofTypes)cmbRoofType.SelectedIndex;
 
             switch (exposure_string)
             {
@@ -208,27 +205,31 @@ namespace ShearWallVisualizer.Controls
                     break;
             }
 
+            var windParams = WindLoadParametersFactory.Create(
+                roof_type, 
+                risk, 
+                windSpeed, 
+                exposure, 
+                enclosure, 
+                kd, 
+                kzt, 
+                importance, 
+                analysis_type
+                );
 
-            return new WindLoadParameters_Base
+            var buildingData = new BuildingData()
             {
-                RiskCategory = risk,
-                WindSpeed = windSpeed,
-                ExposureCategory = exposure,
                 BuildingHeight = buildingHeight,
-                EnclosureClassification = enclosure,
-                GustFactor = 0.85,
-                Kd = kd,
-                Kzt = kzt,
-                ImportanceFactor = importance,
                 BuildingLength = length,
                 BuildingWidth = width,
                 RoofPitch = pitch,
                 RidgeDirection = ridgeDir,
-                RoofType = roof_type,
-                AnalysisType = analysis_type
-                
-
+                RoofType = roof_type
             };
+
+            windParams.ComputeEffectiveWindAreas_Roof(buildingData);
+
+            return (windParams, buildingData);
         }
     }
 }
