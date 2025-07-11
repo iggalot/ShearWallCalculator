@@ -6,8 +6,13 @@ using System.Windows;
 
 namespace ShearWallCalculator.WindLoadCalculations
 {
-    public class FlatRoofAreaCalculator : RoofAreaCalculator_Base
+    public class FlatRoofAreaCalculator_CC : RoofAreaCalculator_Base
     {
+        /// <summary>
+        /// Effective wind areas for roof
+        /// </summary>
+        public override Dictionary<int, EffectiveWindArea_Roof> effWindAreas_Roof { get; set; } = new Dictionary<int, EffectiveWindArea_Roof>();
+
         /// <summary>
         /// Try to create a zone with positive area.  Otherwise return null;
         /// </summary>
@@ -40,7 +45,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             return offset > 0 && 2 * offset < L && 2 * offset < B;
         }
 
-        public static void Compute(WindLoadParameters_Base parameters, BuildingData bldg_data)
+        public override void Compute(WindLoadParameters_Base parameters, BuildingData bldg_data)
         {
             // Existing logic from ComputeFlatRoofAreas
             var L = bldg_data.BuildingLength;

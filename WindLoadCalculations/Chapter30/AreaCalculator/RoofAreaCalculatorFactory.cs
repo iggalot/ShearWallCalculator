@@ -19,15 +19,17 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator
             {
                 if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_FLAT)
                 {
-                    return new FlatRoofAreaCalculator();
+                    return new FlatRoofAreaCalculator_CC();
                 }
                 else if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_GABLE)
                 {
-                    return new GableRoofAreaCalculator();
+                    if (bldg_data.RoofPitch < 7) return new FlatRoofAreaCalculator_CC();
+                    else return new GableRoofAreaCalculator_CC();
                 }
                 else if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_HIP)
                 {
-                    return new HipRoofAreaCalculator();
+                    if (bldg_data.RoofPitch < 7) return new FlatRoofAreaCalculator_CC();
+                    else return new HipRoofAreaCalculator_CC();
                 }
             } else if (parameters.AnalysisType == WindLoadCalculationTypes.MWFRS)
             {

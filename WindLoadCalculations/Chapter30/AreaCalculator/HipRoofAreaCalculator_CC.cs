@@ -6,11 +6,16 @@ using System.Windows;
 
 namespace ShearWallCalculator.WindLoadCalculations
 {
-    public class HipRoofAreaCalculator : RoofAreaCalculator_Base
+    public class HipRoofAreaCalculator_CC : RoofAreaCalculator_Base
     {
+        /// <summary>
+        /// Effective wind areas for roof
+        /// </summary>
+        public override Dictionary<int, EffectiveWindArea_Roof> effWindAreas_Roof { get; set; } = new Dictionary<int, EffectiveWindArea_Roof>();
+
         public static double CritDim_a { get; set; }
 
-        public static void Compute(WindLoadParameters_Base parameters, BuildingData bldg_data)
+        public override void Compute(WindLoadParameters_Base parameters, BuildingData bldg_data)
         {
             /// <summary>
             /// The critical width dimenstion "a" used throughout chapter 30

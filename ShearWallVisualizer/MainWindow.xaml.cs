@@ -152,6 +152,12 @@ namespace ShearWallVisualizer
             ctrol_wind_input.WindInputComplete += WindLoadInputControl_WindInputComplete;
             tabWindInputControlTabItem.Content = ctrol_wind_input;
 
+            // create the wind load results control
+            ContentControl ctrol_wind_results1 = new WindLoadResultsControl_MWFRS(windLoadParams, buildingData);
+            tabWindResultsTabItem_MWFRS.Content = ctrol_wind_results1;
+            var ctrol_wind_results2 = new WindLoadResultsControl_CC(windLoadParams, buildingData);
+            tabWindResultsTabItem_CC.Content = ctrol_wind_results2;
+
             if (buildingData != null)
             {
                 tabWindInputControlTabItem.Visibility = Visibility.Visible;
@@ -425,42 +431,58 @@ namespace ShearWallVisualizer
         /// <param name="e"></param>
         private void WindLoadInputControl_WindInputComplete(object sender, WindLoadInputControl.OnWindInputCompleteEventArgs e)
         {
-            MessageBox.Show("Wind Input Complete");
             // save the input parameters for wind input
             windLoadParams = e._parameters;
 
-            roofAreaCalculator = RoofAreaCalculatorFactory.Create(buildingData, windLoadParams);
-            Console.WriteLine(buildingData.RoofType);
-            Console.WriteLine(windLoadParams.AnalysisType);
-            Console.WriteLine(roofAreaCalculator.DisplayResults());
+            // Draw on the input control canvas
+            var inputControl = tabWindInputControlTabItem.Content as WindLoadInputControl;
+            if (inputControl != null)
+            {
+                var inputCanvas = inputControl.cnvWindLoadInputCanvas;
 
-            Console.WriteLine(roofAreaCalculator.TotalRoofArea());
+                inputCanvas.Children.Clear();
+                double scale = Math.Min(inputCanvas.ActualWidth / buildingData.BuildingWidth, inputCanvas.ActualHeight / buildingData.BuildingLength);
+                foreach (var area in windLoadParams.RoofAreaCalculator.effWindAreas_Roof)
+                {
+                    WindLoadInputControl.DrawEffectiveWindArea(inputCanvas, area.Value, scale);
+                }
+            }
 
-            
-            
+            tabWindResultsTabItem_CC.Visibility = Visibility.Collapsed;
+            tabWindResultsTabItem_MWFRS.Visibility = Visibility.Collapsed;
 
-            //if (windLoadParams.AnalysisType == WindLoadCalculationTypes.MWFRS)
-            //{
-            //    WindLoadResultsControl_MWFRS ctrl = new WindLoadResultsControl_MWFRS(e._parameters);
+            Canvas resultCanvas = null;
+            if (windLoadParams.AnalysisType == WindLoadCalculationTypes.COMPONENT_AND_CLADDING)
+            {
+                if (tabWindResultsTabItem_CC.Content is WindLoadResultsControl_CC ccControl)
+                {
+                    resultCanvas = ccControl.cnvWindLoadResultCanvasCC;
+                }
+                tabWindResultsTabItem_CC.Visibility = Visibility.Visible;
+                tabWindResultsTabItem_MWFRS.Visibility = Visibility.Collapsed;
+            } else if (windLoadParams.AnalysisType == WindLoadCalculationTypes.MWFRS)
+            {
+                if (tabWindResultsTabItem_MWFRS.Content is WindLoadResultsControl_MWFRS mwfrsControl)
+                {
+                    resultCanvas = mwfrsControl.cnvWindLoadResultCanvasMWFRS;
+                }
+                tabWindResultsTabItem_CC.Visibility = Visibility.Collapsed;
+                tabWindResultsTabItem_MWFRS.Visibility = Visibility.Visible;
+            }
 
-            //    ctrl.WindCalculated += WindLoadResultsControl_MWFRS_WindCalculated;
-            //    ctrlWindLoadResultsControl_MWFRS.Content = ctrl;
-
-            //    ctrlWindLoadResultsControl_MWFRS = ctrl;
-            //} else if (windLoadParams.AnalysisType == WindLoadCalculationTypes.COMPONENT_AND_CLADDING)
-            //{
-            //    WindLoadCalculator_CC_ASCE7_16 calc = new WindLoadCalculator_CC_ASCE7_16(e._parameters, e._bldg_data);
-            //    WindLoadResultsControl_CC ctrl = new WindLoadResultsControl_CC(e._parameters);
-
-            //    ctrl.WindCalculated += WindLoadResultsControl_CC_WindCalculated;
-            //    ctrlWindLoadResultsControl_CC.Content = ctrl;
-            //}
+            // Draw on the result canvas if found
 
 
-            tabWindResults1.Visibility = Visibility.Visible;
+            if (resultCanvas != null)
+            {
+                resultCanvas.Children.Clear();
+                double scale = Math.Min(resultCanvas.Width / buildingData.BuildingWidth, resultCanvas.Height / buildingData.BuildingLength);
 
-            tabWindResults2.Visibility = Visibility.Visible;
-            tabWindResults2.IsSelected = true;
+                foreach (var area in windLoadParams.RoofAreaCalculator.effWindAreas_Roof)
+                {
+                    WindLoadInputControl.DrawEffectiveWindArea(resultCanvas, area.Value, scale);
+                }
+            }
 
             Update();
         }

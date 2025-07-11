@@ -1,4 +1,5 @@
 ﻿using ShearWallCalculator.BuildingInfo;
+using ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator;
 using System.Collections.Generic;
 
 namespace ShearWallCalculator.WindLoadCalculations
@@ -17,6 +18,11 @@ namespace ShearWallCalculator.WindLoadCalculations
         public WindLoadCalculationTypes AnalysisType { get; set; } = WindLoadCalculationTypes.COMPONENT_AND_CLADDING;
 
         public Dictionary<int, double> GCp_Values { get; set; } = new Dictionary<int, double>();
+
+        /// <summary>
+        /// Contains the calculator that will be used to calculate the effective wind areas
+        /// </summary>
+        public abstract RoofAreaCalculator_Base RoofAreaCalculator { get; set; }
 
         public abstract void ComputeEffectiveWindAreas_Roof(BuildingData buildingData);
     }

@@ -1,4 +1,5 @@
-﻿using ShearWallCalculator.WindLoadCalculations;
+﻿using ShearWallCalculator.BuildingInfo;
+using ShearWallCalculator.WindLoadCalculations;
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
@@ -42,7 +43,7 @@ namespace ShearWallVisualizer.Controls
             
         }
 
-        public WindLoadResultsControl_CC(WindLoadParameters_Base parameters)
+        public WindLoadResultsControl_CC(WindLoadParameters_Base parameters, BuildingData bldg_data)
         {
             InitializeComponent();
 

@@ -6,18 +6,22 @@ using System.Windows;
 
 namespace ShearWallCalculator.WindLoadCalculations
 {
-    public class GableRoofAreaCalculator : RoofAreaCalculator_Base
+    public class GableRoofAreaCalculator_CC : RoofAreaCalculator_Base
     {
+        /// <summary>
+        /// Effective wind areas for roof
+        /// </summary>
+        public override Dictionary<int, EffectiveWindArea_Roof> effWindAreas_Roof { get; set; } = new Dictionary<int, EffectiveWindArea_Roof>();
+
         public static double CritDim_a { get; set; }
 
-        public static void Compute(WindLoadParameters_Base parameters, BuildingData bldg_data)
+        public override void Compute(WindLoadParameters_Base parameters, BuildingData bldg_data)
         {
             /// <summary>
             /// The critical width dimenstion "a" used throughout chapter 30
             /// -- minimum of 0.4 * building height and 0.1 * min(building Length, building width)
             /// </summary>
             CritDim_a = Math.Min(0.4 * bldg_data.MeanRoofHeight, 0.1 * Math.Min(bldg_data.BuildingLength, bldg_data.BuildingWidth));
-
 
             // Gable logic
             if (bldg_data.BuildingLength < bldg_data.BuildingWidth)

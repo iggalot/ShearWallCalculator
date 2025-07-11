@@ -1,4 +1,5 @@
 ﻿using ShearWallCalculator.BuildingInfo;
+using ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator;
 using System;
 using System.ComponentModel;
 
@@ -79,7 +80,7 @@ namespace ShearWallCalculator.WindLoadCalculations
         MWFRS_LR_Full = 5
     }
 
-    public class WindLoadCalculator_Base
+    public abstract class WindLoadCalculator_Base
     {
         public virtual ASCE7_Versions ASCEVersion { get; }
         public WindLoadParameters_Base Parameters { get; set; }

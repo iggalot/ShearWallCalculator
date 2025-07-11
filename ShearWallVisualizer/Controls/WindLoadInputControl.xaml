@@ -144,7 +144,7 @@
                     <Button Content="Compute Wind Loads" Width="150" Margin="10" Grid.ColumnSpan="2" Click="ComputeButton_Click"/>
                 </StackPanel>
             </StackPanel>
-            <Canvas Name="cnvCanvas" Grid.Column="1" Width="300" Height="300" Margin="10"  Background="LightGray"></Canvas>
+            <Canvas x:Name="cnvWindLoadInputCanvas" Grid.Column="1" Width="300" Height="300" Margin="10"  Background="LightGray"></Canvas>
         </StackPanel>
     </Grid>
 </UserControl>

@@ -1,14 +1,22 @@
-﻿using System;
+﻿using ShearWallCalculator.BuildingInfo;
+using System;
 using System.Collections.Generic;
 
 namespace ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator
 {
-    public class RoofAreaCalculator_Base
+    public abstract class RoofAreaCalculator_Base
     {
         /// <summary>
-        /// Effective wind areas for roof
+        /// Effective wind areas for roof To be overriden by the implementating class
         /// </summary>
-        public static Dictionary<int, EffectiveWindArea_Roof> effWindAreas_Roof { get; set; } = new Dictionary<int, EffectiveWindArea_Roof>();
+        public abstract Dictionary<int, EffectiveWindArea_Roof> effWindAreas_Roof { get; set; }
+
+        /// <summary>
+        /// Function to compute the areas of the calculator.  To be overriden by the implementating class
+        /// </summary>
+        /// <param name="p"></param>
+        /// <param name="bldg_data"></param>
+        public abstract void Compute(WindLoadParameters_Base p, BuildingData bldg_data);
 
         public string DisplayResults()
         {

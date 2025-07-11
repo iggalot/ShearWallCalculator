@@ -90,7 +90,6 @@ namespace ShearWallVisualizer.Controls
         // Event handler for the Compute Button click
         private void ComputeButton_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("Building created");
             double buildingHeight = double.Parse(BuildingHeightTextBox.Text);
             double length = double.Parse(BuildingLengthTextBox.Text);
             double width = double.Parse(BuildingWidthTextBox.Text);
@@ -114,7 +113,6 @@ namespace ShearWallVisualizer.Controls
 
         private void OkButton_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("OK button clicked");
             this.bldgData = bldgData_temp;
             OnBuildingDataInputComplete(bldgData); // raise the event where input has been completed
         }
