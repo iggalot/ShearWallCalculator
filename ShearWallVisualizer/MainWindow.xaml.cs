@@ -9,6 +9,7 @@ using ShearWallCalculator.WindLoadCalculations;
 using ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator;
 using ShearWallVisualizer.Controls;
 using ShearWallVisualizer.Dialogs;
+using ShearWallVisualizer.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -31,14 +32,15 @@ namespace ShearWallVisualizer
     /// </summary>
     public enum MenuTabs
     {
-        WallInfo = 0,
-        BuildingData = 1,
-        WindLoadInput = 2,
+        BuildingData = 0,
+        WindLoadInput = 1,
+        ShearWallInfo = 2,
         WindLoadResultsMWFRS = 3,
         WindLoadResultsCC = 4,
         ShearWallCalculations = 5
 
     }
+
     public partial class MainWindow : Window
     {
         public ShearWallCalculatorBase Calculator = new ShearWallCalculator_RigidDiaphragm();
@@ -49,6 +51,8 @@ namespace ShearWallVisualizer
         public SimpsonCatalog simpsonCatalog { get; set; } = new SimpsonCatalog();  // contains the Simposon catalog connector and holddown data
 
         private JsonDrawingSerializer _serializer = new JsonDrawingSerializer();
+
+        private Dictionary<MenuTabs, string> menuTabNames = new Dictionary<MenuTabs, string>();
 
         //// data for the image overlay
         //string selectedImageFilePath = null;
@@ -138,8 +142,14 @@ namespace ShearWallVisualizer
                     MainTabControl.SelectedIndex = 0;
                 }
 
+                // Now clean up and remove the tabs for the results
+                TabControlManager.RemoveAllTabs(MainTabControl);
+                TabControlManager.ReAddTab(MainTabControl, "tabBuildingDataControlTabItem");
+                MainTabControl.SelectedIndex = 0;
             };
         }
+
+        
 
         private void UpdateTabs()
         {
@@ -157,17 +167,6 @@ namespace ShearWallVisualizer
             tabWindResultsTabItem_MWFRS.Content = ctrol_wind_results1;
             var ctrol_wind_results2 = new WindLoadResultsControl_CC(windLoadParams, buildingData);
             tabWindResultsTabItem_CC.Content = ctrol_wind_results2;
-
-            if (buildingData != null)
-            {
-                tabWindInputControlTabItem.Visibility = Visibility.Visible;
-                MainTabControl.SelectedIndex = 1;
-            }
-            else
-            {
-                tabWindInputControlTabItem.Visibility = Visibility.Collapsed;
-                MainTabControl.SelectedIndex = 0;
-            }
         }
 
         public void Update()
@@ -420,7 +419,13 @@ namespace ShearWallVisualizer
         {
             buildingData = e._bldg_data;
             UpdateTabs();
-            MainTabControl.SelectedIndex = 2;
+
+            //TabControlManager.ReAddTab(MainTabControl, tabWindInputControlTabItem);
+
+            MainTabControl.SelectedIndex = 1;
+
+            // Add the tabWindInputControlTabItem
+            TabControlManager.ReAddTab(MainTabControl, "tabWindInputControlTabItem");
 
             Update();
         }
@@ -448,8 +453,8 @@ namespace ShearWallVisualizer
                 }
             }
 
-            tabWindResultsTabItem_CC.Visibility = Visibility.Collapsed;
-            tabWindResultsTabItem_MWFRS.Visibility = Visibility.Collapsed;
+            TabControlManager.ReAddTab(MainTabControl, "tabWindResultsTabItem_CC");
+            TabControlManager.ReAddTab(MainTabControl, "tabWindResultsTabItem_MWFRS");
 
             Canvas resultCanvas = null;
             if (windLoadParams.AnalysisType == WindLoadCalculationTypes.COMPONENT_AND_CLADDING)
@@ -458,20 +463,18 @@ namespace ShearWallVisualizer
                 {
                     resultCanvas = ccControl.cnvWindLoadResultCanvasCC;
                 }
-                tabWindResultsTabItem_CC.Visibility = Visibility.Visible;
-                tabWindResultsTabItem_MWFRS.Visibility = Visibility.Collapsed;
-            } else if (windLoadParams.AnalysisType == WindLoadCalculationTypes.MWFRS)
+                TabControlManager.RemoveTab(MainTabControl, tabWindResultsTabItem_MWFRS);
+
+            }
+            else if (windLoadParams.AnalysisType == WindLoadCalculationTypes.MWFRS)
             {
                 if (tabWindResultsTabItem_MWFRS.Content is WindLoadResultsControl_MWFRS mwfrsControl)
                 {
                     resultCanvas = mwfrsControl.cnvWindLoadResultCanvasMWFRS;
                 }
-                tabWindResultsTabItem_CC.Visibility = Visibility.Collapsed;
-                tabWindResultsTabItem_MWFRS.Visibility = Visibility.Visible;
+                TabControlManager.RemoveTab(MainTabControl, tabWindResultsTabItem_CC);
+
             }
-
-            // Draw on the result canvas if found
-
 
             if (resultCanvas != null)
             {

@@ -34,7 +34,20 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator
             } else if (parameters.AnalysisType == WindLoadCalculationTypes.MWFRS)
             {
                 // TODO:  implement the area calculators
-                throw new NotImplementedException("ERROR: MWFRS not yet implemented.");
+                if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_FLAT)
+                {
+                    return new FlatRoofAreaCalculator_MWFRS();
+                }
+                else if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_GABLE)
+                {
+                    if (bldg_data.RoofPitch < 7) return new FlatRoofAreaCalculator_MWFRS();
+                    else return new GableRoofAreaCalculator_MWFRS();
+                }
+                else if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_HIP)
+                {
+                    if (bldg_data.RoofPitch < 7) return new FlatRoofAreaCalculator_MWFRS();
+                    else return new HipRoofAreaCalculator_MWFRS();
+                }
             }
 
 
