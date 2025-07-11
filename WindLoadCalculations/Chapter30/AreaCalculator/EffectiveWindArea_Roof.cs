@@ -133,5 +133,10 @@ namespace ShearWallCalculator.WindLoadCalculations
             double factor = 1.0 / (6.0 * area);
             return (cx * factor, cy * factor, Math.Abs(area));
         }
+
+        public string DisplayResults()
+        {
+            return $"{Label}: Area = {Area:F2} ft², Centroid = ({Centroid.X:F2}, {Centroid.Y:F2})";
+        }
     }
 }

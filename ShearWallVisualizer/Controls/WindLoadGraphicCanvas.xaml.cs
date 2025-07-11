@@ -1,4 +1,5 @@
-﻿using ShearWallCalculator.WindLoadCalculations;
+﻿using ShearWallCalculator.BuildingInfo;
+using ShearWallCalculator.WindLoadCalculations;
 using System;
 using System.Collections.Generic;
 using System.Windows;
@@ -21,20 +22,22 @@ namespace ShearWallVisualizer.Controls
 
         private double cnv_ht_elev, cnv_width_elev, cnv_ht_plan, cnv_width_plan;
 
-        WindLoadParameters _parameters;
+        WindLoadParameters_Base _parameters;
+        BuildingData _bldg_data;
         List<WindPressureResult_Wall_MWFRS> _wall_results;
         List<WindPressureResult_Roof_MWFRS> _roof_results;
 
-        public WindLoadParameters Parameters { get => _parameters; set => _parameters = value; }
+        public WindLoadParameters_Base Parameters { get => _parameters; set => _parameters = value; }
 
         public WindLoadGraphicCanvas()
         {
             InitializeComponent();
         }
 
-        public WindLoadGraphicCanvas( WindLoadParameters parameters, List<WindPressureResult_Wall_MWFRS> wall_results, List<WindPressureResult_Roof_MWFRS> roof_results)
+        public WindLoadGraphicCanvas( WindLoadParameters_Base parameters, BuildingData bldg_data, List<WindPressureResult_Wall_MWFRS> wall_results, List<WindPressureResult_Roof_MWFRS> roof_results)
         {
             _parameters = parameters;
+            _bldg_data = bldg_data;
             _wall_results = wall_results;
             _roof_results = roof_results;
 
@@ -45,10 +48,10 @@ namespace ShearWallVisualizer.Controls
 
         private void WindLoadGraphicsCanvas_Loaded(object sender, RoutedEventArgs e)
         {
-            double ht = _parameters.BuildingHeight;
-            double length = _parameters.BuildingLength;
-            double width = _parameters.BuildingWidth;
-            double ridge_ht = ht + length * 0.5 * Math.Tan(_parameters.RoofPitch * 2.0 * Math.PI / 360);
+            double ht = _bldg_data.BuildingHeight;
+            double length = _bldg_data.BuildingLength;
+            double width = _bldg_data.BuildingWidth;
+            double ridge_ht = ht + length * 0.5 * Math.Tan(_bldg_data.RoofPitch * 2.0 * Math.PI / 360);
 
 
             Canvas cnv_plan = cnvPlanView;
@@ -127,9 +130,9 @@ namespace ShearWallVisualizer.Controls
             double offset = _margin;
             // Draw the plan frame
             Point p1 = new Point(offset, cnv_ht_plan - offset);
-            Point p2 = new Point(offset + SCALE_X * _parameters.BuildingLength, cnv_ht_plan - offset);
-            Point p3 = new Point(offset + SCALE_X * _parameters.BuildingLength, cnv_ht_plan - offset - SCALE_Y * _parameters.BuildingWidth);
-            Point p4 = new Point(offset, cnv_ht_plan - offset - SCALE_Y * _parameters.BuildingWidth);
+            Point p2 = new Point(offset + SCALE_X * _bldg_data.BuildingLength, cnv_ht_plan - offset);
+            Point p3 = new Point(offset + SCALE_X * _bldg_data.BuildingLength, cnv_ht_plan - offset - SCALE_Y * _bldg_data.BuildingWidth);
+            Point p4 = new Point(offset, cnv_ht_plan - offset - SCALE_Y * _bldg_data.BuildingWidth);
 
             DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvPlanView, p1.X, p1.Y, p2.X, p2.Y, System.Windows.Media.Brushes.Black, 2.0);
             DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvPlanView, p2.X, p2.Y, p3.X, p3.Y, System.Windows.Media.Brushes.Black, 2.0);
@@ -189,10 +192,10 @@ namespace ShearWallVisualizer.Controls
 
             // Draw the elevation frame
             Point p1 = new Point(offset, cnv_ht_elev - offset);
-            Point p2 = new Point(offset, cnv_ht_elev - offset - SCALE_Y * _parameters.BuildingHeight);
-            Point p3 = new Point(offset + SCALE_X * _parameters.BuildingLength * 0.5, cnv_ht_elev - offset - SCALE_Y * (_parameters.BuildingHeight + _parameters.BuildingLength * 0.5 * Math.Sin(_parameters.RoofPitch * 2.0 * Math.PI / 360)));
-            Point p4 = new Point(offset + SCALE_X * _parameters.BuildingLength, cnv_ht_elev - offset - SCALE_Y * _parameters.BuildingHeight);
-            Point p5 = new Point(offset + SCALE_X * _parameters.BuildingLength, cnv_ht_elev - offset);
+            Point p2 = new Point(offset, cnv_ht_elev - offset - SCALE_Y * _bldg_data.BuildingHeight);
+            Point p3 = new Point(offset + SCALE_X * _bldg_data.BuildingLength * 0.5, cnv_ht_elev - offset - SCALE_Y * (_bldg_data.BuildingHeight + _bldg_data.BuildingLength * 0.5 * Math.Sin(_bldg_data.RoofPitch * 2.0 * Math.PI / 360)));
+            Point p4 = new Point(offset + SCALE_X * _bldg_data.BuildingLength, cnv_ht_elev - offset - SCALE_Y * _bldg_data.BuildingHeight);
+            Point p5 = new Point(offset + SCALE_X * _bldg_data.BuildingLength, cnv_ht_elev - offset);
             
             // Mark the ridge
             DrawingHelpersLibrary.DrawingHelpers.DrawCircle(cnvElevationView, p3.X, p3.Y, System.Windows.Media.Brushes.Transparent, System.Windows.Media.Brushes.Black, 4.0, 2.0);
@@ -207,7 +210,7 @@ namespace ShearWallVisualizer.Controls
             double WW_pressure_z0 = GetWallPressure("Windward Wall - z=0ft", load_case_num);
             double WW_pressure_z15 = WW_pressure_z0;
 
-            if (_parameters.BuildingHeight >= 15.0)
+            if (_bldg_data.BuildingHeight >= 15.0)
             {
                 WW_pressure_z15 = GetWallPressure("Windward Wall - z=15ft", load_case_num);
             } 
@@ -284,10 +287,10 @@ namespace ShearWallVisualizer.Controls
                 double WW_roof_pressure = GetRoofPressure("Windward Roof 0->h/2", load_case_num);
                 double LW_roof_pressure = WW_roof_pressure;
 
-                double roof_angle_deg_ww = _parameters.RoofPitch;
+                double roof_angle_deg_ww = _bldg_data.RoofPitch;
                 double roof_angle_rad_ww = roof_angle_deg_ww * Math.PI / 180.0;
 
-                double roof_angle_deg_lw = 180.0 - _parameters.RoofPitch;
+                double roof_angle_deg_lw = 180.0 - _bldg_data.RoofPitch;
                 double roof_angle_rad_lw = roof_angle_deg_lw * Math.PI / 180.0;
 
                 // find point that is perpendicular to line from p2 to p3 at a distance of WW_roof_pressure
@@ -338,10 +341,10 @@ namespace ShearWallVisualizer.Controls
                 double WW_roof_pressure2 = GetRoofPressure("Windward Roof h/2->h", load_case_num);
 
 
-                double roof_angle_deg_ww = _parameters.RoofPitch;
+                double roof_angle_deg_ww = _bldg_data.RoofPitch;
                 double roof_angle_rad_ww = roof_angle_deg_ww * Math.PI / 180.0;
 
-                double roof_angle_deg_lw = 180.0 - _parameters.RoofPitch;
+                double roof_angle_deg_lw = 180.0 - _bldg_data.RoofPitch;
                 double roof_angle_rad_lw = roof_angle_deg_lw * Math.PI / 180.0;
 
                 // find point that is perpendicular to line from p2 to p3 at a distance of WW_roof_pressure
@@ -421,10 +424,10 @@ namespace ShearWallVisualizer.Controls
 
 
 
-                double roof_angle_deg_ww = _parameters.RoofPitch;
+                double roof_angle_deg_ww = _bldg_data.RoofPitch;
                 double roof_angle_rad_ww = roof_angle_deg_ww * Math.PI / 180.0;
 
-                double roof_angle_deg_lw = 180.0 - _parameters.RoofPitch;
+                double roof_angle_deg_lw = 180.0 - _bldg_data.RoofPitch;
                 double roof_angle_rad_lw = roof_angle_deg_lw * Math.PI / 180.0;
 
                 // find point that is perpendicular to line from p2 to p3 at a distance of WW_roof_pressure
@@ -533,7 +536,7 @@ namespace ShearWallVisualizer.Controls
 
         private void DrawRoofWind(WindLoadCases load_case_num, Point p2, Point p3, Point p4)
         {
-            if (_parameters.RidgeDirection == "Perpendicular to Wind" && _parameters.RoofPitch >= 10.0)
+            if (_bldg_data.RidgeDirection == "Perpendicular to Wind" && _bldg_data.RoofPitch >= 10.0)
             {
                 DrawRoofWind_PerpToRidge(load_case_num, p2, p3, p4);
             }
@@ -549,10 +552,10 @@ namespace ShearWallVisualizer.Controls
             double WW_roof_pressure = GetRoofPressure("Windward Roof", load_case_num);
             double LW_roof_pressure = GetRoofPressure("Leeward Roof", load_case_num);
 
-            double roof_angle_deg_ww = _parameters.RoofPitch;
+            double roof_angle_deg_ww = _bldg_data.RoofPitch;
             double roof_angle_rad_ww = roof_angle_deg_ww * Math.PI / 180.0;
 
-            double roof_angle_deg_lw = 180.0 - _parameters.RoofPitch;
+            double roof_angle_deg_lw = 180.0 - _bldg_data.RoofPitch;
             double roof_angle_rad_lw = roof_angle_deg_lw * Math.PI / 180.0;
 
             // find point that is perpendicular to line from p2 to p3 at a distance of WW_roof_pressure

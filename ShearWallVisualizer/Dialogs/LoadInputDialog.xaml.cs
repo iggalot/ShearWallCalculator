@@ -35,7 +35,7 @@ namespace ShearWallVisualizer.Dialogs
             MagnitudeY = 100;
 
             gridASCEWind.Visibility = Visibility.Visible;
-            WindLoadResultsControl_MWFRS wlrc_MWFRS = new WindLoadResultsControl_MWFRS(e._parameters);
+            WindLoadResultsControl_MWFRS wlrc_MWFRS = new WindLoadResultsControl_MWFRS(e._parameters, e._bldg_data);
             gridASCEWind.Children.Add(wlrc_MWFRS);
 
             //DialogResult = true; // signal that the input is complete

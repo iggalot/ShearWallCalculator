@@ -3,14 +3,15 @@ using Microsoft.Win32;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using ShearWallCalculator;
+using ShearWallCalculator.BuildingInfo;
 using ShearWallCalculator.Interfaces;
 using ShearWallCalculator.WindLoadCalculations;
+using ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator;
 using ShearWallVisualizer.Controls;
 using ShearWallVisualizer.Dialogs;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Diagnostics.Eventing.Reader;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -25,10 +26,25 @@ using static ShearWallVisualizer.Controls.WallDataControl;
 
 namespace ShearWallVisualizer
 {
+    /// <summary>
+    /// The enum that controls the ordering of the information tabs in the main application
+    /// </summary>
+    public enum MenuTabs
+    {
+        WallInfo = 0,
+        BuildingData = 1,
+        WindLoadInput = 2,
+        WindLoadResultsMWFRS = 3,
+        WindLoadResultsCC = 4,
+        ShearWallCalculations = 5
+
+    }
     public partial class MainWindow : Window
     {
         public ShearWallCalculatorBase Calculator = new ShearWallCalculator_RigidDiaphragm();
-        public WindLoadParameters windLoadParams { get; set; } = new WindLoadParameters();
+        public WindLoadParameters_Base windLoadParams { get; set; }
+        public BuildingData buildingData { get; set; } = null;
+        public RoofAreaCalculator_Base roofAreaCalculator { get; set; }
 
         public SimpsonCatalog simpsonCatalog { get; set; } = new SimpsonCatalog();  // contains the Simposon catalog connector and holddown data
 
@@ -97,6 +113,9 @@ namespace ShearWallVisualizer
             // the function to run once the app has loaded.
             this.Loaded += (s, e) =>
             {
+                //buildingData = new BuildingData();
+
+                UpdateTabs();
 
                 ResetView(); // reset the view so that origin 0,0 is at lower left of the corner screen and the model is zoomed to fill the entire window
                 LoadRecentFilesMenu();  // recent files menu
@@ -110,10 +129,45 @@ namespace ShearWallVisualizer
 
                 MainTabControl.SelectedIndex = 0; // Show Dimensions tab by default
 
-                // Events for wind load calculation
-                ctrlWindLoadResultsControl_MWFRS.WindCalculated += WindLoadResultsControl_MWFRS_WindCalculated;
-                WindLoadInputControl.WindInputComplete += WindLoadInputControl_WindInputComplete;
+                if (buildingData != null)
+                {
+                    MainTabControl.SelectedIndex = 1;
+                }
+                else
+                {
+                    MainTabControl.SelectedIndex = 0;
+                }
+
             };
+        }
+
+        private void UpdateTabs()
+        {
+            var ctrol_bldg_input = new BuildingDataInputControl(buildingData);
+            ctrol_bldg_input.BuildingDataInputComplete += BuildingDataInputControl_BuildingDataInputComplete;
+            tabBuildingDataControlTabItem.Content = ctrol_bldg_input;
+
+            // create the wind load input control
+            var ctrol_wind_input = new WindLoadInputControl(buildingData);
+            ctrol_wind_input.WindInputComplete += WindLoadInputControl_WindInputComplete;
+            tabWindInputControlTabItem.Content = ctrol_wind_input;
+
+            // create the wind load results control
+            ContentControl ctrol_wind_results1 = new WindLoadResultsControl_MWFRS(windLoadParams, buildingData);
+            tabWindResultsTabItem_MWFRS.Content = ctrol_wind_results1;
+            var ctrol_wind_results2 = new WindLoadResultsControl_CC(windLoadParams, buildingData);
+            tabWindResultsTabItem_CC.Content = ctrol_wind_results2;
+
+            if (buildingData != null)
+            {
+                tabWindInputControlTabItem.Visibility = Visibility.Visible;
+                MainTabControl.SelectedIndex = 1;
+            }
+            else
+            {
+                tabWindInputControlTabItem.Visibility = Visibility.Collapsed;
+                MainTabControl.SelectedIndex = 0;
+            }
         }
 
         public void Update()
@@ -362,6 +416,14 @@ namespace ShearWallVisualizer
         }
 
         #region UI Control Related Events
+        private void BuildingDataInputControl_BuildingDataInputComplete(object sender, BuildingDataInputControl.OnBuildingDataInputCompleteEventArgs e)
+        {
+            buildingData = e._bldg_data;
+            UpdateTabs();
+            MainTabControl.SelectedIndex = 2;
+
+            Update();
+        }
         /// <summary>
         /// Event listener for when input of the wind loads as been completed
         /// </summary>
@@ -369,37 +431,60 @@ namespace ShearWallVisualizer
         /// <param name="e"></param>
         private void WindLoadInputControl_WindInputComplete(object sender, WindLoadInputControl.OnWindInputCompleteEventArgs e)
         {
-            if (ctrlWindLoadResultsControl_MWFRS != null)
-            {
-                ctrlWindLoadResultsControl_MWFRS.WindCalculated -= WindLoadResultsControl_MWFRS_WindCalculated;
-            }
-
             // save the input parameters for wind input
             windLoadParams = e._parameters;
-            
 
-            if (windLoadParams.AnalysisType == WindLoadCalculationTypes.MWFRS)
+            // Draw on the input control canvas
+            var inputControl = tabWindInputControlTabItem.Content as WindLoadInputControl;
+            if (inputControl != null)
             {
-                WindLoadResultsControl_MWFRS ctrl = new WindLoadResultsControl_MWFRS(e._parameters);
+                var inputCanvas = inputControl.cnvWindLoadInputCanvas;
 
-                ctrl.WindCalculated += WindLoadResultsControl_MWFRS_WindCalculated;
-                ctrlWindLoadResultsControl_MWFRS.Content = ctrl;
-
-                ctrlWindLoadResultsControl_MWFRS = ctrl;
-            } else if (windLoadParams.AnalysisType == WindLoadCalculationTypes.COMPONENT_AND_CLADDING)
-            {
-                WindLoadCalculator_CC_ASCE7_16 calc = new WindLoadCalculator_CC_ASCE7_16(e._parameters);
-                WindLoadResultsControl_CC ctrl = new WindLoadResultsControl_CC(e._parameters);
-
-                ctrl.WindCalculated += WindLoadResultsControl_CC_WindCalculated;
-                ctrlWindLoadResultsControl_CC.Content = ctrl;
+                inputCanvas.Children.Clear();
+                double scale = Math.Min(inputCanvas.ActualWidth / buildingData.BuildingWidth, inputCanvas.ActualHeight / buildingData.BuildingLength);
+                foreach (var area in windLoadParams.RoofAreaCalculator.effWindAreas_Roof)
+                {
+                    WindLoadInputControl.DrawEffectiveWindArea(inputCanvas, area.Value, scale);
+                }
             }
 
+            tabWindResultsTabItem_CC.Visibility = Visibility.Collapsed;
+            tabWindResultsTabItem_MWFRS.Visibility = Visibility.Collapsed;
 
-            tabWindResults1.Visibility = Visibility.Visible;
+            Canvas resultCanvas = null;
+            if (windLoadParams.AnalysisType == WindLoadCalculationTypes.COMPONENT_AND_CLADDING)
+            {
+                if (tabWindResultsTabItem_CC.Content is WindLoadResultsControl_CC ccControl)
+                {
+                    resultCanvas = ccControl.cnvWindLoadResultCanvasCC;
+                }
+                tabWindResultsTabItem_CC.Visibility = Visibility.Visible;
+                tabWindResultsTabItem_MWFRS.Visibility = Visibility.Collapsed;
+            } else if (windLoadParams.AnalysisType == WindLoadCalculationTypes.MWFRS)
+            {
+                if (tabWindResultsTabItem_MWFRS.Content is WindLoadResultsControl_MWFRS mwfrsControl)
+                {
+                    resultCanvas = mwfrsControl.cnvWindLoadResultCanvasMWFRS;
+                }
+                tabWindResultsTabItem_CC.Visibility = Visibility.Collapsed;
+                tabWindResultsTabItem_MWFRS.Visibility = Visibility.Visible;
+            }
 
-            tabWindResults2.Visibility = Visibility.Visible;
-            tabWindResults2.IsSelected = true;
+            // Draw on the result canvas if found
+
+
+            if (resultCanvas != null)
+            {
+                resultCanvas.Children.Clear();
+                double scale = Math.Min(resultCanvas.Width / buildingData.BuildingWidth, resultCanvas.Height / buildingData.BuildingLength);
+
+                foreach (var area in windLoadParams.RoofAreaCalculator.effWindAreas_Roof)
+                {
+                    WindLoadInputControl.DrawEffectiveWindArea(resultCanvas, area.Value, scale);
+                }
+            }
+
+            Update();
         }
 
         private void WindLoadResultsControl_CC_WindCalculated(object sender, WindLoadResultsControl_CC.OnWindCalculatedEventArgs e)
@@ -416,7 +501,7 @@ namespace ShearWallVisualizer
         {
             List<WindLoadCalculator_MWFRS_ASCE7_10.WindPressureResult_Wall_MWFRS> wall_results = e._wall_results;
             List<WindLoadCalculator_MWFRS_ASCE7_10.WindPressureResult_Roof_MWFRS> roof_results = e._roof_results;
-            WindLoadParameters parameters = e._parameters;
+            WindLoadParameters_Base parameters = e._parameters;
 
             // now that we've used the event, unhook it
             ((WindLoadResultsControl_MWFRS)sender).WindCalculated-= WindLoadResultsControl_MWFRS_WindCalculated;
@@ -440,7 +525,7 @@ namespace ShearWallVisualizer
 
             // TODO:  This calculation needs to be improved
             // worst x case will be +WW and -LW -- internal suction should offset each other.
-            double load_x = (ww - lw) * parameters.BuildingHeight * parameters.BuildingWidth / 1000; // net sum at elevation h
+            double load_x = (ww - lw) * buildingData.BuildingHeight * buildingData.BuildingWidth / 1000; // net sum at elevation h
             double load_y = 0;
 
             if (Calculator != null)

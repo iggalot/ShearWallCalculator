@@ -16,44 +16,34 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- Results Controls (Right Column) -->
-        <StackPanel Name="spResultsAndCanvas" Grid.Row="0" Grid.Column="0" Orientation="Vertical" HorizontalAlignment="Left" Margin="10">
-            <!-- Importance Factor -->
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                <TextBlock Text="qh (psf) = " VerticalAlignment="Center" />
-                <TextBlock Name="tbl_qh" Width="150"  Text=""/>
-            </StackPanel>
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                <TextBlock Text="theta (deg) = " VerticalAlignment="Center" />
-                <TextBlock Name="tbl_theta" Width="150"  Text=""/>
-            </StackPanel>
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                <TextBlock Text="h/L = " VerticalAlignment="Center"/>
-                <TextBlock Name="tbl_hOverL" Width="150" Text=""/>
-            </StackPanel>
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                <TextBlock Text="h (ft) = " VerticalAlignment="Center"/>
-                <TextBlock Name="tbl_h" Width="150" Text=""/>
-            </StackPanel>
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                <TextBlock Text="Wind Orientation = " VerticalAlignment="Center"/>
-                <TextBlock Name="tbl_windOrientation" Width="150" Text=""/>
-            </StackPanel>
-            <!-- Display Results of MWFRS Calculation -->
-            <TextBlock Text="Results (MWFRS)" Margin="10"/>
-            <DataGrid x:Name="WallResultsDataGrid" 
-                  AutoGenerateColumns="True"
-                  HeadersVisibility="Column"
-                  CanUserAddRows="False"
-                  IsReadOnly="True"
-                      Width="Auto"
-                      Height="Auto"
-                      FontSize="10">
-            </DataGrid>
+        <StackPanel Orientation="Horizontal">
 
-            <!-- Display Roof Zone Pressure Results -->
-            <TextBlock Text="Roof Zone Pressures" Margin="10"/>
-            <DataGrid x:Name="RoofResultsDataGrid"
+            <!-- Results Controls (Right Column) -->
+            <StackPanel Name="spResultsAndCanvas" Grid.Row="0" Grid.Column="0" Orientation="Vertical" HorizontalAlignment="Left" Margin="10">
+                <!-- Importance Factor -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                    <TextBlock Text="qh (psf) = " VerticalAlignment="Center" />
+                    <TextBlock Name="tbl_qh" Width="150"  Text=""/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                    <TextBlock Text="theta (deg) = " VerticalAlignment="Center" />
+                    <TextBlock Name="tbl_theta" Width="150"  Text=""/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                    <TextBlock Text="h/L = " VerticalAlignment="Center"/>
+                    <TextBlock Name="tbl_hOverL" Width="150" Text=""/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                    <TextBlock Text="h (ft) = " VerticalAlignment="Center"/>
+                    <TextBlock Name="tbl_h" Width="150" Text=""/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                    <TextBlock Text="Wind Orientation = " VerticalAlignment="Center"/>
+                    <TextBlock Name="tbl_windOrientation" Width="150" Text=""/>
+                </StackPanel>
+                <!-- Display Results of MWFRS Calculation -->
+                <TextBlock Text="Results (MWFRS)" Margin="10"/>
+                <DataGrid x:Name="WallResultsDataGrid" 
                   AutoGenerateColumns="True"
                   HeadersVisibility="Column"
                   CanUserAddRows="False"
@@ -61,7 +51,21 @@
                       Width="Auto"
                       Height="Auto"
                       FontSize="10">
-            </DataGrid>
+                </DataGrid>
+
+                <!-- Display Roof Zone Pressure Results -->
+                <TextBlock Text="Roof Zone Pressures" Margin="10"/>
+                <DataGrid x:Name="RoofResultsDataGrid"
+                  AutoGenerateColumns="True"
+                  HeadersVisibility="Column"
+                  CanUserAddRows="False"
+                  IsReadOnly="True"
+                      Width="Auto"
+                      Height="Auto"
+                      FontSize="10">
+                </DataGrid>
+            </StackPanel>
+            <Canvas x:Name="cnvWindLoadResultCanvasMWFRS" Grid.Column="1" Width="200" Height="200" Margin="10"  Background="LightGray"></Canvas>
         </StackPanel>
     </Grid>
 </UserControl>

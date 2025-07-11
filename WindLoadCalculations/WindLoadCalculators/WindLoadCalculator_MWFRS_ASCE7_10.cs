@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ShearWallCalculator.BuildingInfo;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -9,7 +10,13 @@ namespace ShearWallCalculator.WindLoadCalculations
     {
         public override ASCE7_Versions ASCEVersion { get => ASCE7_Versions.ASCE_VER_7_10; }
 
-        public static List<WindPressureResult_Wall_MWFRS> CalculateWallPressureResults_MWFRS(WindLoadParameters parameters, Dictionary<WindZones_Walls_MWFRS, double> wall_zones)
+        public WindLoadCalculator_MWFRS_ASCE7_10(WindLoadParameters_Base p, BuildingData bldg_data)
+        {
+            Parameters = p;
+            buildingData = bldg_data;
+        }
+
+        public List<WindPressureResult_Wall_MWFRS> CalculateWallPressureResults_MWFRS(WindLoadParameters_Base parameters, Dictionary<WindZones_Walls_MWFRS, double> wall_zones)
         {
             List<WindPressureResult_Wall_MWFRS> wall_results = new List<WindPressureResult_Wall_MWFRS>();
 
@@ -33,27 +40,27 @@ namespace ShearWallCalculator.WindLoadCalculations
                 {
                     case WindZones_Walls_MWFRS.MWFRS_WW_0:
                         wpr.z = 0;
-                        wpr.Cp = WindLoadCalculator_MWFRS_ASCE7_10.GetCpWindwardwall_MWFRS(parameters);
+                        wpr.Cp = this.GetCpWindwardwall_MWFRS(parameters);
                         break;
                     case WindZones_Walls_MWFRS.MWFRS_WW_15:
                         wpr.z = 15;
-                        wpr.Cp = WindLoadCalculator_MWFRS_ASCE7_10.GetCpWindwardwall_MWFRS(parameters);
+                        wpr.Cp = this.GetCpWindwardwall_MWFRS(parameters);
                         break;
                     case WindZones_Walls_MWFRS.MWFRS_WW_h:
-                        wpr.z = parameters.MeanRoofHeight;
-                        wpr.Cp = WindLoadCalculator_MWFRS_ASCE7_10.GetCpWindwardwall_MWFRS(parameters);
+                        wpr.z = buildingData.MeanRoofHeight;
+                        wpr.Cp = this.GetCpWindwardwall_MWFRS(parameters);
                         break;
 
                     case WindZones_Walls_MWFRS.MWFRS_LW_h:
                         // swap these values since the balloon case is additive for leeward and sidewalls
-                        wpr.z = parameters.MeanRoofHeight;
-                        wpr.Cp = WindLoadCalculator_MWFRS_ASCE7_10.GetCpLeewardWall_MWFRS(parameters);
+                        wpr.z = buildingData.MeanRoofHeight;
+                        wpr.Cp = this.GetCpLeewardWall_MWFRS(parameters);
                         break;
 
                     case WindZones_Walls_MWFRS.MWFRS_SW_h:
                         // swap these values since the balloon case is additive for leeward and sidewalls
-                        wpr.z = parameters.MeanRoofHeight;
-                        wpr.Cp = WindLoadCalculator_MWFRS_ASCE7_10.GetCpSidewall_MWFRS(parameters);
+                        wpr.z = buildingData.MeanRoofHeight;
+                        wpr.Cp = this.GetCpSidewall_MWFRS(parameters);
                         break;
 
                     default:
@@ -66,7 +73,7 @@ namespace ShearWallCalculator.WindLoadCalculations
 
                 // Common values
                 wpr.Kz = Math.Round(WindLoadCalculator_MWFRS_ASCE7_10.GetKz(wpr.z, parameters.ExposureCategory), 2);
-                var Kzh = Math.Round(WindLoadCalculator_MWFRS_ASCE7_10.GetKz(parameters.MeanRoofHeight, parameters.ExposureCategory), 2);
+                var Kzh = Math.Round(WindLoadCalculator_MWFRS_ASCE7_10.GetKz(buildingData.MeanRoofHeight, parameters.ExposureCategory), 2);
                 wpr.qz = Math.Round(0.00256 * wpr.Kz * parameters.Kzt * parameters.Kd * parameters.WindSpeed * parameters.WindSpeed * parameters.ImportanceFactor, 2);
                 var qh = Math.Round(0.00256 * Kzh * parameters.Kzt * parameters.Kd * parameters.WindSpeed * parameters.WindSpeed * parameters.ImportanceFactor, 2);
 
@@ -82,7 +89,7 @@ namespace ShearWallCalculator.WindLoadCalculations
 
             return wall_results;
         }
-        public static List<WindPressureResult_Roof_MWFRS> CalculateRoofPressureResults_MWFRS(WindLoadParameters parameters, Dictionary<WindZones_Roof_MWFRS, double> roof_zones)
+        public List<WindPressureResult_Roof_MWFRS> CalculateRoofPressureResults_MWFRS(WindLoadParameters_Base parameters, Dictionary<WindZones_Roof_MWFRS, double> roof_zones)
         {
             List<WindPressureResult_Roof_MWFRS> roof_results = new List<WindPressureResult_Roof_MWFRS>();
             foreach (var kvp in roof_zones)
@@ -91,47 +98,47 @@ namespace ShearWallCalculator.WindLoadCalculations
                 wpr.Surface = kvp.Key.ToString();
 
                 RoofCpCases_MWFRS cases;
-                if (parameters.RidgeDirection == "Perpendicular to Wind")
+                if (buildingData.RidgeDirection == "Perpendicular to Wind")
                 {
-                    if (parameters.RoofPitch >= 10.0)
+                    if (buildingData.RoofPitch >= 10.0)
                     {
-                        cases = WindLoadCalculator_MWFRS_ASCE7_10.CalculateRoofCp_PerpendicularRidge_MWFRS(parameters.MeanRoofHeight, parameters.BuildingLength, parameters.RoofPitch);
+                        cases = WindLoadCalculator_MWFRS_ASCE7_10.CalculateRoofCp_PerpendicularRidge_MWFRS(buildingData.MeanRoofHeight, buildingData.BuildingLength, buildingData.RoofPitch);
                     }
                     else
                     {
-                        cases = WindLoadCalculator_MWFRS_ASCE7_10.CalculateRoofCp_ForFlatRoofOrParallelRidge_MWFRS(parameters.MeanRoofHeight, parameters.BuildingLength, kvp.Key);
+                        cases = WindLoadCalculator_MWFRS_ASCE7_10.CalculateRoofCp_ForFlatRoofOrParallelRidge_MWFRS(buildingData.MeanRoofHeight, buildingData.BuildingLength, kvp.Key);
                     }
                 }
                 else
                 {
-                    cases = WindLoadCalculator_MWFRS_ASCE7_10.CalculateRoofCp_ForFlatRoofOrParallelRidge_MWFRS(parameters.MeanRoofHeight, parameters.BuildingLength, kvp.Key);
+                    cases = WindLoadCalculator_MWFRS_ASCE7_10.CalculateRoofCp_ForFlatRoofOrParallelRidge_MWFRS(buildingData.MeanRoofHeight, buildingData.BuildingLength, kvp.Key);
                 }
 
                 if (kvp.Key == WindZones_Roof_MWFRS.MWFRS_WR_0_h2)
                 {
                     wpr.Start = 0;
-                    wpr.End = parameters.MeanRoofHeight / 2;
+                    wpr.End = buildingData.MeanRoofHeight / 2;
                     wpr.CpA = Math.Round(cases.Cp_CaseA_Windward, 2);
                     wpr.CpB = Math.Round(cases.Cp_CaseB_Windward, 2);
                 }
                 else if (kvp.Key == WindZones_Roof_MWFRS.MWFRS_WR_h2_h)
                 {
-                    wpr.Start = parameters.MeanRoofHeight / 2;
-                    wpr.End = parameters.MeanRoofHeight;
+                    wpr.Start = buildingData.MeanRoofHeight / 2;
+                    wpr.End = buildingData.MeanRoofHeight;
                     wpr.CpA = Math.Round(cases.Cp_CaseA_Windward, 2);
                     wpr.CpB = Math.Round(cases.Cp_CaseB_Windward, 2);
                 }
                 else if (kvp.Key == WindZones_Roof_MWFRS.MWFRS_WR_h_2h)
                 {
-                    wpr.Start = parameters.MeanRoofHeight;
-                    wpr.End = 2 * parameters.MeanRoofHeight;
+                    wpr.Start = buildingData.MeanRoofHeight;
+                    wpr.End = 2 * buildingData.MeanRoofHeight;
                     wpr.CpA = Math.Round(cases.Cp_CaseA_Windward, 2);
                     wpr.CpB = Math.Round(cases.Cp_CaseB_Windward, 2);
                 }
                 else if (kvp.Key == WindZones_Roof_MWFRS.MWFRS_WR_2h_L)
                 {
-                    wpr.Start = 2 * parameters.MeanRoofHeight;
-                    wpr.End = parameters.BuildingLength;
+                    wpr.Start = 2 * buildingData.MeanRoofHeight;
+                    wpr.End = buildingData.BuildingLength;
                     wpr.CpA = Math.Round(cases.Cp_CaseA_Windward, 2);
                     wpr.CpB = Math.Round(cases.Cp_CaseB_Windward, 2);
                 }
@@ -139,14 +146,14 @@ namespace ShearWallCalculator.WindLoadCalculations
                 else if (kvp.Key == WindZones_Roof_MWFRS.MWFRS_WR_Full)
                 {
                     wpr.Start = 0.0;
-                    wpr.End = parameters.BuildingLength / 2;
+                    wpr.End = buildingData.BuildingLength / 2;
                     wpr.CpA = Math.Round(cases.Cp_CaseA_Windward, 2);
                     wpr.CpB = Math.Round(cases.Cp_CaseB_Windward, 2);
                 }
                 else if (kvp.Key == WindZones_Roof_MWFRS.MWFRS_LR_Full)
                 {
-                    wpr.Start = parameters.BuildingLength / 2;
-                    wpr.End = parameters.BuildingLength;
+                    wpr.Start = buildingData.BuildingLength / 2;
+                    wpr.End = buildingData.BuildingLength;
                     wpr.CpA = Math.Round(cases.Cp_CaseA_Leeward, 2);
                     wpr.CpB = Math.Round(cases.Cp_CaseB_Leeward, 2);
                 }
@@ -159,14 +166,14 @@ namespace ShearWallCalculator.WindLoadCalculations
                 }
 
                 // Adjust the end point if it's off the building length
-                if (wpr.End > parameters.BuildingLength)
+                if (wpr.End > buildingData.BuildingLength)
                 {
-                    wpr.End = parameters.BuildingLength;
+                    wpr.End = buildingData.BuildingLength;
                 }
 
                 wpr.GCpi_A = +1.0 * WindLoadCalculator_MWFRS_ASCE7_10.GetGCpiMagnitude(parameters.EnclosureClassification);
                 wpr.GCpi_B = -1.0 * WindLoadCalculator_MWFRS_ASCE7_10.GetGCpiMagnitude(parameters.EnclosureClassification);
-                var Kzh = Math.Round(WindLoadCalculator_MWFRS_ASCE7_10.GetKz(parameters.BuildingHeight, parameters.ExposureCategory), 2);
+                var Kzh = Math.Round(WindLoadCalculator_MWFRS_ASCE7_10.GetKz(buildingData.BuildingHeight, parameters.ExposureCategory), 2);
                 wpr.qh = Math.Round(0.00256 * Kzh * parameters.Kzt * parameters.Kd * parameters.WindSpeed * parameters.WindSpeed * parameters.ImportanceFactor, 2);
 
                 wpr.PressBaseA = Math.Round(wpr.qh * parameters.GustFactor * wpr.CpA, 2);
@@ -175,7 +182,7 @@ namespace ShearWallCalculator.WindLoadCalculations
                 wpr.Balloon1 = Math.Round(wpr.PressBaseA - wpr.GCpi_A * wpr.qh, 2);
                 wpr.Balloon2 = Math.Round(wpr.PressBaseB + wpr.GCpi_B * wpr.qh, 2);
                 wpr.Suction2 = Math.Round(wpr.PressBaseB - wpr.GCpi_B * wpr.qh, 2);
-                wpr.theta = parameters.RoofPitch;
+                wpr.theta = buildingData.RoofPitch;
 
                 roof_results.Add(wpr);
             }
@@ -226,10 +233,10 @@ namespace ShearWallCalculator.WindLoadCalculations
         }
 
 
-        public static Dictionary<WindZones_Walls_MWFRS, double> Calculate_WallZones_MWFRS(WindLoadParameters p)
+        public Dictionary<WindZones_Walls_MWFRS, double> Calculate_WallZones_MWFRS(WindLoadParameters_Base p)
         {
             double V = p.WindSpeed;
-            double h = p.MeanRoofHeight;
+            double h = buildingData.MeanRoofHeight;
 
             if (h >= 15)
             {
@@ -254,17 +261,17 @@ namespace ShearWallCalculator.WindLoadCalculations
             }
         }
 
-        public static Dictionary<WindZones_Roof_MWFRS, double> CalculateMWFRS_RoofZones(WindLoadParameters p)
+        public Dictionary<WindZones_Roof_MWFRS, double> CalculateMWFRS_RoofZones(WindLoadParameters_Base p)
         {
-            double theta = p.RoofPitch;
+            double theta = buildingData.RoofPitch;
             double V = p.WindSpeed;
-            double h = p.MeanRoofHeight;
-            double L = p.BuildingLength;
+            double h = buildingData.MeanRoofHeight;
+            double L = buildingData.BuildingLength;
             double hOverL = h / L;
 
             Dictionary<WindZones_Roof_MWFRS, double> zones = new Dictionary<WindZones_Roof_MWFRS, double>();
 
-            if (p.RidgeDirection == "Perpendicular to Wind")
+            if (buildingData.RidgeDirection == "Perpendicular to Wind")
             {
                 if (theta < 10)
                 {
@@ -340,10 +347,10 @@ namespace ShearWallCalculator.WindLoadCalculations
         }
 
         // Cp values for different surfaces
-        public static double GetCpLeewardWall_MWFRS(WindLoadParameters p)
+        public double GetCpLeewardWall_MWFRS(WindLoadParameters_Base p)
         {
-            double length = p.BuildingLength;
-            double width = p.BuildingWidth;
+            double length = buildingData.BuildingLength;
+            double width = buildingData.BuildingWidth;
 
             // Ensure ratio is length over width (L/B) ≥ 1
             double ratio = length / width; ;
@@ -356,8 +363,8 @@ namespace ShearWallCalculator.WindLoadCalculations
             else
                 return -0.2;
         }
-        public static double GetCpSidewall_MWFRS(WindLoadParameters p) => -0.7;
-        public static double GetCpWindwardwall_MWFRS(WindLoadParameters p) => 0.8;
+        public double GetCpSidewall_MWFRS(WindLoadParameters_Base p) => -0.7;
+        public double GetCpWindwardwall_MWFRS(WindLoadParameters_Base p) => 0.8;
 
         public static RoofCpCases_MWFRS CalculateRoofCp_ForFlatRoofOrParallelRidge_MWFRS(double h, double L, WindZones_Roof_MWFRS zone_name)
         {
