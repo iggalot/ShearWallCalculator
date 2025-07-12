@@ -14,39 +14,41 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.Figure30_3
     {
         public static void DrawCurvesOnCanvas(Canvas canvas, Chapter30_BaseFigure figure)
         {
-            double canvasWidth = canvas.ActualWidth > 0 ? canvas.ActualWidth : canvas.Width;  // fallback default
-            double canvasHeight = canvas.ActualHeight > 0 ? canvas.ActualHeight : canvas.Height;  // fallback default
+            double canvasWidth = canvas.ActualWidth > 0 ? canvas.ActualWidth : canvas.Width;
+            double canvasHeight = canvas.ActualHeight > 0 ? canvas.ActualHeight : canvas.Height;
 
             double xMin = 1;
             double xMax = 1000;
 
-            double yMinNeg = -4; // negative GCp top
+            double yMinNeg = -4;
             double yMaxNeg = 0;
 
             double yMinPos = 0;
             double yMaxPos = 1;
 
-            int samplePoints = 100;
-
             canvas.Children.Clear();
 
-            // Background grid (optional)
-            DrawGrid(canvas, canvasWidth, canvasHeight, xMin, xMax, yMinNeg, yMaxPos);
+            // === Fixed X-axis tick values ===
+            List<double> xTickValues = new List<double> { 1, 10, 20, 50, 100, 200, 500, 1000 };
 
+            // === Draw grid with fixed ticks ===
+            DrawGrid(canvas, canvasWidth, canvasHeight, xMin, xMax, yMinNeg, yMaxPos, xTickValues);
+
+            // === Draw curves ===
             foreach (var kvp in figure.RoofCurves_Neg)
             {
-                DrawCurve(canvas, kvp.Value, kvp.Key, Brushes.Red, true, canvasWidth, canvasHeight, xMin, xMax, yMinNeg, yMaxPos, samplePoints);
+                DrawCurve(canvas, kvp.Value, kvp.Key, Brushes.Red, true, canvasWidth, canvasHeight, xMin, xMax, yMinNeg, yMaxPos);
             }
 
             foreach (var kvp in figure.RoofCurves_Pos)
             {
-                DrawCurve(canvas, kvp.Value, kvp.Key, Brushes.Blue, false, canvasWidth, canvasHeight, xMin, xMax, yMinNeg, yMaxPos, samplePoints);
+                DrawCurve(canvas, kvp.Value, kvp.Key, Brushes.Blue, false, canvasWidth, canvasHeight, xMin, xMax, yMinNeg, yMaxPos);
             }
         }
 
         private static void DrawCurve(Canvas canvas, ExternalGCpCurve curve, string label, Brush color, bool isNegative,
-                               double canvasWidth, double canvasHeight,
-                               double xMin, double xMax, double yMin, double yMax, int samplePoints)
+                                      double canvasWidth, double canvasHeight,
+                                      double xMin, double xMax, double yMin, double yMax)
         {
             Polyline line = new Polyline
             {
@@ -54,20 +56,24 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.Figure30_3
                 StrokeThickness = 2
             };
 
-            // Sample from xMin (1) to 1200 regardless of curve.X1/X2
-            double plotMin = 1;
-            double plotMax = 1200;
+            // Use raw X values for breakpoints (no log here)
+            double plotMin = Math.Max(1.0, curve.LowerBoundX);
+            double plotMax = Math.Min(1200.0, curve.UpperBoundX);
 
-            for (int i = 0; i <= samplePoints; i++)
+            List<double> xPoints = new List<double>();
+            if (plotMin < curve.X1) xPoints.Add(plotMin);
+            xPoints.Add(curve.X1);
+            xPoints.Add(curve.X2);
+            if (plotMax > curve.X2) xPoints.Add(plotMax);
+
+            foreach (double x in xPoints)
             {
-                double x = plotMin + i * (plotMax - plotMin) / samplePoints;
                 double y = curve.Evaluate(x);
 
-                // Normalize to pixel positions
-                double px = ((x - xMin) / (xMax - xMin)) * canvasWidth;
-                px = Math.Max(0, Math.Min(canvasWidth, px)); // Clamp to canvas
+                double px = ((Math.Log10(x) - Math.Log10(xMin)) / (Math.Log10(xMax) - Math.Log10(xMin))) * canvasWidth;
+                px = Math.Max(0, Math.Min(canvasWidth, px)); // Clamp
 
-                double normY = (y - yMin) / (yMax - yMin); // yMin = -4.0, yMax = 1.0
+                double normY = (y - yMin) / (yMax - yMin);
                 double py = normY * canvasHeight;
 
                 line.Points.Add(new Point(px, py));
@@ -75,96 +81,170 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.Figure30_3
 
             canvas.Children.Add(line);
 
-            // Label at end of line
+            // Label at end of line (existing)
             TextBlock labelText = new TextBlock
             {
                 Text = label,
                 Foreground = color,
                 FontSize = 10
             };
-
-            double labelX = line.Points[line.Points.Count - 1].X + 4;
-            double labelY = line.Points[line.Points.Count - 1].Y;
-
-            Canvas.SetLeft(labelText, labelX);
-            Canvas.SetTop(labelText, labelY);
+            var endPt = line.Points[line.Points.Count - 1];
+            Canvas.SetLeft(labelText, endPt.X + 4);
+            Canvas.SetTop(labelText, endPt.Y);
             canvas.Children.Add(labelText);
+
+            // === NEW: Draw Y-values at left and right ends of the curve ===
+
+            // Left end
+            Point leftPt = line.Points[0];
+            double leftXVal = xPoints[0];
+            double leftYVal = curve.Evaluate(leftXVal);
+
+            TextBlock leftYLabel = new TextBlock
+            {
+                Text = leftYVal.ToString("0.00"),
+                Foreground = color,
+                FontSize = 10,
+                Background = Brushes.White
+            };
+            leftYLabel.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            double lw = leftYLabel.DesiredSize.Width;
+            double lh = leftYLabel.DesiredSize.Height;
+            Canvas.SetLeft(leftYLabel, leftPt.X - lw / 2);
+            Canvas.SetTop(leftYLabel, leftPt.Y - lh / 2);
+            canvas.Children.Add(leftYLabel);
+
+            // Right end
+            Point rightPt = line.Points[line.Points.Count - 1];
+            double rightXVal = xPoints[xPoints.Count - 1];
+            double rightYVal = curve.Evaluate(rightXVal);
+
+            TextBlock rightYLabel = new TextBlock
+            {
+                Text = rightYVal.ToString("0.00"),
+                Foreground = color,
+                FontSize = 10,
+                Background = Brushes.White
+            };
+            rightYLabel.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            double rw = rightYLabel.DesiredSize.Width;
+            double rh = rightYLabel.DesiredSize.Height;
+            Canvas.SetLeft(rightYLabel, rightPt.X - rw / 2);
+            Canvas.SetTop(rightYLabel, rightPt.Y - rh / 2);
+            canvas.Children.Add(rightYLabel);
         }
 
         private static void DrawGrid(Canvas canvas, double canvasWidth, double canvasHeight,
-                             double xMin, double xMax, double yMin, double yMax)
+                                     double xMin, double xMax, double yMin, double yMax,
+                                     IEnumerable<double> xValuesToLabel)
         {
-            // yMin should be -4 and yMax should be 1
-            // Vertical grid lines at specified x-values
-            double[] verticalXs = new double[] { 10, 20, 50, 100, 200, 500, 1000 };
-            foreach (double xVal in verticalXs)
+            // === Draw X-axis ticks, dashed vertical lines, and centered labels ===
+            foreach (double xVal in xValuesToLabel)
             {
-                // Skip x-values outside the defined domain (if any)
-                if (xVal < xMin || xVal > xMax)
-                    continue;
+                if (xVal <= 0) continue;
 
-                double normX = (xVal - xMin) / (xMax - xMin);
-                double px = normX * canvasWidth;
+                double px = ((Math.Log10(xVal) - Math.Log10(xMin)) / (Math.Log10(xMax) - Math.Log10(xMin))) * canvasWidth;
 
-                // Create a dashed vertical line
+                // Dashed vertical grid line
                 Line vLine = new Line
                 {
                     X1 = px,
                     Y1 = 0,
                     X2 = px,
                     Y2 = canvasHeight,
-                    Stroke = Brushes.LightGray,
+                    Stroke = Brushes.Gray,
                     StrokeThickness = 1,
-                    StrokeDashArray = new DoubleCollection { 2, 2 }
+                    StrokeDashArray = new DoubleCollection() { 4, 2 }
                 };
                 canvas.Children.Add(vLine);
 
-                // Add a label at the bottom (or center-bottom of the plot area)
+                // Tick mark at bottom
+                Line tick = new Line
+                {
+                    X1 = px,
+                    Y1 = canvasHeight - 6,
+                    X2 = px,
+                    Y2 = canvasHeight,
+                    Stroke = Brushes.Black,
+                    StrokeThickness = 1
+                };
+                canvas.Children.Add(tick);
+
+                // X-axis label centered on tick
                 TextBlock xLabel = new TextBlock
                 {
-                    Text = xVal.ToString(),
+                    Text = xVal >= 1000 ? $"{xVal / 1000:0.#}k" : xVal.ToString("0"),
                     FontSize = 10,
-                    Foreground = Brushes.Gray
+                    Foreground = Brushes.Black
                 };
-                // Position label near the bottom of the canvas.
-                Canvas.SetLeft(xLabel, px + 2);
-                // For vertical position, you may choose to place it at canvasHeight - 15
-                Canvas.SetTop(xLabel, canvasHeight - 15);
+                // Measure label width to center it
+                xLabel.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                double labelWidth = xLabel.DesiredSize.Width;
+                Canvas.SetLeft(xLabel, px - labelWidth / 2);
+                Canvas.SetTop(xLabel, canvasHeight - 18);
                 canvas.Children.Add(xLabel);
             }
 
-            // Horizontal grid lines: from y = -4.0 to y = 1.0 in increments of 0.2
-            for (double yVal = yMin; yVal <= yMax; yVal += 0.2)
+            // === Draw horizontal lines at every 0.2 with labels ===
+            double yStep = 0.2;
+            int yDivisions = (int)Math.Round((yMax - yMin) / yStep);
+            for (int i = 0; i <= yDivisions; i++)
             {
-                double normY = (yVal - yMin) / (yMax - yMin);
+                double y = yMin + i * yStep;
+                double normY = (y - yMin) / (yMax - yMin);
                 double py = normY * canvasHeight;
 
-                // Create a dashed horizontal line
-                Line hLine = new Line
+                // Draw line
+                Line yLine = new Line
                 {
                     X1 = 0,
                     Y1 = py,
                     X2 = canvasWidth,
                     Y2 = py,
                     Stroke = Brushes.LightGray,
-                    StrokeThickness = 1,
-                    StrokeDashArray = new DoubleCollection { 2, 2 }
+                    StrokeThickness = 1
                 };
-                canvas.Children.Add(hLine);
+                canvas.Children.Add(yLine);
 
-                // Add a label on the left side for each horizontal tick
+                // Y label
                 TextBlock yLabel = new TextBlock
                 {
-                    Text = yVal.ToString("F1"),
+                    Text = y.ToString("0.0"),
                     FontSize = 10,
-                    Foreground = Brushes.Gray
+                    Foreground = Brushes.Black
                 };
-                // Position the label with some left margin (e.g., 2 pixels) and offset vertically.
+                // Center vertically: label height is about 12 px, shift up by ~6
+                yLabel.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                double labelHeight = yLabel.DesiredSize.Height;
                 Canvas.SetLeft(yLabel, 2);
-                Canvas.SetTop(yLabel, py - 10);
+                Canvas.SetTop(yLabel, py - labelHeight / 2);
                 canvas.Children.Add(yLabel);
             }
+
+            // === Draw dashed horizontal lines at special Y-values ===
+            double[] dashedYVals = new double[] { -4, -3, -2, -1, 0, 1 };
+            foreach (double y in dashedYVals)
+            {
+                if (y < yMin || y > yMax) continue;
+
+                double normY = (y - yMin) / (yMax - yMin);
+                double py = normY * canvasHeight;
+
+                Line dashedLine = new Line
+                {
+                    X1 = 0,
+                    Y1 = py,
+                    X2 = canvasWidth,
+                    Y2 = py,
+                    Stroke = Brushes.Gray,
+                    StrokeThickness = 1,
+                    StrokeDashArray = new DoubleCollection() { 4, 2 }
+                };
+                canvas.Children.Add(dashedLine);
+            }
         }
+
+
 
 
 

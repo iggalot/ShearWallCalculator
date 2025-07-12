@@ -441,6 +441,7 @@ namespace ShearWallVisualizer
             // save the input parameters for wind input
             windLoadParams = e._parameters;
 
+            if (windLoadParams == null) return;
             // Draw on the input control canvas
             var inputControl = tabWindInputControlTabItem.Content as WindLoadInputControl;
             if (inputControl != null)
@@ -482,13 +483,28 @@ namespace ShearWallVisualizer
                     FigureDrawer.DrawCurvesOnCanvas(figure30Canvas, figureCC);
                 }
 
-                // Now retrieve the Gcp values from the figure
-                foreach (var kvp in windLoadParams.RoofAreaCalculator.effWindAreas_Roof)
+                if (windLoadParams.RoofAreaCalculator != null)
                 {
-                    // write the label
-                    Console.WriteLine($"{kvp.Value.Label}  {kvp.Value.Area} " +
-                        $"pos: {figureCC.RoofCurves_Pos[kvp.Value.Label].Evaluate(kvp.Value.Area):F3} " +
-                        $"neg: {figureCC.RoofCurves_Neg[kvp.Value.Label].Evaluate(kvp.Value.Area):F3}");
+                    // Now retrieve the Gcp values from the figure
+                    foreach (var kvp in windLoadParams.RoofAreaCalculator.effWindAreas_Roof)
+                    {
+                        string str = string.Empty;
+                        str += $"{kvp.Value.Label}  {kvp.Value.Area} ";
+
+                        if (figureCC.RoofCurves_Pos.ContainsKey(kvp.Value.Label))
+                        {
+                            str += $"pos: {figureCC.RoofCurves_Pos[kvp.Value.Label].Evaluate(kvp.Value.Area):F3} ";
+                        }
+
+                        if (figureCC.RoofCurves_Neg.ContainsKey(kvp.Value.Label))
+                        {
+                            str += $"neg: {figureCC.RoofCurves_Neg[kvp.Value.Label].Evaluate(kvp.Value.Area):F3}";
+                        }
+
+                        // write the label and the data calcs
+
+                        Console.WriteLine(str);
+                    }
                 }
 
             }
