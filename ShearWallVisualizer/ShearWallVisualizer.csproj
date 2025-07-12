@@ -187,6 +187,7 @@
       <DependentUpon>LoadInputDialog.xaml</DependentUpon>
     </Compile>
     <Compile Include="Helpers\DrawingHelpers.cs" />
+    <Compile Include="Helpers\FigureDrawer.cs" />
     <Compile Include="Helpers\MathHelpers.cs" />
     <Compile Include="Helpers\TabControlManager.cs" />
     <Compile Include="ImageLayer.cs" />

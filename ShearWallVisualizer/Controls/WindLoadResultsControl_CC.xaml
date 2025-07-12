@@ -63,7 +63,10 @@
                       FontSize="10">
                 </DataGrid>
             </StackPanel>
-            <Canvas x:Name="cnvWindLoadResultCanvasCC" Grid.Column="1" Width="200" Height="200" Margin="10"  Background="LightGray"></Canvas>
+            <StackPanel Orientation="Vertical" Grid.Column="1" Margin="10">
+                <Canvas x:Name="cnvWindLoadResultCanvasCC" Width="200" Height="200" Margin="10"  Background="LightGray"></Canvas>
+                <Canvas x:Name="cnvFigure30_3" Width="200" Height="200" Margin="10"  Background="LightGray"></Canvas>
+            </StackPanel>
         </StackPanel>
     </Grid>
 </UserControl>

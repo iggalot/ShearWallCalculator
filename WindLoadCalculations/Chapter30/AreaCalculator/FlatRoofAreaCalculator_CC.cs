@@ -63,7 +63,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             {
                 z3 = TryCreateZone(
                     1,
-                    "1'",
+                    "Zone1'",
                     new[]
                     {
                         new Point(offset1, offset1),
@@ -94,7 +94,7 @@ namespace ShearWallCalculator.WindLoadCalculations
 
                 var hole2 = z3 != null ? new[] { z3.OuterBoundary } : null;
 
-                z2 = TryCreateZone(2, "1", outer2, hole2);
+                z2 = TryCreateZone(2, "Zone1", outer2, hole2);
                 if (z2 != null)
                     zones[2] = z2;
             }
@@ -115,7 +115,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             var hole1 = z2 != null ? new[] { z2.OuterBoundary } :
                         z3 != null ? new[] { z3.OuterBoundary } : null;
 
-            var z1 = TryCreateZone(3, "2", outer1, hole1);
+            var z1 = TryCreateZone(3, "Zone2", outer1, hole1);
             if (z1 != null)
                 zones[3] = z1;
 
@@ -133,7 +133,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             Point p18 = new Point(0, 0.6 * bldg_data.MeanRoofHeight);
 
             var roof_area_3_1 = new EffectiveWindArea_Roof(
-                "3_1",
+                "Zone3",
                 new List<Point> { p13, p14, p15, p16, p17, p18 },
                 null
                 );
@@ -148,7 +148,7 @@ namespace ShearWallCalculator.WindLoadCalculations
 
 
             var roof_area_3_2 = new EffectiveWindArea_Roof(
-                "3_2",
+                "Zone3",
                 new List<Point> { p19, p20, p21, p22, p23, p24 },
                 null
                 );
@@ -162,7 +162,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             Point p30 = new Point(bldg_data.BuildingLength, bldg_data.BuildingWidth);
 
             var roof_area_3_3 = new EffectiveWindArea_Roof(
-                "3_3",
+                "Zone3",
                 new List<Point> { p25, p26, p27, p28, p29, p30 },
                 null
                 );
@@ -176,7 +176,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             Point p36 = new Point(0.6 * bldg_data.MeanRoofHeight, bldg_data.BuildingWidth);
 
             var roof_area_3_4 = new EffectiveWindArea_Roof(
-                "3_4",
+                "Zone3",
                 new List<Point> { p31, p32, p33, p34, p35, p36 },
                 null
                 );

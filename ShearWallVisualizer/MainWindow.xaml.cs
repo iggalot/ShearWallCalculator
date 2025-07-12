@@ -6,7 +6,9 @@ using ShearWallCalculator;
 using ShearWallCalculator.BuildingInfo;
 using ShearWallCalculator.Interfaces;
 using ShearWallCalculator.WindLoadCalculations;
+using ShearWallCalculator.WindLoadCalculations.Chapter30;
 using ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator;
+using ShearWallCalculator.WindLoadCalculations.Chapter30.Figure30_3;
 using ShearWallVisualizer.Controls;
 using ShearWallVisualizer.Dialogs;
 using ShearWallVisualizer.Helpers;
@@ -457,13 +459,37 @@ namespace ShearWallVisualizer
             TabControlManager.ReAddTab(MainTabControl, "tabWindResultsTabItem_MWFRS");
 
             Canvas resultCanvas = null;
+            Canvas figure30Canvas = null;
+            Chapter30_BaseFigure figureCC = null;
             if (windLoadParams.AnalysisType == WindLoadCalculationTypes.COMPONENT_AND_CLADDING)
             {
                 if (tabWindResultsTabItem_CC.Content is WindLoadResultsControl_CC ccControl)
                 {
                     resultCanvas = ccControl.cnvWindLoadResultCanvasCC;
+                    figure30Canvas = ccControl.cnvFigure30_3;
                 }
                 TabControlManager.RemoveTab(MainTabControl, tabWindResultsTabItem_MWFRS);
+
+                // Create the figure
+                figureCC = Chapter30FigureFactory.CreateFigure(
+                    buildingData.RoofType,
+                    buildingData.MeanRoofHeight,
+                    buildingData.BuildingWidth,
+                    buildingData.RoofPitch);
+
+                if(figureCC != null && resultCanvas != null)
+                {
+                    FigureDrawer.DrawCurvesOnCanvas(figure30Canvas, figureCC);
+                }
+
+                // Now retrieve the Gcp values from the figure
+                foreach (var kvp in windLoadParams.RoofAreaCalculator.effWindAreas_Roof)
+                {
+                    // write the label
+                    Console.WriteLine($"{kvp.Value.Label}  {kvp.Value.Area} " +
+                        $"pos: {figureCC.RoofCurves_Pos[kvp.Value.Label].Evaluate(kvp.Value.Area):F3} " +
+                        $"neg: {figureCC.RoofCurves_Neg[kvp.Value.Label].Evaluate(kvp.Value.Area):F3}");
+                }
 
             }
             else if (windLoadParams.AnalysisType == WindLoadCalculationTypes.MWFRS)
