@@ -56,7 +56,6 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.Figure30_3
                 StrokeThickness = 2
             };
 
-            // Use raw X values for breakpoints (no log here)
             double plotMin = Math.Max(1.0, curve.LowerBoundX);
             double plotMax = Math.Min(1200.0, curve.UpperBoundX);
 
@@ -66,46 +65,74 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.Figure30_3
             xPoints.Add(curve.X2);
             if (plotMax > curve.X2) xPoints.Add(plotMax);
 
+            List<Point> linePoints = new List<Point>();
+
             foreach (double x in xPoints)
             {
                 double y = curve.Evaluate(x);
-
                 double px = ((Math.Log10(x) - Math.Log10(xMin)) / (Math.Log10(xMax) - Math.Log10(xMin))) * canvasWidth;
-                px = Math.Max(0, Math.Min(canvasWidth, px)); // Clamp
-
-                double normY = (y - yMin) / (yMax - yMin);
-                double py = normY * canvasHeight;
-
-                line.Points.Add(new Point(px, py));
+                px = Math.Max(0, Math.Min(canvasWidth, px));
+                double py = ((y - yMin) / (yMax - yMin)) * canvasHeight;
+                linePoints.Add(new Point(px, py));
             }
+
+            foreach (Point pt in linePoints)
+                line.Points.Add(pt);
 
             canvas.Children.Add(line);
 
-            // Retrieve the label name
+            // === Label: strip "Zone" and show the rest ===
             string displayLabel = label.StartsWith("Zone", StringComparison.OrdinalIgnoreCase)
-                ? label.Substring(4).TrimStart() // remove "Zone" and any leading space
+                ? label.Substring(4).TrimStart()
                 : label;
 
-            // Label at end of line (existing)
             TextBlock labelText = new TextBlock
             {
                 Text = displayLabel,
                 Foreground = color,
-                FontSize = 10
+                FontSize = 10,
+                Background = Brushes.White
             };
 
+            labelText.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            double labelW = labelText.DesiredSize.Width;
+            double labelH = labelText.DesiredSize.Height;
 
-            var endPt = line.Points[line.Points.Count - 1];
-            Canvas.SetLeft(labelText, endPt.X + 4);
-            Canvas.SetTop(labelText, endPt.Y);
+            // Padding for circle
+            double padding = 1;
+            double circleDiameter = Math.Max(labelW, labelH) + padding * 2;
+
+            // Position at x=5
+            double labelX = 5;
+            labelX = Math.Max(xMin, Math.Min(xMax, labelX));
+            double px10 = ((Math.Log10(labelX) - Math.Log10(xMin)) / (Math.Log10(xMax) - Math.Log10(xMin))) * canvasWidth;
+            double y10 = curve.Evaluate(labelX);
+            double py10 = ((y10 - yMin) / (yMax - yMin)) * canvasHeight;
+            double circleCenterX = px10;
+            double circleCenterY = py10 - labelH / 2 - 2.5;
+
+            // Draw the circle behind the label
+            Ellipse circle = new Ellipse
+            {
+                Width = circleDiameter,
+                Height = circleDiameter,
+                Stroke = color,
+                StrokeThickness = 1,
+                Fill = Brushes.White
+            };
+            Canvas.SetLeft(circle, circleCenterX - circleDiameter / 2);
+            Canvas.SetTop(circle, circleCenterY - circleDiameter / 2);
+            canvas.Children.Add(circle);
+
+            // Draw the label centered in the circle
+            Canvas.SetLeft(labelText, circleCenterX - labelW / 2);
+            Canvas.SetTop(labelText, circleCenterY - labelH / 2);
             canvas.Children.Add(labelText);
 
-            // === NEW: Draw Y-values at left and right ends of the curve ===
-
-            // Left end
-            Point leftPt = line.Points[0];
+            // === Left Y-value label ===
             double leftXVal = xPoints[0];
             double leftYVal = curve.Evaluate(leftXVal);
+            Point leftPt = linePoints[0];
 
             TextBlock leftYLabel = new TextBlock
             {
@@ -121,10 +148,10 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.Figure30_3
             Canvas.SetTop(leftYLabel, leftPt.Y - lh / 2);
             canvas.Children.Add(leftYLabel);
 
-            // Right end
-            Point rightPt = line.Points[line.Points.Count - 1];
+            // === Right Y-value label ===
             double rightXVal = xPoints[xPoints.Count - 1];
             double rightYVal = curve.Evaluate(rightXVal);
+            Point rightPt = linePoints[linePoints.Count - 1];
 
             TextBlock rightYLabel = new TextBlock
             {
@@ -140,6 +167,7 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.Figure30_3
             Canvas.SetTop(rightYLabel, rightPt.Y - rh / 2);
             canvas.Children.Add(rightYLabel);
         }
+
 
         private static void DrawGrid(Canvas canvas, double canvasWidth, double canvasHeight,
                                      double xMin, double xMax, double yMin, double yMax,

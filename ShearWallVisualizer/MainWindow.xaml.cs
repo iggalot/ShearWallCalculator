@@ -461,6 +461,9 @@ namespace ShearWallVisualizer
 
             Canvas resultCanvas = null;
             Canvas figure30Canvas = null;
+            TextBlock figure30Title = null;
+            TextBlock figure30Criteria = null;
+
             Chapter30_BaseFigure figureCC = null;
             if (windLoadParams.AnalysisType == WindLoadCalculationTypes.COMPONENT_AND_CLADDING)
             {
@@ -468,6 +471,8 @@ namespace ShearWallVisualizer
                 {
                     resultCanvas = ccControl.cnvWindLoadResultCanvasCC;
                     figure30Canvas = ccControl.cnvFigure30_3;
+                    figure30Title = ccControl.txtFigureTitle;
+                    figure30Criteria = ccControl.txtFigureCriteria;
                 }
                 TabControlManager.RemoveTab(MainTabControl, tabWindResultsTabItem_MWFRS);
 
@@ -478,10 +483,15 @@ namespace ShearWallVisualizer
                     buildingData.BuildingWidth,
                     buildingData.RoofPitch);
 
-                if(figureCC != null && resultCanvas != null)
+                if(figure30Title != null) figure30Title.Text = figureCC.ChartTitle;
+                if (figure30Criteria != null) figure30Criteria.Text = figureCC.ChartCriteria;
+
+                if (figureCC != null && resultCanvas != null)
                 {
+                    // draw the figure to the canvas now
                     FigureDrawer.DrawCurvesOnCanvas(figure30Canvas, figureCC);
                 }
+
 
                 if (windLoadParams.RoofAreaCalculator != null)
                 {
