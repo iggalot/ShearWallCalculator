@@ -10,6 +10,9 @@
     {
         public Figure30_3_2G(double h, double b)
         {
+            ChartTitle = "ASCE 7-16 Figure 30-3-2G - Hip Roofs";
+            ChartCriteria = "h <= 60ft, 20deg < slope <= 27deg";
+
             // Roof Negative Pressure Zones
             RoofCurves_Neg["Zone3"] = new ExternalGCpCurve(10, -2.0, 200, -1.0);
             RoofCurves_Neg["Zone2e"] = new ExternalGCpCurve(10, -2.0, 200, -1.0);
@@ -27,27 +30,6 @@
             OverhangCurves["Zone2r"] = new ExternalGCpCurve(7, -2.7, 200, -2.0);
             OverhangCurves["Zone2e"] = new ExternalGCpCurve(7, -2.7, 200, -2.0);
             OverhangCurves["Zone1"] = new ExternalGCpCurve(10, -2.6, 200, -1.8);
-
-
-            //Zone3_neg_Roof = new ExternalGCpCurve(10, -2.0, 200, -1.0);
-            //Zone2e_neg_Roof = new ExternalGCpCurve(10, -2.0, 200, -1.0);
-            //Zone2r_neg_Roof = new ExternalGCpCurve(10, -2.0, 200, -1.0);
-            //Zone1_neg_Roof = new ExternalGCpCurve(10, -1.4, 100, -0.8);
-            ///// <summary>
-            ///// Roof
-            ///// </summary>
-            //Zone3_pos_Roof = new ExternalGCpCurve(10, 0.7, 100, 0.3);
-            //Zone2r_pos_Roof = new ExternalGCpCurve(10, 0.7, 100, 0.3);
-            //Zone2e_pos_Roof = new ExternalGCpCurve(10, 0.7, 100, 0.3);
-            //Zone1_pos_Roof = new ExternalGCpCurve(10, 0.7, 100, 0.3);
-
-            ///// <summary>
-            ///// Overhang
-            ///// </summary>
-            //Zone3_Overhang = new ExternalGCpCurve(7, -3.1, 200, -1.5);
-            //Zone2r_Overhang = new ExternalGCpCurve(7, -2.7, 200, -2.0);
-            //Zone2e_Overhang = new ExternalGCpCurve(7, -2.7, 200, -2.0);
-            //Zone1_Overhang = new ExternalGCpCurve(10, -2.6, 200, -1.8);
         } 
     }
 }

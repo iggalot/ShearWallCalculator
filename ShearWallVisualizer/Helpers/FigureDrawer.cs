@@ -81,13 +81,20 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.Figure30_3
 
             canvas.Children.Add(line);
 
+            // Retrieve the label name
+            string displayLabel = label.StartsWith("Zone", StringComparison.OrdinalIgnoreCase)
+                ? label.Substring(4).TrimStart() // remove "Zone" and any leading space
+                : label;
+
             // Label at end of line (existing)
             TextBlock labelText = new TextBlock
             {
-                Text = label,
+                Text = displayLabel,
                 Foreground = color,
                 FontSize = 10
             };
+
+
             var endPt = line.Points[line.Points.Count - 1];
             Canvas.SetLeft(labelText, endPt.X + 4);
             Canvas.SetTop(labelText, endPt.Y);
@@ -153,7 +160,7 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.Figure30_3
                     X2 = px,
                     Y2 = canvasHeight,
                     Stroke = Brushes.Gray,
-                    StrokeThickness = 1,
+                    StrokeThickness = 0.5,
                     StrokeDashArray = new DoubleCollection() { 4, 2 }
                 };
                 canvas.Children.Add(vLine);
@@ -202,7 +209,7 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.Figure30_3
                     X2 = canvasWidth,
                     Y2 = py,
                     Stroke = Brushes.LightGray,
-                    StrokeThickness = 1
+                    StrokeThickness = 0.5
                 };
                 canvas.Children.Add(yLine);
 
@@ -243,10 +250,5 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.Figure30_3
                 canvas.Children.Add(dashedLine);
             }
         }
-
-
-
-
-
     }
 }
