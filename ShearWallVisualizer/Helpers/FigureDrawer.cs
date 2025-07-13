@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -19,36 +20,89 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.Figure30_3
 
             double xMin = 1;
             double xMax = 1000;
-
             double yMinNeg = -4;
-            double yMaxNeg = 0;
-
-            double yMinPos = 0;
             double yMaxPos = 1;
 
             canvas.Children.Clear();
 
-            // === Fixed X-axis tick values ===
             List<double> xTickValues = new List<double> { 1, 10, 20, 50, 100, 200, 500, 1000 };
-
-            // === Draw grid with fixed ticks ===
             DrawGrid(canvas, canvasWidth, canvasHeight, xMin, xMax, yMinNeg, yMaxPos, xTickValues);
 
-            // === Draw curves ===
+            // Combine both positive and negative curves with polarity
+            var allCurves = new List<(string label, ExternalGCpCurve curve, bool isNegative)>();
             foreach (var kvp in figure.RoofCurves_Neg)
-            {
-                DrawCurve(canvas, kvp.Value, kvp.Key, Brushes.Red, true, canvasWidth, canvasHeight, xMin, xMax, yMinNeg, yMaxPos);
-            }
-
+                allCurves.Add((kvp.Key, kvp.Value, true));
             foreach (var kvp in figure.RoofCurves_Pos)
+                allCurves.Add((kvp.Key, kvp.Value, false));
+
+            // Group by curve shape (not label)
+            var groupedByShape = allCurves
+                .GroupBy(item => GetCurveShapeKey(item.curve))
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            // Draw each group with horizontal spread based on per-group zone index
+            foreach (var group in groupedByShape)
             {
-                DrawCurve(canvas, kvp.Value, kvp.Key, Brushes.Blue, false, canvasWidth, canvasHeight, xMin, xMax, yMinNeg, yMaxPos);
+                var curveGroup = group.Value;
+
+                for (int i = 0; i < curveGroup.Count; i++)
+                {
+                    var (label, curve, isNegative) = curveGroup[i];
+                    Brush color = isNegative ? Brushes.Red : Brushes.Blue;
+
+                    DrawCurve(canvas, curve, label, color, isNegative,
+                              canvasWidth, canvasHeight, xMin, xMax, yMinNeg, yMaxPos,
+                              zoneIndex: i);
+                }
             }
         }
 
+
+        private static string GetCurveShapeKey(ExternalGCpCurve curve)
+        {
+            // Use rounded values of key points to group similar curves
+            double x1 = Math.Round(curve.X1, 3);
+            double x2 = Math.Round(curve.X2, 3);
+
+            double y1 = Math.Round(curve.Evaluate(x1), 3);
+            double y2 = Math.Round(curve.Evaluate(x2), 3);
+
+            return $"{x1:F3}_{x2:F3}_{y1:F3}_{y2:F3}";
+        }
+
+
+        private static string ExtractGroupingKey(string label)
+        {
+            // For example: "Gable Perpendicular Zone 1" => "Gable Perpendicular"
+            int zoneIndex = label.IndexOf("Zone", StringComparison.OrdinalIgnoreCase);
+            if (zoneIndex >= 0)
+            {
+                return label.Substring(0, zoneIndex).Trim();
+            }
+
+            return label.Trim(); // fallback
+        }
+
+        // Helper to extract a line key from zone label
+        // You will want to customize this based on your label format and how zones are assigned to curves
+        private static string ExtractLineKey(string label)
+        {
+            // For example: label = "Zone 3" -> return "Zone"
+            // Or if labels are like "LineA Zone 3" you could parse differently
+            var parts = label.Split(' ');
+            if (parts.Length >= 2)
+            {
+                // Return all except last part (assumed zone number)
+                return string.Join(" ", parts, 0, parts.Length - 1);
+            }
+            return label; // fallback
+        }
+
+
         private static void DrawCurve(Canvas canvas, ExternalGCpCurve curve, string label, Brush color, bool isNegative,
                                       double canvasWidth, double canvasHeight,
-                                      double xMin, double xMax, double yMin, double yMax)
+                                      double xMin, double xMax, double yMin, double yMax,
+                                      int zoneIndex)  // local index of this zone within the curve’s zones
         {
             Polyline line = new Polyline
             {
@@ -102,14 +156,17 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.Figure30_3
             double padding = 1;
             double circleDiameter = Math.Max(labelW, labelH) + padding * 2;
 
-            // Position at x=5
-            double labelX = 5;
-            labelX = Math.Max(xMin, Math.Min(xMax, labelX));
-            double px10 = ((Math.Log10(labelX) - Math.Log10(xMin)) / (Math.Log10(xMax) - Math.Log10(xMin))) * canvasWidth;
-            double y10 = curve.Evaluate(labelX);
-            double py10 = ((y10 - yMin) / (yMax - yMin)) * canvasHeight;
-            double circleCenterX = px10;
-            double circleCenterY = py10 - labelH / 2 - 2.5;
+            // Position labels starting near x=3, spaced horizontally by zoneIndex
+            double horizontalSpacing = 18; // pixels between labels
+            double startX = 3;
+            startX = Math.Max(xMin, Math.Min(xMax, startX));
+            double pxStart = ((Math.Log10(startX) - Math.Log10(xMin)) / (Math.Log10(xMax) - Math.Log10(xMin))) * canvasWidth;
+
+            double yAtStartX = curve.Evaluate(startX);
+            double pyAtStartX = ((yAtStartX - yMin) / (yMax - yMin)) * canvasHeight;
+
+            double circleCenterX = pxStart + zoneIndex * horizontalSpacing;
+            double circleCenterY = pyAtStartX - labelH / 2 - 2.5;
 
             // Draw the circle behind the label
             Ellipse circle = new Ellipse
@@ -167,7 +224,6 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.Figure30_3
             Canvas.SetTop(rightYLabel, rightPt.Y - rh / 2);
             canvas.Children.Add(rightYLabel);
         }
-
 
         private static void DrawGrid(Canvas canvas, double canvasWidth, double canvasHeight,
                                      double xMin, double xMax, double yMin, double yMax,

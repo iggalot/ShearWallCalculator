@@ -37,10 +37,10 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30
             low.RoofPos["Zone2e"] = new ExternalGCpCurve(10, 0.7, 100, 0.3);
             low.RoofPos["Zone1"] = new ExternalGCpCurve(10, 0.7, 100, 0.3);
 
-            low.Overhang["Zone3"] = new ExternalGCpCurve(10, 0.7, 100, 0.3);
-            low.Overhang["Zone2r"] = new ExternalGCpCurve(10, 0.7, 100, 0.3);
-            low.Overhang["Zone2e"] = new ExternalGCpCurve(10, 0.7, 100, 0.3);
-            low.Overhang["Zone1"] = new ExternalGCpCurve(10, 0.7, 100, 0.3);
+            low.Overhang["Zone3"] = new ExternalGCpCurve(10, -2.9, 200, -1.6);
+            low.Overhang["Zone2r"] = new ExternalGCpCurve(10, -2.9, 200, -2.3);
+            low.Overhang["Zone2e"] = new ExternalGCpCurve(10, -2.3, 200, -2.1);
+            low.Overhang["Zone1"] = new ExternalGCpCurve(10, -1.8, 100, -2.0);
 
             // High h/B >= 0.8
             high.RoofNeg["Zone3"] = new ExternalGCpCurve(10, -2.6, 200, -1.4);
@@ -53,10 +53,10 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30
             high.RoofPos["Zone2e"] = new ExternalGCpCurve(10, 0.7, 100, 0.3);
             high.RoofPos["Zone1"] = new ExternalGCpCurve(10, 0.7, 100, 0.3);
 
-            high.Overhang["Zone3"] = new ExternalGCpCurve(10, -2.0, 200, -1.0);
-            high.Overhang["Zone2e"] = new ExternalGCpCurve(10, -2.0, 200, -1.0);
-            high.Overhang["Zone2r"] = new ExternalGCpCurve(10, -2.0, 200, -1.0);
-            high.Overhang["Zone1"] = new ExternalGCpCurve(10, -1.4, 100, -0.8);
+            high.Overhang["Zone3"] = new ExternalGCpCurve(10, -3.7, 200, -1.9);
+            high.Overhang["Zone2e"] = new ExternalGCpCurve(10, -3.1, 200, -2.4);
+            high.Overhang["Zone2r"] = new ExternalGCpCurve(10, -2.9, 200, -2.3);
+            high.Overhang["Zone1"] = new ExternalGCpCurve(20, -1.4, 100, -2.0);
 
             if (ratio <= 0.5)
             {

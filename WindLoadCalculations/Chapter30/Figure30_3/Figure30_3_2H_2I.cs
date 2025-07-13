@@ -19,8 +19,8 @@
             // Roof Negative Curves
             RoofCurves_Neg["Zone1"] = new ExternalGCpCurve(10, a, 200, b1);
             RoofCurves_Neg["Zone2e"] = new ExternalGCpCurve(3, c, 50, -0.8, 1, amax);
-            RoofCurves_Neg["Zone2r"] = new ExternalGCpCurve(7, d, 200, -1.0, 1, amax);
-            RoofCurves_Neg["Zone3"] = new ExternalGCpCurve(10, -1.4, 100, -0.8, amin, 1000);
+            RoofCurves_Neg["Zone2r"] = new ExternalGCpCurve(7, d, 100, -1.0, 1, amax);
+            RoofCurves_Neg["Zone3"] = new ExternalGCpCurve(5, -3.6, 50, -1.0, amin, 1000);
 
             // Roof Positive Curves (fixed values)
             RoofCurves_Pos["Zone3"] = new ExternalGCpCurve(3, 0.9, 100, 0.3);
@@ -38,7 +38,7 @@
             // Overhang Curves
             OverhangCurves["Zone3"] = new ExternalGCpCurve(5, j, 50, -1.8, amin, 1000);
             OverhangCurves["Zone2r"] = new ExternalGCpCurve(7, i, 100, -1.8, 1, amax);
-            OverhangCurves["Zone2e"] = new ExternalGCpCurve(3, e, 50, -1.6, 1, amax);
+            OverhangCurves["Zone2e"] = new ExternalGCpCurve(3, g, 50, -1.6, 1, amax);
             OverhangCurves["Zone1"] = new ExternalGCpCurve(10, e, 200, f);
         }
     }

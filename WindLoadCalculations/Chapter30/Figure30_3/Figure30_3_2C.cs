@@ -16,8 +16,8 @@
             // ---- Roof: Negative Pressure Zones ----
             RoofCurves_Neg["Zone3r"] = new ExternalGCpCurve(4, -3.6, 50, -1.8);
             RoofCurves_Neg["Zone3e"] = new ExternalGCpCurve(10, -2.5, 150, -1.2);
-            RoofCurves_Neg["Zone2n"] = new ExternalGCpCurve(10, -2.5, 250, -1.0);
-            RoofCurves_Neg["Zone2r"] = new ExternalGCpCurve(10, -2.5, 250, -1.0);
+            RoofCurves_Neg["Zone2n"] = new ExternalGCpCurve(10, -2.5, 150, -1.2);
+            RoofCurves_Neg["Zone2r"] = new ExternalGCpCurve(10, -2.5, 150, -1.2);
             RoofCurves_Neg["Zone2e"] = new ExternalGCpCurve(20, -1.5, 300, -0.8);
             RoofCurves_Neg["Zone1"] = new ExternalGCpCurve(20, -1.5, 300, -0.8);
 
