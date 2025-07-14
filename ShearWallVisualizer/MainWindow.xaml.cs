@@ -439,7 +439,14 @@ namespace ShearWallVisualizer
         private void WindLoadInputControl_WindInputComplete(object sender, WindLoadInputControl.OnWindInputCompleteEventArgs e)
         {
             // save the input parameters for wind input
+            var version = e._version;
             windLoadParams = e._parameters;
+
+            // TODO: load the calculator (if it isnt already)
+
+
+
+
 
             if (windLoadParams == null) return;
             // Draw on the input control canvas
@@ -477,11 +484,26 @@ namespace ShearWallVisualizer
                 TabControlManager.RemoveTab(MainTabControl, tabWindResultsTabItem_MWFRS);
 
                 // Create the figure
-                figureCC = Chapter30FigureFactory_ASCE7_16.CreateFigure_ASCE7_16(
-                    buildingData.RoofType,
-                    buildingData.MeanRoofHeight,
-                    buildingData.BuildingWidth,
-                    buildingData.RoofPitch);
+                switch (version)
+                {
+                    case ASCE7_Versions.ASCE_VER_7_10:
+                        throw new NotImplementedException("Not implemented for ASCE 7.10");
+                        break;
+                    case ASCE7_Versions.ASCE_VER_7_16:
+                        figureCC = Chapter30FigureFactory_ASCE7_16.CreateFigure_ASCE7_16(
+                            buildingData.RoofType,
+                            buildingData.MeanRoofHeight,
+                            buildingData.BuildingWidth,
+                            buildingData.RoofPitch);
+                        break;
+                    case ASCE7_Versions.ASCE_VER_7_22:
+                        figureCC = Chapter30FigureFactory_ASCE7_22.CreateFigure_ASCE7_22(
+                            buildingData.RoofType,
+                            buildingData.MeanRoofHeight,
+                            buildingData.BuildingWidth,
+                            buildingData.RoofPitch);
+                        break;
+                }
 
                 if(figure30Title != null) figure30Title.Text = figureCC.ChartTitle;
                 if (figure30Criteria != null) figure30Criteria.Text = figureCC.ChartCriteria;

@@ -56,7 +56,7 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30
             high.Overhang["Zone3"] = new ExternalGCpCurve(10, -3.7, 200, -1.9);
             high.Overhang["Zone2e"] = new ExternalGCpCurve(10, -3.1, 200, -2.4);
             high.Overhang["Zone2r"] = new ExternalGCpCurve(10, -2.9, 200, -2.3);
-            high.Overhang["Zone1"] = new ExternalGCpCurve(20, -1.4, 100, -2.0);
+            high.Overhang["Zone1"] = new ExternalGCpCurve(20, -2.3, 100, -2.0);
 
             if (ratio <= 0.5)
             {

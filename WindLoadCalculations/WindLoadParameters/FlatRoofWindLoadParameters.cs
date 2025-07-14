@@ -7,9 +7,9 @@ namespace ShearWallCalculator.WindLoadCalculations
     {
         public override RoofAreaCalculator_Base RoofAreaCalculator { get; set; }
 
-        public override void ComputeEffectiveWindAreas_Roof(BuildingData bldg_data)
+        public override void ComputeEffectiveWindAreas_Roof(BuildingData bldg_data, ASCE7_Versions version)
         {
-            RoofAreaCalculator = RoofAreaCalculatorFactory.Create(bldg_data, this);
+            RoofAreaCalculator = RoofAreaCalculatorFactory.Create(bldg_data, this, version);
             RoofAreaCalculator.Compute(this, bldg_data);
         }
     }

@@ -1,11 +1,10 @@
 ﻿using ShearWallCalculator.BuildingInfo;
 using ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator;
-using System;
 using System.Collections.Generic;
 
 namespace ShearWallCalculator.WindLoadCalculations
 {
-    public class FlatRoofAreaCalculator_MWFRS : RoofAreaCalculator_Base
+    public class FlatRoofAreaCalculator_MWFRS_ASCE7_22 : RoofAreaCalculator_Base
     {
         /// <summary>
         /// Effective wind areas for roof

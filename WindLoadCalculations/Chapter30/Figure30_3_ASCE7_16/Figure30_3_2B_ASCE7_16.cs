@@ -35,7 +35,7 @@
             OverhangCurves["Zone2n"] = new ExternalGCpCurve(10, -3.5, 250, -2.0);
             OverhangCurves["Zone2r"] = new ExternalGCpCurve(10, -3.5, 250, -2.0);
             OverhangCurves["Zone2e"] = new ExternalGCpCurve(20, -2.5, 100, -1.5);
-            OverhangCurves["Zone1"] = new ExternalGCpCurve(10, -2.5, 100, -1.5);
+            OverhangCurves["Zone1"] = new ExternalGCpCurve(20, -2.5, 100, -1.5);
         }
     }
 }

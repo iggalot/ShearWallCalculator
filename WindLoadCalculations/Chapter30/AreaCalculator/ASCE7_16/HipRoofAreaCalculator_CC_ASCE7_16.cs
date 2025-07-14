@@ -6,7 +6,7 @@ using System.Windows;
 
 namespace ShearWallCalculator.WindLoadCalculations
 {
-    public class HipRoofAreaCalculator_CC : RoofAreaCalculator_Base
+    public class HipRoofAreaCalculator_CC_ASCE7_16 : RoofAreaCalculator_Base
     {
         /// <summary>
         /// Effective wind areas for roof

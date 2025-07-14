@@ -84,15 +84,17 @@ namespace ShearWallCalculator.WindLoadCalculations
             }
             else if (buildingData.RoofPitch <= 20)
             {
-                extGCpCurve = new Figure30_3_2E_2F_ASCE7_22(buildingData.MeanRoofHeight, buildingData.BuildingWidth);
+                extGCpCurve = new Figure30_3_2E_ASCE7_22();
             }
             else if (buildingData.RoofPitch <= 27)
             {
-                extGCpCurve = new Figure30_3_2G_ASCE7_22(buildingData.MeanRoofHeight, buildingData.BuildingWidth);
+                extGCpCurve = new Figure30_3_2F_ASCE7_22();
             }
-            else if (buildingData.RoofPitch <= 45)
+            else if (buildingData.RoofPitch > 27 && buildingData.RoofPitch < 45)
+                extGCpCurve = new Figure30_3_2F_2G_INTERPOLATED_ASCE7_22(buildingData.RoofPitch);
+            else if (buildingData.RoofPitch == 45)
             {
-                extGCpCurve = new Figure30_3_2H_2I_ASCE7_22(buildingData.MeanRoofHeight, buildingData.BuildingWidth, buildingData.RoofPitch);
+                extGCpCurve = new Figure30_3_2G_ASCE7_22();
             }
             else
             {

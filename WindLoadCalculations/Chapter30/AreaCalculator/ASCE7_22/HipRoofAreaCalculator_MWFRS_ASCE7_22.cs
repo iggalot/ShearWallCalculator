@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace ShearWallCalculator.WindLoadCalculations
 {
-    public class HipRoofAreaCalculator_MWFRS : RoofAreaCalculator_Base
+    public class HipRoofAreaCalculator_MWFRS_ASCE7_22 : RoofAreaCalculator_Base
     {
         public static double CritDim_a { get; set; }
         /// <summary>

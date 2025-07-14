@@ -41,7 +41,7 @@ namespace ShearWallCalculator.WindLoadCalculations
 
         private void GetExtGCpCurve_FlatRoof(WindLoadParameters_Base p)
         {
-            extGCpCurve = new Figure30_3_2A();
+            extGCpCurve = new Figure30_3_2A_ASCE7_16();
         }
 
         private void GetExtGCpCurve_GableRoof(WindLoadParameters_Base p)
@@ -52,19 +52,19 @@ namespace ShearWallCalculator.WindLoadCalculations
             }
             else if (buildingData.RoofPitch <= 7)
             {
-                extGCpCurve = new Figure30_3_2A();
+                extGCpCurve = new Figure30_3_2A_ASCE7_16();
             }
             else if (buildingData.RoofPitch <= 20)
             {
-                extGCpCurve = new Figure30_3_2B();
+                extGCpCurve = new Figure30_3_2B_ASCE7_16();
             }
             else if (buildingData.RoofPitch <= 27)
             {
-                extGCpCurve = new Figure30_3_2C();
+                extGCpCurve = new Figure30_3_2C_ASCE7_16();
             }
             else if (buildingData.RoofPitch <= 45)
             {
-                extGCpCurve = new Figure30_3_2D();
+                extGCpCurve = new Figure30_3_2D_ASCE7_16();
             }
             else
             {
@@ -80,19 +80,19 @@ namespace ShearWallCalculator.WindLoadCalculations
             }
             else if (buildingData.RoofPitch <= 7)
             {
-                extGCpCurve = new Figure30_3_2A();
+                extGCpCurve = new Figure30_3_2A_ASCE7_16();
             }
             else if (buildingData.RoofPitch <= 20)
             {
-                extGCpCurve = new Figure30_3_2E_2F(buildingData.MeanRoofHeight, buildingData.BuildingWidth);
+                extGCpCurve = new Figure30_3_2E_2F_ASCE7_16(buildingData.MeanRoofHeight, buildingData.BuildingWidth);
             }
             else if (buildingData.RoofPitch <= 27)
             {
-                extGCpCurve = new Figure30_3_2G(buildingData.MeanRoofHeight, buildingData.BuildingWidth);
+                extGCpCurve = new Figure30_3_2G_ASCE7_16(buildingData.MeanRoofHeight, buildingData.BuildingWidth);
             }
             else if (buildingData.RoofPitch <= 45)
             {
-                extGCpCurve = new Figure30_3_2H_2I(buildingData.MeanRoofHeight, buildingData.BuildingWidth, buildingData.RoofPitch);
+                extGCpCurve = new Figure30_3_2H_2I_ASCE7_16(buildingData.MeanRoofHeight, buildingData.BuildingWidth, buildingData.RoofPitch);
             }
             else
             {

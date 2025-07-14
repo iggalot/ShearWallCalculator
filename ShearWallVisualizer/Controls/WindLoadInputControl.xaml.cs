@@ -16,11 +16,13 @@ namespace ShearWallVisualizer.Controls
         public class OnWindInputCompleteEventArgs : EventArgs
         {
             public WindLoadParameters_Base _parameters { get; }
+            public ASCE7_Versions _version { get; }
             public BuildingData _bldg_data { get; }
 
-            public OnWindInputCompleteEventArgs(WindLoadParameters_Base parameters)
+            public OnWindInputCompleteEventArgs(WindLoadParameters_Base parameters, ASCE7_Versions version)
             {
                 _parameters = parameters;
+                _version = version;
             }
         }
 
@@ -77,9 +79,9 @@ namespace ShearWallVisualizer.Controls
             cmbWindAnalysisType.SelectedIndex = 0;
         }
 
-        public virtual void OnWindInputComplete(WindLoadParameters_Base parameters)
+        public virtual void OnWindInputComplete(WindLoadParameters_Base parameters, ASCE7_Versions version)
         {
-            WindInputComplete?.Invoke(this, new OnWindInputCompleteEventArgs(parameters));
+            WindInputComplete?.Invoke(this, new OnWindInputCompleteEventArgs(parameters, version));
         }
 
         public static Brush GetColorForRegion(string region)
@@ -185,14 +187,31 @@ namespace ShearWallVisualizer.Controls
                 return;
             }
 
-            var parameters = GetWindLoadParameters(bldgData.RoofType);
-            parameters.ComputeEffectiveWindAreas_Roof(bldgData);
+            var version_index = cmbASCEVersion.SelectedIndex;
+            ASCE7_Versions version;
+            switch (version_index)
+            {
+                case (int)ASCE7_Versions.ASCE_VER_7_10:
+                    version = ASCE7_Versions.ASCE_VER_7_10;
+                    break;
+                case (int)ASCE7_Versions.ASCE_VER_7_16:
+                    version = ASCE7_Versions.ASCE_VER_7_16;
+                    break;
+                case (int)ASCE7_Versions.ASCE_VER_7_22:
+                    version = ASCE7_Versions.ASCE_VER_7_22;
+                    break;
+                default:
+                    version = ASCE7_Versions.ASCE_VER_7_22;
+                    break;
+            }
+            var parameters = GetWindLoadParameters(bldgData.RoofType, version);
+            parameters.ComputeEffectiveWindAreas_Roof(bldgData, version);
 
-            OnWindInputComplete(parameters); // raise the event where input has been completed
+            OnWindInputComplete(parameters, version); // raise the event where input has been completed
         }
 
         // Method to retrieve parameters from the input fields
-        private WindLoadParameters_Base GetWindLoadParameters(RoofTypes roof_type)
+        private WindLoadParameters_Base GetWindLoadParameters(RoofTypes roof_type, ASCE7_Versions version)
         {
 
             double windSpeed = double.Parse(WindSpeedTextBox.Text);
@@ -202,7 +221,6 @@ namespace ShearWallVisualizer.Controls
             string risk = ((ComboBoxItem)RiskCategoryComboBox.SelectedItem).Content.ToString();
             string enclosure = ((ComboBoxItem)EnclosureComboBox.SelectedItem).Content.ToString();
             WindLoadCalculationTypes analysis_type = (WindLoadCalculationTypes)cmbWindAnalysisType.SelectedIndex;
-
             string exposure_string = ((ComboBoxItem)ExposureCategoryComboBox.SelectedItem).Content.ToString();
             WindExposureCategories exposure;
 
@@ -235,7 +253,7 @@ namespace ShearWallVisualizer.Controls
                 );
             if(bldgData != null)
             {
-                windParams.ComputeEffectiveWindAreas_Roof(bldgData);
+                windParams.ComputeEffectiveWindAreas_Roof(bldgData, version);
             } else
             {
                 windParams = null;

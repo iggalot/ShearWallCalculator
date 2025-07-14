@@ -10,7 +10,7 @@
     {
         public Figure30_3_2A_ASCE7_22()
         {
-            ChartTitle = "ASCE 7-16 Figure 30-3-2A";
+            ChartTitle = "ASCE 7-22 Figure 30-3-2A";
             ChartCriteria = "h <= 60ft, slope <= 7deg";
 
             // Positive Pressure Roof Zones

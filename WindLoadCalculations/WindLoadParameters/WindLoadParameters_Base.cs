@@ -24,6 +24,6 @@ namespace ShearWallCalculator.WindLoadCalculations
         /// </summary>
         public abstract RoofAreaCalculator_Base RoofAreaCalculator { get; set; }
 
-        public abstract void ComputeEffectiveWindAreas_Roof(BuildingData buildingData);
+        public abstract void ComputeEffectiveWindAreas_Roof(BuildingData buildingData, ASCE7_Versions version);
     }
 }

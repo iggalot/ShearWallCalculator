@@ -1,5 +1,4 @@
 ﻿using ShearWallCalculator.BuildingInfo;
-using ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator;
 using System;
 using System.ComponentModel;
 
@@ -13,9 +12,9 @@ namespace ShearWallCalculator.WindLoadCalculations
     }
     public enum ASCE7_Versions
     {
-        ASCE_VER_7_10 = 1,
-        ASCE_VER_7_16 = 2,
-        ASCE_VER_7_22 = 3
+        ASCE_VER_7_10 = 0,
+        ASCE_VER_7_16 = 1,
+        ASCE_VER_7_22 = 2
     }
 
     public enum WindLoadCalculationTypes
