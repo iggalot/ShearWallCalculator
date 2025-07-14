@@ -6,9 +6,9 @@
     /// h <= 60ft
     /// 20deg < slope <= 27deg
     /// </summary>
-    public class Figure30_3_2G : Chapter30_BaseFigure
+    public class Figure30_3_2G_ASCE7_22 : Chapter30_BaseFigure
     {
-        public Figure30_3_2G(double h, double b)
+        public Figure30_3_2G_ASCE7_22(double h, double b)
         {
             ChartTitle = "ASCE 7-16 Figure 30-3-2G - Hip Roofs";
             ChartCriteria = "h <= 60ft, 20deg < slope <= 27deg";

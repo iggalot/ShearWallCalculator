@@ -477,7 +477,7 @@ namespace ShearWallVisualizer
                 TabControlManager.RemoveTab(MainTabControl, tabWindResultsTabItem_MWFRS);
 
                 // Create the figure
-                figureCC = Chapter30FigureFactory.CreateFigure(
+                figureCC = Chapter30FigureFactory_ASCE7_16.CreateFigure_ASCE7_16(
                     buildingData.RoofType,
                     buildingData.MeanRoofHeight,
                     buildingData.BuildingWidth,

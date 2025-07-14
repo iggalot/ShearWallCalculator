@@ -1,8 +1,8 @@
 ﻿namespace ShearWallCalculator.WindLoadCalculations.Chapter30
 {
-    public class Figure30_3_2H_2I : Chapter30_BaseFigure
+    public class Figure30_3_2H_2I_ASCE7_16 : Chapter30_BaseFigure
     {
-        public Figure30_3_2H_2I(double h, double b, double slope)
+        public Figure30_3_2H_2I_ASCE7_16(double h, double b, double slope)
         {
             ChartTitle = "ASCE 7-16 Figure 30-3-2H and 2I - Hip Roofs";
             ChartCriteria = "h <= 60ft, 27deg < slope <= 45deg";

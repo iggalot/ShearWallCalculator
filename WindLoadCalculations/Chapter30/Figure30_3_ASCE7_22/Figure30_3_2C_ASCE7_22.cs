@@ -6,9 +6,9 @@
     /// h <= 60ft
     /// 20deg < slope <= 27deg
     /// </summary>
-    public class Figure30_3_2C : Chapter30_BaseFigure
+    public class Figure30_3_2C_ASCE7_22 : Chapter30_BaseFigure
     {
-        public Figure30_3_2C()
+        public Figure30_3_2C_ASCE7_22()
         {
             ChartTitle = "ASCE 7-16 Figure 30-3-2C - Gable Roofs";
             ChartCriteria = "h <= 60ft, 20deg < slope <= 27deg";

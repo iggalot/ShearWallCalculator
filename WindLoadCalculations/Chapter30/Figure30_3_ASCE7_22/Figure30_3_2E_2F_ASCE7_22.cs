@@ -9,14 +9,14 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30
     /// h <= 60ft
     /// 7deg < slope <= 20deg
     /// </summary>
-    public class Figure30_3_2E_2F:Chapter30_BaseFigure
+    public class Figure30_3_2E_2F_ASCE7_22:Chapter30_BaseFigure
     {
         /// <summary>
         /// ASCE7-16 Figure 30-3-2E (Roof) and 2F (Overhang)
         /// </summary>
         /// <param name="h">mean roof height</param>
         /// <param name="B">width of building -- normal to wind</param>
-        public Figure30_3_2E_2F(double h, double B)
+        public Figure30_3_2E_2F_ASCE7_22(double h, double B)
         {
             ChartTitle = "ASCE 7-16 Figure 30-3-2E and 2F - Hip Roofs";
             ChartCriteria = "h <= 60ft, 7deg < slope <= 20deg";
