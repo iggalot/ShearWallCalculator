@@ -121,7 +121,27 @@ namespace ShearWallCalculator.WindLoadCalculations
                 effWindAreas_Roof.Add(2, new EffectiveWindArea_Roof("Zone2", new List<Point> { p2, p3, p6, p7, p4, p5, D, C }, null));
                 effWindAreas_Roof.Add(3, new EffectiveWindArea_Roof("Zone1", new List<Point> { p3, p4, p7, p6 }, null));
 
+                // left triangle
+                Point p40 = new Point(p2.X, p2.Y + inset_dist);
+                Point p41 = new Point(C.X - inset_dist, C.Y);
+                Point p42 = new Point(bldg_data.BuildingWidth - inset_dist - CritDim_a, CritDim_a);
+                Point p43 = new Point(bldg_data.BuildingWidth - CritDim_a, CritDim_a);
 
+                effWindAreas_Roof.Add(4, new EffectiveWindArea_Roof("Zone3", new List<Point> { A, p2, p43, E }, null));
+                effWindAreas_Roof.Add(5, new EffectiveWindArea_Roof("Zone2", new List<Point> { p2, C, p43, p42, p41, p40 }, null));
+                effWindAreas_Roof.Add(6, new EffectiveWindArea_Roof("Zone1", new List<Point> { p40, p41, p42 }, null));
+
+                // right triangle
+                Point p50 = new Point(p4.X, p4.Y + inset_dist);
+                Point p51 = new Point(C.X - inset_dist, C.Y);
+                Point p52 = new Point(bldg_data.BuildingLength - CritDim_a, bldg_data.BuildingWidth - inset_dist - CritDim_a);
+                Point p53 = new Point(bldg_data.BuildingLength - CritDim_a, bldg_data.BuildingWidth - CritDim_a);
+                Point p54 = new Point(D.X + inset_dist, D.Y);
+                Point p55 = new Point(bldg_data.BuildingLength - CritDim_a, CritDim_a + inset_dist);
+
+                effWindAreas_Roof.Add(7, new EffectiveWindArea_Roof("Zone3", new List<Point> { B, F, p53, p55 }, null));
+                effWindAreas_Roof.Add(8, new EffectiveWindArea_Roof("Zone2", new List<Point> { p4, p50, p54, p52, p53, D }, null));
+                effWindAreas_Roof.Add(9, new EffectiveWindArea_Roof("Zone1", new List<Point> { p50, p52, p54 }, null));
 
 
 
