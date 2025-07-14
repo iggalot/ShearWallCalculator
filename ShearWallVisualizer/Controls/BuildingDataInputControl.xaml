@@ -62,11 +62,6 @@
                     <!-- Compute Button -->
                     <Button Content="Create Building" Width="150" Margin="10" Grid.ColumnSpan="2" Click="ComputeButton_Click"/>
                 </StackPanel>
-                <!-- Buttons -->
-                <StackPanel Name="stackPanelButtons" Visibility="Collapsed" Grid.Row="4" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="5">
-                    <Button Content="Accept" Width="75" Margin="5" Click="OkButton_Click" />
-                    <Button Content="Cancel" Width="75" Margin="5" Click="CancelButton_Click" />
-                </StackPanel>
             </StackPanel>
             <Canvas Name="cnvCanvas" Width="250" Height="250" Margin="10"  Background="LightGray"></Canvas>
         </StackPanel>

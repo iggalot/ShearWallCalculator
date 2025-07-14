@@ -46,7 +46,6 @@ namespace ShearWallVisualizer.Controls
 
         private void BuildingDataInputControl_Loaded(object sender, RoutedEventArgs e)
         {
-            stackPanelButtons.Visibility = Visibility.Collapsed;
 
             cmbRoofType.Items.Clear();
 
@@ -107,19 +106,8 @@ namespace ShearWallVisualizer.Controls
                 RoofType = roof_type
             };
 
-            // reveal the buttons
-            stackPanelButtons.Visibility = Visibility.Visible;
-        }
-
-        private void OkButton_Click(object sender, RoutedEventArgs e)
-        {
             this.bldgData = bldgData_temp;
             OnBuildingDataInputComplete(bldgData); // raise the event where input has been completed
-        }
-
-        private void CancelButton_Click(object sender, RoutedEventArgs e)
-        {
-            bldgData_temp = bldgData;
         }
     }
 }
