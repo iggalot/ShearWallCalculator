@@ -47,6 +47,8 @@ namespace ShearWallVisualizer
     {
         public ShearWallCalculatorBase Calculator = new ShearWallCalculator_RigidDiaphragm();
         public WindLoadParameters_Base windLoadParams { get; set; }
+        public ASCE7_Versions windVersion { get; set;
+        }
         public BuildingData buildingData { get; set; } = null;
         public RoofAreaCalculator_Base roofAreaCalculator { get; set; }
 
@@ -148,10 +150,10 @@ namespace ShearWallVisualizer
                 TabControlManager.RemoveAllTabs(MainTabControl);
                 TabControlManager.ReAddTab(MainTabControl, "tabBuildingDataControlTabItem");
                 MainTabControl.SelectedIndex = 0;
+
+                windVersion = ASCE7_Versions.ASCE_VER_7_16;  // set a default value for the wind load calculator type
             };
         }
-
-        
 
         private void UpdateTabs()
         {
@@ -160,7 +162,7 @@ namespace ShearWallVisualizer
             tabBuildingDataControlTabItem.Content = ctrol_bldg_input;
 
             // create the wind load input control
-            var ctrol_wind_input = new WindLoadInputControl(buildingData);
+            var ctrol_wind_input = new WindLoadInputControl(buildingData, windVersion);
             ctrol_wind_input.WindInputComplete += WindLoadInputControl_WindInputComplete;
             tabWindInputControlTabItem.Content = ctrol_wind_input;
 
@@ -420,7 +422,6 @@ namespace ShearWallVisualizer
         private void BuildingDataInputControl_BuildingDataInputComplete(object sender, BuildingDataInputControl.OnBuildingDataInputCompleteEventArgs e)
         {
             buildingData = e._bldg_data;
-            UpdateTabs();
 
             //TabControlManager.ReAddTab(MainTabControl, tabWindInputControlTabItem);
 
@@ -428,6 +429,10 @@ namespace ShearWallVisualizer
 
             // Add the tabWindInputControlTabItem
             TabControlManager.ReAddTab(MainTabControl, "tabWindInputControlTabItem");
+            WindLoadInputControl temp = tabWindInputControlTabItem.Content as WindLoadInputControl;
+            tabWindInputControlTabItem.Content = new WindLoadInputControl(buildingData, temp.Version, temp.Parameters);
+
+            UpdateTabs();
 
             Update();
         }
@@ -439,16 +444,12 @@ namespace ShearWallVisualizer
         private void WindLoadInputControl_WindInputComplete(object sender, WindLoadInputControl.OnWindInputCompleteEventArgs e)
         {
             // save the input parameters for wind input
-            var version = e._version;
+            windVersion = e._version;
             windLoadParams = e._parameters;
 
             // TODO: load the calculator (if it isnt already)
 
 
-
-
-
-            if (windLoadParams == null) return;
             // Draw on the input control canvas
             var inputControl = tabWindInputControlTabItem.Content as WindLoadInputControl;
             if (inputControl != null)
@@ -484,7 +485,7 @@ namespace ShearWallVisualizer
                 TabControlManager.RemoveTab(MainTabControl, tabWindResultsTabItem_MWFRS);
 
                 // Create the figure
-                switch (version)
+                switch (windVersion)
                 {
                     case ASCE7_Versions.ASCE_VER_7_10:
                         throw new NotImplementedException("Not implemented for ASCE 7.10");

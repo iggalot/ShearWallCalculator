@@ -27,6 +27,9 @@ namespace ShearWallVisualizer.Controls
         }
 
         public BuildingData bldgData { get; set; } = null;
+        public WindLoadParameters_Base Parameters { get; set; } = null;
+        public ASCE7_Versions Version { get; set; }
+
 
         public WindLoadInputControl()
         {
@@ -35,18 +38,30 @@ namespace ShearWallVisualizer.Controls
             this.Loaded += WindLoadInputControl_Loaded;
         }
 
-        public WindLoadInputControl(BuildingData bldg_data)
+        public WindLoadInputControl(BuildingData bldg_data, WindLoadParameters_Base parameters = null)
+        {
+            InitializeComponent();
+
+            this.Parameters = parameters;
+            this.bldgData = bldg_data;
+
+            this.Loaded += WindLoadInputControl_Loaded;
+        }
+
+        public WindLoadInputControl(BuildingData bldg_data, ASCE7_Versions version, WindLoadParameters_Base parameters = null)
         {
             InitializeComponent();
 
             this.bldgData = bldg_data;
+            this.Version = version;
+            this.Parameters = parameters;
 
             this.Loaded += WindLoadInputControl_Loaded;
         }
 
         private void WindLoadInputControl_Loaded(object sender, RoutedEventArgs e)
         {
-
+            // populate the bulding data summary
             if(this.bldgData == null)
             {
                 spBuildingData.Visibility = Visibility.Collapsed;
@@ -61,22 +76,67 @@ namespace ShearWallVisualizer.Controls
                 tbMeanRoofHeight.Text = this.bldgData.MeanRoofHeight.ToString("F2");
             }
 
+            // populate the combo boxes.
             cmbWindAnalysisType.Items.Clear();
             cmbASCEVersion.Items.Clear();
 
-            foreach (var value in Enum.GetValues(typeof(ASCE7_Versions))) 
+            foreach (var value in Enum.GetValues(typeof(ASCE7_Versions)))
             {
                 cmbASCEVersion.Items.Add(value);
             }
 
-            cmbASCEVersion.SelectedIndex = 1;
 
             foreach (var value in Enum.GetValues(typeof(WindLoadCalculationTypes)))
             {
                 cmbWindAnalysisType.Items.Add(value);
             }
 
-            cmbWindAnalysisType.SelectedIndex = 0;
+            // populate existing parameters if any
+            if (this.Parameters != null)
+            {
+                WindSpeedTextBox.Text = Parameters.WindSpeed.ToString();
+                KztTextBox.Text = Parameters.Kzt.ToString();
+                KdTextBox.Text = Parameters.Kd.ToString();
+                ImportanceFactorTextBox.Text = Parameters.ImportanceFactor.ToString();
+
+                bool found_analysis = false;
+                foreach (WindLoadCalculationTypes item in Enum.GetValues(typeof(WindLoadCalculationTypes)))
+                {
+                    if (item == Parameters.AnalysisType)
+                    {
+                        cmbWindAnalysisType.SelectedIndex = (int)item;
+                        found_analysis = true;
+                        break;
+                    }
+                }
+                if (found_analysis == false)
+                {
+                    throw new Exception("ERROR:  In WindLoadInputControl_Loaded() -- AnalysisType " + Parameters.AnalysisType.ToString() + " not found.");
+                }
+
+                bool found_version = false;
+                foreach (ASCE7_Versions item in Enum.GetValues(typeof(ASCE7_Versions)))
+                {
+                    if (item == Version)
+                    {
+                        cmbASCEVersion.SelectedIndex = (int)item;
+                        found_version = true;
+                        break;
+                    }
+                }
+                if (found_version == false)
+                {
+                    throw new Exception("ERROR:  In WindLoadInputControl_Loaded() -- Version " + Version.ToString() + " not found.");
+                }
+
+            } else
+            {
+                cmbWindAnalysisType.SelectedIndex = (int)WindLoadCalculationTypes.COMPONENT_AND_CLADDING;
+                cmbASCEVersion.SelectedIndex = (int)ASCE7_Versions.ASCE_VER_7_16;
+            }
+
+
+
         }
 
         public virtual void OnWindInputComplete(WindLoadParameters_Base parameters, ASCE7_Versions version)
@@ -204,15 +264,16 @@ namespace ShearWallVisualizer.Controls
                     version = ASCE7_Versions.ASCE_VER_7_22;
                     break;
             }
-            var parameters = GetWindLoadParameters(bldgData.RoofType, version);
-            parameters.ComputeEffectiveWindAreas_Roof(bldgData, version);
+            Parameters = GetWindLoadParameters(bldgData.RoofType, version);
+            Parameters.ComputeEffectiveWindAreas_Roof(bldgData, version);
 
-            OnWindInputComplete(parameters, version); // raise the event where input has been completed
+            OnWindInputComplete(Parameters, version); // raise the event where input has been completed
         }
 
         // Method to retrieve parameters from the input fields
         private WindLoadParameters_Base GetWindLoadParameters(RoofTypes roof_type, ASCE7_Versions version)
         {
+            Version = version;
 
             double windSpeed = double.Parse(WindSpeedTextBox.Text);
             double kd = double.Parse(KdTextBox.Text);
