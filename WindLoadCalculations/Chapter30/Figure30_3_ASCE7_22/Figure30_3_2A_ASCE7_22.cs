@@ -5,7 +5,7 @@
     /// Gable Roofs
     /// h <= 60ft
     /// slope <= 7deg
-    /// </summary>I'm lost
+    /// </summary>
     public class Figure30_3_2A_ASCE7_22 : Chapter30_BaseFigure
     {
         public Figure30_3_2A_ASCE7_22()

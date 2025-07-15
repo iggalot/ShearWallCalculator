@@ -1,16 +1,16 @@
 ﻿namespace ShearWallCalculator.WindLoadCalculations.Chapter30
 {
     /// <summary>
-    /// ASCE7-16 Figure 30-3-2G
+    /// ASCE7-16 Interpolated Figures 30-3-2F && 30-3-2G
     /// Hip Roofs
     /// h <= 60ft
-    /// slope = 45 deg
+    /// 27deg < slope < 45deg
     /// </summary>
     public class Figure30_3_2F_2G_INTERPOLATED_ASCE7_22 : Chapter30_BaseFigure
     {
         public Figure30_3_2F_2G_INTERPOLATED_ASCE7_22(double slope)
         {
-            ChartTitle = "ASCE 7-22 Figure 30-3-2G - Hip Roofs";
+            ChartTitle = "ASCE 7-22 Interpolated 30-3-2G - Hip Roofs";
             ChartCriteria = "h <= 60ft, 27deg < slope < 45deg";
 
             Figure30_3_2F_ASCE7_22 f30_3_2F = new Figure30_3_2F_ASCE7_22();

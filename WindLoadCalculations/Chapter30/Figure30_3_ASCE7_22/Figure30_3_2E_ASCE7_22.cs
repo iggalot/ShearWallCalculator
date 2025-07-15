@@ -15,7 +15,7 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30
         /// </summary>
         public Figure30_3_2E_ASCE7_22()
         {
-            ChartTitle = "ASCE 7-22 Figure 30-3-2E and 2F - Hip Roofs";
+            ChartTitle = "ASCE 7-22 Figure 30-3-2E - Hip Roofs";
             ChartCriteria = "h <= 60ft, 7deg < slope <= 20deg";
             // ---- Roof: Negative Pressure Zones ----
             RoofCurves_Neg["Zone3"] = new ExternalGCpCurve(10, -2.6, 200, -1.4);
