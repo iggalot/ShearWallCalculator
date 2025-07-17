@@ -169,7 +169,7 @@ namespace ShearWallVisualizer
             // create the wind load results control
             ContentControl ctrol_wind_results1 = new WindLoadResultsControl_MWFRS(windLoadParams, buildingData);
             tabWindResultsTabItem_MWFRS.Content = ctrol_wind_results1;
-            var ctrol_wind_results2 = new WindLoadResultsControl_CC(windLoadParams, buildingData);
+            var ctrol_wind_results2 = new WindLoadResultsControl_CC(Calculator);
             tabWindResultsTabItem_CC.Content = ctrol_wind_results2;
         }
 
@@ -489,7 +489,6 @@ namespace ShearWallVisualizer
                 {
                     case ASCE7_Versions.ASCE_VER_7_10:
                         throw new NotImplementedException("Not implemented for ASCE 7.10");
-                        break;
                     case ASCE7_Versions.ASCE_VER_7_16:
                         figureCC = Chapter30FigureFactory_ASCE7_16.CreateFigure_ASCE7_16(
                             buildingData.RoofType,

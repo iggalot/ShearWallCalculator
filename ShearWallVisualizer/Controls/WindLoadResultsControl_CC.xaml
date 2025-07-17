@@ -6,42 +6,53 @@
              xmlns:local="clr-namespace:ShearWallVisualizer.Controls"
              mc:Ignorable="d" 
              >
-    <Grid Margin="10" Background="LightBlue">
-        <!-- Define Grid Layout -->
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
-        <StackPanel Orientation="Horizontal">
+    <Border>
+        <StackPanel Orientation="Vertical">
+            <StackPanel Orientation="Horizontal" Background="AliceBlue">
+                <TextBlock x:Name="tbVersion" Text="VERSION XXX" FontSize="18" FontWeight="Bold" Width="Auto"/>
+                <TextBlock Text="  Components and Cladding Results" FontWeight="Bold" FontSize="18" Width="Auto"/>
+            </StackPanel>
+            <Grid Margin="10" Background="LightBlue">
+                <!-- Define Grid Layout -->
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
 
-            <!-- Results Controls (Right Column) -->
-            <StackPanel Name="spResultsAndCanvas" Grid.Row="0" Grid.Column="0" Orientation="Vertical" HorizontalAlignment="Left" Margin="10">
-                <!-- Importance Factor -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                    <TextBlock Text="qh (psf) = " VerticalAlignment="Center" />
-                    <TextBlock Name="tbl_qh" Width="150"  Text=""/>
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                    <TextBlock Text="theta (deg) = " VerticalAlignment="Center" />
-                    <TextBlock Name="tbl_theta" Width="150"  Text=""/>
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                    <TextBlock Text="h/L = " VerticalAlignment="Center"/>
-                    <TextBlock Name="tbl_hOverL" Width="150" Text=""/>
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                    <TextBlock Text="h (ft) = " VerticalAlignment="Center"/>
-                    <TextBlock Name="tbl_h" Width="150" Text=""/>
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                    <TextBlock Text="Wind Orientation = " VerticalAlignment="Center"/>
-                    <TextBlock Name="tbl_windOrientation" Width="150" Text=""/>
-                </StackPanel>
-                <!-- Display Results of MWFRS Calculation -->
-                <TextBlock Text="Results (Comp. And Clad.)" Margin="10"/>
-                <DataGrid x:Name="WallResultsDataGrid" 
+                <StackPanel Orientation="Horizontal">
+                    <!-- Results Controls (Right Column) -->
+                    <StackPanel Name="spResultsAndCanvas" Grid.Row="0" Grid.Column="0" Orientation="Vertical" HorizontalAlignment="Left" Margin="10">
+                        <!-- Importance Factor -->
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                            <TextBlock Text="qh (psf) = " VerticalAlignment="Center" />
+                            <TextBlock Name="tbl_qh" Width="150"  Text=""/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                <TextBlock Text="h (ft) = " VerticalAlignment="Center"/>
+                                <TextBlock Name="tbl_h" Width="150" Text=""/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                <TextBlock Text="theta (deg) = " VerticalAlignment="Center" />
+                                <TextBlock Name="tbl_theta" Width="150"  Text=""/>
+                            </StackPanel>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                <TextBlock Text="h/L = " VerticalAlignment="Center"/>
+                                <TextBlock Name="tbl_hOverL" Width="150" Text=""/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <TextBlock Text="h/B = " VerticalAlignment="Center"/>
+                                <TextBlock Name="tbl_hOverB" Width="150" Text=""/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Display Results of MWFRS Calculation -->
+                        <TextBlock Text="Results (Comp. And Clad.)" Margin="10"/>
+                        <DataGrid x:Name="WallResultsDataGrid" 
                   AutoGenerateColumns="True"
                   HeadersVisibility="Column"
                   CanUserAddRows="False"
@@ -49,11 +60,11 @@
                       Width="Auto"
                       Height="Auto"
                       FontSize="10">
-                </DataGrid>
+                        </DataGrid>
 
-                <!-- Display Roof Zone Pressure Results -->
-                <TextBlock Text="Roof Zone Pressures" Margin="10"/>
-                <DataGrid x:Name="RoofResultsDataGrid"
+                        <!-- Display Roof Zone Pressure Results -->
+                        <TextBlock Text="Roof Zone Pressures" Margin="10"/>
+                        <DataGrid x:Name="RoofResultsDataGrid"
                   AutoGenerateColumns="True"
                   HeadersVisibility="Column"
                   CanUserAddRows="False"
@@ -61,18 +72,20 @@
                       Width="Auto"
                       Height="Auto"
                       FontSize="10">
-                </DataGrid>
-            </StackPanel>
-            <StackPanel Orientation="Vertical" Grid.Column="1" Margin="5">
-                <Canvas x:Name="cnvWindLoadResultCanvasCC" Width="200" Height="200" Background="Transparent"></Canvas>
+                        </DataGrid>
+                    </StackPanel>
+                    <StackPanel Orientation="Vertical" Grid.Column="1" Margin="5">
+                        <Canvas x:Name="cnvWindLoadResultCanvasCC" Width="200" Height="200" Background="Transparent"></Canvas>
 
-                <!-- Ae vs GCp coefficient curve-->
-                <StackPanel Orientation="Vertical" Margin="0 15 0 0">
-                    <TextBlock x:Name="txtFigureTitle" Text="Title" FontSize="12" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center"  />
-                    <Canvas x:Name="cnvFigure30_3" Width="200" Height="200" Background="White"></Canvas>
-                    <TextBlock x:Name="txtFigureCriteria" Text="Criteria" Height="25" FontSize="10" FontWeight="Bold"/>
+                        <!-- Ae vs GCp coefficient curve-->
+                        <StackPanel Orientation="Vertical" Margin="0 15 0 0">
+                            <TextBlock x:Name="txtFigureTitle" Text="Title" FontSize="12" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center"  />
+                            <Canvas x:Name="cnvFigure30_3" Width="200" Height="200" Background="White"></Canvas>
+                            <TextBlock x:Name="txtFigureCriteria" Text="Criteria" Height="25" FontSize="10" FontWeight="Bold"/>
+                        </StackPanel>
+                    </StackPanel>
                 </StackPanel>
-            </StackPanel>
+            </Grid>
         </StackPanel>
-    </Grid>
+    </Border>
 </UserControl>
