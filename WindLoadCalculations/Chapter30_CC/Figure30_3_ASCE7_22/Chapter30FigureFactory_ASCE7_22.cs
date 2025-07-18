@@ -27,7 +27,7 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.Figure30_3
                         return new Figure30_3_2E_ASCE7_22();
                     else if (slope <= 27)
                         return new Figure30_3_2F_ASCE7_22();
-                    else if (slope == 45)
+                    else if (slope >= 45)
                         return new Figure30_3_2G_ASCE7_22();
                     else
                         return new Figure30_3_2F_2G_INTERPOLATED_ASCE7_22(slope);

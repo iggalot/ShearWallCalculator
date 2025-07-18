@@ -30,7 +30,7 @@ namespace ShearWallVisualizer.Controls
             WindCalculated?.Invoke(this, new OnWindCalculatedEventArgs(parameters, wall_results, roof_results));
         }
 
-        WindLoadCalculator_Base Calculator { get; set; } // the calculator for whic this control is based
+        WindLoadCalculator_Base windLoadCalculator { get; set; } = null; // the calculator for whic this control is based
 
         public List<WindLoadCalculator_MWFRS_ASCE7_10.WindPressureResult_Wall_MWFRS> wall_results = new List<WindLoadCalculator_MWFRS_ASCE7_10.WindPressureResult_Wall_MWFRS>();
         public List<WindLoadCalculator_MWFRS_ASCE7_10.WindPressureResult_Roof_MWFRS> roof_results = new List<WindLoadCalculator_MWFRS_ASCE7_10.WindPressureResult_Roof_MWFRS>();
@@ -44,7 +44,7 @@ namespace ShearWallVisualizer.Controls
         {
             InitializeComponent();
 
-            Calculator = calculator;
+            windLoadCalculator = calculator;
 
             this.Loaded += WindLoadResultsControl_CC_Loaded;
         }
@@ -52,36 +52,39 @@ namespace ShearWallVisualizer.Controls
 
         private void WindLoadResultsControl_CC_Loaded(object sender, RoutedEventArgs e)
         {
-            tbVersion.Text = Calculator.ASCEVersion.ToString();
-            tbl_theta.Text = Calculator.buildingData.RoofPitch.ToString("F2");
-            tbl_h.Text = Calculator.buildingData.MeanRoofHeight.ToString("F2");
-            tbl_hOverB.Text = (Calculator.buildingData.MeanRoofHeight / Calculator.buildingData.BuildingWidth).ToString("F2");
-            tbl_hOverL.Text = (Calculator.buildingData.MeanRoofHeight / Calculator.buildingData.BuildingLength).ToString("F2");
-            tbl_qh.Text = Calculator.CalculateDynamicWindPressure(Calculator.buildingData.MeanRoofHeight).ToString("F2");
+            if (windLoadCalculator != null)
+            {
+                tbVersion.Text = windLoadCalculator.ASCEVersion.ToString();
+                tbl_theta.Text = windLoadCalculator.buildingData.RoofPitch.ToString("F2");
+                tbl_h.Text = windLoadCalculator.buildingData.MeanRoofHeight.ToString("F2");
+                tbl_hOverB.Text = (windLoadCalculator.buildingData.MeanRoofHeight / windLoadCalculator.buildingData.BuildingWidth).ToString("F2");
+                tbl_hOverL.Text = (windLoadCalculator.buildingData.MeanRoofHeight / windLoadCalculator.buildingData.BuildingLength).ToString("F2");
+                tbl_qh.Text = windLoadCalculator.CalculateDynamicWindPressure(windLoadCalculator.buildingData.MeanRoofHeight).ToString("F2");
 
-            //Dictionary<string, double> wall_zones = WindLoadCalculator_MWFRS.Calculate_WallZones_MWFRS(_parameters);
-            //Dictionary<string, double> roof_zones = WindLoadCalculator_MWFRS.CalculateMWFRS_RoofZones(_parameters);
+                //Dictionary<string, double> wall_zones = WindLoadCalculator_MWFRS.Calculate_WallZones_MWFRS(_parameters);
+                //Dictionary<string, double> roof_zones = WindLoadCalculator_MWFRS.CalculateMWFRS_RoofZones(_parameters);
 
-            //// compute the wind load results tables
-            //wall_results = CalculateWallPressureResults_MWFRS(_parameters, wall_zones);
-            //roof_results = CalculateRoofPressureResults_MWFRS(_parameters, roof_zones);
+                //// compute the wind load results tables
+                //wall_results = CalculateWallPressureResults_MWFRS(_parameters, wall_zones);
+                //roof_results = CalculateRoofPressureResults_MWFRS(_parameters, roof_zones);
 
-            //tbl_qh.Text = Math.Round(WindLoadCalculator_MWFRS.CalculateDynamicWindPressure(_parameters, _parameters.BuildingHeight), 2).ToString();
-            //tbl_theta.Text = Math.Round(_parameters.RoofPitch, 2).ToString();
-            //tbl_hOverL.Text = Math.Round(_parameters.BuildingHeight / _parameters.BuildingLength, 2).ToString();
-            //tbl_h.Text = Math.Round(_parameters.BuildingHeight, 2).ToString();
-            //tbl_windOrientation.Text = _parameters.RidgeDirection;
+                //tbl_qh.Text = Math.Round(WindLoadCalculator_MWFRS.CalculateDynamicWindPressure(_parameters, _parameters.BuildingHeight), 2).ToString();
+                //tbl_theta.Text = Math.Round(_parameters.RoofPitch, 2).ToString();
+                //tbl_hOverL.Text = Math.Round(_parameters.BuildingHeight / _parameters.BuildingLength, 2).ToString();
+                //tbl_h.Text = Math.Round(_parameters.BuildingHeight, 2).ToString();
+                //tbl_windOrientation.Text = _parameters.RidgeDirection;
 
-            //// Display wall results in the DataGrids
-            //WallResultsDataGrid.ItemsSource = null;
-            //WallResultsDataGrid.ItemsSource = wall_results;
+                //// Display wall results in the DataGrids
+                //WallResultsDataGrid.ItemsSource = null;
+                //WallResultsDataGrid.ItemsSource = wall_results;
 
-            //RoofResultsDataGrid.ItemsSource = null;
-            //RoofResultsDataGrid.ItemsSource = roof_results;
+                //RoofResultsDataGrid.ItemsSource = null;
+                //RoofResultsDataGrid.ItemsSource = roof_results;
 
-            //spResultsAndCanvas.Children.Add(new WindLoadGraphicCanvas(_parameters, wall_results, roof_results));
+                //spResultsAndCanvas.Children.Add(new WindLoadGraphicCanvas(_parameters, wall_results, roof_results));
 
-            //OnWindCalculated(_parameters, wall_results, roof_results);
+                //OnWindCalculated(_parameters, wall_results, roof_results);
+            }
         }
 
 

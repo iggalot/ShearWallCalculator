@@ -9,6 +9,7 @@ using ShearWallCalculator.WindLoadCalculations;
 using ShearWallCalculator.WindLoadCalculations.Chapter30;
 using ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator;
 using ShearWallCalculator.WindLoadCalculations.Chapter30.Figure30_3;
+using ShearWallCalculator.WindLoadCalculations.WindLoadCalculators;
 using ShearWallVisualizer.Controls;
 using ShearWallVisualizer.Dialogs;
 using ShearWallVisualizer.Helpers;
@@ -51,6 +52,7 @@ namespace ShearWallVisualizer
         }
         public BuildingData buildingData { get; set; } = null;
         public RoofAreaCalculator_Base roofAreaCalculator { get; set; }
+        public WindLoadCalculator_Base windLoadCalculator { get; set; }
 
         public SimpsonCatalog simpsonCatalog { get; set; } = new SimpsonCatalog();  // contains the Simposon catalog connector and holddown data
 
@@ -123,7 +125,20 @@ namespace ShearWallVisualizer
             {
                 //buildingData = new BuildingData();
 
-                UpdateTabs();
+                var ctrol_bldg_input = new BuildingDataInputControl(buildingData);
+                ctrol_bldg_input.BuildingDataInputComplete += BuildingDataInputControl_BuildingDataInputComplete;
+                tabBuildingDataControlTabItem.Content = ctrol_bldg_input;
+
+                // create the wind load input control
+                var ctrol_wind_input = new WindLoadInputControl(buildingData, windVersion, windLoadParams);
+                ctrol_wind_input.WindInputComplete += WindLoadInputControl_WindInputComplete;
+                tabWindInputControlTabItem.Content = ctrol_wind_input;
+
+                // create the wind load results control
+                ContentControl ctrol_wind_results1 = new WindLoadResultsControl_MWFRS(windLoadParams, buildingData);
+                tabWindResultsTabItem_MWFRS.Content = ctrol_wind_results1;
+                var ctrol_wind_results2 = new WindLoadResultsControl_CC(windLoadCalculator);
+                tabWindResultsTabItem_CC.Content = ctrol_wind_results2;
 
                 ResetView(); // reset the view so that origin 0,0 is at lower left of the corner screen and the model is zoomed to fill the entire window
                 LoadRecentFilesMenu();  // recent files menu
@@ -133,7 +148,7 @@ namespace ShearWallVisualizer
                 // load the Simpson catalog
                 simpsonCatalog = new SimpsonCatalog();
 
-                Update();
+                UpdateShearWallUI();
 
                 MainTabControl.SelectedIndex = 0; // Show Dimensions tab by default
 
@@ -155,25 +170,7 @@ namespace ShearWallVisualizer
             };
         }
 
-        private void UpdateTabs()
-        {
-            var ctrol_bldg_input = new BuildingDataInputControl(buildingData);
-            ctrol_bldg_input.BuildingDataInputComplete += BuildingDataInputControl_BuildingDataInputComplete;
-            tabBuildingDataControlTabItem.Content = ctrol_bldg_input;
-
-            // create the wind load input control
-            var ctrol_wind_input = new WindLoadInputControl(buildingData, windVersion);
-            ctrol_wind_input.WindInputComplete += WindLoadInputControl_WindInputComplete;
-            tabWindInputControlTabItem.Content = ctrol_wind_input;
-
-            // create the wind load results control
-            ContentControl ctrol_wind_results1 = new WindLoadResultsControl_MWFRS(windLoadParams, buildingData);
-            tabWindResultsTabItem_MWFRS.Content = ctrol_wind_results1;
-            var ctrol_wind_results2 = new WindLoadResultsControl_CC(Calculator);
-            tabWindResultsTabItem_CC.Content = ctrol_wind_results2;
-        }
-
-        public void Update()
+        public void UpdateShearWallUI()
         {
             // clear the tabs
             sp_DimPanel_Diaphragms.Children.Clear();
@@ -212,7 +209,7 @@ namespace ShearWallVisualizer
                 LoadInfoTextBlock.Text = $"X: {Calculator.V_x} | Y: {Calculator.V_y}";
             }
 
-            // Update the button appearances
+            // UpdateShearWallUI the button appearances
             SetButtonModes();
 
             // redraw the scene
@@ -399,7 +396,7 @@ namespace ShearWallVisualizer
                 throw new NotImplementedException("Error: FinalizeShape() received an invalid DrawMode variable.");
             }
 
-            Calculator.PerformCalculations();  // perform the calculations with the new Calculator
+            Calculator.PerformCalculations();  // perform the calculations with the new windLoadCalculator
 
             // Clear the preview shape from the screen.
             previewShape = null;
@@ -432,9 +429,24 @@ namespace ShearWallVisualizer
             WindLoadInputControl temp = tabWindInputControlTabItem.Content as WindLoadInputControl;
             tabWindInputControlTabItem.Content = new WindLoadInputControl(buildingData, temp.Version, temp.Parameters);
 
-            UpdateTabs();
 
-            Update();
+
+            var ctrol_bldg_input = new BuildingDataInputControl(buildingData);
+            ctrol_bldg_input.BuildingDataInputComplete += BuildingDataInputControl_BuildingDataInputComplete;
+            tabBuildingDataControlTabItem.Content = ctrol_bldg_input;
+
+            // create the wind load input control
+            var ctrol_wind_input = new WindLoadInputControl(buildingData, windVersion, windLoadParams);
+            ctrol_wind_input.WindInputComplete += WindLoadInputControl_WindInputComplete;
+            tabWindInputControlTabItem.Content = ctrol_wind_input;
+
+            // create the wind load results control
+            ContentControl ctrol_wind_results1 = new WindLoadResultsControl_MWFRS(windLoadParams, buildingData);
+            tabWindResultsTabItem_MWFRS.Content = ctrol_wind_results1;
+            var ctrol_wind_results2 = new WindLoadResultsControl_CC(windLoadCalculator);
+            tabWindResultsTabItem_CC.Content = ctrol_wind_results2;
+
+            UpdateShearWallUI();
         }
         /// <summary>
         /// Event listener for when input of the wind loads as been completed
@@ -448,7 +460,13 @@ namespace ShearWallVisualizer
             windLoadParams = e._parameters;
 
             // TODO: load the calculator (if it isnt already)
+            windLoadCalculator = WindLoadCalculatorFactory.Create(windVersion, windLoadParams.AnalysisType, windLoadParams, buildingData);
 
+            // create the wind load results control
+            ContentControl ctrol_wind_results1 = new WindLoadResultsControl_MWFRS(windLoadParams, buildingData);
+            tabWindResultsTabItem_MWFRS.Content = ctrol_wind_results1;
+            var ctrol_wind_results2 = new WindLoadResultsControl_CC(windLoadCalculator);
+            tabWindResultsTabItem_CC.Content = ctrol_wind_results2;
 
             // Draw on the input control canvas
             var inputControl = tabWindInputControlTabItem.Content as WindLoadInputControl;
@@ -561,7 +579,7 @@ namespace ShearWallVisualizer
                 }
             }
 
-            Update();
+            UpdateShearWallUI();
         }
 
         private void WindLoadResultsControl_CC_WindCalculated(object sender, WindLoadResultsControl_CC.OnWindCalculatedEventArgs e)
@@ -610,7 +628,7 @@ namespace ShearWallVisualizer
                 Calculator.AddLoads(load_x, load_y);
             }
 
-            Update();
+            UpdateShearWallUI();
         }
 
         private void CreateWallDataControls()
@@ -651,7 +669,7 @@ namespace ShearWallVisualizer
                 if (wall.Key == args.Id)
                 {
                     Calculator._wall_system._walls.Remove(wall.Key);
-                    Update();
+                    UpdateShearWallUI();
                     return;
                 }
             }
@@ -671,7 +689,7 @@ namespace ShearWallVisualizer
                 if (dia.Key == args.Id)
                 {
                     Calculator._diaphragm_system._diaphragms.Remove(dia.Key);
-                    Update();
+                    UpdateShearWallUI();
                     return;
                 }
             }
@@ -1319,7 +1337,7 @@ namespace ShearWallVisualizer
             }
 
             // the counter for uniquely numbering the brace wall lines
-            // TODO should this be handled by the Calculator instead of when its being drawn?
+            // TODO should this be handled by the windLoadCalculator instead of when its being drawn?
             int bwl_count = 1;
 
             for (int i = 0; i < Calculator._wall_system.BWL_Manager.BracedWallLines.Count; i++)
@@ -1777,7 +1795,7 @@ namespace ShearWallVisualizer
             if (e.RightButton == MouseButtonState.Pressed)
             {
                 ResetInputMode();
-                Update();
+                UpdateShearWallUI();
                 return;
             }
 
@@ -1807,7 +1825,7 @@ namespace ShearWallVisualizer
                 FinalizeShape(endPoint_world.Value);
             }
 
-            Update();
+            UpdateShearWallUI();
         }
 
 
@@ -1819,7 +1837,7 @@ namespace ShearWallVisualizer
             tbScreenCoords.Text = e.GetPosition(m_layers).ToString();
             tbWorldCoords.Text = "World Coords: (" + currentMouseWorldPosition.X.ToString("F2") + ", " + currentMouseWorldPosition.Y.ToString("F2") + ")";  // changed this one too
 
-            Update();
+            UpdateShearWallUI();
         }
 
         private void m_layers_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
@@ -1852,7 +1870,7 @@ namespace ShearWallVisualizer
 
             InvalidateGrid();               // signal that the grid needs updating
 
-            Update();
+            UpdateShearWallUI();
         }
 
         private void m_layers_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
@@ -1861,7 +1879,7 @@ namespace ShearWallVisualizer
             if (e.RightButton == MouseButtonState.Pressed)
             {
                 ResetInputMode();
-                Update();
+                UpdateShearWallUI();
                 return;
             }
         }
@@ -1898,14 +1916,14 @@ namespace ShearWallVisualizer
                     Console.WriteLine("--------------------------");
                 }
 
-                Update();
+                UpdateShearWallUI();
             }
         }
 
         private void btnHideShapes_Click(object sender, RoutedEventArgs e)
         {
             hideShapes = !hideShapes;
-            Update();
+            UpdateShearWallUI();
             btnHideShapes.Content = hideShapes ? "Show Shapes" : "Hide Shapes";
 
         }
@@ -1913,7 +1931,7 @@ namespace ShearWallVisualizer
         private void btnHideImage_Click(object sender, RoutedEventArgs e)
         {
             hideImage = !hideImage;
-            Update();
+            UpdateShearWallUI();
 
             btnHideImage.Content = hideImage ? "Show Image" : "Hide Image";
         }
@@ -1921,7 +1939,7 @@ namespace ShearWallVisualizer
         private void btnHideGrid_Click(object sender, RoutedEventArgs e)
         {
             hideGrid = !hideGrid;
-            Update();
+            UpdateShearWallUI();
             btnHideGrid.Content = hideGrid ? "Show Grid" : "Hide Grid";
         }
 
@@ -1955,7 +1973,7 @@ namespace ShearWallVisualizer
             if (dialog.ShowDialog() == true)
             {
                 Calculator.AddLoads(dialog.MagnitudeX, dialog.MagnitudeY);
-                Update();  // update the calculator
+                UpdateShearWallUI();  // update the calculator
             }
         }
 
@@ -1997,7 +2015,7 @@ namespace ShearWallVisualizer
                 InvalidateGrid();
             }
 
-            Update();
+            UpdateShearWallUI();
         }
 
         private void OpenImageTool_Click(object sender, RoutedEventArgs e)
@@ -2055,7 +2073,7 @@ namespace ShearWallVisualizer
                 Calculator = null;  // delete any previous calculators we have
             }
 
-            Update();
+            UpdateShearWallUI();
 
             var openFileDialog = new OpenFileDialog
             {
@@ -2090,7 +2108,7 @@ namespace ShearWallVisualizer
                     throw new Exception("Invalid calculator type in MenuItem_Load_Click()");
                 }
 
-                Update();
+                UpdateShearWallUI();
                 MessageBox.Show("Drawing loaded!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
@@ -2246,7 +2264,7 @@ namespace ShearWallVisualizer
                                 $"Real-World Distance: {e.RealWorldDistance:F2}\n" +
                                 $"Scale Factor: {e.ScaleFactor:F6}");
 
-                Update();
+                UpdateShearWallUI();
             }
         }
 

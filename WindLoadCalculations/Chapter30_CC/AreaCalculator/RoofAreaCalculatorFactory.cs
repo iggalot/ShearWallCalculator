@@ -18,7 +18,7 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator
 
             if (version == ASCE7_Versions.ASCE_VER_7_10)
             {
-                throw new NotImplementedException("ERROR: ASCE7_10 not yet implemented.");
+                throw new NotImplementedException("ERROR: " + version + " not yet implemented.");
             }
             else if (version == ASCE7_Versions.ASCE_VER_7_16)
             {

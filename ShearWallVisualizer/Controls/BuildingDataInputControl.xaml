@@ -22,7 +22,7 @@
                 <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Vertical" HorizontalAlignment="Left" Margin="5">
                     <!-- Building Height -->
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                        <TextBlock Text="Building Height (h)" VerticalAlignment="Center" Margin="5"/>
+                        <TextBlock Text="Building Plate Height (h)" VerticalAlignment="Center" Margin="5"/>
                         <TextBox x:Name="BuildingHeightTextBox" Width="150" Margin="5" Text="30"/>
                     </StackPanel>
 

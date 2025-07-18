@@ -124,7 +124,7 @@ namespace ShearWallVisualizer.Controls
                 canvasImage.Children.Clear();
                 canvasImage.Children.Add(imageDisplay);
 
-                // Update image size info in the UI
+                // UpdateShearWallUI image size info in the UI
                 txtImageSize.Text = $"{bitmap.PixelWidth} x {bitmap.PixelHeight}";
 
                 // Reset previous measurement points and distance text
