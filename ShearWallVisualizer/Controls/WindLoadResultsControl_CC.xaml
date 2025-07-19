@@ -50,28 +50,17 @@
                             </StackPanel>
                         </StackPanel>
 
-                        <!-- Display Results of MWFRS Calculation -->
-                        <TextBlock Text="Results (Comp. And Clad.)" Margin="10"/>
-                        <DataGrid x:Name="WallResultsDataGrid" 
-                  AutoGenerateColumns="True"
-                  HeadersVisibility="Column"
-                  CanUserAddRows="False"
-                  IsReadOnly="True"
-                      Width="Auto"
-                      Height="Auto"
-                      FontSize="10">
-                        </DataGrid>
-
                         <!-- Display Roof Zone Pressure Results -->
                         <TextBlock Text="Roof Zone Pressures" Margin="10"/>
                         <DataGrid x:Name="RoofResultsDataGrid"
-                  AutoGenerateColumns="True"
-                  HeadersVisibility="Column"
-                  CanUserAddRows="False"
-                  IsReadOnly="True"
-                      Width="Auto"
-                      Height="Auto"
-                      FontSize="10">
+                              AutoGenerateColumns="False"
+                              HeadersVisibility="Column"
+                              CanUserAddRows="False"
+                              IsReadOnly="True"
+                              HorizontalScrollBarVisibility="Auto"
+                              Margin="5"
+                              ColumnWidth="Auto"
+                              FontSize="10">
                         </DataGrid>
                     </StackPanel>
                     <StackPanel Orientation="Vertical" Grid.Column="1" Margin="5">

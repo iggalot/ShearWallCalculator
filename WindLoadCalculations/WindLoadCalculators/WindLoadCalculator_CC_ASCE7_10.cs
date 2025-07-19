@@ -14,18 +14,6 @@ namespace ShearWallCalculator.WindLoadCalculations
         // Which figure of Ch30_3_2A thru I to use for CC
         public Chapter30_BaseFigure extGCpCurve{get; set;}
 
-        /// <summary>
-        /// The critical width dimenstion "a" used throughout chapter 30
-        /// -- minimum of 0.4 * building height and 0.1 * min(building Length, building width)
-        /// </summary>
-        public double CritDim_a
-        {
-            get
-            {
-                return Math.Min(0.4 * buildingData.MeanRoofHeight, 0.1 * Math.Min(buildingData.BuildingLength, buildingData.BuildingWidth));
-            }
-        }
-
         public WindLoadCalculator_CC_ASCE7_10(WindLoadParameters_Base p, BuildingData bldg_data)
         {
             Parameters = p;

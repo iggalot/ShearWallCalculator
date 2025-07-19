@@ -19,8 +19,10 @@ using System.Collections.Specialized;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -556,7 +558,6 @@ namespace ShearWallVisualizer
                         Console.WriteLine(str);
                     }
                 }
-
             }
             else if (windLoadParams.AnalysisType == WindLoadCalculationTypes.MWFRS)
             {
@@ -579,7 +580,115 @@ namespace ShearWallVisualizer
                 }
             }
 
+            // Get the datagrid from the results control
+
+            DataGrid windLoadResultsDataGrid = ctrol_wind_results2.RoofResultsDataGrid;
+            windLoadResultsDataGrid.ItemsSource = null;
+            windLoadResultsDataGrid.Columns.Clear(); 
+            windLoadResultsDataGrid.AutoGenerateColumns = false;
+
+            // create our data object
+
+            var col_name = new DataGridTextColumn
+            {
+                Header = "Name",
+                Binding = new Binding("Name")
+            };
+            windLoadResultsDataGrid.Columns.Add(col_name);
+
+
+            var col_area = new DataGridTextColumn
+            {
+                Header = "Area\n(sq ft)",
+                Binding = new Binding("Area") { StringFormat = "0" }
+            };
+            windLoadResultsDataGrid.Columns.Add(col_area);
+
+            var col_qh = new DataGridTextColumn
+            {
+                Header = "qh\n(psf)",
+                Binding = new Binding("qh") { StringFormat = "0.0" }
+            };
+            windLoadResultsDataGrid.Columns.Add(col_qh);
+
+            var col_gcp_pos = new DataGridTextColumn
+            {
+                Header = "GCp+",
+                Binding = new Binding("GCp_pos") { StringFormat = "0.0" }
+            };
+            windLoadResultsDataGrid.Columns.Add(col_gcp_pos);
+
+            var col_gcp_neg = new DataGridTextColumn
+            {
+                Header = "GCp-",
+                Binding = new Binding("GCp_neg") { StringFormat = "0.0" }
+            };
+            windLoadResultsDataGrid.Columns.Add(col_gcp_neg);
+
+            var col_pos_press = new DataGridTextColumn
+            {
+                Header = "+ Press\n(psf)",
+                Binding = new Binding("PosPress") { StringFormat = "0.0" }
+            };
+            windLoadResultsDataGrid.Columns.Add(col_pos_press);
+
+            var col_neg_press = new DataGridTextColumn
+            {
+                Header = "- Press\n(psf)",
+                Binding = new Binding("NegPress") { StringFormat = "0.0" }
+            };
+            windLoadResultsDataGrid.Columns.Add(col_neg_press);
+
+            var col_overhang_press = new DataGridTextColumn
+            {
+                Header = "Overhang Press\n(psf)",
+                Binding = new Binding("OverhangPress") { StringFormat = "0.0" }
+            };
+            windLoadResultsDataGrid.Columns.Add(col_overhang_press);
+
+            List<CC_RoofResults> windLoadResults = new List<CC_RoofResults>();
+            foreach (var area in windLoadParams.RoofAreaCalculator.effWindAreas_Roof)
+            {
+                CC_RoofResults data = new CC_RoofResults();
+                data.Name = area.Value.Label;
+                data.Area = area.Value.Area;
+                data.qh = windLoadCalculator.CalculateDynamicWindPressure(buildingData.MeanRoofHeight);
+                data.GCp_pos = figureCC.RoofCurves_Pos[area.Value.Label].Evaluate(area.Value.Area);
+                data.GCp_neg = figureCC.RoofCurves_Neg[area.Value.Label].Evaluate(area.Value.Area);
+                data.PosPress = data.qh * data.GCp_pos;
+                data.NegPress = data.qh * data.GCp_neg;
+
+                if (figureCC.OverhangCurves != null && figureCC.OverhangCurves.ContainsKey(area.Value.Label))
+                {
+                    data.OverhangPress = figureCC.OverhangCurves[area.Value.Label].Evaluate(area.Value.Area);
+                } else
+                {
+                    data.OverhangPress = 0;
+                }
+                    windLoadResults.Add(data);
+            }
+
+            windLoadResultsDataGrid.ItemsSource = windLoadResults;
+
+            foreach (var col in windLoadResultsDataGrid.Columns)
+            {
+                Console.WriteLine($"Column: {col.Header}");
+            }
+
             UpdateShearWallUI();
+        }
+
+        public class CC_RoofResults
+        {
+            public string Name { get; set; }
+            public double Area { get; set; }
+            public double qh { get; set; }
+            public double GCp_pos { get; set; }
+            public double GCp_neg { get; set; }
+
+            public double PosPress { get; set; }
+            public double NegPress { get; set; }
+            public double OverhangPress { get; set; }
         }
 
         private void WindLoadResultsControl_CC_WindCalculated(object sender, WindLoadResultsControl_CC.OnWindCalculatedEventArgs e)
