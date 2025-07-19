@@ -480,7 +480,7 @@ namespace ShearWallVisualizer
                 double scale = Math.Min(inputCanvas.ActualWidth / buildingData.BuildingWidth, inputCanvas.ActualHeight / buildingData.BuildingLength);
                 foreach (var area in windLoadParams.RoofAreaCalculator.effWindAreas_Roof)
                 {
-                    WindLoadInputControl.DrawEffectiveWindArea(inputCanvas, area.Value, scale);
+                    WindLoadInputControl.DrawEffectiveWindArea(inputCanvas, area.Value, scale, GetColorForRegion(area.Value.Label_Short));
                 }
             }
 
@@ -541,16 +541,16 @@ namespace ShearWallVisualizer
                     foreach (var kvp in windLoadParams.RoofAreaCalculator.effWindAreas_Roof)
                     {
                         string str = string.Empty;
-                        str += $"{kvp.Value.Label}  {kvp.Value.Area} ";
+                        str += $"{kvp.Value.Label_Full}  {kvp.Value.Area} ";
 
-                        if (figureCC.RoofCurves_Pos.ContainsKey(kvp.Value.Label))
+                        if (figureCC.RoofCurves_Pos.ContainsKey(kvp.Value.Label_Full))
                         {
-                            str += $"pos: {figureCC.RoofCurves_Pos[kvp.Value.Label].Evaluate(kvp.Value.Area):F3} ";
+                            str += $"pos: {figureCC.RoofCurves_Pos[kvp.Value.Label_Full].Evaluate(kvp.Value.Area):F3} ";
                         }
 
-                        if (figureCC.RoofCurves_Neg.ContainsKey(kvp.Value.Label))
+                        if (figureCC.RoofCurves_Neg.ContainsKey(kvp.Value.Label_Full))
                         {
-                            str += $"neg: {figureCC.RoofCurves_Neg[kvp.Value.Label].Evaluate(kvp.Value.Area):F3}";
+                            str += $"neg: {figureCC.RoofCurves_Neg[kvp.Value.Label_Full].Evaluate(kvp.Value.Area):F3}";
                         }
 
                         // write the label and the data calcs
@@ -576,12 +576,11 @@ namespace ShearWallVisualizer
 
                 foreach (var area in windLoadParams.RoofAreaCalculator.effWindAreas_Roof)
                 {
-                    WindLoadInputControl.DrawEffectiveWindArea(resultCanvas, area.Value, scale);
+                    WindLoadInputControl.DrawEffectiveWindArea(resultCanvas, area.Value, scale, GetColorForRegion(area.Value.Label_Short));
                 }
             }
 
             // Get the datagrid from the results control
-
             DataGrid windLoadResultsDataGrid = ctrol_wind_results2.RoofResultsDataGrid;
             windLoadResultsDataGrid.ItemsSource = null;
             windLoadResultsDataGrid.Columns.Clear(); 
@@ -596,6 +595,21 @@ namespace ShearWallVisualizer
             };
             windLoadResultsDataGrid.Columns.Add(col_name);
 
+            var col_rectangle = new DataGridTemplateColumn
+            {
+                Header = ""
+            };
+
+            // Define the DataTemplate in code for drawing a colored rectangle
+            var factory = new FrameworkElementFactory(typeof(Rectangle));
+            factory.SetValue(Rectangle.WidthProperty, 15.0);
+            factory.SetValue(Rectangle.HeightProperty, 15.0);
+            factory.SetValue(Rectangle.StrokeProperty, Brushes.Black);
+            factory.SetBinding(Rectangle.FillProperty, new Binding("RectColor"));
+
+            col_rectangle.CellTemplate = new DataTemplate { VisualTree = factory };
+
+            windLoadResultsDataGrid.Columns.Add(col_rectangle);
 
             var col_area = new DataGridTextColumn
             {
@@ -650,22 +664,29 @@ namespace ShearWallVisualizer
             foreach (var area in windLoadParams.RoofAreaCalculator.effWindAreas_Roof)
             {
                 CC_RoofResults data = new CC_RoofResults();
-                data.Name = area.Value.Label;
+                data.Name = area.Value.Label_Short;
+                data.Region = area.Value.Label_Short;
                 data.Area = area.Value.Area;
                 data.qh = windLoadCalculator.CalculateDynamicWindPressure(buildingData.MeanRoofHeight);
-                data.GCp_pos = figureCC.RoofCurves_Pos[area.Value.Label].Evaluate(area.Value.Area);
-                data.GCp_neg = figureCC.RoofCurves_Neg[area.Value.Label].Evaluate(area.Value.Area);
-                data.PosPress = data.qh * data.GCp_pos;
-                data.NegPress = data.qh * data.GCp_neg;
 
-                if (figureCC.OverhangCurves != null && figureCC.OverhangCurves.ContainsKey(area.Value.Label))
+                if (figureCC.RoofCurves_Pos != null && figureCC.RoofCurves_Pos.ContainsKey(area.Value.Label_Full))
                 {
-                    data.OverhangPress = figureCC.OverhangCurves[area.Value.Label].Evaluate(area.Value.Area);
-                } else
-                {
-                    data.OverhangPress = 0;
+                    data.GCp_pos = figureCC.RoofCurves_Pos[area.Value.Label_Full].Evaluate(area.Value.Area);
+                    data.PosPress = data.qh * data.GCp_pos;
                 }
-                    windLoadResults.Add(data);
+
+                if (figureCC.RoofCurves_Neg != null && figureCC.RoofCurves_Pos.ContainsKey(area.Value.Label_Full))
+                {
+                    data.GCp_neg = figureCC.RoofCurves_Neg[area.Value.Label_Full].Evaluate(area.Value.Area);
+                    data.NegPress = data.qh * data.GCp_neg;
+                }
+
+                if (figureCC.OverhangCurves != null && figureCC.OverhangCurves.ContainsKey(area.Value.Label_Full))
+                {
+                    data.OverhangPress = figureCC.OverhangCurves[area.Value.Label_Full].Evaluate(area.Value.Area);
+                } 
+                    
+                windLoadResults.Add(data);
             }
 
             windLoadResultsDataGrid.ItemsSource = windLoadResults;
@@ -682,6 +703,7 @@ namespace ShearWallVisualizer
         {
             public string Name { get; set; }
             public double Area { get; set; }
+            public string Region { get; set; } // used to store the regions name so we can draw the rectangle from it
             public double qh { get; set; }
             public double GCp_pos { get; set; }
             public double GCp_neg { get; set; }
@@ -689,6 +711,8 @@ namespace ShearWallVisualizer
             public double PosPress { get; set; }
             public double NegPress { get; set; }
             public double OverhangPress { get; set; }
+
+            public Brush RectColor => GetColorForRegion(Region);
         }
 
         private void WindLoadResultsControl_CC_WindCalculated(object sender, WindLoadResultsControl_CC.OnWindCalculatedEventArgs e)
@@ -2463,5 +2487,41 @@ namespace ShearWallVisualizer
             }
         }
         #endregion
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="region">Should be in the form of "Zone1", "Zone2e", etc. </param>
+        /// <returns></returns>
+        public static Brush GetColorForRegion(string region)
+        {
+            switch (region)
+            {
+                case "1":
+                    return Brushes.Red;
+                case "1'":
+                    return Brushes.IndianRed;
+                case "2":
+                    return Brushes.Yellow;
+                case "2e":
+                    return Brushes.LightYellow;
+                case "2r":
+                    return Brushes.Goldenrod;
+                case "2n":
+                    return Brushes.YellowGreen;
+                case "3":
+                    return Brushes.Green;
+                case "3e":
+                    return Brushes.GreenYellow;
+                case "3r":
+                    return Brushes.LightGreen;
+                case "4":
+                    return Brushes.MediumOrchid;
+                case "5":
+                    return Brushes.Purple;
+                default:
+                    return Brushes.Black;
+            }
+        }
     }
 }

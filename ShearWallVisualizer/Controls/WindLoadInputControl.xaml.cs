@@ -134,9 +134,6 @@ namespace ShearWallVisualizer.Controls
                 cmbWindAnalysisType.SelectedIndex = (int)WindLoadCalculationTypes.COMPONENT_AND_CLADDING;
                 cmbASCEVersion.SelectedIndex = (int)ASCE7_Versions.ASCE_VER_7_16;
             }
-
-
-
         }
 
         public virtual void OnWindInputComplete(WindLoadParameters_Base parameters, ASCE7_Versions version)
@@ -144,38 +141,7 @@ namespace ShearWallVisualizer.Controls
             WindInputComplete?.Invoke(this, new OnWindInputCompleteEventArgs(parameters, version));
         }
 
-        public static Brush GetColorForRegion(string region)
-        {
-            switch (region)
-            {
-                case "1":
-                    return Brushes.Red;
-                case "1'":
-                    return Brushes.IndianRed;
-                case "2":
-                    return Brushes.Yellow;
-                case "2e":
-                    return Brushes.LightYellow;
-                case "2r":
-                    return Brushes.Goldenrod;
-                case "2n":
-                    return Brushes.YellowGreen;
-                case "3":
-                    return Brushes.Green;
-                case "3e":
-                    return Brushes.GreenYellow;
-                case "3r":
-                    return Brushes.LightGreen;
-                case "4":
-                    return Brushes.MediumOrchid;
-                case "5":
-                    return Brushes.Purple;
-                default:
-                    return Brushes.Black;
-            }
-        }
-
-        public static void DrawEffectiveWindArea(Canvas canvas, EffectiveWindArea_Roof area, double scaleFactor)
+        public static void DrawEffectiveWindArea(Canvas canvas, EffectiveWindArea_Roof area, double scaleFactor, Brush fill_color)
         {
             if (canvas == null || area == null)
                 return;
@@ -206,7 +172,7 @@ namespace ShearWallVisualizer.Controls
             var outerPolygon = CreatePolygon(
                 area.OuterBoundary,
                 Brushes.Black,
-                GetColorForRegion(area.Label)
+                fill_color
             );
             canvas.Children.Add(outerPolygon);
 

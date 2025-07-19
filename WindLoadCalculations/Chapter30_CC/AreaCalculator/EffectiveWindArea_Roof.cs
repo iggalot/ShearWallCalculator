@@ -9,14 +9,23 @@ namespace ShearWallCalculator.WindLoadCalculations
     {
         public List<Point> OuterBoundary { get; private set; }
         public List<List<Point>> Holes { get; private set; }
-        public string Label { get; set; }
+
+        /// <summary>
+        /// The long form of the zone name, e.g. "Zone2e" that always starts with "Zone"
+        /// </summary>
+        public string Label_Full { get; set; }
+        
+        /// <summary>
+        /// Returns only the short numeric identifier of the label "Zone2e" becomes "2e"
+        /// </summary>
+        public string Label_Short { get => Label_Full.Substring(4); }
 
         public EffectiveWindArea_Roof(string label, IEnumerable<Point> outer, IEnumerable<IEnumerable<Point>> holes = null)
         {
             if (outer == null)
                 throw new ArgumentNullException(nameof(outer));
 
-            Label = label;
+            Label_Full = label;
             OuterBoundary = outer.ToList();
             ValidateAndFixWinding(OuterBoundary, shouldBeCCW: true);
 
@@ -136,7 +145,7 @@ namespace ShearWallCalculator.WindLoadCalculations
 
         public string DisplayResults()
         {
-            return $"{Label}: Area = {Area:F2} ft², Centroid = ({Centroid.X:F2}, {Centroid.Y:F2})";
+            return $"{Label_Full}: Area = {Area:F2} ft², Centroid = ({Centroid.X:F2}, {Centroid.Y:F2})";
         }
     }
 }

@@ -22,17 +22,15 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Orientation="Horizontal">
-                    <!-- Results Controls (Right Column) -->
                     <StackPanel Name="spResultsAndCanvas" Grid.Row="0" Grid.Column="0" Orientation="Vertical" HorizontalAlignment="Left" Margin="10">
-                        <!-- Importance Factor -->
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                            <TextBlock Text="qh (psf) = " VerticalAlignment="Center" />
-                            <TextBlock Name="tbl_qh" Width="150"  Text=""/>
+                            <TextBlock Text="h (ft) = " VerticalAlignment="Center"/>
+                            <TextBlock Name="tbl_h" Width="150" Text=""/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                                <TextBlock Text="h (ft) = " VerticalAlignment="Center"/>
-                                <TextBlock Name="tbl_h" Width="150" Text=""/>
+                                <TextBlock Text="RoofType = " VerticalAlignment="Center" />
+                                <TextBlock Name="tbl_roof_type" Width="150"  Text=""/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                                 <TextBlock Text="theta (deg) = " VerticalAlignment="Center" />
@@ -64,6 +62,7 @@
                         </DataGrid>
                     </StackPanel>
                     <StackPanel Orientation="Vertical" Grid.Column="1" Margin="5">
+                        <!-- Roof area pressure map -->
                         <Canvas x:Name="cnvWindLoadResultCanvasCC" Width="200" Height="200" Background="Transparent"></Canvas>
 
                         <!-- Ae vs GCp coefficient curve-->

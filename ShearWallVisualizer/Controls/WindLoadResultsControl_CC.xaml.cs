@@ -1,9 +1,9 @@
-﻿using ShearWallCalculator.BuildingInfo;
-using ShearWallCalculator.WindLoadCalculations;
+﻿using ShearWallCalculator.WindLoadCalculations;
 using System;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 
 namespace ShearWallVisualizer.Controls
 {
@@ -59,34 +59,8 @@ namespace ShearWallVisualizer.Controls
                 tbl_h.Text = windLoadCalculator.buildingData.MeanRoofHeight.ToString("F2");
                 tbl_hOverB.Text = (windLoadCalculator.buildingData.MeanRoofHeight / windLoadCalculator.buildingData.BuildingWidth).ToString("F2");
                 tbl_hOverL.Text = (windLoadCalculator.buildingData.MeanRoofHeight / windLoadCalculator.buildingData.BuildingLength).ToString("F2");
-                tbl_qh.Text = windLoadCalculator.CalculateDynamicWindPressure(windLoadCalculator.buildingData.MeanRoofHeight).ToString("F2");
-
-                //Dictionary<string, double> wall_zones = WindLoadCalculator_MWFRS.Calculate_WallZones_MWFRS(_parameters);
-                //Dictionary<string, double> roof_zones = WindLoadCalculator_MWFRS.CalculateMWFRS_RoofZones(_parameters);
-
-                //// compute the wind load results tables
-                //wall_results = CalculateWallPressureResults_MWFRS(_parameters, wall_zones);
-                //roof_results = CalculateRoofPressureResults_MWFRS(_parameters, roof_zones);
-
-                //tbl_qh.Text = Math.Round(WindLoadCalculator_MWFRS.CalculateDynamicWindPressure(_parameters, _parameters.BuildingHeight), 2).ToString();
-                //tbl_theta.Text = Math.Round(_parameters.RoofPitch, 2).ToString();
-                //tbl_hOverL.Text = Math.Round(_parameters.BuildingHeight / _parameters.BuildingLength, 2).ToString();
-                //tbl_h.Text = Math.Round(_parameters.BuildingHeight, 2).ToString();
-                //tbl_windOrientation.Text = _parameters.RidgeDirection;
-
-                //// Display wall results in the DataGrids
-                //WallResultsDataGrid.ItemsSource = null;
-                //WallResultsDataGrid.ItemsSource = wall_results;
-
-                //RoofResultsDataGrid.ItemsSource = null;
-                //RoofResultsDataGrid.ItemsSource = roof_results;
-
-                //spResultsAndCanvas.Children.Add(new WindLoadGraphicCanvas(_parameters, wall_results, roof_results));
-
-                //OnWindCalculated(_parameters, wall_results, roof_results);
+                tbl_roof_type.Text = windLoadCalculator.buildingData.RoofType.ToString();
             }
         }
-
-
     }
 }

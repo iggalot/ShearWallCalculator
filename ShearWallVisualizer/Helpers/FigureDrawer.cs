@@ -135,7 +135,7 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.Figure30_3
 
             canvas.Children.Add(line);
 
-            // === Label: strip "Zone" and show the rest ===
+            // === Label_Full: strip "Zone" and show the rest ===
             string displayLabel = label.StartsWith("Zone", StringComparison.OrdinalIgnoreCase)
                 ? label.Substring(4).TrimStart()
                 : label;
