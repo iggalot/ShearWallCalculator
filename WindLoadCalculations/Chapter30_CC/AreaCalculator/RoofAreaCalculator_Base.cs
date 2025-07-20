@@ -11,6 +11,13 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator
         /// </summary>
         public abstract Dictionary<int, EffectiveWindArea_Roof> effWindAreas_Roof { get; set; }
 
+        public virtual bool HasCritDim { get; set; } = false;
+        public virtual double CritDim_a
+        {
+            get => throw new NotSupportedException("This component does not support CritDim_a.");
+            set => throw new NotSupportedException("This component does not support CritDim_a.");
+        }
+
         /// <summary>
         /// Function to compute the areas of the calculator.  To be overriden by the implementating class
         /// </summary>

@@ -12,17 +12,23 @@ namespace ShearWallCalculator.WindLoadCalculations
         /// Effective wind areas for roof
         /// </summary>
         public override Dictionary<int, EffectiveWindArea_Roof> effWindAreas_Roof { get; set; } = new Dictionary<int, EffectiveWindArea_Roof>();
-
-        public static double CritDim_a { get; set; }
+        public override double CritDim_a { get; set; }
+        public override bool HasCritDim { get; set; }
 
         public override void Compute(WindLoadParameters_Base parameters, BuildingData bldg_data)
         {
             /// <summary>
             /// The critical width dimenstion "a" used throughout chapter 30
             /// -- minimum of 0.4 * building height and 0.1 * min(building Length, building width)
+            /// but not less than 4% of smallest dimension or 3 ft.
             /// </summary>
-            CritDim_a = Math.Min(0.4 * bldg_data.MeanRoofHeight, 0.1 * Math.Min(bldg_data.BuildingLength, bldg_data.BuildingWidth));
-            
+            CritDim_a = Math.Max(
+                Math.Min(0.4 * bldg_data.MeanRoofHeight, 0.1 * Math.Min(bldg_data.BuildingLength, bldg_data.BuildingWidth)),
+                Math.Max(0.04 * Math.Min(bldg_data.BuildingLength, bldg_data.BuildingWidth),
+                3)
+                );
+            HasCritDim = true;
+
             // Hip logic
             // Figure 30.3-2E / 2F / 2G / 2H / 2I -- Flat roof and Gable with slope greater than 7
             // Map if Length is less than width -- ridge is vertical on map

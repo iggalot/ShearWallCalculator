@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
 
 namespace ShearWallVisualizer.Controls
 {
@@ -57,6 +56,15 @@ namespace ShearWallVisualizer.Controls
                 tbVersion.Text = windLoadCalculator.ASCEVersion.ToString();
                 tbl_theta.Text = windLoadCalculator.buildingData.RoofPitch.ToString("F2");
                 tbl_h.Text = windLoadCalculator.buildingData.MeanRoofHeight.ToString("F2");
+
+                if (windLoadCalculator.Parameters.RoofAreaCalculator.HasCritDim)
+                {
+                    sp_a.Visibility = Visibility.Visible;
+                    tbl_a.Text = windLoadCalculator.Parameters.RoofAreaCalculator.CritDim_a.ToString("F2");
+                } else {
+                    sp_a.Visibility = Visibility.Collapsed;
+                }
+
                 tbl_hOverB.Text = (windLoadCalculator.buildingData.MeanRoofHeight / windLoadCalculator.buildingData.BuildingWidth).ToString("F2");
                 tbl_hOverL.Text = (windLoadCalculator.buildingData.MeanRoofHeight / windLoadCalculator.buildingData.BuildingLength).ToString("F2");
                 tbl_roof_type.Text = windLoadCalculator.buildingData.RoofType.ToString();

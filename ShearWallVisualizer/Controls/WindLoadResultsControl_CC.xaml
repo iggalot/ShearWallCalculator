@@ -24,8 +24,14 @@
                 <StackPanel Orientation="Horizontal">
                     <StackPanel Name="spResultsAndCanvas" Grid.Row="0" Grid.Column="0" Orientation="Vertical" HorizontalAlignment="Left" Margin="10">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                            <TextBlock Text="h (ft) = " VerticalAlignment="Center"/>
-                            <TextBlock Name="tbl_h" Width="150" Text=""/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                <TextBlock Text="h (ft) = " VerticalAlignment="Center"/>
+                                <TextBlock Name="tbl_h" Width="150" Text=""/>
+                            </StackPanel>
+                            <StackPanel Name="sp_a" Orientation="Horizontal" HorizontalAlignment="Left">
+                                <TextBlock Text="a (ft) = " VerticalAlignment="Center"/>
+                                <TextBlock Name="tbl_a" Width="150" Text="Junk"/>
+                            </StackPanel>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">

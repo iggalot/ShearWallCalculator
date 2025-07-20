@@ -533,31 +533,6 @@ namespace ShearWallVisualizer
                     // draw the figure to the canvas now
                     FigureDrawer.DrawCurvesOnCanvas(figure30Canvas, figureCC);
                 }
-
-
-                if (windLoadParams.RoofAreaCalculator != null)
-                {
-                    // Now retrieve the Gcp values from the figure
-                    foreach (var kvp in windLoadParams.RoofAreaCalculator.effWindAreas_Roof)
-                    {
-                        string str = string.Empty;
-                        str += $"{kvp.Value.Label_Full}  {kvp.Value.Area} ";
-
-                        if (figureCC.RoofCurves_Pos.ContainsKey(kvp.Value.Label_Full))
-                        {
-                            str += $"pos: {figureCC.RoofCurves_Pos[kvp.Value.Label_Full].Evaluate(kvp.Value.Area):F3} ";
-                        }
-
-                        if (figureCC.RoofCurves_Neg.ContainsKey(kvp.Value.Label_Full))
-                        {
-                            str += $"neg: {figureCC.RoofCurves_Neg[kvp.Value.Label_Full].Evaluate(kvp.Value.Area):F3}";
-                        }
-
-                        // write the label and the data calcs
-
-                        Console.WriteLine(str);
-                    }
-                }
             }
             else if (windLoadParams.AnalysisType == WindLoadCalculationTypes.MWFRS)
             {
