@@ -38,7 +38,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             //    }
             //} 
 
-            //foreach (var kvp in Parameters.effWindAreas_Roof)
+            //foreach (var kvp in Parameters.effWindAreas)
             //{
             //    Console.WriteLine(kvp.Key + " " + kvp.Value.Area+"\n");
             //    //double val = ExternalGCpCurve.GetGCp(kvp.Value.Area);

@@ -53,7 +53,7 @@ namespace ShearWallVisualizer
         public ASCE7_Versions windVersion { get; set;
         }
         public BuildingData buildingData { get; set; } = null;
-        public RoofAreaCalculator_Base roofAreaCalculator { get; set; }
+        public AreaCalculator_Base roofAreaCalculator { get; set; }
         public WindLoadCalculator_Base windLoadCalculator { get; set; }
 
         public SimpsonCatalog simpsonCatalog { get; set; } = new SimpsonCatalog();  // contains the Simposon catalog connector and holddown data
@@ -478,7 +478,7 @@ namespace ShearWallVisualizer
 
                 inputCanvas.Children.Clear();
                 double scale = Math.Min(inputCanvas.ActualWidth / buildingData.BuildingWidth, inputCanvas.ActualHeight / buildingData.BuildingLength);
-                foreach (var area in windLoadParams.RoofAreaCalculator.effWindAreas_Roof)
+                foreach (var area in windLoadParams.RoofAreaCalculator.effWindAreas)
                 {
                     WindLoadInputControl.DrawEffectiveWindArea(inputCanvas, area.Value, scale, GetColorForRegion(area.Value.Label_Short));
                 }
@@ -510,14 +510,14 @@ namespace ShearWallVisualizer
                     case ASCE7_Versions.ASCE_VER_7_10:
                         throw new NotImplementedException("Not implemented for ASCE 7.10");
                     case ASCE7_Versions.ASCE_VER_7_16:
-                        figureCC = Chapter30FigureFactory_ASCE7_16.CreateFigure_ASCE7_16(
+                        figureCC = Chapter30RoofFigureFactory_ASCE7_16.CreateFigure_ASCE7_16(
                             buildingData.RoofType,
                             buildingData.MeanRoofHeight,
                             buildingData.BuildingWidth,
                             buildingData.RoofPitch);
                         break;
                     case ASCE7_Versions.ASCE_VER_7_22:
-                        figureCC = Chapter30FigureFactory_ASCE7_22.CreateFigure_ASCE7_22(
+                        figureCC = Chapter30RoofFigureFactory_ASCE7_22.CreateRoofFigure_ASCE7_22(
                             buildingData.RoofType,
                             buildingData.MeanRoofHeight,
                             buildingData.BuildingWidth,
@@ -549,7 +549,7 @@ namespace ShearWallVisualizer
                 resultCanvas.Children.Clear();
                 double scale = Math.Min(resultCanvas.Width / buildingData.BuildingWidth, resultCanvas.Height / buildingData.BuildingLength);
 
-                foreach (var area in windLoadParams.RoofAreaCalculator.effWindAreas_Roof)
+                foreach (var area in windLoadParams.RoofAreaCalculator.effWindAreas)
                 {
                     WindLoadInputControl.DrawEffectiveWindArea(resultCanvas, area.Value, scale, GetColorForRegion(area.Value.Label_Short));
                 }
@@ -636,7 +636,7 @@ namespace ShearWallVisualizer
             windLoadResultsDataGrid.Columns.Add(col_overhang_press);
 
             List<CC_RoofResults> windLoadResults = new List<CC_RoofResults>();
-            foreach (var area in windLoadParams.RoofAreaCalculator.effWindAreas_Roof)
+            foreach (var area in windLoadParams.RoofAreaCalculator.effWindAreas)
             {
                 CC_RoofResults data = new CC_RoofResults();
                 data.Name = area.Value.Label_Short;

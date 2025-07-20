@@ -5,7 +5,7 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator
 {
     public static class RoofAreaCalculatorFactory
     {
-        public static RoofAreaCalculator_Base Create(
+        public static AreaCalculator_Base Create(
             BuildingData bldg_data,
             WindLoadParameters_Base parameters,
             ASCE7_Versions version

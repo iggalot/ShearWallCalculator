@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace ShearWallCalculator.WindLoadCalculations
 {
-    public class EffectiveWindArea_Roof
+    public class EffectiveWindArea
     {
         public List<Point> OuterBoundary { get; private set; }
         public List<List<Point>> Holes { get; private set; }
@@ -20,7 +20,7 @@ namespace ShearWallCalculator.WindLoadCalculations
         /// </summary>
         public string Label_Short { get => Label_Full.Substring(4); }
 
-        public EffectiveWindArea_Roof(string label, IEnumerable<Point> outer, IEnumerable<IEnumerable<Point>> holes = null)
+        public EffectiveWindArea(string label, IEnumerable<Point> outer, IEnumerable<IEnumerable<Point>> holes = null)
         {
             if (outer == null)
                 throw new ArgumentNullException(nameof(outer));

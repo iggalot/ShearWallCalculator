@@ -6,17 +6,17 @@ using System.Windows;
 
 namespace ShearWallCalculator.WindLoadCalculations
 {
-    public class GableRoofAreaCalculator_CC_ASCE7_22 : RoofAreaCalculator_Base
+    public class GableRoofAreaCalculator_CC_ASCE7_22 : AreaCalculator_Base
     {
         /// <summary>
         /// Effective wind areas for roof
         /// </summary>
-        public override Dictionary<int, EffectiveWindArea_Roof> effWindAreas_Roof { get; set; } = new Dictionary<int, EffectiveWindArea_Roof>();
+        public override Dictionary<int, EffectiveWindArea> effWindAreas { get; set; } = new Dictionary<int, EffectiveWindArea>();
 
         public override double CritDim_a { get; set; }
         public override bool HasCritDim { get; set; }
 
-        public override void Compute(WindLoadParameters_Base parameters, BuildingData bldg_data)
+        public override void Compute(WindLoadParameters_Base parameters, BuildingData bldg_data, Dictionary<string, double> optionalParams = null)
         {
             /// <summary>
             /// The critical width dimenstion "a" used throughout chapter 30
@@ -66,22 +66,22 @@ namespace ShearWallCalculator.WindLoadCalculations
                 Point p37 = new Point(bldg_data.BuildingLength, bldg_data.BuildingWidth);
 
                 // Bottom row of rectangles
-                effWindAreas_Roof.Add(2, new EffectiveWindArea_Roof("Zone2", new List<Point> { p1, p3, p13, p11 }, null));
-                effWindAreas_Roof.Add(3, new EffectiveWindArea_Roof("Zone3", new List<Point> { p3, p4, p14, p13 }, null));
-                effWindAreas_Roof.Add(4, new EffectiveWindArea_Roof("Zone3", new List<Point> { p4, p5, p15, p14 }, null));
-                effWindAreas_Roof.Add(5, new EffectiveWindArea_Roof("Zone2", new List<Point> { p5, p7, p17, p15 }, null));
+                effWindAreas.Add(2, new EffectiveWindArea("Zone2", new List<Point> { p1, p3, p13, p11 }, null));
+                effWindAreas.Add(3, new EffectiveWindArea("Zone3", new List<Point> { p3, p4, p14, p13 }, null));
+                effWindAreas.Add(4, new EffectiveWindArea("Zone3", new List<Point> { p4, p5, p15, p14 }, null));
+                effWindAreas.Add(5, new EffectiveWindArea("Zone2", new List<Point> { p5, p7, p17, p15 }, null));
 
                 // Middle row of rectangles
-                effWindAreas_Roof.Add(8, new EffectiveWindArea_Roof("Zone1", new List<Point> { p11, p13, p23, p21 }, null));
-                effWindAreas_Roof.Add(9, new EffectiveWindArea_Roof("Zone2", new List<Point> { p13, p14, p24, p23 }, null));
-                effWindAreas_Roof.Add(10, new EffectiveWindArea_Roof("Zone2", new List<Point> { p14, p15, p25, p24 }, null));
-                effWindAreas_Roof.Add(11, new EffectiveWindArea_Roof("Zone1", new List<Point> { p15, p17, p27, p25 }, null));
+                effWindAreas.Add(8, new EffectiveWindArea("Zone1", new List<Point> { p11, p13, p23, p21 }, null));
+                effWindAreas.Add(9, new EffectiveWindArea("Zone2", new List<Point> { p13, p14, p24, p23 }, null));
+                effWindAreas.Add(10, new EffectiveWindArea("Zone2", new List<Point> { p14, p15, p25, p24 }, null));
+                effWindAreas.Add(11, new EffectiveWindArea("Zone1", new List<Point> { p15, p17, p27, p25 }, null));
 
                 // Top row of rectangles
-                effWindAreas_Roof.Add(14, new EffectiveWindArea_Roof("Zone2", new List<Point> { p21, p23, p33, p31 }, null));
-                effWindAreas_Roof.Add(15, new EffectiveWindArea_Roof("Zone3", new List<Point> { p23, p24, p34, p33 }, null));
-                effWindAreas_Roof.Add(16, new EffectiveWindArea_Roof("Zone3", new List<Point> { p24, p25, p35, p34 }, null));
-                effWindAreas_Roof.Add(17, new EffectiveWindArea_Roof("Zone2", new List<Point> { p25, p27, p37, p35 }, null));
+                effWindAreas.Add(14, new EffectiveWindArea("Zone2", new List<Point> { p21, p23, p33, p31 }, null));
+                effWindAreas.Add(15, new EffectiveWindArea("Zone3", new List<Point> { p23, p24, p34, p33 }, null));
+                effWindAreas.Add(16, new EffectiveWindArea("Zone3", new List<Point> { p24, p25, p35, p34 }, null));
+                effWindAreas.Add(17, new EffectiveWindArea("Zone2", new List<Point> { p25, p27, p37, p35 }, null));
 
                 return;
             }
@@ -121,26 +121,26 @@ namespace ShearWallCalculator.WindLoadCalculations
 
 
                 // Bottom row of rectangles
-                effWindAreas_Roof.Add(1, new EffectiveWindArea_Roof("Zone3e", new List<Point> { p1, p2, p22, p21 }, null));
-                effWindAreas_Roof.Add(2, new EffectiveWindArea_Roof("Zone2e", new List<Point> { p2, p3, p23, p22 }, null));
-                effWindAreas_Roof.Add(3, new EffectiveWindArea_Roof("Zone3e", new List<Point> { p3, p4, p24, p23 }, null));
+                effWindAreas.Add(1, new EffectiveWindArea("Zone3e", new List<Point> { p1, p2, p22, p21 }, null));
+                effWindAreas.Add(2, new EffectiveWindArea("Zone2e", new List<Point> { p2, p3, p23, p22 }, null));
+                effWindAreas.Add(3, new EffectiveWindArea("Zone3e", new List<Point> { p3, p4, p24, p23 }, null));
 
                 //// Top row of rectangles
-                effWindAreas_Roof.Add(7, new EffectiveWindArea_Roof("Zone3r", new List<Point> { p21, p22, p32, p31 }, null));
-                effWindAreas_Roof.Add(8, new EffectiveWindArea_Roof("Zone2r", new List<Point> { p22, p23, p33, p32 }, null));
-                effWindAreas_Roof.Add(9, new EffectiveWindArea_Roof("Zone3r", new List<Point> { p23, p24, p34, p33 }, null));
+                effWindAreas.Add(7, new EffectiveWindArea("Zone3r", new List<Point> { p21, p22, p32, p31 }, null));
+                effWindAreas.Add(8, new EffectiveWindArea("Zone2r", new List<Point> { p22, p23, p33, p32 }, null));
+                effWindAreas.Add(9, new EffectiveWindArea("Zone3r", new List<Point> { p23, p24, p34, p33 }, null));
 
                 // ------------------ RIDGE ---------------- //
 
                 // Bottom row of rectangles
-                effWindAreas_Roof.Add(10, new EffectiveWindArea_Roof("Zone3r", new List<Point> { p31, p32, p42, p41 }, null));
-                effWindAreas_Roof.Add(11, new EffectiveWindArea_Roof("Zone2r", new List<Point> { p32, p33, p43, p42 }, null));
-                effWindAreas_Roof.Add(12, new EffectiveWindArea_Roof("Zone3r", new List<Point> { p33, p34, p44, p43 }, null));
+                effWindAreas.Add(10, new EffectiveWindArea("Zone3r", new List<Point> { p31, p32, p42, p41 }, null));
+                effWindAreas.Add(11, new EffectiveWindArea("Zone2r", new List<Point> { p32, p33, p43, p42 }, null));
+                effWindAreas.Add(12, new EffectiveWindArea("Zone3r", new List<Point> { p33, p34, p44, p43 }, null));
 
                 // Middle row of rectangles
-                effWindAreas_Roof.Add(13, new EffectiveWindArea_Roof("Zone2n", new List<Point> { p41, p42, p62, p61 }, null));
-                effWindAreas_Roof.Add(14, new EffectiveWindArea_Roof("Zone1", new List<Point> { p42, p43, p63, p62 }, null));
-                effWindAreas_Roof.Add(15, new EffectiveWindArea_Roof("Zone2n", new List<Point> { p43, p44, p64, p63 }, null));
+                effWindAreas.Add(13, new EffectiveWindArea("Zone2n", new List<Point> { p41, p42, p62, p61 }, null));
+                effWindAreas.Add(14, new EffectiveWindArea("Zone1", new List<Point> { p42, p43, p63, p62 }, null));
+                effWindAreas.Add(15, new EffectiveWindArea("Zone2n", new List<Point> { p43, p44, p64, p63 }, null));
 
                 // Top row of rectangles
 
@@ -184,22 +184,22 @@ namespace ShearWallCalculator.WindLoadCalculations
                 Point p37 = new Point(bldg_data.BuildingLength, bldg_data.BuildingWidth);
 
                 // Bottom row of rectangles
-                effWindAreas_Roof.Add(2, new EffectiveWindArea_Roof("Zone2", new List<Point> { p1, p3, p13, p11 }, null));
-                effWindAreas_Roof.Add(3, new EffectiveWindArea_Roof("Zone3", new List<Point> { p3, p4, p14, p13 }, null));
-                effWindAreas_Roof.Add(4, new EffectiveWindArea_Roof("Zone3", new List<Point> { p4, p5, p15, p14 }, null));
-                effWindAreas_Roof.Add(5, new EffectiveWindArea_Roof("Zone2", new List<Point> { p5, p7, p17, p15 }, null));
+                effWindAreas.Add(2, new EffectiveWindArea("Zone2", new List<Point> { p1, p3, p13, p11 }, null));
+                effWindAreas.Add(3, new EffectiveWindArea("Zone3", new List<Point> { p3, p4, p14, p13 }, null));
+                effWindAreas.Add(4, new EffectiveWindArea("Zone3", new List<Point> { p4, p5, p15, p14 }, null));
+                effWindAreas.Add(5, new EffectiveWindArea("Zone2", new List<Point> { p5, p7, p17, p15 }, null));
 
                 // Middle row of rectangles
-                effWindAreas_Roof.Add(8, new EffectiveWindArea_Roof("Zone1", new List<Point> { p11, p13, p23, p21 }, null));
-                effWindAreas_Roof.Add(9, new EffectiveWindArea_Roof("Zone2", new List<Point> { p13, p14, p24, p23 }, null));
-                effWindAreas_Roof.Add(10, new EffectiveWindArea_Roof("Zone2", new List<Point> { p14, p15, p25, p24 }, null));
-                effWindAreas_Roof.Add(11, new EffectiveWindArea_Roof("Zone1", new List<Point> { p15, p17, p27, p25 }, null));
+                effWindAreas.Add(8, new EffectiveWindArea("Zone1", new List<Point> { p11, p13, p23, p21 }, null));
+                effWindAreas.Add(9, new EffectiveWindArea("Zone2", new List<Point> { p13, p14, p24, p23 }, null));
+                effWindAreas.Add(10, new EffectiveWindArea("Zone2", new List<Point> { p14, p15, p25, p24 }, null));
+                effWindAreas.Add(11, new EffectiveWindArea("Zone1", new List<Point> { p15, p17, p27, p25 }, null));
 
                 // Top row of rectangles
-                effWindAreas_Roof.Add(14, new EffectiveWindArea_Roof("Zone2", new List<Point> { p21, p23, p33, p31 }, null));
-                effWindAreas_Roof.Add(15, new EffectiveWindArea_Roof("Zone3", new List<Point> { p23, p24, p34, p33 }, null));
-                effWindAreas_Roof.Add(16, new EffectiveWindArea_Roof("Zone3", new List<Point> { p24, p25, p35, p34 }, null));
-                effWindAreas_Roof.Add(17, new EffectiveWindArea_Roof("Zone2", new List<Point> { p25, p27, p37, p35 }, null));
+                effWindAreas.Add(14, new EffectiveWindArea("Zone2", new List<Point> { p21, p23, p33, p31 }, null));
+                effWindAreas.Add(15, new EffectiveWindArea("Zone3", new List<Point> { p23, p24, p34, p33 }, null));
+                effWindAreas.Add(16, new EffectiveWindArea("Zone3", new List<Point> { p24, p25, p35, p34 }, null));
+                effWindAreas.Add(17, new EffectiveWindArea("Zone2", new List<Point> { p25, p27, p37, p35 }, null));
 
                 return;
             }

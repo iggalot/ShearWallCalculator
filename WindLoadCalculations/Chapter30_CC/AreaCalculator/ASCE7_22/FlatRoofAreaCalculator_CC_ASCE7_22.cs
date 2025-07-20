@@ -6,12 +6,12 @@ using System.Windows;
 
 namespace ShearWallCalculator.WindLoadCalculations
 {
-    public class FlatRoofAreaCalculator_CC_ASCE7_22 : RoofAreaCalculator_Base
+    public class FlatRoofAreaCalculator_CC_ASCE7_22 : AreaCalculator_Base
     {
         /// <summary>
         /// Effective wind areas for roof
         /// </summary>
-        public override Dictionary<int, EffectiveWindArea_Roof> effWindAreas_Roof { get; set; } = new Dictionary<int, EffectiveWindArea_Roof>();
+        public override Dictionary<int, EffectiveWindArea> effWindAreas { get; set; } = new Dictionary<int, EffectiveWindArea>();
 
         /// <summary>
         /// Try to create a zone with positive area.  Otherwise return null;
@@ -20,11 +20,11 @@ namespace ShearWallCalculator.WindLoadCalculations
         /// <param name="outer"></param>
         /// <param name="holes"></param>
         /// <returns></returns>
-        private static EffectiveWindArea_Roof TryCreateZone(int id, string label, IEnumerable<Point> outer, IEnumerable<IEnumerable<Point>> holes = null)
+        private static EffectiveWindArea TryCreateZone(int id, string label, IEnumerable<Point> outer, IEnumerable<IEnumerable<Point>> holes = null)
         {
             try
             {
-                var zone = new EffectiveWindArea_Roof(label, outer, holes);
+                var zone = new EffectiveWindArea(label, outer, holes);
                 if (zone.Area > 0)
                 {
                     Console.WriteLine($"Zone {id} ({label}) created: Area = {zone.Area:F2} ft²");
@@ -45,7 +45,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             return offset > 0 && 2 * offset < L && 2 * offset < B;
         }
 
-        public override void Compute(WindLoadParameters_Base parameters, BuildingData bldg_data)
+        public override void Compute(WindLoadParameters_Base parameters, BuildingData bldg_data, Dictionary<string, double> optionalParams = null)
         {
             // Existing logic from ComputeFlatRoofAreas
             var L = bldg_data.BuildingLength;
@@ -55,10 +55,10 @@ namespace ShearWallCalculator.WindLoadCalculations
             double offset1 = 1.2 * h;
             double offset2 = 0.6 * h;
 
-            var zones = new Dictionary<int, EffectiveWindArea_Roof>();
+            var zones = new Dictionary<int, EffectiveWindArea>();
 
             // Zone 1' - Center (innermost)
-            EffectiveWindArea_Roof z3 = null;
+            EffectiveWindArea z3 = null;
             if (IsValidRectangle(L, B, offset1))
             {
                 z3 = TryCreateZone(
@@ -81,7 +81,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             }
 
             // Zone 1 - Middle band
-            EffectiveWindArea_Roof z2 = null;
+            EffectiveWindArea z2 = null;
             if (IsValidRectangle(L, B, offset2))
             {
                 var outer2 = new[]
@@ -120,7 +120,7 @@ namespace ShearWallCalculator.WindLoadCalculations
                 zones[3] = z1;
 
             // Save or use your zones dictionary here...
-            effWindAreas_Roof = zones;
+            effWindAreas = zones;
 
 
             // region 3 corner zones
@@ -132,7 +132,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             Point p17 = new Point(0.2 * bldg_data.MeanRoofHeight, 0.6 * bldg_data.MeanRoofHeight);
             Point p18 = new Point(0, 0.6 * bldg_data.MeanRoofHeight);
 
-            var roof_area_3_1 = new EffectiveWindArea_Roof(
+            var roof_area_3_1 = new EffectiveWindArea(
                 "Zone3",
                 new List<Point> { p13, p14, p15, p16, p17, p18 },
                 null
@@ -147,7 +147,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             Point p24 = new Point(bldg_data.BuildingLength - 0.6 * bldg_data.MeanRoofHeight, 0);
 
 
-            var roof_area_3_2 = new EffectiveWindArea_Roof(
+            var roof_area_3_2 = new EffectiveWindArea(
                 "Zone3",
                 new List<Point> { p19, p20, p21, p22, p23, p24 },
                 null
@@ -161,7 +161,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             Point p29 = new Point(bldg_data.BuildingLength, bldg_data.BuildingWidth - 0.6 * bldg_data.MeanRoofHeight);
             Point p30 = new Point(bldg_data.BuildingLength, bldg_data.BuildingWidth);
 
-            var roof_area_3_3 = new EffectiveWindArea_Roof(
+            var roof_area_3_3 = new EffectiveWindArea(
                 "Zone3",
                 new List<Point> { p25, p26, p27, p28, p29, p30 },
                 null
@@ -175,16 +175,16 @@ namespace ShearWallCalculator.WindLoadCalculations
             Point p35 = new Point(0.6 * bldg_data.MeanRoofHeight, bldg_data.BuildingWidth - 0.2 * bldg_data.MeanRoofHeight);
             Point p36 = new Point(0.6 * bldg_data.MeanRoofHeight, bldg_data.BuildingWidth);
 
-            var roof_area_3_4 = new EffectiveWindArea_Roof(
+            var roof_area_3_4 = new EffectiveWindArea(
                 "Zone3",
                 new List<Point> { p31, p32, p33, p34, p35, p36 },
                 null
                 );
 
-            effWindAreas_Roof.Add(4, roof_area_3_1);  //z3
-            effWindAreas_Roof.Add(5, roof_area_3_2);  //z3
-            effWindAreas_Roof.Add(6, roof_area_3_3);  //z3
-            effWindAreas_Roof.Add(7, roof_area_3_4);  //z3
+            effWindAreas.Add(4, roof_area_3_1);  //z3
+            effWindAreas.Add(5, roof_area_3_2);  //z3
+            effWindAreas.Add(6, roof_area_3_3);  //z3
+            effWindAreas.Add(7, roof_area_3_4);  //z3
 
             return;
         }

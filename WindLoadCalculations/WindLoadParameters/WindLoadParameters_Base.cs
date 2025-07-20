@@ -20,10 +20,20 @@ namespace ShearWallCalculator.WindLoadCalculations
         public Dictionary<int, double> GCp_Values { get; set; } = new Dictionary<int, double>();
 
         /// <summary>
-        /// Contains the calculator that will be used to calculate the effective wind areas
+        /// Contains the calculator that will be used to calculate the effective wind areas on the roof
         /// </summary>
-        public abstract RoofAreaCalculator_Base RoofAreaCalculator { get; set; }
+        public abstract AreaCalculator_Base RoofAreaCalculator { get; set; }
 
-        public abstract void ComputeEffectiveWindAreas_Roof(BuildingData buildingData, ASCE7_Versions version);
+        /// <summary>
+        /// Contains the calculator for the wall loads acting on the BuildingLength dimension
+        /// </summary>
+        public abstract AreaCalculator_Base WallAreaCalculator_BldgLength { get; set; }
+        /// <summary>
+        /// Contains the calculator for the wall loads acting on the BuildingWidth dimension
+        /// </summary>
+        public abstract AreaCalculator_Base WallAreaCalculator_BldgWidth { get; set; }
+
+
+        public abstract void ComputeEffectiveWindAreas(BuildingData buildingData, ASCE7_Versions version);
     }
 }

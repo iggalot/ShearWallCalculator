@@ -141,7 +141,7 @@ namespace ShearWallVisualizer.Controls
             WindInputComplete?.Invoke(this, new OnWindInputCompleteEventArgs(parameters, version));
         }
 
-        public static void DrawEffectiveWindArea(Canvas canvas, EffectiveWindArea_Roof area, double scaleFactor, Brush fill_color)
+        public static void DrawEffectiveWindArea(Canvas canvas, EffectiveWindArea area, double scaleFactor, Brush fill_color)
         {
             if (canvas == null || area == null)
                 return;
@@ -231,7 +231,7 @@ namespace ShearWallVisualizer.Controls
                     break;
             }
             Parameters = GetWindLoadParameters(bldgData.RoofType, version);
-            Parameters.ComputeEffectiveWindAreas_Roof(bldgData, version);
+            Parameters.ComputeEffectiveWindAreas(bldgData, version);
 
             OnWindInputComplete(Parameters, version); // raise the event where input has been completed
         }
@@ -280,7 +280,7 @@ namespace ShearWallVisualizer.Controls
                 );
             if(bldgData != null)
             {
-                windParams.ComputeEffectiveWindAreas_Roof(bldgData, version);
+                windParams.ComputeEffectiveWindAreas(bldgData, version);
             } else
             {
                 windParams = null;

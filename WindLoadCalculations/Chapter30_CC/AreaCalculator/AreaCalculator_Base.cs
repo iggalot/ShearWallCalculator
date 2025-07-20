@@ -4,12 +4,12 @@ using System.Collections.Generic;
 
 namespace ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator
 {
-    public abstract class RoofAreaCalculator_Base
+    public abstract class AreaCalculator_Base
     {
         /// <summary>
         /// Effective wind areas for roof To be overriden by the implementating class
         /// </summary>
-        public abstract Dictionary<int, EffectiveWindArea_Roof> effWindAreas_Roof { get; set; }
+        public abstract Dictionary<int, EffectiveWindArea> effWindAreas { get; set; }
 
         public virtual bool HasCritDim { get; set; } = false;
         public virtual double CritDim_a
@@ -23,12 +23,12 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator
         /// </summary>
         /// <param name="p"></param>
         /// <param name="bldg_data"></param>
-        public abstract void Compute(WindLoadParameters_Base p, BuildingData bldg_data);
+        public abstract void Compute(WindLoadParameters_Base p, BuildingData bldg_data, Dictionary<string, double> optionalDimension = null);
 
         public string DisplayResults()
         {
             string str = string.Empty;
-            foreach (KeyValuePair<int, EffectiveWindArea_Roof> kvp in effWindAreas_Roof)
+            foreach (KeyValuePair<int, EffectiveWindArea> kvp in effWindAreas)
             {
                 str += kvp.Value.DisplayResults() + "\n";
             }
@@ -41,7 +41,7 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator
         public double TotalRoofArea()
         {
             double sum = 0;
-            foreach (KeyValuePair<int, EffectiveWindArea_Roof> kvp in effWindAreas_Roof)
+            foreach (KeyValuePair<int, EffectiveWindArea> kvp in effWindAreas)
             {
                 sum += kvp.Value.Area;
             }
