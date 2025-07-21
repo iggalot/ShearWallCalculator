@@ -34,6 +34,10 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.Figure30_3
                 allCurves.Add((kvp.Key, kvp.Value, true));
             foreach (var kvp in figure.RoofCurves_Pos)
                 allCurves.Add((kvp.Key, kvp.Value, false));
+            foreach (var kvp in figure.WallCurves_Neg)
+                allCurves.Add((kvp.Key, kvp.Value, true));
+            foreach (var kvp in figure.WallCurves_Pos)
+                allCurves.Add((kvp.Key, kvp.Value, false));
 
             // Group by curve shape (not label)
             var groupedByShape = allCurves

@@ -8,8 +8,7 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30_CC.AreaCalculator.A
 {
     public class WallAreaCalculator_NonGableEnd_CC_ASCE7_22 : AreaCalculator_Base
     {
-        public override Dictionary<int, EffectiveWindArea> effWindAreas { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
-
+        public override Dictionary<int, EffectiveWindArea> effWindAreas { get; set; } = new Dictionary<int, EffectiveWindArea>();
         public override double CritDim_a { get; set; }
         public override bool HasCritDim { get; set; }
 

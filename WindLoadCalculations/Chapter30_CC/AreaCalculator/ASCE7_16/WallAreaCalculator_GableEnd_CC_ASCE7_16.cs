@@ -8,7 +8,7 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30_CC.AreaCalculator.A
 {
     public class WallAreaCalculator_GableEnd_CC_ASCE7_16 : AreaCalculator_Base
     {
-        public override Dictionary<int, EffectiveWindArea> effWindAreas { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
+        public override Dictionary<int, EffectiveWindArea> effWindAreas { get; set; } = new Dictionary<int, EffectiveWindArea>();
 
         public override double CritDim_a { get; set; }
         public override bool HasCritDim { get; set; }
@@ -27,6 +27,7 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30_CC.AreaCalculator.A
                 );
             HasCritDim = true;
 
+
             double length;
             if (optionalParams.ContainsKey("WallLength"))
             {
@@ -42,15 +43,35 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30_CC.AreaCalculator.A
             Point B = new Point(length, 0);
             Point C = new Point(bldg_data.BuildingLength, bldg_data.BuildingHeight);
             Point D = new Point(0, bldg_data.BuildingHeight);
+            Point E = new Point(length, bldg_data.BuildingHeight + Math.Tan(bldg_data.RoofPitch) * length / 2.0);
 
-            Point p1 = new Point(CritDim_a, 0);
-            Point p2 = new Point(CritDim_a, bldg_data.BuildingHeight);
-            Point p3 = new Point(bldg_data.BuildingLength - CritDim_a, 0);
-            Point p4 = new Point(bldg_data.BuildingLength - CritDim_a, bldg_data.BuildingHeight);
+            Point p1, p2, p3, p4, p5, p6;
+            if (length > 2 * CritDim_a)
+            {
+                var ht_at_roof = bldg_data.BuildingHeight + Math.Tan(bldg_data.RoofPitch) * CritDim_a;
+                p1 = new Point(CritDim_a, 0);
+                p2 = new Point(CritDim_a, bldg_data.BuildingHeight);
+                p3 = new Point(length - CritDim_a, 0);
+                p4 = new Point(length - CritDim_a, bldg_data.BuildingHeight);
+                p5 = new Point(CritDim_a, ht_at_roof);
+                p6 = new Point(length - CritDim_a, ht_at_roof);
 
-            effWindAreas.Add(1, new EffectiveWindArea("Zone5", new List<Point> { A, p1, p2, D }, null));
-            effWindAreas.Add(2, new EffectiveWindArea("Zone4", new List<Point> { p1, p3, p4, p2 }, null));
-            effWindAreas.Add(3, new EffectiveWindArea("Zone5", new List<Point> { p3, B, C, p4 }, null));
+                effWindAreas.Add(1, new EffectiveWindArea("Zone5", new List<Point> { A, p1, p5, D }, null));
+                effWindAreas.Add(2, new EffectiveWindArea("Zone4", new List<Point> { p1, p3, p6, E, p5 }, null));
+                effWindAreas.Add(3, new EffectiveWindArea("Zone5", new List<Point> { p3, B, C, p6 }, null));
+            }
+            else if (length < 2 * CritDim_a)
+            {
+                p1 = new Point(CritDim_a, 0);
+                p2 = new Point(CritDim_a, bldg_data.BuildingHeight);
+                p3 = new Point(length - CritDim_a, 0);
+                p4 = new Point(length - CritDim_a, bldg_data.BuildingHeight);
+                effWindAreas.Add(1, new EffectiveWindArea("Zone5", new List<Point> { A, B, C, E, D }, null));
+            }
+            else
+            {
+                throw new Exception("ERROR: Wall length is too short.");
+            }
         }
     }
 }

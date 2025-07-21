@@ -17,6 +17,8 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30
             RoofCurves_Pos = new Dictionary<string, ExternalGCpCurve>();
             RoofCurves_Neg = new Dictionary<string, ExternalGCpCurve>();
             OverhangCurves = new Dictionary<string, ExternalGCpCurve>();
+            WallCurves_Pos = new Dictionary<string, ExternalGCpCurve>();
+            WallCurves_Neg = new Dictionary<string, ExternalGCpCurve>();
         }
     }
 }

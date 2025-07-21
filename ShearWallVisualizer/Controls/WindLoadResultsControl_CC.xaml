@@ -66,16 +66,46 @@
                               ColumnWidth="Auto"
                               FontSize="10">
                         </DataGrid>
+                        <!-- Display Wall Zone Pressure Results -->
+                        <TextBlock Text="Side Wall Zone Pressures" Margin="10"/>
+                        <DataGrid x:Name="WallsResultsDataGrid_SideWall"
+                              AutoGenerateColumns="False"
+                              HeadersVisibility="Column"
+                              CanUserAddRows="False"
+                              IsReadOnly="True"
+                              HorizontalScrollBarVisibility="Auto"
+                              Margin="5"
+                              ColumnWidth="Auto"
+                              FontSize="10">
+                        </DataGrid>
+                        <TextBlock Text="End Wall Zone Pressures" Margin="10"/>
+                        <DataGrid x:Name="WallsResultsDataGrid_EndWall"
+                              AutoGenerateColumns="False"
+                              HeadersVisibility="Column"
+                              CanUserAddRows="False"
+                              IsReadOnly="True"
+                              HorizontalScrollBarVisibility="Auto"
+                              Margin="5"
+                              ColumnWidth="Auto"
+                              FontSize="10">
+                        </DataGrid>
                     </StackPanel>
                     <StackPanel Orientation="Vertical" Grid.Column="1" Margin="5">
                         <!-- Roof area pressure map -->
-                        <Canvas x:Name="cnvWindLoadResultCanvasCC" Width="200" Height="200" Background="Transparent"></Canvas>
+                        <Canvas x:Name="cnvWindLoadResultCanvasCC" Width="100" Height="100" Background="Transparent"></Canvas>
 
                         <!-- Ae vs GCp coefficient curve-->
-                        <StackPanel Orientation="Vertical" Margin="0 15 0 0">
-                            <TextBlock x:Name="txtFigureTitle" Text="Title" FontSize="12" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center"  />
-                            <Canvas x:Name="cnvFigure30_3" Width="200" Height="200" Background="White"></Canvas>
-                            <TextBlock x:Name="txtFigureCriteria" Text="Criteria" Height="25" FontSize="10" FontWeight="Bold"/>
+                        <StackPanel Orientation="Vertical">
+                            <StackPanel Orientation="Vertical" Margin="0 15 0 0">
+                                <TextBlock x:Name="txtFigureTitle_Roof" Text="Title" FontSize="10" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center"  />
+                                <Canvas x:Name="cnvFigure30_3" Width="150" Height="150" Background="White"></Canvas>
+                                <TextBlock x:Name="txtFigureCriteria_Roof" Text="Criteria" Height="25" FontSize="10" FontWeight="Bold"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Vertical" Margin="0 15 0 0">
+                                <TextBlock x:Name="txtFigureTitle_Walls" Text="Title" FontSize="10" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center"  />
+                                <Canvas x:Name="cnvFigure30_1" Width="150" Height="150" Background="White"></Canvas>
+                                <TextBlock x:Name="txtFigureCriteria_Walls" Text="Criteria" Height="25" FontSize="10" FontWeight="Bold"/>
+                            </StackPanel>
                         </StackPanel>
                     </StackPanel>
                 </StackPanel>

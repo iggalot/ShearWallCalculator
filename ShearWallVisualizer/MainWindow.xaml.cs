@@ -463,14 +463,14 @@ namespace ShearWallVisualizer
 
             // TODO: load the calculator (if it isnt already)
             windLoadCalculator = WindLoadCalculatorFactory.Create(windVersion, windLoadParams.AnalysisType, windLoadParams, buildingData);
-
+            
             // create the wind load results control
-            ContentControl ctrol_wind_results1 = new WindLoadResultsControl_MWFRS(windLoadParams, buildingData);
-            tabWindResultsTabItem_MWFRS.Content = ctrol_wind_results1;
-            var ctrol_wind_results2 = new WindLoadResultsControl_CC(windLoadCalculator);
-            tabWindResultsTabItem_CC.Content = ctrol_wind_results2;
+            ContentControl ctrol_wind_results_MWFRS = new WindLoadResultsControl_MWFRS(windLoadParams, buildingData);
+            tabWindResultsTabItem_MWFRS.Content = ctrol_wind_results_MWFRS;
+            var ctrol_wind_result_CC = new WindLoadResultsControl_CC(windLoadCalculator);
+            tabWindResultsTabItem_CC.Content = ctrol_wind_result_CC;
 
-            // Draw on the input control canvas
+            // Draw the areas on the input control canvas
             var inputControl = tabWindInputControlTabItem.Content as WindLoadInputControl;
             if (inputControl != null)
             {
@@ -484,54 +484,81 @@ namespace ShearWallVisualizer
                 }
             }
 
+            // Reactive the CC and MWFRS tabs (make them visible again) -- we will turn off the unecessary one further down
             TabControlManager.ReAddTab(MainTabControl, "tabWindResultsTabItem_CC");
             TabControlManager.ReAddTab(MainTabControl, "tabWindResultsTabItem_MWFRS");
 
             Canvas resultCanvas = null;
-            Canvas figure30Canvas = null;
-            TextBlock figure30Title = null;
-            TextBlock figure30Criteria = null;
+            Canvas figure30Canvas_Roof = null;
+            TextBlock figure30Title_Roof = null;
+            TextBlock figure30Criteria_Roof = null;
 
-            Chapter30_BaseFigure figureCC = null;
+            Canvas figure30Canvas_Walls = null;
+            TextBlock figure30Title_Walls = null;
+            TextBlock figure30Criteria_Walls = null;
+
+            Chapter30_BaseFigure figureCC_Roof = null;
+            Chapter30_BaseFigure figureCC_Wall = null;
+
             if (windLoadParams.AnalysisType == WindLoadCalculationTypes.COMPONENT_AND_CLADDING)
             {
                 if (tabWindResultsTabItem_CC.Content is WindLoadResultsControl_CC ccControl)
                 {
                     resultCanvas = ccControl.cnvWindLoadResultCanvasCC;
-                    figure30Canvas = ccControl.cnvFigure30_3;
-                    figure30Title = ccControl.txtFigureTitle;
-                    figure30Criteria = ccControl.txtFigureCriteria;
+                    figure30Canvas_Roof = ccControl.cnvFigure30_3;
+                    figure30Title_Roof = ccControl.txtFigureTitle_Roof;
+                    figure30Criteria_Roof = ccControl.txtFigureCriteria_Roof;
+
+                    figure30Canvas_Walls = ccControl.cnvFigure30_1;
+                    figure30Title_Walls = ccControl.txtFigureTitle_Walls;
+                    figure30Criteria_Walls = ccControl.txtFigureCriteria_Walls;
                 }
                 TabControlManager.RemoveTab(MainTabControl, tabWindResultsTabItem_MWFRS);
 
-                // Create the figure
+                // Create the Components and Classing GCp vs Area figure from Chapter 30
+                // for wall Figure30_3_1 and roof Figure30_3_2A,B,C,D, etc.
                 switch (windVersion)
                 {
                     case ASCE7_Versions.ASCE_VER_7_10:
                         throw new NotImplementedException("Not implemented for ASCE 7.10");
                     case ASCE7_Versions.ASCE_VER_7_16:
-                        figureCC = Chapter30RoofFigureFactory_ASCE7_16.CreateFigure_ASCE7_16(
+                        figureCC_Roof = Chapter30RoofFigureFactory_ASCE7_16.CreateFigure_ASCE7_16(
                             buildingData.RoofType,
                             buildingData.MeanRoofHeight,
                             buildingData.BuildingWidth,
                             buildingData.RoofPitch);
+                        figureCC_Wall = new Figure30_3_1_ASCE7_16();
                         break;
                     case ASCE7_Versions.ASCE_VER_7_22:
-                        figureCC = Chapter30RoofFigureFactory_ASCE7_22.CreateRoofFigure_ASCE7_22(
+                        figureCC_Roof = Chapter30RoofFigureFactory_ASCE7_22.CreateRoofFigure_ASCE7_22(
                             buildingData.RoofType,
                             buildingData.MeanRoofHeight,
                             buildingData.BuildingWidth,
                             buildingData.RoofPitch);
+                        figureCC_Wall = new Figure30_3_1_ASCE7_22();
                         break;
                 }
 
-                if(figure30Title != null) figure30Title.Text = figureCC.ChartTitle;
-                if (figure30Criteria != null) figure30Criteria.Text = figureCC.ChartCriteria;
+                // Update the titles of the graph
+                if (figure30Title_Roof != null) figure30Title_Roof.Text = figureCC_Roof.ChartTitle;
+                if (figure30Criteria_Roof != null) figure30Criteria_Roof.Text = figureCC_Roof.ChartCriteria;
 
-                if (figureCC != null && resultCanvas != null)
+                // Draw the curve on the curve canvas
+                if (figureCC_Roof != null && resultCanvas != null)
                 {
                     // draw the figure to the canvas now
-                    FigureDrawer.DrawCurvesOnCanvas(figure30Canvas, figureCC);
+                    FigureDrawer.DrawCurvesOnCanvas(figure30Canvas_Roof, figureCC_Roof);
+                }
+
+                // Update the titles of the graph
+                if (figure30Title_Walls != null) figure30Title_Walls.Text = figureCC_Wall.ChartTitle;
+                if (figure30Criteria_Walls != null) figure30Criteria_Walls.Text = figureCC_Wall.ChartCriteria;
+
+                // Draw the curve on the curve canvas
+                if (figureCC_Wall != null && resultCanvas != null)
+                {
+                    // draw the figure to the canvas now
+                    FigureDrawer.DrawCurvesOnCanvas(figure30Canvas_Walls, figureCC_Wall);
                 }
             }
             else if (windLoadParams.AnalysisType == WindLoadCalculationTypes.MWFRS)
@@ -544,6 +571,7 @@ namespace ShearWallVisualizer
 
             }
 
+            // Draw the areas on the area map canvas
             if (resultCanvas != null)
             {
                 resultCanvas.Children.Clear();
@@ -555,14 +583,28 @@ namespace ShearWallVisualizer
                 }
             }
 
+            DataGrid windLoadRoofResultsDataGrid;
+            List<CC_WindLoadResults> windLoadResults_Roof;
+            CreateCC_DataGrid_Roof(ctrol_wind_result_CC, figureCC_Roof, out windLoadRoofResultsDataGrid, out windLoadResults_Roof);
+            windLoadRoofResultsDataGrid.ItemsSource = windLoadResults_Roof;
+
+            DataGrid windLoadWallResultsDataGrid;
+            List<CC_WindLoadResults> windLoadResults_Walls; 
+            CreateCC_DataGrid_Walls(ctrol_wind_result_CC, figureCC_Wall, out windLoadWallResultsDataGrid, out windLoadResults_Walls);
+            windLoadWallResultsDataGrid.ItemsSource = windLoadResults_Walls;
+
+            UpdateShearWallUI();
+        }
+
+        private void CreateCC_DataGrid_Roof(WindLoadResultsControl_CC ctrol_wind_results2, Chapter30_BaseFigure figureCC, out DataGrid windLoadResultsDataGrid, out List<CC_WindLoadResults> windLoadResults)
+        {
             // Get the datagrid from the results control
-            DataGrid windLoadResultsDataGrid = ctrol_wind_results2.RoofResultsDataGrid;
+            windLoadResultsDataGrid = ctrol_wind_results2.RoofResultsDataGrid;
             windLoadResultsDataGrid.ItemsSource = null;
-            windLoadResultsDataGrid.Columns.Clear(); 
+            windLoadResultsDataGrid.Columns.Clear();
             windLoadResultsDataGrid.AutoGenerateColumns = false;
 
             // create our data object
-
             var col_name = new DataGridTextColumn
             {
                 Header = "Name",
@@ -635,10 +677,10 @@ namespace ShearWallVisualizer
             };
             windLoadResultsDataGrid.Columns.Add(col_overhang_press);
 
-            List<CC_RoofResults> windLoadResults = new List<CC_RoofResults>();
+            windLoadResults = new List<CC_WindLoadResults>();
             foreach (var area in windLoadParams.RoofAreaCalculator.effWindAreas)
             {
-                CC_RoofResults data = new CC_RoofResults();
+                CC_WindLoadResults data = new CC_WindLoadResults();
                 data.Name = area.Value.Label_Short;
                 data.Region = area.Value.Label_Short;
                 data.Area = area.Value.Area;
@@ -650,7 +692,7 @@ namespace ShearWallVisualizer
                     data.PosPress = data.qh * data.GCp_pos;
                 }
 
-                if (figureCC.RoofCurves_Neg != null && figureCC.RoofCurves_Pos.ContainsKey(area.Value.Label_Full))
+                if (figureCC.RoofCurves_Neg != null && figureCC.RoofCurves_Neg.ContainsKey(area.Value.Label_Full))
                 {
                     data.GCp_neg = figureCC.RoofCurves_Neg[area.Value.Label_Full].Evaluate(area.Value.Area);
                     data.NegPress = data.qh * data.GCp_neg;
@@ -659,22 +701,147 @@ namespace ShearWallVisualizer
                 if (figureCC.OverhangCurves != null && figureCC.OverhangCurves.ContainsKey(area.Value.Label_Full))
                 {
                     data.OverhangPress = figureCC.OverhangCurves[area.Value.Label_Full].Evaluate(area.Value.Area);
-                } 
-                    
+                }
+
                 windLoadResults.Add(data);
             }
-
-            windLoadResultsDataGrid.ItemsSource = windLoadResults;
-
-            foreach (var col in windLoadResultsDataGrid.Columns)
-            {
-                Console.WriteLine($"Column: {col.Header}");
-            }
-
-            UpdateShearWallUI();
         }
 
-        public class CC_RoofResults
+
+        private void CreateCC_DataGrid_Walls(WindLoadResultsControl_CC ctrol_wind_results2, Chapter30_BaseFigure figureCC, out DataGrid windLoadWallResultsDataGrid, out List<CC_WindLoadResults> windLoadResults)
+        {
+            // Get the datagrid from the results control
+            windLoadWallResultsDataGrid = ctrol_wind_results2.WallsResultsDataGrid_SideWall;
+            windLoadWallResultsDataGrid.ItemsSource = null;
+            windLoadWallResultsDataGrid.Columns.Clear();
+            windLoadWallResultsDataGrid.AutoGenerateColumns = false;
+
+            // create our data object
+            var col_name = new DataGridTextColumn
+            {
+                Header = "Name",
+                Binding = new Binding("Name")
+            };
+            windLoadWallResultsDataGrid.Columns.Add(col_name);
+
+            var col_rectangle = new DataGridTemplateColumn
+            {
+                Header = ""
+            };
+
+            // Define the DataTemplate in code for drawing a colored rectangle
+            var factory = new FrameworkElementFactory(typeof(Rectangle));
+            factory.SetValue(Rectangle.WidthProperty, 15.0);
+            factory.SetValue(Rectangle.HeightProperty, 15.0);
+            factory.SetValue(Rectangle.StrokeProperty, Brushes.Black);
+            factory.SetBinding(Rectangle.FillProperty, new Binding("RectColor"));
+
+            col_rectangle.CellTemplate = new DataTemplate { VisualTree = factory };
+
+            windLoadWallResultsDataGrid.Columns.Add(col_rectangle);
+
+            var col_area = new DataGridTextColumn
+            {
+                Header = "Area\n(sq ft)",
+                Binding = new Binding("Area") { StringFormat = "0" }
+            };
+            windLoadWallResultsDataGrid.Columns.Add(col_area);
+
+            var col_qh = new DataGridTextColumn
+            {
+                Header = "qh\n(psf)",
+                Binding = new Binding("qh") { StringFormat = "0.0" }
+            };
+            windLoadWallResultsDataGrid.Columns.Add(col_qh);
+
+            var col_gcp_pos = new DataGridTextColumn
+            {
+                Header = "GCp+",
+                Binding = new Binding("GCp_pos") { StringFormat = "0.0" }
+            };
+            windLoadWallResultsDataGrid.Columns.Add(col_gcp_pos);
+
+            var col_gcp_neg = new DataGridTextColumn
+            {
+                Header = "GCp-",
+                Binding = new Binding("GCp_neg") { StringFormat = "0.0" }
+            };
+            windLoadWallResultsDataGrid.Columns.Add(col_gcp_neg);
+
+            var col_pos_press = new DataGridTextColumn
+            {
+                Header = "+ Press\n(psf)",
+                Binding = new Binding("PosPress") { StringFormat = "0.0" }
+            };
+            windLoadWallResultsDataGrid.Columns.Add(col_pos_press);
+
+            var col_neg_press = new DataGridTextColumn
+            {
+                Header = "- Press\n(psf)",
+                Binding = new Binding("NegPress") { StringFormat = "0.0" }
+            };
+            windLoadWallResultsDataGrid.Columns.Add(col_neg_press);
+
+            windLoadResults = new List<CC_WindLoadResults>();
+
+            /// Results for the side wall
+            /// 
+            if ((windLoadParams.WallAreaCalculator_BldgLength.effWindAreas != null) && windLoadParams.WallAreaCalculator_BldgLength.effWindAreas.Count > 0)
+            {
+                foreach (var area in windLoadParams.WallAreaCalculator_BldgLength.effWindAreas)
+                {
+                    CC_WindLoadResults data = new CC_WindLoadResults();
+                    data.Name = area.Value.Label_Short;
+                    data.Region = area.Value.Label_Short;
+                    data.Area = area.Value.Area;
+                    data.qh = windLoadCalculator.CalculateDynamicWindPressure(buildingData.MeanRoofHeight);
+
+                    if (figureCC.WallCurves_Pos != null && figureCC.WallCurves_Pos.ContainsKey(area.Value.Label_Full))
+                    {
+                        data.GCp_pos = figureCC.WallCurves_Pos[area.Value.Label_Full].Evaluate(area.Value.Area);
+                        data.PosPress = data.qh * data.GCp_pos;
+                    }
+
+                    if (figureCC.WallCurves_Neg != null && figureCC.WallCurves_Neg.ContainsKey(area.Value.Label_Full))
+                    {
+                        data.GCp_neg = figureCC.WallCurves_Neg[area.Value.Label_Full].Evaluate(area.Value.Area);
+                        data.NegPress = data.qh * data.GCp_neg;
+                    }
+
+                    windLoadResults.Add(data);
+                }
+            }
+
+            ///// Results for the windward end wall
+            //if ((windLoadParams.WallAreaCalculator_BldgWidth.effWindAreas != null) && windLoadParams.WallAreaCalculator_BldgWidth.effWindAreas.Count > 0)
+            //{
+            //    /// Results for the windward end wall
+            //    foreach (var area in windLoadParams.WallAreaCalculator_BldgWidth.effWindAreas)
+            //    {
+            //        CC_WindLoadResults data = new CC_WindLoadResults();
+            //        data.Name = area.Value.Label_Short;
+            //        data.Region = area.Value.Label_Short;
+            //        data.Area = area.Value.Area;
+            //        data.qh = windLoadCalculator.CalculateDynamicWindPressure(buildingData.MeanRoofHeight);
+
+            //        if (figureCC_Roof.WallCurves_Pos != null && figureCC_Roof.WallCurves_Pos.ContainsKey(area.Value.Label_Full))
+            //        {
+            //            data.GCp_pos = figureCC_Roof.WallCurves_Pos[area.Value.Label_Full].Evaluate(area.Value.Area);
+            //            data.PosPress = data.qh * data.GCp_pos;
+            //        }
+
+            //        if (figureCC_Roof.WallCurves_Neg != null && figureCC_Roof.WallCurves_Neg.ContainsKey(area.Value.Label_Full))
+            //        {
+            //            data.GCp_neg = figureCC_Roof.WallCurves_Neg[area.Value.Label_Full].Evaluate(area.Value.Area);
+            //            data.NegPress = data.qh * data.GCp_neg;
+            //        }
+
+            //        windLoadResults.Add(data);
+            //    }
+            //}
+        }
+
+        public class CC_WindLoadResults
         {
             public string Name { get; set; }
             public double Area { get; set; }
