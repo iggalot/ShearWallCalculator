@@ -19,7 +19,7 @@
 
             // Negative Pressure Wall Zones
             WallCurves_Neg["Zone5"] = new ExternalGCpCurve(10, -1.4, 500, -0.8);
-            WallCurves_Neg["Zone4'"] = new ExternalGCpCurve(10, -1.1, 500, -0.8);
+            WallCurves_Neg["Zone4"] = new ExternalGCpCurve(10, -1.1, 500, -0.8);
         }
     }
 }
