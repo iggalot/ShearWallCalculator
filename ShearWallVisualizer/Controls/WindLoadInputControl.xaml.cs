@@ -80,6 +80,7 @@ namespace ShearWallVisualizer.Controls
             cmbWindAnalysisType.Items.Clear();
             cmbASCEVersion.Items.Clear();
 
+
             foreach (var value in Enum.GetValues(typeof(ASCE7_Versions)))
             {
                 cmbASCEVersion.Items.Add(value);
@@ -243,7 +244,6 @@ namespace ShearWallVisualizer.Controls
             double kzt = double.Parse(KztTextBox.Text);
             double importance = double.Parse(ImportanceFactorTextBox.Text);
             string risk = ((ComboBoxItem)RiskCategoryComboBox.SelectedItem).Content.ToString();
-            string enclosure = ((ComboBoxItem)EnclosureComboBox.SelectedItem).Content.ToString();
             WindLoadCalculationTypes analysis_type = (WindLoadCalculationTypes)cmbWindAnalysisType.SelectedIndex;
             string exposure_string = ((ComboBoxItem)ExposureCategoryComboBox.SelectedItem).Content.ToString();
             WindExposureCategories exposure;
@@ -269,7 +269,6 @@ namespace ShearWallVisualizer.Controls
                 risk, 
                 windSpeed, 
                 exposure, 
-                enclosure, 
                 kd, 
                 kzt, 
                 importance, 

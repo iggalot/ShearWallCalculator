@@ -121,16 +121,6 @@
                         </ComboBox>
                     </StackPanel>
 
-                    <!-- Enclosure Classification (Default to Partially Enclosed) -->
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                        <TextBlock Text="Enclosure Classification" VerticalAlignment="Center" Margin="5"/>
-                        <ComboBox x:Name="EnclosureComboBox" Width="150" Margin="5">
-                            <ComboBoxItem Content="Enclosed"/>
-                            <ComboBoxItem Content="Partially Enclosed" IsSelected="True"/>
-                            <ComboBoxItem Content="Open"/>
-                        </ComboBox>
-                    </StackPanel>
-
                     <!-- Ridge Direction (Default to Perpendicular to Wind) -->
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                         <TextBlock Text="Ridge Direction" VerticalAlignment="Center" Margin="5"/>

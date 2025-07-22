@@ -3,7 +3,15 @@ using System;
 
 namespace ShearWallCalculator.BuildingInfo
 {
-    /// <summary>
+    public enum BuildingEnclosures
+    {
+        BLDG_ENCLOSED = 0,
+        BLDG_PARTIALLY_ENCLOSED = 1,
+        BLDG_PARTIALLY_OPEN = 2,
+        BLDG_OPEN = 3
+    }
+    
+    // <summary>
     /// A class for storing the building data
     /// </summary>
     public class BuildingData
@@ -14,6 +22,7 @@ namespace ShearWallCalculator.BuildingInfo
         public double RoofPitch { get; set; } = 0;
         public string RidgeDirection { get; set; } = string.Empty;
         public RoofTypes RoofType { get; set; } = RoofTypes.ROOF_TYPE_FLAT;
+        public BuildingEnclosures EnclosureType { get; set; } = BuildingEnclosures.BLDG_ENCLOSED;
 
         /// <summary>
         /// The mean roof height of the building, h per ASCE7

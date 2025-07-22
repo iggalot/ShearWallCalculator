@@ -1,12 +1,10 @@
 ﻿using ShearWallCalculator.BuildingInfo;
+using ShearWallCalculator.WindLoadCalculations.WindLoadCalculators;
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
 
 namespace ShearWallCalculator.WindLoadCalculations
 {
-    public class WindLoadCalculator_MWFRS_ASCE7_16 : WindLoadCalculator_Base
+    public class WindLoadCalculator_MWFRS_ASCE7_16 : WindLoadCalculator_MWFRS_Base
     {
         public override ASCE7_Versions ASCEVersion { get => ASCE7_Versions.ASCE_VER_7_16; }
 
@@ -15,5 +13,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             Parameters = p;
             buildingData = bldg_data;
         }
+
+
     }
 }

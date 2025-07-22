@@ -10,7 +10,7 @@ namespace ShearWallCalculator.WindLoadCalculations
         public string RiskCategory { get; set; }
         public double WindSpeed { get; set; }
         public WindExposureCategories ExposureCategory { get; set; }
-        public string EnclosureClassification { get; set; }
+        public BuildingEnclosures EnclosureClassification { get; set; }
         public double Kd { get; set; }
         public double Kzt { get; set; } = 1.0;
         public double GustFactor { get; set; } = 0.85;

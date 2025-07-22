@@ -1,4 +1,6 @@
 ﻿using ShearWallCalculator.BuildingInfo;
+using ShearWallCalculator.WindLoadCalculations.Chapter30;
+using ShearWallCalculator.WindLoadCalculations.Chapter30.Figure30_3;
 using System;
 using System.ComponentModel;
 
@@ -85,13 +87,38 @@ namespace ShearWallCalculator.WindLoadCalculations
         public WindLoadParameters_Base Parameters { get; set; }
         public BuildingData buildingData { get; set; }
 
+        // Which figure of Ch30_3_2A thru I to use for CC roof
+        public Chapter30_BaseFigure extGCpCurve_Roof { get; set; }
+
+        // The curve of Ch30_3_1 to use for CC walls
+        public Chapter30_BaseFigure extGCpCurve_Wall { get; set; }
+
+        public void CreateExtGcpCurves()
+        {
+            switch (ASCEVersion)
+            {
+                case ASCE7_Versions.ASCE_VER_7_16:
+                    extGCpCurve_Roof = Chapter30RoofFigureFactory_ASCE7_16.CreateRoofFigure_ASCE7_16(
+                         buildingData.RoofType, buildingData.MeanRoofHeight, buildingData.BuildingWidth, buildingData.RoofPitch);
+                    extGCpCurve_Wall = new Figure30_3_1_ASCE7_16();
+                    break;
+                case ASCE7_Versions.ASCE_VER_7_22:
+                    extGCpCurve_Roof = Chapter30RoofFigureFactory_ASCE7_22.CreateRoofFigure_ASCE7_22(
+                        buildingData.RoofType, buildingData.MeanRoofHeight, buildingData.BuildingWidth, buildingData.RoofPitch);
+                    extGCpCurve_Wall = new Figure30_3_1_ASCE7_22();
+                    break;
+                default:
+                    throw new Exception("ERROR: Invalid ASCE Version: " + ASCEVersion + " in WindLoadCalculator_Base constructor.");
+            }
+        }
+
         /// <summary>
-        /// Calculates the dyanmic wind pressure q at a specified height z
+        /// Calculates the dyanmic wind pressure q at a specified height z per ASCE7_16 and ASCE7_22
         /// </summary>
         /// <param name="p"></param>
         /// <param name="z"></param>
         /// <returns></returns>
-        public double CalculateDynamicWindPressure(double z)
+        public virtual double CalculateDynamicWindPressure(double z)
         {
             if (Parameters == null)
                 return -1000;
@@ -107,27 +134,28 @@ namespace ShearWallCalculator.WindLoadCalculations
             return qz;
         }
 
+
         // Get Kz approximation based on building height and exposure category
-        public static double GetKz(double z, WindExposureCategories exposure)
+        public virtual double GetKz(double z, WindExposureCategories exposure)
         {
             double zg, alpha;
 
             switch (exposure)
             {
                 case WindExposureCategories.WIND_EXP_CAT_B:
-                    zg = 1200;
+                    zg = 1200.0;
                     alpha = 7.0;
                     break;
                 case WindExposureCategories.WIND_EXP_CAT_C:
-                    zg = 900;
+                    zg = 900.0;
                     alpha = 9.5;
                     break;
                 case WindExposureCategories.WIND_EXP_CAT_D:
-                    zg = 700;
+                    zg = 700.0;
                     alpha = 11.5;
                     break;
                 default:
-                    zg = 900;
+                    zg = 900.0;
                     alpha = 9.5;
                     break;
             }
@@ -143,41 +171,35 @@ namespace ShearWallCalculator.WindLoadCalculations
         /// <param name="version"></param>
         /// <returns></returns>
         /// <exception cref="NotImplementedException"></exception>
-        public static double GetKd(WindLoadCalculationTypes calc_type, ASCE7_Versions version)
+        public virtual double GetKd(WindLoadCalculationTypes calc_type)
         {
-            switch (version)
+            switch (calc_type)
             {
-                // From Table 26.6-1 of ASCE 7-16
-                case ASCE7_Versions.ASCE_VER_7_16:
-                    {
-                        switch (calc_type)
-                        {
-                            case WindLoadCalculationTypes.COMPONENT_AND_CLADDING:
-                                return 0.85;
-                            case WindLoadCalculationTypes.MWFRS:
-                                return 0.85;
-                            default:
-                                throw new NotImplementedException("ERROR:  " + calc_type + " for " + version + " not supported. ");
-                        }
-                    }
-                // From Table 26.6-1 of ASCE 7-22
-                case ASCE7_Versions.ASCE_VER_7_22:
-                    {
-                        switch (calc_type)
-                        {
-                            case WindLoadCalculationTypes.COMPONENT_AND_CLADDING:
-                                return 0.85;
-                            case WindLoadCalculationTypes.MWFRS:
-                                return 0.85;
-                            default:
-                                throw new NotImplementedException("ERROR:  " + calc_type + " for " + version + " not supported. ");
-                        }
-                    }
+                case WindLoadCalculationTypes.COMPONENT_AND_CLADDING:
+                    return 0.85;
+                case WindLoadCalculationTypes.MWFRS:
+                    return 0.85;
                 default:
-                    {
-                        throw new NotImplementedException("ERROR:  ASCE7 Version " + version + " not supported. ");
-                    }
+                    throw new NotImplementedException("ERROR:  " + calc_type + " not supported. ");
             }
         }
+
+        /// <summary>
+        /// The +/- coefficient for internal pressure coefficient GCpi from ASCE7_16 & ASCE7-22 Table 26.13-1
+        /// </summary>
+        /// <returns></returns>
+        public virtual double GetGCpi()
+        {
+            switch (buildingData.EnclosureType)
+            {
+                case BuildingEnclosures.BLDG_ENCLOSED: return 0.18;
+                case BuildingEnclosures.BLDG_PARTIALLY_ENCLOSED: return 0.55;
+                case BuildingEnclosures.BLDG_PARTIALLY_OPEN: return 0.18;
+                case BuildingEnclosures.BLDG_OPEN: return 0.0;
+                default: throw new Exception("ERROR: Invalid enclosure type: " + buildingData.EnclosureType + " in WindLoadCalculator_MWFRS_ASCE7_22 constructor.");
+            }
+        }
+
+
     }
 }

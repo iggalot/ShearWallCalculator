@@ -46,8 +46,13 @@ namespace ShearWallVisualizer.Controls
 
         private void BuildingDataInputControl_Loaded(object sender, RoutedEventArgs e)
         {
+            if (bldgData == null)
+            {
+                bldgData = new BuildingData();
+            }
 
             cmbRoofType.Items.Clear();
+            cmbEnclosure.Items.Clear();
 
             foreach (var value in Enum.GetValues(typeof(RoofTypes)))
             {
@@ -56,9 +61,18 @@ namespace ShearWallVisualizer.Controls
 
             cmbRoofType.SelectedIndex = 0;
 
-            if(bldgData == null)
+            foreach (var value in Enum.GetValues(typeof(BuildingEnclosures)))
             {
-                bldgData = new BuildingData();
+                cmbEnclosure.Items.Add(value);
+            }
+
+            switch (bldgData.EnclosureType)
+            {
+                case BuildingEnclosures.BLDG_ENCLOSED: cmbEnclosure.SelectedIndex = 0; break;
+                case BuildingEnclosures.BLDG_PARTIALLY_ENCLOSED: cmbEnclosure.SelectedIndex = 1; break;
+                case BuildingEnclosures.BLDG_PARTIALLY_OPEN: cmbEnclosure.SelectedIndex = 2; break;
+                case BuildingEnclosures.BLDG_OPEN: cmbEnclosure.SelectedIndex = 3; break;
+                default: cmbEnclosure.SelectedIndex = 0; break;
             }
 
             BuildingHeightTextBox.Text = bldgData.BuildingHeight.ToString();
@@ -78,6 +92,7 @@ namespace ShearWallVisualizer.Controls
                 case RoofTypes.ROOF_TYPE_FLAT: cmbRoofType.SelectedIndex = 0; break;
                 case RoofTypes.ROOF_TYPE_GABLE: cmbRoofType.SelectedIndex = 1; break;
                 case RoofTypes.ROOF_TYPE_HIP: cmbRoofType.SelectedIndex = 2; break;
+                default: cmbRoofType.SelectedIndex = 0; break;
             }
         }
 
@@ -95,6 +110,7 @@ namespace ShearWallVisualizer.Controls
             double pitch = double.Parse(RoofPitchTextBox.Text);
             string ridgeDir = ((ComboBoxItem)RidgeDirectionComboBox.SelectedItem).Content.ToString();
             RoofTypes roof_type = (RoofTypes)cmbRoofType.SelectedIndex;
+            BuildingEnclosures enclosure = (BuildingEnclosures)cmbEnclosure.SelectedIndex;
 
             bldgData_temp = new BuildingData()
             {
@@ -103,7 +119,8 @@ namespace ShearWallVisualizer.Controls
                 BuildingWidth = width,
                 RoofPitch = pitch,
                 RidgeDirection = ridgeDir,
-                RoofType = roof_type
+                RoofType = roof_type,
+                EnclosureType = enclosure
             };
 
             this.bldgData = bldgData_temp;

@@ -506,6 +506,9 @@ namespace ShearWallVisualizer
 
         private void PopulateComponentAndCladdingDataGrids()
         {
+            var figureCC_Roof = windLoadCalculator.extGCpCurve_Roof;
+            var figureCC_Wall = windLoadCalculator.extGCpCurve_Wall;
+
             if (ccControl == null || figureCC_Roof == null || figureCC_Wall == null) return;
 
             CreateCC_DataGrid_Roof(figureCC_Roof, ccControl.RoofResultsDataGrid);
@@ -539,8 +542,6 @@ namespace ShearWallVisualizer
             TabControlManager.RemoveTab(MainTabControl, tabWindResultsTabItem_CC);
         }
 
-        private Chapter30_BaseFigure figureCC_Roof;
-        private Chapter30_BaseFigure figureCC_Wall;
         private void SetupComponentAndCladdingFigures()
         {
             if (ccControl == null) return;
@@ -555,21 +556,8 @@ namespace ShearWallVisualizer
             var wallTitle = ccControl.txtFigureTitle_Walls;
             var wallCriteria = ccControl.txtFigureCriteria_Walls;
 
-            switch (windVersion)
-            {
-                case ASCE7_Versions.ASCE_VER_7_16:
-                    figureCC_Roof = Chapter30RoofFigureFactory_ASCE7_16.CreateFigure_ASCE7_16(
-                        buildingData.RoofType, buildingData.MeanRoofHeight, buildingData.BuildingWidth, buildingData.RoofPitch);
-                    figureCC_Wall = new Figure30_3_1_ASCE7_16();
-                    break;
-                case ASCE7_Versions.ASCE_VER_7_22:
-                    figureCC_Roof = Chapter30RoofFigureFactory_ASCE7_22.CreateRoofFigure_ASCE7_22(
-                        buildingData.RoofType, buildingData.MeanRoofHeight, buildingData.BuildingWidth, buildingData.RoofPitch);
-                    figureCC_Wall = new Figure30_3_1_ASCE7_22();
-                    break;
-                default:
-                    throw new NotImplementedException($"ERROR: Not implemented for ASCE {windVersion}");
-            }
+            var figureCC_Roof = windLoadCalculator.extGCpCurve_Roof;
+            var figureCC_Wall = windLoadCalculator.extGCpCurve_Wall;
 
             roofTitle.Text = figureCC_Roof?.ChartTitle;
             roofCriteria.Text = figureCC_Roof?.ChartCriteria;
@@ -646,7 +634,7 @@ namespace ShearWallVisualizer
         //    switch (windVersion)
         //    {
         //        case ASCE7_Versions.ASCE_VER_7_16:
-        //            figureCC_Roof = Chapter30RoofFigureFactory_ASCE7_16.CreateFigure_ASCE7_16(
+        //            figureCC_Roof = Chapter30RoofFigureFactory_ASCE7_16.CreateRoofFigure_ASCE7_16(
         //                buildingData.RoofType,
         //                buildingData.MeanRoofHeight,
         //                buildingData.BuildingWidth,

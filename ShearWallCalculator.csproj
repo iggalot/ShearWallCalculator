@@ -150,8 +150,10 @@
     <Compile Include="WindLoadCalculations\Chapter30_CC\Figure30_3_ASCE7_22\Figure30_3_2G_ASCE7_22.cs" />
     <Compile Include="WindLoadCalculations\WindLoadCalculators\WindLoadCalculatorFactory.cs" />
     <Compile Include="WindLoadCalculations\WindLoadCalculators\WindLoadCalculator_CC_ASCE7_22.cs" />
+    <Compile Include="WindLoadCalculations\WindLoadCalculators\WindLoadCalculator_CC_Base.cs" />
     <Compile Include="WindLoadCalculations\WindLoadCalculators\WindLoadCalculator_MWFRS_ASCE7_22.cs" />
     <Compile Include="WindLoadCalculations\WindLoadCalculators\WindLoadCalculator_MWFRS_ASCE7_16.cs" />
+    <Compile Include="WindLoadCalculations\WindLoadCalculators\WindLoadCalculator_MWFRS_Base.cs" />
     <Compile Include="WindLoadCalculations\WindLoadParameters\FlatRoofWindLoadParameters.cs" />
     <Compile Include="WindLoadCalculations\Chapter30_CC\AreaCalculator\ASCE7_16\GableRoofAreaCalculator_CC_ASCE7_16.cs" />
     <Compile Include="WindLoadCalculations\WindLoadParameters\GableRoofWindLoadParameters.cs" />

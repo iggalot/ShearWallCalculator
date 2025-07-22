@@ -59,6 +59,12 @@
                         </ComboBox>
                     </StackPanel>
 
+                    <!-- Enclosure Classification (Default to Partially Enclosed) -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <TextBlock Text="Enclosure Classification" VerticalAlignment="Center" Margin="5"/>
+                        <ComboBox x:Name="cmbEnclosure" Width="150" Margin="5" />
+                    </StackPanel>
+
                     <!-- Compute Button -->
                     <Button Content="Create Building" Width="150" Margin="10" Grid.ColumnSpan="2" Click="ComputeButton_Click"/>
                 </StackPanel>
