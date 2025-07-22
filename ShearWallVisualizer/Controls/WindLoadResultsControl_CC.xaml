@@ -35,7 +35,7 @@
                             <TextBlock Text="h (ft) = " VerticalAlignment="Center"/>
                             <TextBlock Name="tbl_h" Width="150"/>
                             <StackPanel Orientation="Horizontal" Name="sp_a">
-                                <TextBlock Text="a (ft) = " VerticalAlignment="Center" Margin="10,0,0,0"/>
+                                <TextBlock Text="a (ft) = " VerticalAlignment="Center" Margin="10,10,0,0"/>
                                 <TextBlock Name="tbl_a" Width="150" Text="Junk"/>
                             </StackPanel>
                         </StackPanel>
@@ -43,7 +43,7 @@
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
                             <TextBlock Text="RoofType = " VerticalAlignment="Center"/>
                             <TextBlock Name="tbl_roof_type" Width="150"/>
-                            <TextBlock Text="theta (deg) = " VerticalAlignment="Center" Margin="10,0,0,0"/>
+                            <TextBlock Text="theta (deg) = " VerticalAlignment="Center" Margin="10,10,0,0"/>
                             <TextBlock Name="tbl_theta" Width="150"/>
                         </StackPanel>
 
@@ -94,7 +94,7 @@
                     </StackPanel>
 
                     <!-- Right Side: Diagrams -->
-                    <StackPanel Orientation="Vertical" Grid.Column="1" Margin="10,0,0,0">
+                    <StackPanel Orientation="Vertical" Width="250" HorizontalAlignment="Left" Grid.Column="1" Margin="10,10,0,0">
                         <Canvas x:Name="cnvWindLoadResultCanvasCC"
                                 Width="100"
                                 Height="100"
