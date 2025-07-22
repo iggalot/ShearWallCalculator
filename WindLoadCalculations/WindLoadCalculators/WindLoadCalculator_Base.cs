@@ -14,9 +14,8 @@ namespace ShearWallCalculator.WindLoadCalculations
     }
     public enum ASCE7_Versions
     {
-        //ASCE_VER_7_10 = 0,
-        ASCE_VER_7_16 = 1,
-        ASCE_VER_7_22 = 2
+        ASCE_VER_7_16 = 0,  // this must start at index 0
+        ASCE_VER_7_22 = 1
     }
 
     public enum WindLoadCalculationTypes
@@ -27,18 +26,9 @@ namespace ShearWallCalculator.WindLoadCalculations
 
     public enum WindExposureCategories
     {
-        WIND_EXP_CAT_B = 1,
-        WIND_EXP_CAT_C = 2,
-        WIND_EXP_CAT_D = 3
-    }
-
-    public enum WindZones_CC
-    {
-        CC_1 = 1,       // Roof flat zone
-        CC_2 = 2,       // Roof edge zone
-        CC_3 = 3,       // Roof corner zone
-        CC_4 = 4,       // Wall flat zone
-        CC_5 = 5        // Wall edge zone (width 'a')
+        WIND_EXP_CAT_B = 0,
+        WIND_EXP_CAT_C = 1,
+        WIND_EXP_CAT_D = 2
     }
 
     public enum WindLoadCases
