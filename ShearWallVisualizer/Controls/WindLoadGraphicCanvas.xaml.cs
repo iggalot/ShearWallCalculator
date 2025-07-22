@@ -6,7 +6,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using static ShearWallCalculator.WindLoadCalculations.WindLoadCalculator_Base;
-using static ShearWallCalculator.WindLoadCalculations.WindLoadCalculator_MWFRS_ASCE7_10;
 
 namespace ShearWallVisualizer.Controls
 {
@@ -24,8 +23,6 @@ namespace ShearWallVisualizer.Controls
 
         WindLoadParameters_Base _parameters;
         BuildingData _bldg_data;
-        List<WindPressureResult_Wall_MWFRS> _wall_results;
-        List<WindPressureResult_Roof_MWFRS> _roof_results;
 
         public WindLoadParameters_Base Parameters { get => _parameters; set => _parameters = value; }
 
@@ -34,12 +31,10 @@ namespace ShearWallVisualizer.Controls
             InitializeComponent();
         }
 
-        public WindLoadGraphicCanvas( WindLoadParameters_Base parameters, BuildingData bldg_data, List<WindPressureResult_Wall_MWFRS> wall_results, List<WindPressureResult_Roof_MWFRS> roof_results)
+        public WindLoadGraphicCanvas( WindLoadParameters_Base parameters, BuildingData bldg_data)
         {
             _parameters = parameters;
             _bldg_data = bldg_data;
-            _wall_results = wall_results;
-            _roof_results = roof_results;
 
             InitializeComponent();
 
@@ -76,52 +71,52 @@ namespace ShearWallVisualizer.Controls
 
         private double GetWallPressure(string v, WindLoadCases load_case_num)
         {
-            foreach (var result in _wall_results)
-            {
-                if (result.Surface == v)
-                {
-                    switch (load_case_num)
-                    {
-                        case WindLoadCases.WLC_BaseA:
-                            return result.PressBaseA;
-                        case WindLoadCases.WLC_Balloon1:
-                            return result.Balloon1;
-                        case WindLoadCases.WLC_Suction1:
-                            return result.Suction1;
-                        default:
-                            return 0;
-                    }
-                }
-            }
+        //    foreach (var result in _wall_results)
+        //    {
+        //        if (result.Surface == v)
+        //        {
+        //            switch (load_case_num)
+        //            {
+        //                case WindLoadCases.WLC_BaseA:
+        //                    return result.PressBaseA;
+        //                case WindLoadCases.WLC_Balloon1:
+        //                    return result.Balloon1;
+        //                case WindLoadCases.WLC_Suction1:
+        //                    return result.Suction1;
+        //                default:
+        //                    return 0;
+        //            }
+        //        }
+        //    }
             return 0;
         }
 
         private double GetRoofPressure(string v, WindLoadCases load_case_num)
         {
-            foreach (var result in _roof_results)
-            {
-                if (result.Surface == v)
-                {
-                    switch (load_case_num)
-                    {
-                        case WindLoadCases.WLC_BaseA:
-                            return result.PressBaseA;
-                        case WindLoadCases.WLC_BaseB:
-                            return result.PressBaseB;
-                        case WindLoadCases.WLC_Balloon1:
-                            return result.Balloon1;
-                        case WindLoadCases.WLC_Balloon2:
-                            return result.Balloon2;
-                        case WindLoadCases.WLC_Suction1:
-                            return result.Suction1;
-                        case WindLoadCases.WLC_Suction2:
-                            return result.Suction2;
-                        default:
-                            return 0;
-                    }
+            //foreach (var result in _roof_results)
+            //{
+            //    if (result.Surface == v)
+            //    {
+            //        switch (load_case_num)
+            //        {
+            //            case WindLoadCases.WLC_BaseA:
+            //                return result.PressBaseA;
+            //            case WindLoadCases.WLC_BaseB:
+            //                return result.PressBaseB;
+            //            case WindLoadCases.WLC_Balloon1:
+            //                return result.Balloon1;
+            //            case WindLoadCases.WLC_Balloon2:
+            //                return result.Balloon2;
+            //            case WindLoadCases.WLC_Suction1:
+            //                return result.Suction1;
+            //            case WindLoadCases.WLC_Suction2:
+            //                return result.Suction2;
+            //            default:
+            //                return 0;
+            //        }
                         
-                }
-            }
+            //    }
+            //}
             return 0;
         }
 
@@ -254,283 +249,283 @@ namespace ShearWallVisualizer.Controls
 
         private void DrawRoofWind_Flat(WindLoadCases load_case_num, Point p2, Point p3, Point p4)
         {
-            //"Windward Roof 0->h/2"
-            //"Windward Roof h/2->h"
-            //"Windward Roof h->2h" 
-            //"Windward Roof 2h->end"
+            ////"Windward Roof 0->h/2"
+            ////"Windward Roof h/2->h"
+            ////"Windward Roof h->2h" 
+            ////"Windward Roof 2h->end"
 
-            // find how many zones we have on the roof
-            int zone_count = 0;
-            foreach (WindPressureResult_Roof_MWFRS result in _roof_results)
-            {
-                if (result.Surface == "Windward Roof 0->h/2")
-                {
-                    zone_count++;
-                }
-                else if (result.Surface == "Windward Roof h/2->h")
-                {
-                    zone_count++;
-                }
-                else if (result.Surface == "Windward Roof h->2h")
-                {
-                    zone_count++;
-                }
-                else if (result.Surface == "Windward Roof 2h->end")
-                {
-                    zone_count++;
-                }
-            }
+            //// find how many zones we have on the roof
+            //int zone_count = 0;
+            //foreach (WindPressureResult_Roof_MWFRS result in _roof_results)
+            //{
+            //    if (result.Surface == "Windward Roof 0->h/2")
+            //    {
+            //        zone_count++;
+            //    }
+            //    else if (result.Surface == "Windward Roof h/2->h")
+            //    {
+            //        zone_count++;
+            //    }
+            //    else if (result.Surface == "Windward Roof h->2h")
+            //    {
+            //        zone_count++;
+            //    }
+            //    else if (result.Surface == "Windward Roof 2h->end")
+            //    {
+            //        zone_count++;
+            //    }
+            //}
 
-            if (zone_count == 1)
-            {
-                // ridge point is in zone1
-                double WW_roof_pressure = GetRoofPressure("Windward Roof 0->h/2", load_case_num);
-                double LW_roof_pressure = WW_roof_pressure;
+            //if (zone_count == 1)
+            //{
+            //    // ridge point is in zone1
+            //    double WW_roof_pressure = GetRoofPressure("Windward Roof 0->h/2", load_case_num);
+            //    double LW_roof_pressure = WW_roof_pressure;
 
-                double roof_angle_deg_ww = _bldg_data.RoofPitch;
-                double roof_angle_rad_ww = roof_angle_deg_ww * Math.PI / 180.0;
+            //    double roof_angle_deg_ww = _bldg_data.RoofPitch;
+            //    double roof_angle_rad_ww = roof_angle_deg_ww * Math.PI / 180.0;
 
-                double roof_angle_deg_lw = 180.0 - _bldg_data.RoofPitch;
-                double roof_angle_rad_lw = roof_angle_deg_lw * Math.PI / 180.0;
+            //    double roof_angle_deg_lw = 180.0 - _bldg_data.RoofPitch;
+            //    double roof_angle_rad_lw = roof_angle_deg_lw * Math.PI / 180.0;
 
-                // find point that is perpendicular to line from p2 to p3 at a distance of WW_roof_pressure
+            //    // find point that is perpendicular to line from p2 to p3 at a distance of WW_roof_pressure
 
-                var delta_x_ww = -Math.Cos(roof_angle_rad_ww + Math.PI / 2.0) * WW_roof_pressure;
-                var delta_y_ww = Math.Sin(roof_angle_rad_ww + Math.PI / 2.0) * WW_roof_pressure;
+            //    var delta_x_ww = -Math.Cos(roof_angle_rad_ww + Math.PI / 2.0) * WW_roof_pressure;
+            //    var delta_y_ww = Math.Sin(roof_angle_rad_ww + Math.PI / 2.0) * WW_roof_pressure;
 
-                var delta_x_lw = -Math.Cos(roof_angle_rad_lw - Math.PI / 2.0) * LW_roof_pressure;
-                var delta_y_lw = Math.Sin(roof_angle_rad_lw - Math.PI / 2.0) * LW_roof_pressure;
+            //    var delta_x_lw = -Math.Cos(roof_angle_rad_lw - Math.PI / 2.0) * LW_roof_pressure;
+            //    var delta_y_lw = Math.Sin(roof_angle_rad_lw - Math.PI / 2.0) * LW_roof_pressure;
 
-                var a = new Point(p2.X + delta_x_ww, p2.Y + delta_y_ww);
-                var b1 = new Point(p3.X + delta_x_ww, p3.Y + delta_y_ww);
-                var b2 = new Point(p3.X + delta_x_lw, p3.Y + delta_y_lw);
-                var c = new Point(p4.X + delta_x_lw, p4.Y + delta_y_lw);
+            //    var a = new Point(p2.X + delta_x_ww, p2.Y + delta_y_ww);
+            //    var b1 = new Point(p3.X + delta_x_ww, p3.Y + delta_y_ww);
+            //    var b2 = new Point(p3.X + delta_x_lw, p3.Y + delta_y_lw);
+            //    var c = new Point(p4.X + delta_x_lw, p4.Y + delta_y_lw);
 
 
-                // Windward
-                DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, a.X, a.Y, b1.X, b1.Y, System.Windows.Media.Brushes.Purple, 2.0);
-                DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, a.X, a.Y, p2.X, p2.Y, System.Windows.Media.Brushes.Purple, 2.0);
-                DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, p3.X, p3.Y, b1.X, b1.Y, System.Windows.Media.Brushes.Purple, 2.0);
+            //    // Windward
+            //    DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, a.X, a.Y, b1.X, b1.Y, System.Windows.Media.Brushes.Purple, 2.0);
+            //    DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, a.X, a.Y, p2.X, p2.Y, System.Windows.Media.Brushes.Purple, 2.0);
+            //    DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, p3.X, p3.Y, b1.X, b1.Y, System.Windows.Media.Brushes.Purple, 2.0);
 
-                DrawingHelpersLibrary.DrawingHelpers.DrawText(cnvElevationView, a.X, a.Y, 0, WW_roof_pressure.ToString(), System.Windows.Media.Brushes.Purple, 8.0);
+            //    DrawingHelpersLibrary.DrawingHelpers.DrawText(cnvElevationView, a.X, a.Y, 0, WW_roof_pressure.ToString(), System.Windows.Media.Brushes.Purple, 8.0);
 
                 
-                // Leeward
-                DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, b2.X, b2.Y, c.X, c.Y, System.Windows.Media.Brushes.Purple, 2.0);
-                DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, b2.X, b2.Y, p3.X, p3.Y, System.Windows.Media.Brushes.Purple, 2.0);
-                DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, p4.X, p4.Y, c.X, c.Y, System.Windows.Media.Brushes.Purple, 2.0);
+            //    // Leeward
+            //    DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, b2.X, b2.Y, c.X, c.Y, System.Windows.Media.Brushes.Purple, 2.0);
+            //    DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, b2.X, b2.Y, p3.X, p3.Y, System.Windows.Media.Brushes.Purple, 2.0);
+            //    DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, p4.X, p4.Y, c.X, c.Y, System.Windows.Media.Brushes.Purple, 2.0);
 
-                DrawingHelpersLibrary.DrawingHelpers.DrawText(cnvElevationView, c.X, c.Y, 0, LW_roof_pressure.ToString(), System.Windows.Media.Brushes.Purple, 8.0);
-            }
-            else if (zone_count == 2)
-            {
-                // is ridge in zone 1 or zone 2?
-                double x_ridge, y_ridge;
-                x_ridge = p3.X;
-                y_ridge = p3.Y;
+            //    DrawingHelpersLibrary.DrawingHelpers.DrawText(cnvElevationView, c.X, c.Y, 0, LW_roof_pressure.ToString(), System.Windows.Media.Brushes.Purple, 8.0);
+            //}
+            //else if (zone_count == 2)
+            //{
+            //    // is ridge in zone 1 or zone 2?
+            //    double x_ridge, y_ridge;
+            //    x_ridge = p3.X;
+            //    y_ridge = p3.Y;
 
-                WindPressureResult_Roof_MWFRS result1 = _roof_results[0];
-                WindPressureResult_Roof_MWFRS result2 = _roof_results[1];
+            //    WindPressureResult_Roof_MWFRS result1 = _roof_results[0];
+            //    WindPressureResult_Roof_MWFRS result2 = _roof_results[1];
 
-                double start_x1 = p2.X + SCALE_X * result1.Start;
-                double end_x1 = p2.X + SCALE_X * result1.End;
-                double start_x2 = p2.X + SCALE_X * result2.Start;
-                double end_x2 = p2.X + SCALE_X *result2.End;
+            //    double start_x1 = p2.X + SCALE_X * result1.Start;
+            //    double end_x1 = p2.X + SCALE_X * result1.End;
+            //    double start_x2 = p2.X + SCALE_X * result2.Start;
+            //    double end_x2 = p2.X + SCALE_X *result2.End;
 
-                double WW_roof_pressure1 = GetRoofPressure("Windward Roof 0->h/2", load_case_num);
-                double WW_roof_pressure2 = GetRoofPressure("Windward Roof h/2->h", load_case_num);
+            //    double WW_roof_pressure1 = GetRoofPressure("Windward Roof 0->h/2", load_case_num);
+            //    double WW_roof_pressure2 = GetRoofPressure("Windward Roof h/2->h", load_case_num);
 
 
-                double roof_angle_deg_ww = _bldg_data.RoofPitch;
-                double roof_angle_rad_ww = roof_angle_deg_ww * Math.PI / 180.0;
+            //    double roof_angle_deg_ww = _bldg_data.RoofPitch;
+            //    double roof_angle_rad_ww = roof_angle_deg_ww * Math.PI / 180.0;
 
-                double roof_angle_deg_lw = 180.0 - _bldg_data.RoofPitch;
-                double roof_angle_rad_lw = roof_angle_deg_lw * Math.PI / 180.0;
+            //    double roof_angle_deg_lw = 180.0 - _bldg_data.RoofPitch;
+            //    double roof_angle_rad_lw = roof_angle_deg_lw * Math.PI / 180.0;
 
-                // find point that is perpendicular to line from p2 to p3 at a distance of WW_roof_pressure
+            //    // find point that is perpendicular to line from p2 to p3 at a distance of WW_roof_pressure
 
-                var delta_x1_ww = -Math.Cos(roof_angle_rad_ww + Math.PI / 2.0) * WW_roof_pressure1;
-                var delta_y1_ww = Math.Sin(roof_angle_rad_ww + Math.PI / 2.0) * WW_roof_pressure1;
+            //    var delta_x1_ww = -Math.Cos(roof_angle_rad_ww + Math.PI / 2.0) * WW_roof_pressure1;
+            //    var delta_y1_ww = Math.Sin(roof_angle_rad_ww + Math.PI / 2.0) * WW_roof_pressure1;
 
-                var delta_x1_lw = -Math.Cos(roof_angle_rad_lw - Math.PI / 2.0) * WW_roof_pressure1;
-                var delta_y1_lw = Math.Sin(roof_angle_rad_lw - Math.PI / 2.0) * WW_roof_pressure1;
+            //    var delta_x1_lw = -Math.Cos(roof_angle_rad_lw - Math.PI / 2.0) * WW_roof_pressure1;
+            //    var delta_y1_lw = Math.Sin(roof_angle_rad_lw - Math.PI / 2.0) * WW_roof_pressure1;
 
-                var delta_x2_ww = -Math.Cos(roof_angle_rad_ww + Math.PI / 2.0) * WW_roof_pressure2;
-                var delta_y2_ww = Math.Sin(roof_angle_rad_ww + Math.PI / 2.0) * WW_roof_pressure2;
+            //    var delta_x2_ww = -Math.Cos(roof_angle_rad_ww + Math.PI / 2.0) * WW_roof_pressure2;
+            //    var delta_y2_ww = Math.Sin(roof_angle_rad_ww + Math.PI / 2.0) * WW_roof_pressure2;
 
-                var delta_x2_lw = -Math.Cos(roof_angle_rad_lw - Math.PI / 2.0) * WW_roof_pressure2;
-                var delta_y2_lw = Math.Sin(roof_angle_rad_lw - Math.PI / 2.0) * WW_roof_pressure2;
+            //    var delta_x2_lw = -Math.Cos(roof_angle_rad_lw - Math.PI / 2.0) * WW_roof_pressure2;
+            //    var delta_y2_lw = Math.Sin(roof_angle_rad_lw - Math.PI / 2.0) * WW_roof_pressure2;
 
-                // Ridge is in zone 1
-                if (x_ridge <= end_x1)
-                {
-                    var a = new Point(p2.X + start_x1 + delta_x1_ww, p2.Y + delta_y1_ww);
-                    var b_l = new Point(p3.X + delta_x1_ww, p3.Y + delta_y1_ww);
-                    var b_r = new Point(p3.X + delta_x1_lw, p3.Y + delta_y1_lw);
+            //    // Ridge is in zone 1
+            //    if (x_ridge <= end_x1)
+            //    {
+            //        var a = new Point(p2.X + start_x1 + delta_x1_ww, p2.Y + delta_y1_ww);
+            //        var b_l = new Point(p3.X + delta_x1_ww, p3.Y + delta_y1_ww);
+            //        var b_r = new Point(p3.X + delta_x1_lw, p3.Y + delta_y1_lw);
 
-                    var b1 = new Point(p2.X + end_x1 + delta_x1_lw, p3.Y + delta_y1_lw);
-                    var b2 = new Point(p2.X + end_x1 + delta_x2_lw, p3.Y + delta_y2_lw);
-                    var c = new Point(p4.X + delta_x2_lw, p4.Y + delta_y2_lw);
+            //        var b1 = new Point(p2.X + end_x1 + delta_x1_lw, p3.Y + delta_y1_lw);
+            //        var b2 = new Point(p2.X + end_x1 + delta_x2_lw, p3.Y + delta_y2_lw);
+            //        var c = new Point(p4.X + delta_x2_lw, p4.Y + delta_y2_lw);
 
-                    DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, a.X, a.Y, b_l.X, b_l.Y, System.Windows.Media.Brushes.Purple, 2.0);
-                    DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, b_r.X, b_r.Y, b1.X, b1.Y, System.Windows.Media.Brushes.Purple, 2.0);
+            //        DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, a.X, a.Y, b_l.X, b_l.Y, System.Windows.Media.Brushes.Purple, 2.0);
+            //        DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, b_r.X, b_r.Y, b1.X, b1.Y, System.Windows.Media.Brushes.Purple, 2.0);
 
-                    DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, b2.X, b2.Y, c.X, c.Y, System.Windows.Media.Brushes.Purple, 2.0);
-                } else
-                {
-                    // Ridge is in zone 2
-                    var a = new Point(p2.X + start_x1 + delta_x1_ww, SCALE_Y * p2.Y + delta_y1_ww);
-                    var b1 = new Point(p2.X + end_x1 + delta_x1_ww, SCALE_Y * p3.Y + delta_y1_ww);
-                    var b2 = new Point(p2.X + end_x1 + delta_x2_ww, SCALE_Y * p3.Y + delta_y2_ww);
-                    var b_l = new Point(p3.X  + delta_x2_ww, SCALE_Y * p3.Y + delta_y2_ww);
-                    var b_r = new Point(p3.X + delta_x2_lw, SCALE_Y * p3.Y + delta_y2_lw);
-                    var c = new Point(p4.X + delta_x2_lw, SCALE_Y * p4.Y + delta_y2_lw);
+            //        DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, b2.X, b2.Y, c.X, c.Y, System.Windows.Media.Brushes.Purple, 2.0);
+            //    } else
+            //    {
+            //        // Ridge is in zone 2
+            //        var a = new Point(p2.X + start_x1 + delta_x1_ww, SCALE_Y * p2.Y + delta_y1_ww);
+            //        var b1 = new Point(p2.X + end_x1 + delta_x1_ww, SCALE_Y * p3.Y + delta_y1_ww);
+            //        var b2 = new Point(p2.X + end_x1 + delta_x2_ww, SCALE_Y * p3.Y + delta_y2_ww);
+            //        var b_l = new Point(p3.X  + delta_x2_ww, SCALE_Y * p3.Y + delta_y2_ww);
+            //        var b_r = new Point(p3.X + delta_x2_lw, SCALE_Y * p3.Y + delta_y2_lw);
+            //        var c = new Point(p4.X + delta_x2_lw, SCALE_Y * p4.Y + delta_y2_lw);
 
-                    //DrawingHelpersLibrary.DrawingHelpers.DrawCircle(cnvElevationView, a.X, a.Y, System.Windows.Media.Brushes.Transparent, System.Windows.Media.Brushes.Red, 4.0, 2.0);
-                    //DrawingHelpersLibrary.DrawingHelpers.DrawCircle(cnvElevationView, b1.X, b1.Y, System.Windows.Media.Brushes.Transparent, System.Windows.Media.Brushes.Blue, 4.0, 2.0);
-                    //DrawingHelpersLibrary.DrawingHelpers.DrawCircle(cnvElevationView, b2.X, b2.Y, System.Windows.Media.Brushes.Transparent, System.Windows.Media.Brushes.Green, 4.0, 2.0);
-                    //DrawingHelpersLibrary.DrawingHelpers.DrawCircle(cnvElevationView, b.X, b.Y, System.Windows.Media.Brushes.Transparent, System.Windows.Media.Brushes.Cyan, 4.0, 2.0);
-                    //DrawingHelpersLibrary.DrawingHelpers.DrawCircle(cnvElevationView, c.X, c.Y, System.Windows.Media.Brushes.Transparent, System.Windows.Media.Brushes.Purple, 4.0, 2.0);
+            //        //DrawingHelpersLibrary.DrawingHelpers.DrawCircle(cnvElevationView, a.X, a.Y, System.Windows.Media.Brushes.Transparent, System.Windows.Media.Brushes.Red, 4.0, 2.0);
+            //        //DrawingHelpersLibrary.DrawingHelpers.DrawCircle(cnvElevationView, b1.X, b1.Y, System.Windows.Media.Brushes.Transparent, System.Windows.Media.Brushes.Blue, 4.0, 2.0);
+            //        //DrawingHelpersLibrary.DrawingHelpers.DrawCircle(cnvElevationView, b2.X, b2.Y, System.Windows.Media.Brushes.Transparent, System.Windows.Media.Brushes.Green, 4.0, 2.0);
+            //        //DrawingHelpersLibrary.DrawingHelpers.DrawCircle(cnvElevationView, b.X, b.Y, System.Windows.Media.Brushes.Transparent, System.Windows.Media.Brushes.Cyan, 4.0, 2.0);
+            //        //DrawingHelpersLibrary.DrawingHelpers.DrawCircle(cnvElevationView, c.X, c.Y, System.Windows.Media.Brushes.Transparent, System.Windows.Media.Brushes.Purple, 4.0, 2.0);
 
-                    // The pressure lines
-                    DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, a.X, a.Y, b1.X, b1.Y, System.Windows.Media.Brushes.Purple, 2.0);
+            //        // The pressure lines
+            //        DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, a.X, a.Y, b1.X, b1.Y, System.Windows.Media.Brushes.Purple, 2.0);
 
-                    DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, b2.X, b2.Y, b_l.X, b_l.Y, System.Windows.Media.Brushes.Purple, 2.0);
-                    DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, b_r.X, b_r.Y, c.X, c.Y, System.Windows.Media.Brushes.Purple, 2.0);
-                }
+            //        DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, b2.X, b2.Y, b_l.X, b_l.Y, System.Windows.Media.Brushes.Purple, 2.0);
+            //        DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, b_r.X, b_r.Y, c.X, c.Y, System.Windows.Media.Brushes.Purple, 2.0);
+            //    }
                 
-            } else if (zone_count == 3)
-            {
-                MessageBox.Show("3 zones");
-                // is ridge in zone 1 or zone 2?
-                double x_ridge, y_ridge;
-                x_ridge = p3.X;
-                y_ridge = p3.Y;
+            //} else if (zone_count == 3)
+            //{
+            //    MessageBox.Show("3 zones");
+            //    // is ridge in zone 1 or zone 2?
+            //    double x_ridge, y_ridge;
+            //    x_ridge = p3.X;
+            //    y_ridge = p3.Y;
 
-                WindPressureResult_Roof_MWFRS result1 = _roof_results[0];
-                WindPressureResult_Roof_MWFRS result2 = _roof_results[1];
-                WindPressureResult_Roof_MWFRS result3 = _roof_results[2];
+            //    WindPressureResult_Roof_MWFRS result1 = _roof_results[0];
+            //    WindPressureResult_Roof_MWFRS result2 = _roof_results[1];
+            //    WindPressureResult_Roof_MWFRS result3 = _roof_results[2];
 
-                double start_x1 = p2.X + SCALE_X * result1.Start;
-                double end_x1 = p2.X + SCALE_X * result1.End;
-                double start_x2 = p2.X + SCALE_X * result2.Start;
-                double end_x2 = p2.X + SCALE_X * result2.End;
-                double start_x3 = p2.X + SCALE_X * result3.Start;
-                double end_x3 = p2.X + SCALE_X * result3.End;
+            //    double start_x1 = p2.X + SCALE_X * result1.Start;
+            //    double end_x1 = p2.X + SCALE_X * result1.End;
+            //    double start_x2 = p2.X + SCALE_X * result2.Start;
+            //    double end_x2 = p2.X + SCALE_X * result2.End;
+            //    double start_x3 = p2.X + SCALE_X * result3.Start;
+            //    double end_x3 = p2.X + SCALE_X * result3.End;
 
-                double WW_roof_pressure1 = GetRoofPressure("Windward Roof 0->h/2", load_case_num);
-                double WW_roof_pressure2 = GetRoofPressure("Windward Roof h/2->h", load_case_num);
-                double WW_roof_pressure3 = GetRoofPressure("Windward Roof h->2h", load_case_num);
+            //    double WW_roof_pressure1 = GetRoofPressure("Windward Roof 0->h/2", load_case_num);
+            //    double WW_roof_pressure2 = GetRoofPressure("Windward Roof h/2->h", load_case_num);
+            //    double WW_roof_pressure3 = GetRoofPressure("Windward Roof h->2h", load_case_num);
 
 
 
-                double roof_angle_deg_ww = _bldg_data.RoofPitch;
-                double roof_angle_rad_ww = roof_angle_deg_ww * Math.PI / 180.0;
+            //    double roof_angle_deg_ww = _bldg_data.RoofPitch;
+            //    double roof_angle_rad_ww = roof_angle_deg_ww * Math.PI / 180.0;
 
-                double roof_angle_deg_lw = 180.0 - _bldg_data.RoofPitch;
-                double roof_angle_rad_lw = roof_angle_deg_lw * Math.PI / 180.0;
+            //    double roof_angle_deg_lw = 180.0 - _bldg_data.RoofPitch;
+            //    double roof_angle_rad_lw = roof_angle_deg_lw * Math.PI / 180.0;
 
-                // find point that is perpendicular to line from p2 to p3 at a distance of WW_roof_pressure
+            //    // find point that is perpendicular to line from p2 to p3 at a distance of WW_roof_pressure
 
-                var delta_x1_ww = -Math.Cos(roof_angle_rad_ww + Math.PI / 2.0) * WW_roof_pressure1;
-                var delta_y1_ww = Math.Sin(roof_angle_rad_ww + Math.PI / 2.0) * WW_roof_pressure1;
+            //    var delta_x1_ww = -Math.Cos(roof_angle_rad_ww + Math.PI / 2.0) * WW_roof_pressure1;
+            //    var delta_y1_ww = Math.Sin(roof_angle_rad_ww + Math.PI / 2.0) * WW_roof_pressure1;
 
-                var delta_x1_lw = -Math.Cos(roof_angle_rad_lw - Math.PI / 2.0) * WW_roof_pressure1;
-                var delta_y1_lw = Math.Sin(roof_angle_rad_lw - Math.PI / 2.0) * WW_roof_pressure1;
+            //    var delta_x1_lw = -Math.Cos(roof_angle_rad_lw - Math.PI / 2.0) * WW_roof_pressure1;
+            //    var delta_y1_lw = Math.Sin(roof_angle_rad_lw - Math.PI / 2.0) * WW_roof_pressure1;
 
-                var delta_x2_ww = -Math.Cos(roof_angle_rad_ww + Math.PI / 2.0) * WW_roof_pressure2;
-                var delta_y2_ww = Math.Sin(roof_angle_rad_ww + Math.PI / 2.0) * WW_roof_pressure2;
+            //    var delta_x2_ww = -Math.Cos(roof_angle_rad_ww + Math.PI / 2.0) * WW_roof_pressure2;
+            //    var delta_y2_ww = Math.Sin(roof_angle_rad_ww + Math.PI / 2.0) * WW_roof_pressure2;
 
-                var delta_x2_lw = -Math.Cos(roof_angle_rad_lw - Math.PI / 2.0) * WW_roof_pressure2;
-                var delta_y2_lw = Math.Sin(roof_angle_rad_lw - Math.PI / 2.0) * WW_roof_pressure2;
+            //    var delta_x2_lw = -Math.Cos(roof_angle_rad_lw - Math.PI / 2.0) * WW_roof_pressure2;
+            //    var delta_y2_lw = Math.Sin(roof_angle_rad_lw - Math.PI / 2.0) * WW_roof_pressure2;
 
-                var delta_x3_ww = -Math.Cos(roof_angle_rad_ww + Math.PI / 2.0) * WW_roof_pressure3;
-                var delta_y3_ww = Math.Sin(roof_angle_rad_ww + Math.PI / 2.0) * WW_roof_pressure3;
+            //    var delta_x3_ww = -Math.Cos(roof_angle_rad_ww + Math.PI / 2.0) * WW_roof_pressure3;
+            //    var delta_y3_ww = Math.Sin(roof_angle_rad_ww + Math.PI / 2.0) * WW_roof_pressure3;
 
-                var delta_x3_lw = -Math.Cos(roof_angle_rad_lw - Math.PI / 2.0) * WW_roof_pressure3;
-                var delta_y3_lw = Math.Sin(roof_angle_rad_lw - Math.PI / 2.0) * WW_roof_pressure3;
+            //    var delta_x3_lw = -Math.Cos(roof_angle_rad_lw - Math.PI / 2.0) * WW_roof_pressure3;
+            //    var delta_y3_lw = Math.Sin(roof_angle_rad_lw - Math.PI / 2.0) * WW_roof_pressure3;
 
-                // Ridge is in zone 1
-                if (x_ridge <= end_x1)
-                {
-                    var a = new Point(p2.X + start_x1 + delta_x1_ww, p2.Y + delta_y1_ww);
-                    var b_l = new Point(p3.X + delta_x1_ww, p3.Y + delta_y1_ww);
-                    var b_r = new Point(p3.X + delta_x1_lw, p3.Y + delta_y1_lw);
-                    var b1 = new Point(p2.X + end_x1 + delta_x1_lw, p3.Y + delta_y1_lw);
-                    var b2 = new Point(p2.X + start_x2 + delta_x2_lw, p3.Y + delta_y2_lw);
-                    var c1 = new Point(p2.X + end_x2 + delta_x2_lw, p4.Y + delta_y2_lw);
-                    var c2 = new Point(p2.X + start_x3 + delta_x3_lw, p4.Y + delta_y3_lw);
-                    var d = new Point(p2.X + end_x3 + delta_x3_lw, p4.Y + delta_y3_lw);
+            //    // Ridge is in zone 1
+            //    if (x_ridge <= end_x1)
+            //    {
+            //        var a = new Point(p2.X + start_x1 + delta_x1_ww, p2.Y + delta_y1_ww);
+            //        var b_l = new Point(p3.X + delta_x1_ww, p3.Y + delta_y1_ww);
+            //        var b_r = new Point(p3.X + delta_x1_lw, p3.Y + delta_y1_lw);
+            //        var b1 = new Point(p2.X + end_x1 + delta_x1_lw, p3.Y + delta_y1_lw);
+            //        var b2 = new Point(p2.X + start_x2 + delta_x2_lw, p3.Y + delta_y2_lw);
+            //        var c1 = new Point(p2.X + end_x2 + delta_x2_lw, p4.Y + delta_y2_lw);
+            //        var c2 = new Point(p2.X + start_x3 + delta_x3_lw, p4.Y + delta_y3_lw);
+            //        var d = new Point(p2.X + end_x3 + delta_x3_lw, p4.Y + delta_y3_lw);
 
-                    DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, a.X, a.Y, b_l.X, b_l.Y, System.Windows.Media.Brushes.Purple, 2.0);
-                    DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, b_r.X, b_r.Y, b1.X, b1.Y, System.Windows.Media.Brushes.Purple, 2.0);
-                    DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, b2.X, b2.Y, c1.X, c1.Y, System.Windows.Media.Brushes.Purple, 2.0);
-                    DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, c2.X, c2.Y, d.X, d.Y, System.Windows.Media.Brushes.Purple, 2.0);
+            //        DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, a.X, a.Y, b_l.X, b_l.Y, System.Windows.Media.Brushes.Purple, 2.0);
+            //        DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, b_r.X, b_r.Y, b1.X, b1.Y, System.Windows.Media.Brushes.Purple, 2.0);
+            //        DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, b2.X, b2.Y, c1.X, c1.Y, System.Windows.Media.Brushes.Purple, 2.0);
+            //        DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, c2.X, c2.Y, d.X, d.Y, System.Windows.Media.Brushes.Purple, 2.0);
 
-                }
-                else if (x_ridge <= end_x2)
-                {
-                    // Ridge is in zone 2
-                    var a = new Point(p2.X + start_x1 + delta_x1_ww, p2.Y + delta_y1_ww);
-                    var b1 = new Point(p2.X + end_x1 + delta_x1_ww, p3.Y + delta_y1_ww);
-                    var b2 = new Point(p2.X + start_x2 + delta_x2_ww, p3.Y + delta_y2_ww);
-                    var b_l = new Point(p3.X + delta_x2_ww, p3.Y + delta_y2_ww);
-                    var b_r = new Point(p3.X + delta_x2_lw, p3.Y + delta_y2_lw);
-                    var c1 = new Point(p2.X + end_x2 + delta_x2_lw, p4.Y + delta_y2_lw);
-                    var c2 = new Point(p2.X + start_x3 + delta_x3_lw, p4.Y + delta_y3_lw);
-                    var d = new Point(p2.X + end_x3, p4.Y + delta_y3_lw);
+            //    }
+            //    else if (x_ridge <= end_x2)
+            //    {
+            //        // Ridge is in zone 2
+            //        var a = new Point(p2.X + start_x1 + delta_x1_ww, p2.Y + delta_y1_ww);
+            //        var b1 = new Point(p2.X + end_x1 + delta_x1_ww, p3.Y + delta_y1_ww);
+            //        var b2 = new Point(p2.X + start_x2 + delta_x2_ww, p3.Y + delta_y2_ww);
+            //        var b_l = new Point(p3.X + delta_x2_ww, p3.Y + delta_y2_ww);
+            //        var b_r = new Point(p3.X + delta_x2_lw, p3.Y + delta_y2_lw);
+            //        var c1 = new Point(p2.X + end_x2 + delta_x2_lw, p4.Y + delta_y2_lw);
+            //        var c2 = new Point(p2.X + start_x3 + delta_x3_lw, p4.Y + delta_y3_lw);
+            //        var d = new Point(p2.X + end_x3, p4.Y + delta_y3_lw);
 
-                    DrawingHelpersLibrary.DrawingHelpers.DrawCircle(cnvElevationView, a.X, a.Y, System.Windows.Media.Brushes.Transparent, System.Windows.Media.Brushes.Red, 4.0, 2.0);
-                    DrawingHelpersLibrary.DrawingHelpers.DrawCircle(cnvElevationView, b1.X, b1.Y, System.Windows.Media.Brushes.Transparent, System.Windows.Media.Brushes.Blue, 4.0, 2.0);
-                    DrawingHelpersLibrary.DrawingHelpers.DrawCircle(cnvElevationView, b2.X, b2.Y, System.Windows.Media.Brushes.Transparent, System.Windows.Media.Brushes.Green, 4.0, 2.0);
-                    DrawingHelpersLibrary.DrawingHelpers.DrawCircle(cnvElevationView, b_l.X, b_l.Y, System.Windows.Media.Brushes.Transparent, System.Windows.Media.Brushes.Cyan, 4.0, 2.0);
-                    DrawingHelpersLibrary.DrawingHelpers.DrawCircle(cnvElevationView, b_r.X, b_r.Y, System.Windows.Media.Brushes.Transparent, System.Windows.Media.Brushes.Purple, 4.0, 2.0);
-                    DrawingHelpersLibrary.DrawingHelpers.DrawCircle(cnvElevationView, c1.X, c1.Y, System.Windows.Media.Brushes.Transparent, System.Windows.Media.Brushes.Red, 4.0, 2.0);
-                    DrawingHelpersLibrary.DrawingHelpers.DrawCircle(cnvElevationView, c2.X, c2.Y, System.Windows.Media.Brushes.Transparent, System.Windows.Media.Brushes.Blue, 4.0, 2.0);
-                    DrawingHelpersLibrary.DrawingHelpers.DrawCircle(cnvElevationView, d.X, d.Y, System.Windows.Media.Brushes.Transparent, System.Windows.Media.Brushes.Green, 4.0, 2.0);
+            //        DrawingHelpersLibrary.DrawingHelpers.DrawCircle(cnvElevationView, a.X, a.Y, System.Windows.Media.Brushes.Transparent, System.Windows.Media.Brushes.Red, 4.0, 2.0);
+            //        DrawingHelpersLibrary.DrawingHelpers.DrawCircle(cnvElevationView, b1.X, b1.Y, System.Windows.Media.Brushes.Transparent, System.Windows.Media.Brushes.Blue, 4.0, 2.0);
+            //        DrawingHelpersLibrary.DrawingHelpers.DrawCircle(cnvElevationView, b2.X, b2.Y, System.Windows.Media.Brushes.Transparent, System.Windows.Media.Brushes.Green, 4.0, 2.0);
+            //        DrawingHelpersLibrary.DrawingHelpers.DrawCircle(cnvElevationView, b_l.X, b_l.Y, System.Windows.Media.Brushes.Transparent, System.Windows.Media.Brushes.Cyan, 4.0, 2.0);
+            //        DrawingHelpersLibrary.DrawingHelpers.DrawCircle(cnvElevationView, b_r.X, b_r.Y, System.Windows.Media.Brushes.Transparent, System.Windows.Media.Brushes.Purple, 4.0, 2.0);
+            //        DrawingHelpersLibrary.DrawingHelpers.DrawCircle(cnvElevationView, c1.X, c1.Y, System.Windows.Media.Brushes.Transparent, System.Windows.Media.Brushes.Red, 4.0, 2.0);
+            //        DrawingHelpersLibrary.DrawingHelpers.DrawCircle(cnvElevationView, c2.X, c2.Y, System.Windows.Media.Brushes.Transparent, System.Windows.Media.Brushes.Blue, 4.0, 2.0);
+            //        DrawingHelpersLibrary.DrawingHelpers.DrawCircle(cnvElevationView, d.X, d.Y, System.Windows.Media.Brushes.Transparent, System.Windows.Media.Brushes.Green, 4.0, 2.0);
 
-                    // The pressure lines
-                    DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, a.X, a.Y, b1.X, b1.Y, System.Windows.Media.Brushes.Purple, 2.0);
-                    DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, b2.X, b2.Y, b_l.X, b_l.Y, System.Windows.Media.Brushes.Purple, 2.0);
+            //        // The pressure lines
+            //        DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, a.X, a.Y, b1.X, b1.Y, System.Windows.Media.Brushes.Purple, 2.0);
+            //        DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, b2.X, b2.Y, b_l.X, b_l.Y, System.Windows.Media.Brushes.Purple, 2.0);
 
-                    DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, b_r.X, b_r.Y, c1.X, c1.Y, System.Windows.Media.Brushes.Purple, 2.0);
-                    DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, c2.X, c2.Y, d.X, d.Y, System.Windows.Media.Brushes.Purple, 2.0);
-                } else
-                {
-                    // Ridge is in zone 2
-                    var a = new Point(p2.X + start_x1 + delta_x1_ww, p2.Y + delta_y1_ww);
-                    var b1 = new Point(p2.X + end_x1 + delta_x1_ww, p3.Y + delta_y1_ww);
-                    var b2 = new Point(p2.X + end_x1 + delta_x2_ww, p3.Y + delta_y2_ww);
-                    var c1 = new Point(p2.X + end_x1 + end_x2 + delta_x2_ww, p4.Y + delta_y2_ww);
-                    var c2 = new Point(p2.X + end_x1 + end_x2 + delta_x3_ww, p4.Y + delta_y3_ww);
-                    var b_l = new Point(p3.X + delta_x3_ww, p3.Y + delta_y3_ww);
-                    var b_r = new Point(p3.X + delta_x3_lw, p3.Y + delta_y3_lw);
-                    var d = new Point(p4.X + delta_x3_lw, p4.Y + delta_y3_lw);
+            //        DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, b_r.X, b_r.Y, c1.X, c1.Y, System.Windows.Media.Brushes.Purple, 2.0);
+            //        DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, c2.X, c2.Y, d.X, d.Y, System.Windows.Media.Brushes.Purple, 2.0);
+            //    } else
+            //    {
+            //        // Ridge is in zone 2
+            //        var a = new Point(p2.X + start_x1 + delta_x1_ww, p2.Y + delta_y1_ww);
+            //        var b1 = new Point(p2.X + end_x1 + delta_x1_ww, p3.Y + delta_y1_ww);
+            //        var b2 = new Point(p2.X + end_x1 + delta_x2_ww, p3.Y + delta_y2_ww);
+            //        var c1 = new Point(p2.X + end_x1 + end_x2 + delta_x2_ww, p4.Y + delta_y2_ww);
+            //        var c2 = new Point(p2.X + end_x1 + end_x2 + delta_x3_ww, p4.Y + delta_y3_ww);
+            //        var b_l = new Point(p3.X + delta_x3_ww, p3.Y + delta_y3_ww);
+            //        var b_r = new Point(p3.X + delta_x3_lw, p3.Y + delta_y3_lw);
+            //        var d = new Point(p4.X + delta_x3_lw, p4.Y + delta_y3_lw);
 
-                    // The pressure lines
-                    DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, a.X, a.Y, b1.X, b1.Y, System.Windows.Media.Brushes.Purple, 2.0);
-                    DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, b2.X, b2.Y, c1.X, c1.Y, System.Windows.Media.Brushes.Purple, 2.0);
-                    DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, c2.X, c2.Y, b_l.X, b_l.Y, System.Windows.Media.Brushes.Purple, 2.0);
+            //        // The pressure lines
+            //        DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, a.X, a.Y, b1.X, b1.Y, System.Windows.Media.Brushes.Purple, 2.0);
+            //        DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, b2.X, b2.Y, c1.X, c1.Y, System.Windows.Media.Brushes.Purple, 2.0);
+            //        DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, c2.X, c2.Y, b_l.X, b_l.Y, System.Windows.Media.Brushes.Purple, 2.0);
 
-                    DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, b_r.X, b_r.Y, d.X, d.Y, System.Windows.Media.Brushes.Purple, 2.0);
-                }
-            } else if (zone_count == 4)
-            {
-                MessageBox.Show("4 zones");
-            } else
-            {
-                throw new InvalidOperationException("There should not be more than four zones on a roof wind load");
-            }
+            //        DrawingHelpersLibrary.DrawingHelpers.DrawLine(cnvElevationView, b_r.X, b_r.Y, d.X, d.Y, System.Windows.Media.Brushes.Purple, 2.0);
+            //    }
+            //} else if (zone_count == 4)
+            //{
+            //    MessageBox.Show("4 zones");
+            //} else
+            //{
+            //    throw new InvalidOperationException("There should not be more than four zones on a roof wind load");
+            //}
 
-            // find which zone p3 occurs in -- this is the ridge point
+            //// find which zone p3 occurs in -- this is the ridge point
 
-            // draw p1 zone
+            //// draw p1 zone
 
-            // draw p2 zone
+            //// draw p2 zone
 
-            // draw p3 zone
+            //// draw p3 zone
 
-            // draw p4 zone
+            //// draw p4 zone
 
         }
 

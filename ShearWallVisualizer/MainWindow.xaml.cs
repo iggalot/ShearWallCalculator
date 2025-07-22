@@ -457,145 +457,272 @@ namespace ShearWallVisualizer
         /// <param name="e"></param>
         private void WindLoadInputControl_WindInputComplete(object sender, WindLoadInputControl.OnWindInputCompleteEventArgs e)
         {
-            // save the input parameters for wind input
             windVersion = e._version;
             windLoadParams = e._parameters;
 
-            // TODO: load the calculator (if it isnt already)
             windLoadCalculator = WindLoadCalculatorFactory.Create(windVersion, windLoadParams.AnalysisType, windLoadParams, buildingData);
-            
-            // create the wind load results control
-            ContentControl ctrol_wind_results_MWFRS = new WindLoadResultsControl_MWFRS(windLoadParams, buildingData);
-            tabWindResultsTabItem_MWFRS.Content = ctrol_wind_results_MWFRS;
-            var ctrol_wind_results_CC = new WindLoadResultsControl_CC(windLoadCalculator);
-            tabWindResultsTabItem_CC.Content = ctrol_wind_results_CC;
 
-            // Draw the areas on the input control canvas
-            var inputControl = tabWindInputControlTabItem.Content as WindLoadInputControl;
-            if (inputControl != null)
-            {
-                var inputCanvas = inputControl.cnvWindLoadInputCanvas;
-
-                inputCanvas.Children.Clear();
-                double scale = Math.Min(inputCanvas.ActualWidth / buildingData.BuildingWidth, inputCanvas.ActualHeight / buildingData.BuildingLength);
-                foreach (var area in windLoadParams.RoofAreaCalculator.effWindAreas)
-                {
-                    WindLoadInputControl.DrawEffectiveWindArea(inputCanvas, area.Value, scale, GetColorForRegion(area.Value.Label_Short));
-                }
-            }
-
-            // Reactive the CC and MWFRS tabs (make them visible again) -- we will turn off the unecessary one further down
-            TabControlManager.ReAddTab(MainTabControl, "tabWindResultsTabItem_CC");
-            TabControlManager.ReAddTab(MainTabControl, "tabWindResultsTabItem_MWFRS");
-
-            Canvas resultCanvas = null;
-            Canvas figure30Canvas_Roof = null;
-            TextBlock figure30Title_Roof = null;
-            TextBlock figure30Criteria_Roof = null;
-
-            Canvas figure30Canvas_Walls = null;
-            TextBlock figure30Title_Walls = null;
-            TextBlock figure30Criteria_Walls = null;
-
-            Chapter30_BaseFigure figureCC_Roof = null;
-            Chapter30_BaseFigure figureCC_Wall = null;
+            CreateAndAssignResultControls();
+            DrawInputCanvas();
 
             if (windLoadParams.AnalysisType == WindLoadCalculationTypes.COMPONENT_AND_CLADDING)
-            {
-                if (tabWindResultsTabItem_CC.Content is WindLoadResultsControl_CC ccControl)
-                {
-                    resultCanvas = ccControl.cnvWindLoadResultCanvasCC;
-                    figure30Canvas_Roof = ccControl.cnvFigure30_3;
-                    figure30Title_Roof = ccControl.txtFigureTitle_Roof;
-                    figure30Criteria_Roof = ccControl.txtFigureCriteria_Roof;
-
-                    figure30Canvas_Walls = ccControl.cnvFigure30_1;
-                    figure30Title_Walls = ccControl.txtFigureTitle_Walls;
-                    figure30Criteria_Walls = ccControl.txtFigureCriteria_Walls;
-                }
-                TabControlManager.RemoveTab(MainTabControl, tabWindResultsTabItem_MWFRS);
-
-                // Create the Components and Classing GCp vs Area figure from Chapter 30
-                // for wall Figure30_3_1 and roof Figure30_3_2A,B,C,D, etc.
-                switch (windVersion)
-                {
-                    case ASCE7_Versions.ASCE_VER_7_10:
-                        throw new NotImplementedException("Not implemented for ASCE 7.10");
-                    case ASCE7_Versions.ASCE_VER_7_16:
-                        figureCC_Roof = Chapter30RoofFigureFactory_ASCE7_16.CreateFigure_ASCE7_16(
-                            buildingData.RoofType,
-                            buildingData.MeanRoofHeight,
-                            buildingData.BuildingWidth,
-                            buildingData.RoofPitch);
-                        figureCC_Wall = new Figure30_3_1_ASCE7_16();
-                        break;
-                    case ASCE7_Versions.ASCE_VER_7_22:
-                        figureCC_Roof = Chapter30RoofFigureFactory_ASCE7_22.CreateRoofFigure_ASCE7_22(
-                            buildingData.RoofType,
-                            buildingData.MeanRoofHeight,
-                            buildingData.BuildingWidth,
-                            buildingData.RoofPitch);
-                        figureCC_Wall = new Figure30_3_1_ASCE7_22();
-                        break;
-                }
-
-                // Update the titles of the graph
-                if (figure30Title_Roof != null) figure30Title_Roof.Text = figureCC_Roof.ChartTitle;
-                if (figure30Criteria_Roof != null) figure30Criteria_Roof.Text = figureCC_Roof.ChartCriteria;
-
-                // Draw the curve on the curve canvas
-                if (figureCC_Roof != null && resultCanvas != null)
-                {
-                    // draw the figure to the canvas now
-                    FigureDrawer.DrawCurvesOnCanvas(figure30Canvas_Roof, figureCC_Roof);
-                }
-
-                // Update the titles of the graph
-                if (figure30Title_Walls != null) figure30Title_Walls.Text = figureCC_Wall.ChartTitle;
-                if (figure30Criteria_Walls != null) figure30Criteria_Walls.Text = figureCC_Wall.ChartCriteria;
-
-                // Draw the curve on the curve canvas
-                if (figureCC_Wall != null && resultCanvas != null)
-                {
-                    // draw the figure to the canvas now
-                    FigureDrawer.DrawCurvesOnCanvas(figure30Canvas_Walls, figureCC_Wall);
-                }
-            }
+                SetupComponentAndCladdingFigures();
             else if (windLoadParams.AnalysisType == WindLoadCalculationTypes.MWFRS)
-            {
-                if (tabWindResultsTabItem_MWFRS.Content is WindLoadResultsControl_MWFRS mwfrsControl)
-                {
-                    resultCanvas = mwfrsControl.cnvWindLoadResultCanvasMWFRS;
-                }
-                TabControlManager.RemoveTab(MainTabControl, tabWindResultsTabItem_CC);
+                SetupMWFRSResultTab();
 
-            }
-
-            // Draw the areas on the area map canvas
-            if (resultCanvas != null)
-            {
-                resultCanvas.Children.Clear();
-                double scale = Math.Min(resultCanvas.Width / buildingData.BuildingWidth, resultCanvas.Height / buildingData.BuildingLength);
-
-                foreach (var area in windLoadParams.RoofAreaCalculator.effWindAreas)
-                {
-                    WindLoadInputControl.DrawEffectiveWindArea(resultCanvas, area.Value, scale, GetColorForRegion(area.Value.Label_Short));
-                }
-            }
-
-            var windLoadWallResultsDataGrid = ctrol_wind_results_CC.RoofResultsDataGrid;
-            CreateCC_DataGrid_Roof(figureCC_Roof, windLoadWallResultsDataGrid);
-
-            windLoadWallResultsDataGrid = ctrol_wind_results_CC.WallsResultsDataGrid_SideWall;
-            var area_sidewall = windLoadParams.WallAreaCalculator_BldgLength.effWindAreas;
-            CreateCC_DataGrid_Walls(figureCC_Wall, windLoadWallResultsDataGrid, area_sidewall);
-
-            windLoadWallResultsDataGrid = ctrol_wind_results_CC.WallsResultsDataGrid_EndWall;
-            var area_endwall = windLoadParams.WallAreaCalculator_BldgWidth.effWindAreas;
-            CreateCC_DataGrid_Walls(figureCC_Wall, windLoadWallResultsDataGrid, area_endwall);
-
+            DrawEffectiveAreasOnResultCanvas();
+            PopulateComponentAndCladdingDataGrids();
             UpdateShearWallUI();
         }
+
+        private WindLoadResultsControl_CC ccControl;
+        private WindLoadResultsControl_MWFRS mwfrsControl;
+        private void CreateAndAssignResultControls()
+        {
+            mwfrsControl = new WindLoadResultsControl_MWFRS(windLoadParams, buildingData);
+            tabWindResultsTabItem_MWFRS.Content = mwfrsControl;
+
+            ccControl = new WindLoadResultsControl_CC(windLoadCalculator);
+            tabWindResultsTabItem_CC.Content = ccControl;
+
+            TabControlManager.ReAddTab(MainTabControl, "tabWindResultsTabItem_CC");
+            TabControlManager.ReAddTab(MainTabControl, "tabWindResultsTabItem_MWFRS");
+        }
+
+        private void DrawInputCanvas()
+        {
+            if (tabWindInputControlTabItem.Content is WindLoadInputControl inputControl)
+            {
+                var canvas = inputControl.cnvWindLoadInputCanvas;
+                canvas.Children.Clear();
+
+                double scale = Math.Min(canvas.ActualWidth / buildingData.BuildingWidth, canvas.ActualHeight / buildingData.BuildingLength);
+                foreach (var area in windLoadParams.RoofAreaCalculator.effWindAreas)
+                {
+                    WindLoadInputControl.DrawEffectiveWindArea(canvas, area.Value, scale, GetColorForRegion(area.Value.Label_Short));
+                }
+            }
+        }
+
+        private void PopulateComponentAndCladdingDataGrids()
+        {
+            if (ccControl == null || figureCC_Roof == null || figureCC_Wall == null) return;
+
+            CreateCC_DataGrid_Roof(figureCC_Roof, ccControl.RoofResultsDataGrid);
+
+            CreateCC_DataGrid_Walls(figureCC_Wall, ccControl.WallsResultsDataGrid_SideWall,
+                windLoadParams.WallAreaCalculator_BldgLength.effWindAreas);
+
+            CreateCC_DataGrid_Walls(figureCC_Wall, ccControl.WallsResultsDataGrid_EndWall,
+                windLoadParams.WallAreaCalculator_BldgWidth.effWindAreas);
+        }
+
+        private void DrawEffectiveAreasOnResultCanvas()
+        {
+            Canvas resultCanvas = windLoadParams.AnalysisType == WindLoadCalculationTypes.COMPONENT_AND_CLADDING
+                ? ccControl?.cnvWindLoadResultCanvasCC
+                : mwfrsControl?.cnvWindLoadResultCanvasMWFRS;
+
+            if (resultCanvas == null) return;
+
+            resultCanvas.Children.Clear();
+            double scale = Math.Min(resultCanvas.Width / buildingData.BuildingWidth, resultCanvas.Height / buildingData.BuildingLength);
+
+            foreach (var area in windLoadParams.RoofAreaCalculator.effWindAreas)
+            {
+                WindLoadInputControl.DrawEffectiveWindArea(resultCanvas, area.Value, scale, GetColorForRegion(area.Value.Label_Short));
+            }
+        }
+
+        private void SetupMWFRSResultTab()
+        {
+            TabControlManager.RemoveTab(MainTabControl, tabWindResultsTabItem_CC);
+        }
+
+        private Chapter30_BaseFigure figureCC_Roof;
+        private Chapter30_BaseFigure figureCC_Wall;
+        private void SetupComponentAndCladdingFigures()
+        {
+            if (ccControl == null) return;
+
+            TabControlManager.RemoveTab(MainTabControl, tabWindResultsTabItem_MWFRS);
+
+            var roofCanvas = ccControl.cnvFigure30_3;
+            var roofTitle = ccControl.txtFigureTitle_Roof;
+            var roofCriteria = ccControl.txtFigureCriteria_Roof;
+
+            var wallCanvas = ccControl.cnvFigure30_1;
+            var wallTitle = ccControl.txtFigureTitle_Walls;
+            var wallCriteria = ccControl.txtFigureCriteria_Walls;
+
+            switch (windVersion)
+            {
+                case ASCE7_Versions.ASCE_VER_7_16:
+                    figureCC_Roof = Chapter30RoofFigureFactory_ASCE7_16.CreateFigure_ASCE7_16(
+                        buildingData.RoofType, buildingData.MeanRoofHeight, buildingData.BuildingWidth, buildingData.RoofPitch);
+                    figureCC_Wall = new Figure30_3_1_ASCE7_16();
+                    break;
+                case ASCE7_Versions.ASCE_VER_7_22:
+                    figureCC_Roof = Chapter30RoofFigureFactory_ASCE7_22.CreateRoofFigure_ASCE7_22(
+                        buildingData.RoofType, buildingData.MeanRoofHeight, buildingData.BuildingWidth, buildingData.RoofPitch);
+                    figureCC_Wall = new Figure30_3_1_ASCE7_22();
+                    break;
+                default:
+                    throw new NotImplementedException($"ERROR: Not implemented for ASCE {windVersion}");
+            }
+
+            roofTitle.Text = figureCC_Roof?.ChartTitle;
+            roofCriteria.Text = figureCC_Roof?.ChartCriteria;
+            wallTitle.Text = figureCC_Wall?.ChartTitle;
+            wallCriteria.Text = figureCC_Wall?.ChartCriteria;
+
+            FigureDrawer.DrawCurvesOnCanvas(roofCanvas, figureCC_Roof);
+            FigureDrawer.DrawCurvesOnCanvas(wallCanvas, figureCC_Wall);
+        }
+
+
+
+        //// save the input parameters for wind input
+        //windVersion = e._version;
+        //windLoadParams = e._parameters;
+
+        //// TODO: load the calculator (if it isnt already)
+        //windLoadCalculator = WindLoadCalculatorFactory.Create(windVersion, windLoadParams.AnalysisType, windLoadParams, buildingData);
+
+        //// create the wind load results control
+        //ContentControl ctrol_wind_results_MWFRS = new WindLoadResultsControl_MWFRS(windLoadParams, buildingData);
+        //tabWindResultsTabItem_MWFRS.Content = ctrol_wind_results_MWFRS;
+        //var ctrol_wind_results_CC = new WindLoadResultsControl_CC(windLoadCalculator);
+        //tabWindResultsTabItem_CC.Content = ctrol_wind_results_CC;
+
+        //// Draw the areas on the input control canvas
+        //var inputControl = tabWindInputControlTabItem.Content as WindLoadInputControl;
+        //if (inputControl != null)
+        //{
+        //    var inputCanvas = inputControl.cnvWindLoadInputCanvas;
+
+        //    inputCanvas.Children.Clear();
+        //    double scale = Math.Min(inputCanvas.ActualWidth / buildingData.BuildingWidth, inputCanvas.ActualHeight / buildingData.BuildingLength);
+        //    foreach (var area in windLoadParams.RoofAreaCalculator.effWindAreas)
+        //    {
+        //        WindLoadInputControl.DrawEffectiveWindArea(inputCanvas, area.Value, scale, GetColorForRegion(area.Value.Label_Short));
+        //    }
+        //}
+
+        //// Reactivate the CC and MWFRS tabs (make them visible again) -- we will turn off the unecessary one further down
+        //TabControlManager.ReAddTab(MainTabControl, "tabWindResultsTabItem_CC");
+        //TabControlManager.ReAddTab(MainTabControl, "tabWindResultsTabItem_MWFRS");
+
+        //Canvas resultCanvas = null;
+        //Canvas figure30Canvas_Roof = null;
+        //TextBlock figure30Title_Roof = null;
+        //TextBlock figure30Criteria_Roof = null;
+
+        //Canvas figure30Canvas_Walls = null;
+        //TextBlock figure30Title_Walls = null;
+        //TextBlock figure30Criteria_Walls = null;
+
+        //Chapter30_BaseFigure figureCC_Roof = null;
+        //Chapter30_BaseFigure figureCC_Wall = null;
+
+        //if (windLoadParams.AnalysisType == WindLoadCalculationTypes.COMPONENT_AND_CLADDING)
+        //{
+        //    if (tabWindResultsTabItem_CC.Content is WindLoadResultsControl_CC ccControl)
+        //    {
+        //        // retrieve the relevant controls from the CC tab
+        //        resultCanvas = ccControl.cnvWindLoadResultCanvasCC;
+        //        figure30Canvas_Roof = ccControl.cnvFigure30_3;
+        //        figure30Title_Roof = ccControl.txtFigureTitle_Roof;
+        //        figure30Criteria_Roof = ccControl.txtFigureCriteria_Roof;
+
+        //        figure30Canvas_Walls = ccControl.cnvFigure30_1;
+        //        figure30Title_Walls = ccControl.txtFigureTitle_Walls;
+        //        figure30Criteria_Walls = ccControl.txtFigureCriteria_Walls;
+        //    }
+        //    TabControlManager.RemoveTab(MainTabControl, tabWindResultsTabItem_MWFRS);
+
+        //    // Create the Components and Classing GCp vs Area figure from Chapter 30
+        //    // for wall Figure30_3_1 and roof Figure30_3_2A,B,C,D, etc.
+        //    switch (windVersion)
+        //    {
+        //        case ASCE7_Versions.ASCE_VER_7_16:
+        //            figureCC_Roof = Chapter30RoofFigureFactory_ASCE7_16.CreateFigure_ASCE7_16(
+        //                buildingData.RoofType,
+        //                buildingData.MeanRoofHeight,
+        //                buildingData.BuildingWidth,
+        //                buildingData.RoofPitch);
+        //            figureCC_Wall = new Figure30_3_1_ASCE7_16();
+        //            break;
+        //        case ASCE7_Versions.ASCE_VER_7_22:
+        //            figureCC_Roof = Chapter30RoofFigureFactory_ASCE7_22.CreateRoofFigure_ASCE7_22(
+        //                buildingData.RoofType,
+        //                buildingData.MeanRoofHeight,
+        //                buildingData.BuildingWidth,
+        //                buildingData.RoofPitch);
+        //            figureCC_Wall = new Figure30_3_1_ASCE7_22();
+        //            break;
+        //        default:
+        //            throw new NotImplementedException("ERROR: Not implemented for ASCE " + windVersion.ToString());
+
+        //    }
+
+        //    // Update the titles of the graph
+        //    if (figure30Title_Roof != null) figure30Title_Roof.Text = figureCC_Roof.ChartTitle;
+        //    if (figure30Criteria_Roof != null) figure30Criteria_Roof.Text = figureCC_Roof.ChartCriteria;
+
+        //    // Draw the curve on the curve canvas
+        //    if (figureCC_Roof != null && resultCanvas != null)
+        //    {
+        //        // draw the figure to the canvas now
+        //        FigureDrawer.DrawCurvesOnCanvas(figure30Canvas_Roof, figureCC_Roof);
+        //    }
+
+        //    // Update the titles of the graph
+        //    if (figure30Title_Walls != null) figure30Title_Walls.Text = figureCC_Wall.ChartTitle;
+        //    if (figure30Criteria_Walls != null) figure30Criteria_Walls.Text = figureCC_Wall.ChartCriteria;
+
+        //    // Draw the curve on the curve canvas
+        //    if (figureCC_Wall != null && resultCanvas != null)
+        //    {
+        //        // draw the figure to the canvas now
+        //        FigureDrawer.DrawCurvesOnCanvas(figure30Canvas_Walls, figureCC_Wall);
+        //    }
+        //}
+
+        //else if (windLoadParams.AnalysisType == WindLoadCalculationTypes.MWFRS)
+        //{
+        //    if (tabWindResultsTabItem_MWFRS.Content is WindLoadResultsControl_MWFRS mwfrsControl)
+        //    {
+        //        resultCanvas = mwfrsControl.cnvWindLoadResultCanvasMWFRS;
+        //    }
+        //    TabControlManager.RemoveTab(MainTabControl, tabWindResultsTabItem_CC);
+
+        //}
+
+        //// Draw the areas on the area map canvas
+        //if (resultCanvas != null)
+        //{
+        //    resultCanvas.Children.Clear();
+        //    double scale = Math.Min(resultCanvas.Width / buildingData.BuildingWidth, resultCanvas.Height / buildingData.BuildingLength);
+
+        //    foreach (var area in windLoadParams.RoofAreaCalculator.effWindAreas)
+        //    {
+        //        WindLoadInputControl.DrawEffectiveWindArea(resultCanvas, area.Value, scale, GetColorForRegion(area.Value.Label_Short));
+        //    }
+        //}
+
+        //var windLoadWallResultsDataGrid = ctrol_wind_results_CC.RoofResultsDataGrid;
+        //CreateCC_DataGrid_Roof(figureCC_Roof, windLoadWallResultsDataGrid);
+
+        //windLoadWallResultsDataGrid = ctrol_wind_results_CC.WallsResultsDataGrid_SideWall;
+        //var area_sidewall = windLoadParams.WallAreaCalculator_BldgLength.effWindAreas;
+        //CreateCC_DataGrid_Walls(figureCC_Wall, windLoadWallResultsDataGrid, area_sidewall);
+
+        //windLoadWallResultsDataGrid = ctrol_wind_results_CC.WallsResultsDataGrid_EndWall;
+        //var area_endwall = windLoadParams.WallAreaCalculator_BldgWidth.effWindAreas;
+        //CreateCC_DataGrid_Walls(figureCC_Wall, windLoadWallResultsDataGrid, area_endwall);
+
+        //UpdateShearWallUI();
 
         private void CreateCC_DataGrid_Roof(Chapter30_BaseFigure figureCC, DataGrid data_grid)
         {
@@ -824,55 +951,6 @@ namespace ShearWallVisualizer
             public double OverhangPress { get; set; }
 
             public Brush RectColor => GetColorForRegion(Region);
-        }
-
-        private void WindLoadResultsControl_CC_WindCalculated(object sender, WindLoadResultsControl_CC.OnWindCalculatedEventArgs e)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Event listener for when wind load calculations have been completed.
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void WindLoadResultsControl_MWFRS_WindCalculated(object sender, WindLoadResultsControl_MWFRS.OnWindCalculatedEventArgs e)
-        {
-            List<WindLoadCalculator_MWFRS_ASCE7_10.WindPressureResult_Wall_MWFRS> wall_results = e._wall_results;
-            List<WindLoadCalculator_MWFRS_ASCE7_10.WindPressureResult_Roof_MWFRS> roof_results = e._roof_results;
-            WindLoadParameters_Base parameters = e._parameters;
-
-            // now that we've used the event, unhook it
-            ((WindLoadResultsControl_MWFRS)sender).WindCalculated-= WindLoadResultsControl_MWFRS_WindCalculated;
-
-            // Get the internal suction windward case
-            double ww = 0;
-            double lw = 0;
-
-            foreach (var wall in wall_results)
-            {
-                if (wall.Surface == "Windward Wall - z=h")
-                {
-                    ww = wall.PressBaseA;
-                }
-
-                if (wall.Surface == "Leeward Wall")
-                {
-                    lw = wall.PressBaseA;
-                }
-            }
-
-            // TODO:  This calculation needs to be improved
-            // worst x case will be +WW and -LW -- internal suction should offset each other.
-            double load_x = (ww - lw) * buildingData.BuildingHeight * buildingData.BuildingWidth / 1000; // net sum at elevation h
-            double load_y = 0;
-
-            if (Calculator != null)
-            {
-                Calculator.AddLoads(load_x, load_y);
-            }
-
-            UpdateShearWallUI();
         }
 
         private void CreateWallDataControls()

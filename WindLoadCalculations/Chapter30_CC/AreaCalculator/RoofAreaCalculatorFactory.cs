@@ -16,11 +16,7 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator
                 return null;
             }
 
-            if (version == ASCE7_Versions.ASCE_VER_7_10)
-            {
-                throw new NotImplementedException("ERROR: " + version + " not yet implemented.");
-            }
-            else if (version == ASCE7_Versions.ASCE_VER_7_16)
+            if (version == ASCE7_Versions.ASCE_VER_7_16)
             {
                 if (parameters.AnalysisType == WindLoadCalculationTypes.COMPONENT_AND_CLADDING)
                 {

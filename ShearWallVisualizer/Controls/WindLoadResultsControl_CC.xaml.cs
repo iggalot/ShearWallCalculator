@@ -13,26 +13,19 @@ namespace ShearWallVisualizer.Controls
         public class OnWindCalculatedEventArgs : EventArgs
         {
             public WindLoadParameters_Base _parameters { get; }
-            public List<WindLoadCalculator_MWFRS_ASCE7_10.WindPressureResult_Wall_MWFRS> _wall_results { get; }
-            public List<WindLoadCalculator_MWFRS_ASCE7_10.WindPressureResult_Roof_MWFRS> _roof_results { get; }
 
-            public OnWindCalculatedEventArgs(WindLoadParameters_Base parameters, List<WindLoadCalculator_MWFRS_ASCE7_10.WindPressureResult_Wall_MWFRS> wall_results, List<WindLoadCalculator_MWFRS_ASCE7_10.WindPressureResult_Roof_MWFRS> roof_results)
+            public OnWindCalculatedEventArgs(WindLoadParameters_Base parameters)
             {
                 _parameters = parameters;
-                _wall_results = wall_results;
-                _roof_results = roof_results;
             }
         }
 
-        protected virtual void OnWindCalculated(WindLoadParameters_Base parameters, List<WindLoadCalculator_MWFRS_ASCE7_10.WindPressureResult_Wall_MWFRS> wall_results, List<WindLoadCalculator_MWFRS_ASCE7_10.WindPressureResult_Roof_MWFRS> roof_results)
+        protected virtual void OnWindCalculated(WindLoadParameters_Base parameters)
         {
-            WindCalculated?.Invoke(this, new OnWindCalculatedEventArgs(parameters, wall_results, roof_results));
+            WindCalculated?.Invoke(this, new OnWindCalculatedEventArgs(parameters));
         }
 
         WindLoadCalculator_Base windLoadCalculator { get; set; } = null; // the calculator for whic this control is based
-
-        public List<WindLoadCalculator_MWFRS_ASCE7_10.WindPressureResult_Wall_MWFRS> wall_results = new List<WindLoadCalculator_MWFRS_ASCE7_10.WindPressureResult_Wall_MWFRS>();
-        public List<WindLoadCalculator_MWFRS_ASCE7_10.WindPressureResult_Roof_MWFRS> roof_results = new List<WindLoadCalculator_MWFRS_ASCE7_10.WindPressureResult_Roof_MWFRS>();
 
         public WindLoadResultsControl_CC()
         {

@@ -12,7 +12,7 @@ namespace ShearWallCalculator.WindLoadCalculations
     }
     public enum ASCE7_Versions
     {
-        ASCE_VER_7_10 = 0,
+        //ASCE_VER_7_10 = 0,
         ASCE_VER_7_16 = 1,
         ASCE_VER_7_22 = 2
     }
@@ -134,6 +134,50 @@ namespace ShearWallCalculator.WindLoadCalculations
 
             z = Math.Max(z, 15); // Minimum height for Kz is 15 ft
             return 2.01 * Math.Pow(z / zg, 2.0 / alpha);
-        } 
+        }
+
+        /// <summary>
+        /// Compute Kd coefficient for the specific version of ASCE7
+        /// </summary>
+        /// <param name="calc_type"></param>
+        /// <param name="version"></param>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public static double GetKd(WindLoadCalculationTypes calc_type, ASCE7_Versions version)
+        {
+            switch (version)
+            {
+                // From Table 26.6-1 of ASCE 7-16
+                case ASCE7_Versions.ASCE_VER_7_16:
+                    {
+                        switch (calc_type)
+                        {
+                            case WindLoadCalculationTypes.COMPONENT_AND_CLADDING:
+                                return 0.85;
+                            case WindLoadCalculationTypes.MWFRS:
+                                return 0.85;
+                            default:
+                                throw new NotImplementedException("ERROR:  " + calc_type + " for " + version + " not supported. ");
+                        }
+                    }
+                // From Table 26.6-1 of ASCE 7-22
+                case ASCE7_Versions.ASCE_VER_7_22:
+                    {
+                        switch (calc_type)
+                        {
+                            case WindLoadCalculationTypes.COMPONENT_AND_CLADDING:
+                                return 0.85;
+                            case WindLoadCalculationTypes.MWFRS:
+                                return 0.85;
+                            default:
+                                throw new NotImplementedException("ERROR:  " + calc_type + " for " + version + " not supported. ");
+                        }
+                    }
+                default:
+                    {
+                        throw new NotImplementedException("ERROR:  ASCE7 Version " + version + " not supported. ");
+                    }
+            }
+        }
     }
 }

@@ -217,9 +217,6 @@ namespace ShearWallVisualizer.Controls
             ASCE7_Versions version;
             switch (version_index)
             {
-                case (int)ASCE7_Versions.ASCE_VER_7_10:
-                    version = ASCE7_Versions.ASCE_VER_7_10;
-                    break;
                 case (int)ASCE7_Versions.ASCE_VER_7_16:
                     version = ASCE7_Versions.ASCE_VER_7_16;
                     break;
@@ -227,8 +224,8 @@ namespace ShearWallVisualizer.Controls
                     version = ASCE7_Versions.ASCE_VER_7_22;
                     break;
                 default:
-                    version = ASCE7_Versions.ASCE_VER_7_22;
-                    break;
+                    throw new Exception("ERROR:  In WindLoadInputControl_Loaded() -- Version " + version_index.ToString() + " not found.");
+
             }
             Parameters = GetWindLoadParameters(bldgData.RoofType, version);
             Parameters.ComputeEffectiveWindAreas(bldgData, version);

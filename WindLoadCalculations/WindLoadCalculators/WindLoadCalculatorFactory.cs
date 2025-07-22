@@ -12,19 +12,7 @@ namespace ShearWallCalculator.WindLoadCalculations.WindLoadCalculators
             BuildingData buildingData
             )
         {
-            if (version == ASCE7_Versions.ASCE_VER_7_10)
-            {
-                if (calculationType == WindLoadCalculationTypes.COMPONENT_AND_CLADDING)
-                {
-                    return new WindLoadCalculator_CC_ASCE7_10(parameters, buildingData);
-                }
-                else if (calculationType == WindLoadCalculationTypes.MWFRS)
-                {
-                    return new WindLoadCalculator_MWFRS_ASCE7_10(parameters, buildingData);
-                }
-            }
-
-            else if (version == ASCE7_Versions.ASCE_VER_7_16)
+            if (version == ASCE7_Versions.ASCE_VER_7_16)
             {
                 if (calculationType == WindLoadCalculationTypes.COMPONENT_AND_CLADDING)
                 {
