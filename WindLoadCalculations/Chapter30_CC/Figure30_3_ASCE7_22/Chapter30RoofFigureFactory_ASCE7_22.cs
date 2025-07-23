@@ -30,7 +30,7 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.Figure30_3
                     else if (slope >= 45)
                         return new Figure30_3_2G_ASCE7_22();
                     else
-                        return new Figure30_3_2F_2G_INTERPOLATED_ASCE7_22(slope);
+                        return new Figure30_3_2F_2G_INTERPOLATED_ASCE7_22(new Figure30_3_2F_ASCE7_22(), 27, new Figure30_3_2G_ASCE7_22(), 45, slope);
 
                 default:
                     throw new ArgumentException("ERROR: Invalid roof type" + roofType + " in Chapter30FigureFactory");

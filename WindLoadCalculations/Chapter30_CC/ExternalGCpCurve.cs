@@ -1,60 +1,64 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace ShearWallCalculator.WindLoadCalculations.Chapter30
 {
     public class ExternalGCpCurve
     {
-        public double X1 { get; }
-        public double Y1 { get; }
-        public double X2 { get; }
-        public double Y2 { get; }
+        // Points defining the piecewise linear curve (exactly 8 points for 7 segments)
+        private readonly (double X, double Y)[] points;
 
-        // Optional bounds for interpolation (default to no bounds)
-        public double LowerBoundX { get; }
-        public double UpperBoundX { get; }
+        public double LowerBoundX => points[0].X;
+        public double UpperBoundX => points[points.Length - 1].X;
 
-        // Constructor without bounds
-        public ExternalGCpCurve(double x1, double y1, double x2, double y2)
+        /// <summary>
+        /// Constructor accepting exactly 8 points (X,Y) defining the curve.
+        /// Points must be sorted by ascending X.
+        /// </summary>
+        public ExternalGCpCurve((double X, double Y)[] points)
         {
-            X1 = x1;
-            Y1 = y1;
-            X2 = x2;
-            Y2 = y2;
+            if (points == null) throw new ArgumentNullException(nameof(points));
+            if (points.Length != 8)
+                throw new ArgumentException("Exactly 8 points are required.");
 
-            LowerBoundX = double.NegativeInfinity;
-            UpperBoundX = double.PositiveInfinity;
-        }
-
-        // Constructor with bounds
-        public ExternalGCpCurve(double x1, double y1, double x2, double y2, double lowerBoundX, double upperBoundX)
-        {
-            X1 = x1;
-            Y1 = y1;
-            X2 = x2;
-            Y2 = y2;
-
-            LowerBoundX = lowerBoundX;
-            UpperBoundX = upperBoundX;
+            for (int i = 1; i < points.Length; i++)
+            {
+                if (points[i].X < points[i - 1].X)
+                    throw new ArgumentException("Points must be sorted by ascending X.");
+            }
+            this.points = points;
         }
 
         /// <summary>
-        /// Evaluate the trilinear curve at given x.
-        /// Clamps x to bounds, and linearly interpolates Y.
+        /// Evaluate the piecewise linear curve at given x.
+        /// Clamps x to bounds, and linearly interpolates between neighboring points.
         /// </summary>
         public double Evaluate(double x)
         {
-            double clampedX = Math.Max(LowerBoundX, Math.Min(UpperBoundX, x));
+            if (x <= LowerBoundX) return points[0].Y;
+            if (x >= UpperBoundX) return points[points.Length - 1].Y;
 
-            if (clampedX <= X1)
-                return Y1;
-            if (clampedX >= X2)
-                return Y2;
+            for (int i = 1; i < points.Length; i++)
+            {
+                if (x <= points[i].X)
+                {
+                    double x1 = points[i - 1].X;
+                    double y1 = points[i - 1].Y;
+                    double x2 = points[i].X;
+                    double y2 = points[i].Y;
 
-            // Linear interpolation
-            double t = (clampedX - X1) / (X2 - X1);
-            return Y1 + t * (Y2 - Y1);
+                    double t = (x - x1) / (x2 - x1);
+                    return y1 + t * (y2 - y1);
+                }
+            }
+
+            // Should never reach here because of prior bounds checks
+            return points[points.Length - 1].Y;
+        }
+
+        public (double X, double Y)[] GetPoints()
+        {
+            // Return a copy to avoid external mutation
+            return ((double X, double Y)[])points.Clone();
         }
     }
 }

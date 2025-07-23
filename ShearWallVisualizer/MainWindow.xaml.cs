@@ -798,6 +798,7 @@ namespace ShearWallVisualizer
                 data.qh = windLoadCalculator.CalculateDynamicWindPressure(buildingData.MeanRoofHeight);
 
                 double pressure_pos;
+                double pressure_neg;
 
                 if (wall_type == "sidewall")
                 {
@@ -809,10 +810,10 @@ namespace ShearWallVisualizer
                     }
 
                     // negative max net pressure
-                    if (windLoadCalculator.TryGetPressureNet_Neg_SideWall(area.Value, out pressure_pos))
+                    if (windLoadCalculator.TryGetPressureNet_Neg_SideWall(area.Value, out pressure_neg))
                     {
                         data.GCp_neg = figureCC.WallCurves_Neg[area.Value.Label_Full].Evaluate(area.Value.Area);
-                        data.NegPress = pressure_pos;
+                        data.NegPress = pressure_neg;
                     }
                 }
                 else if (wall_type == "endwall")
@@ -825,10 +826,10 @@ namespace ShearWallVisualizer
                     }
 
                     // negative max net pressure
-                    if (windLoadCalculator.TryGetPressureNet_Neg_EndWall(area.Value, out pressure_pos))
+                    if (windLoadCalculator.TryGetPressureNet_Neg_EndWall(area.Value, out pressure_neg))
                     {
                         data.GCp_neg = figureCC.WallCurves_Neg[area.Value.Label_Full].Evaluate(area.Value.Area);
-                        data.NegPress = pressure_pos;
+                        data.NegPress = pressure_neg;
                     }
                 }
                 else

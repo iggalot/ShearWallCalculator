@@ -1,4 +1,7 @@
-﻿namespace ShearWallCalculator.WindLoadCalculations.Chapter30
+﻿using System;
+using System.Collections.Generic;
+
+namespace ShearWallCalculator.WindLoadCalculations.Chapter30
 {
     /// <summary>
     /// ASCE7-16 Interpolated Figures 30-3-2F && 30-3-2G
@@ -6,43 +9,102 @@
     /// h <= 60ft
     /// 27deg < slope < 45deg
     /// </summary>
+    ///         //ChartTitle = "ASCE 7-22 Interpolated 30-3-2F-2G - Hip Roofs";
+    //    ChartCriteria = "h <= 60ft, 27deg < slope < 45deg";
+
     public class Figure30_3_2F_2G_INTERPOLATED_ASCE7_22 : Chapter30_BaseFigure
     {
-        public Figure30_3_2F_2G_INTERPOLATED_ASCE7_22(double slope)
+        private readonly Chapter30_BaseFigure lowerFigure; // e.g. 27deg figure
+        private readonly Chapter30_BaseFigure upperFigure; // e.g. 45deg figure
+        private readonly double lowerAngle;
+        private readonly double upperAngle;
+        private readonly double targetAngle;
+
+        /// <summary>
+        /// Constructs an interpolated figure between two base figures.
+        /// Angles must satisfy lowerAngle < targetAngle < upperAngle.
+        /// </summary>
+        public Figure30_3_2F_2G_INTERPOLATED_ASCE7_22(
+            Chapter30_BaseFigure lowerFigure,
+            double lowerAngle,
+            Chapter30_BaseFigure upperFigure,
+            double upperAngle,
+            double targetAngle)
         {
-            ChartTitle = "ASCE 7-22 Interpolated 30-3-2F-2G - Hip Roofs";
-            ChartCriteria = "h <= 60ft, 27deg < slope < 45deg";
+            if (lowerAngle >= upperAngle)
+                throw new ArgumentException("lowerAngle must be less than upperAngle");
+            if (targetAngle < lowerAngle || targetAngle > upperAngle)
+                throw new ArgumentException("targetAngle must be between lowerAngle and upperAngle");
 
-            Figure30_3_2F_ASCE7_22 f30_3_2F = new Figure30_3_2F_ASCE7_22();
-            Figure30_3_2G_ASCE7_22 f30_3_2G = new Figure30_3_2G_ASCE7_22();
+            this.lowerFigure = lowerFigure ?? throw new ArgumentNullException(nameof(lowerFigure));
+            this.upperFigure = upperFigure ?? throw new ArgumentNullException(nameof(upperFigure));
+            this.lowerAngle = lowerAngle;
+            this.upperAngle = upperAngle;
+            this.targetAngle = targetAngle;
 
-            /// NEegative pressures are interpolated from Table2F and 2G for the specified slope value
-            // Zone 3 negative
-            var curve3f = f30_3_2F.RoofCurves_Neg["Zone3"];
-            var curve3g = f30_3_2G.RoofCurves_Neg["Zone3"];
-            var interp_curve3_neg_y1 = (curve3f.Y1 - curve3f.Y1) * (slope - 27) / (45 - 27) + curve3f.Y1;
-            var interp_curve3_neg_y2 = (curve3g.Y2 - curve3g.Y2) * (slope - 27) / (45 - 27) + curve3g.Y2;
-            RoofCurves_Neg["Zone3"] = new ExternalGCpCurve(curve3f.X1, interp_curve3_neg_y1, curve3f.X2, interp_curve3_neg_y2);
+            ChartTitle = $"Interpolated GCp Curves between {lowerAngle}° and {upperAngle}° at {targetAngle}°";
+            ChartCriteria = $"Interpolation between {lowerAngle}° and {upperAngle}° roof slopes";
 
-            // Zone 2 negative
-            var curve2f = f30_3_2F.RoofCurves_Neg["Zone2"];
-            var curve2g = f30_3_2G.RoofCurves_Neg["Zone2"];
-            var interp_curve2_neg_y1 = (curve2f.Y1 - curve2f.Y1) * (slope - 27) / (45 - 27) + curve2f.Y1;
-            var interp_curve2_neg_y2 = (curve2g.Y2 - curve2g.Y2) * (slope - 27) / (45 - 27) + curve2g.Y2;
-            RoofCurves_Neg["Zone2"] = new ExternalGCpCurve(curve3f.X1, interp_curve2_neg_y1, curve3f.X2, interp_curve2_neg_y2);
+            RoofCurves_Neg = InterpolateCurves(lowerFigure.RoofCurves_Neg, upperFigure.RoofCurves_Neg);
+            RoofCurves_Pos = InterpolateCurves(lowerFigure.RoofCurves_Pos, upperFigure.RoofCurves_Pos);
+        }
 
-            // Zone 1 negative
-            var curve1f = f30_3_2F.RoofCurves_Neg["Zone1"];
-            var curve1g = f30_3_2G.RoofCurves_Neg["Zone1"];
-            var interp_curve1_neg_y1 = (curve1f.Y1 - curve1f.Y1) * (slope - 27) / (45 - 27) + curve1f.Y1;
-            var interp_curve1_neg_y2 = (curve1g.Y2 - curve1g.Y2) * (slope - 27) / (45 - 27) + curve1g.Y2;
-            RoofCurves_Neg["Zone1"] = new ExternalGCpCurve(curve3f.X1, interp_curve1_neg_y1, curve3f.X2, interp_curve1_neg_y2);
+        private Dictionary<string, ExternalGCpCurve> InterpolateCurves(
+            IReadOnlyDictionary<string, ExternalGCpCurve> lowerCurves,
+            IReadOnlyDictionary<string, ExternalGCpCurve> upperCurves)
+        {
+            var result = new Dictionary<string, ExternalGCpCurve>();
 
-            // Roof Positive Pressure Zones
-            /// These are the same for 2F and 2G
-            RoofCurves_Pos["Zone3"] = new ExternalGCpCurve(10, 0.7, 100, 0.3);
-            RoofCurves_Pos["Zone2"] = new ExternalGCpCurve(10, 0.7, 100, 0.3);
-            RoofCurves_Pos["Zone1"] = new ExternalGCpCurve(10, 0.7, 100, 0.3);
-        } 
+            foreach (var zone in lowerCurves.Keys)
+            {
+                if (!upperCurves.ContainsKey(zone))
+                    throw new InvalidOperationException($"Upper curves missing zone '{zone}'.");
+
+                ExternalGCpCurve lowerCurve = lowerCurves[zone];
+                ExternalGCpCurve upperCurve = upperCurves[zone];
+
+                var interpolatedPoints = InterpolateCurvePoints(
+                    lowerCurve, upperCurve, lowerAngle, upperAngle, targetAngle);
+
+                result[zone] = new ExternalGCpCurve(interpolatedPoints);
+            }
+
+            return result;
+        }
+
+        private (double X, double Y)[] InterpolateCurvePoints(
+            ExternalGCpCurve lowerCurve,
+            ExternalGCpCurve upperCurve,
+            double lowerAngle,
+            double upperAngle,
+            double targetAngle)
+        {
+            // Both curves must have the same number of points (e.g. 8)
+            var lowerPoints = lowerCurve.GetPoints();
+            var upperPoints = upperCurve.GetPoints();
+
+            if (lowerPoints.Length != upperPoints.Length)
+                throw new InvalidOperationException("Curves must have the same number of points.");
+
+            var interpolated = new (double X, double Y)[lowerPoints.Length];
+
+            double t = (targetAngle - lowerAngle) / (upperAngle - lowerAngle);
+
+            for (int i = 0; i < lowerPoints.Length; i++)
+            {
+                double xLower = lowerPoints[i].X;
+                double xUpper = upperPoints[i].X;
+                if (Math.Abs(xLower - xUpper) > 1e-6)
+                    throw new InvalidOperationException($"Curve points X mismatch at index {i}: {xLower} vs {xUpper}");
+
+                double yLower = lowerPoints[i].Y;
+                double yUpper = upperPoints[i].Y;
+
+                double yInterp = yLower + t * (yUpper - yLower);
+                interpolated[i] = (xLower, yInterp);
+            }
+
+            return interpolated;
+        }
     }
 }

@@ -103,26 +103,6 @@ namespace ShearWallCalculator.WindLoadCalculations
                 Console.WriteLine("Zone 1 skipped: invalid offset or too large for roof size.");
             }
 
-            // Zone 2 - Outer
-            var outer1 = new[]
-            {
-                new Point(0, 0),
-                new Point(L, 0),
-                new Point(L, B),
-                new Point(0, B)
-            };
-
-            var hole1 = z2 != null ? new[] { z2.OuterBoundary } :
-                        z3 != null ? new[] { z3.OuterBoundary } : null;
-
-            var z1 = TryCreateZone(3, "Zone2", outer1, hole1);
-            if (z1 != null)
-                zones[3] = z1;
-
-            // Save or use your zones dictionary here...
-            effWindAreas = zones;
-
-
             // region 3 corner zones
             // lower left
             Point p13 = new Point(0, 0);
@@ -181,12 +161,34 @@ namespace ShearWallCalculator.WindLoadCalculations
                 null
                 );
 
+
+
+
+            // Zone 2 - Outer
+            var outer1 = new[]
+            {
+                new Point(0, 0),
+                new Point(L, 0),
+                new Point(L, B),
+                new Point(0, B)
+            };
+
+            var hole1 = (z2 != null ? new[] { z2.OuterBoundary, roof_area_3_1.OuterBoundary, roof_area_3_2.OuterBoundary , roof_area_3_3.OuterBoundary , roof_area_3_4.OuterBoundary} : null);
+
+            var z1 = TryCreateZone(3, "Zone2", outer1, hole1);
+            if (z1 != null)
+                zones[3] = z1;
+
+            // Save or use your zones dictionary here...
+            effWindAreas = zones;
+
             effWindAreas.Add(4, roof_area_3_1);  //z3
             effWindAreas.Add(5, roof_area_3_2);  //z3
             effWindAreas.Add(6, roof_area_3_3);  //z3
             effWindAreas.Add(7, roof_area_3_4);  //z3
 
             return;
+
         }
     }
 

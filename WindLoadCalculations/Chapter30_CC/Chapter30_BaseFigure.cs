@@ -6,11 +6,11 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30
     {
         public string ChartTitle { get; set; }
         public string ChartCriteria { get; set; }
-        public Dictionary<string, ExternalGCpCurve> RoofCurves_Pos { get; private set; }
-        public Dictionary<string, ExternalGCpCurve> RoofCurves_Neg { get; private set; }
-        public Dictionary<string, ExternalGCpCurve> OverhangCurves { get; private set; } = null;
-        public Dictionary<string, ExternalGCpCurve> WallCurves_Pos { get; private set; }
-        public Dictionary<string, ExternalGCpCurve> WallCurves_Neg { get; private set; }
+        public Dictionary<string, ExternalGCpCurve> RoofCurves_Pos { get; set; }
+        public Dictionary<string, ExternalGCpCurve> RoofCurves_Neg { get; set; }
+        public Dictionary<string, ExternalGCpCurve> OverhangCurves { get; set; } = null;
+        public Dictionary<string, ExternalGCpCurve> WallCurves_Pos { get; set; }
+        public Dictionary<string, ExternalGCpCurve> WallCurves_Neg { get; set; }
 
         protected Chapter30_BaseFigure()
         {

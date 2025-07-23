@@ -18,14 +18,74 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30
             ChartTitle = "ASCE 7-22 Figure 30-3-2F - Hip Roofs";
             ChartCriteria = "h <= 60ft, 20deg < slope <= 27deg";
             // ---- Roof: Negative Pressure Zones ----
-            RoofCurves_Neg["Zone3"] = new ExternalGCpCurve(10, -2.0, 100, -1.0);
-            RoofCurves_Neg["Zone2"] = new ExternalGCpCurve(10, -2.0, 100, -1.0);
-            RoofCurves_Neg["Zone1"] = new ExternalGCpCurve(10, -1.4, 100, -0.8);
+            RoofCurves_Neg["Zone3"] = new ExternalGCpCurve(new (double X, double Y)[]
+            {
+                (1.0, -2.0),
+                (10,  -2.0),
+                (20,  -1.7),
+                (50,  -1.3),
+                (100, -1.0),
+                (200, -1.0),
+                (500, -1.0),
+                (1000, -1.0),
+            });
+            RoofCurves_Neg["Zone2"] = new ExternalGCpCurve(new (double X, double Y)[]
+            {
+                (1.0, -2.0),
+                (10,  -2.0),
+                (20,  -1.7),
+                (50,  -1.3),
+                (100, -1.0),
+                (200, -1.0),
+                (500, -1.0),
+                (1000, -1.0),
+            });
+            RoofCurves_Neg["Zone1"] = new ExternalGCpCurve(new (double X, double Y)[]
+            {
+                (1.0, -1.4),
+                (10,  -1.4),
+                (20,  -1.22),
+                (50,  -0.97),
+                (100, -0.8),
+                (200, -0.8),
+                (500, -0.8),
+                (1000, -0.8),
+            });
 
             // ---- Roof: Positive Pressure Zones ----
-            RoofCurves_Pos["Zone3"] = new ExternalGCpCurve(10, 0.7, 100, 0.3);
-            RoofCurves_Pos["Zone2"] = new ExternalGCpCurve(10, 0.7, 100, 0.3);
-            RoofCurves_Pos["Zone1"] = new ExternalGCpCurve(10, 0.7, 100, 0.3);
+            RoofCurves_Pos["Zone3"] = new ExternalGCpCurve(new (double X, double Y)[]
+            {
+                (1.0, 0.7),
+                (10,  0.7),
+                (20,  0.57),
+                (50,  0.43),
+                (100, 0.3),
+                (200, 0.3),
+                (500, 0.3),
+                (1000, 0.3),
+            });
+            RoofCurves_Pos["Zone2"] = new ExternalGCpCurve(new (double X, double Y)[]
+            {
+                (1.0, 0.7),
+                (10,  0.7),
+                (20,  0.57),
+                (50,  0.43),
+                (100, 0.3),
+                (200, 0.3),
+                (500, 0.3),
+                (1000, 0.3),
+            });
+            RoofCurves_Pos["Zone1"] = new ExternalGCpCurve(new (double X, double Y)[]
+            {
+                (1.0, 0.7),
+                (10,  0.7),
+                (20,  0.57),
+                (50,  0.43),
+                (100, 0.3),
+                (200, 0.3),
+                (500, 0.3),
+                (1000, 0.3),
+            });
         }
     }
 }
