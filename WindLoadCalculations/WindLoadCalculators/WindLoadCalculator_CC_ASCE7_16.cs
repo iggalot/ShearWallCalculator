@@ -12,7 +12,7 @@ namespace ShearWallCalculator.WindLoadCalculations
     {
         public override ASCE7_Versions ASCEVersion { get => ASCE7_Versions.ASCE_VER_7_16; }
 
-        public WindLoadCalculator_CC_ASCE7_16(WindLoadParameters_Base p, BuildingData bldg_data)
+        public WindLoadCalculator_CC_ASCE7_16(WindLoadParameters_Base p, BuildingData bldg_data) : base()
         {
             buildingData = bldg_data;
             Parameters = p;
@@ -20,7 +20,10 @@ namespace ShearWallCalculator.WindLoadCalculations
             if (buildingData.MeanRoofHeight <= 60)
             {
                 CreateExtGcpCurves();
-            } 
+            } else
+            {
+                throw new Exception("ERROR: Building max mean roof height has exceeded 60 ft -- " + buildingData.MeanRoofHeight + " ft.");
+            }
         }
     }
 }
