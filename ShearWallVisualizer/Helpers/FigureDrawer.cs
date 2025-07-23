@@ -8,336 +8,238 @@ using System.Windows.Shapes;
 
 namespace ShearWallCalculator.WindLoadCalculations.Chapter30.Figure30_3
 {
-    /// <summary>
-    /// Helper that draws a Chapter30 Figure to a specified Canvas
-    /// </summary>
     public static class FigureDrawer
     {
         public static void DrawCurvesOnCanvas(Canvas canvas, Chapter30_BaseFigure figure)
         {
-        //    double canvasWidth = canvas.ActualWidth > 0 ? canvas.ActualWidth : canvas.Width;
-        //    double canvasHeight = canvas.ActualHeight > 0 ? canvas.ActualHeight : canvas.Height;
+            double canvasWidth = canvas.ActualWidth > 0 ? canvas.ActualWidth : canvas.Width;
+            double canvasHeight = canvas.ActualHeight > 0 ? canvas.ActualHeight : canvas.Height;
 
-        //    double xMin = 1;
-        //    double xMax = 1000;
-        //    double yMinNeg = -4;
-        //    double yMaxPos = 1;
+            double xMin = 1;
+            double xMax = 1000;
+            double yMinNeg = -4;
+            double yMaxPos = 1;
 
-        //    canvas.Children.Clear();
+            canvas.Children.Clear();
 
-        //    List<double> xTickValues = new List<double> { 1, 10, 20, 50, 100, 200, 500, 1000 };
-        //    DrawGrid(canvas, canvasWidth, canvasHeight, xMin, xMax, yMinNeg, yMaxPos, xTickValues);
+            List<double> xTickValues = new List<double> { 1, 10, 20, 50, 100, 200, 500, 1000 };
+            DrawGrid(canvas, canvasWidth, canvasHeight, xMin, xMax, yMinNeg, yMaxPos, xTickValues);
 
-        //    // Combine both positive and negative curves with polarity
-        //    var allCurves = new List<(string label, ExternalGCpCurve curve, bool isNegative)>();
-        //    foreach (var kvp in figure.RoofCurves_Neg)
-        //        allCurves.Add((kvp.Key, kvp.Value, true));
-        //    foreach (var kvp in figure.RoofCurves_Pos)
-        //        allCurves.Add((kvp.Key, kvp.Value, false));
-        //    foreach (var kvp in figure.WallCurves_Neg)
-        //        allCurves.Add((kvp.Key, kvp.Value, true));
-        //    foreach (var kvp in figure.WallCurves_Pos)
-        //        allCurves.Add((kvp.Key, kvp.Value, false));
+            var allCurves = new List<(string label, ExternalGCpCurve curve, bool isNegative)>();
+            foreach (var kvp in figure.RoofCurves_Neg)
+                allCurves.Add((kvp.Key, kvp.Value, true));
+            foreach (var kvp in figure.RoofCurves_Pos)
+                allCurves.Add((kvp.Key, kvp.Value, false));
+            foreach (var kvp in figure.WallCurves_Neg)
+                allCurves.Add((kvp.Key, kvp.Value, true));
+            foreach (var kvp in figure.WallCurves_Pos)
+                allCurves.Add((kvp.Key, kvp.Value, false));
 
-        //    // Group by curve shape (not label)
-        //    var groupedByShape = allCurves
-        //        .GroupBy(item => GetCurveShapeKey(item.curve))
-        //        .ToDictionary(g => g.Key, g => g.ToList());
+            var groupedByShape = allCurves
+                .GroupBy(item => string.Join("_", item.curve.GetPoints().Select(p => $"{p.X:F3}_{p.Y:F3}")))
+                .ToDictionary(g => g.Key, g => g.ToList());
 
-        //    // Draw each group with horizontal spread based on per-group zone index
-        //    foreach (var group in groupedByShape)
-        //    {
-        //        var curveGroup = group.Value;
-
-        //        for (int i = 0; i < curveGroup.Count; i++)
-        //        {
-        //            var (label, curve, isNegative) = curveGroup[i];
-        //            Brush color = isNegative ? Brushes.Red : Brushes.Blue;
-
-        //            DrawCurve(canvas, curve, label, color, isNegative,
-        //                      canvasWidth, canvasHeight, xMin, xMax, yMinNeg, yMaxPos,
-        //                      zoneIndex: i);
-        //        }
-        //    }
-        }
-
-
-        private static string GetCurveShapeKey(ExternalGCpCurve curve)
-        {
-            //    // Use rounded values of key points to group similar curves
-            //    double x1 = Math.Round(curve.X1, 3);
-            //    double x2 = Math.Round(curve.X2, 3);
-
-            //    double y1 = Math.Round(curve.Evaluate(x1), 3);
-            //    double y2 = Math.Round(curve.Evaluate(x2), 3);
-
-            //    return $"{x1:F3}_{x2:F3}_{y1:F3}_{y2:F3}";
-            return "this is incomplete";
-        }
-
-
-        private static string ExtractGroupingKey(string label)
-        {
-            // For example: "Gable Perpendicular Zone 1" => "Gable Perpendicular"
-            int zoneIndex = label.IndexOf("Zone", StringComparison.OrdinalIgnoreCase);
-            if (zoneIndex >= 0)
+            foreach (var group in groupedByShape)
             {
-                return label.Substring(0, zoneIndex).Trim();
+                var curveGroup = group.Value;
+
+                for (int i = 0; i < curveGroup.Count; i++)
+                {
+                    var (label, curve, isNegative) = curveGroup[i];
+                    Brush color = isNegative ? Brushes.Red : Brushes.Blue;
+
+                    DrawCurve(canvas, curve, label, color, isNegative,
+                              canvasWidth, canvasHeight, xMin, xMax, yMinNeg, yMaxPos,
+                              zoneIndex: i);
+                }
             }
-
-            return label.Trim(); // fallback
         }
-
-        // Helper to extract a line key from zone label
-        // You will want to customize this based on your label format and how zones are assigned to curves
-        private static string ExtractLineKey(string label)
-        {
-            // For example: label = "Zone 3" -> return "Zone"
-            // Or if labels are like "LineA Zone 3" you could parse differently
-            var parts = label.Split(' ');
-            if (parts.Length >= 2)
-            {
-                // Return all except last part (assumed zone number)
-                return string.Join(" ", parts, 0, parts.Length - 1);
-            }
-            return label; // fallback
-        }
-
 
         private static void DrawCurve(Canvas canvas, ExternalGCpCurve curve, string label, Brush color, bool isNegative,
                                       double canvasWidth, double canvasHeight,
                                       double xMin, double xMax, double yMin, double yMax,
-                                      int zoneIndex)  // local index of this zone within the curve’s zones
+                                      int zoneIndex)
         {
-        //    Polyline line = new Polyline
-        //    {
-        //        Stroke = color,
-        //        StrokeThickness = 2
-        //    };
+            Polyline line = new Polyline
+            {
+                Stroke = color,
+                StrokeThickness = 2
+            };
 
-        //    double plotMin = Math.Max(1.0, curve.LowerBoundX);
-        //    double plotMax = Math.Min(1200.0, curve.UpperBoundX);
+            var points = curve.GetPoints();
+            List<Point> linePoints = new List<Point>();
 
-        //    List<double> xPoints = new List<double>();
-        //    if (plotMin < curve.X1) xPoints.Add(plotMin);
-        //    xPoints.Add(curve.X1);
-        //    xPoints.Add(curve.X2);
-        //    if (plotMax > curve.X2) xPoints.Add(plotMax);
+            foreach (var (x, y) in points)
+            {
+                double px = ((Math.Log10(x) - Math.Log10(xMin)) / (Math.Log10(xMax) - Math.Log10(xMin))) * canvasWidth;
+                double py = ((y - yMin) / (yMax - yMin)) * canvasHeight;
+                linePoints.Add(new Point(px, py));
+            }
 
-        //    List<Point> linePoints = new List<Point>();
+            foreach (Point pt in linePoints)
+                line.Points.Add(pt);
 
-        //    foreach (double x in xPoints)
-        //    {
-        //        double y = curve.Evaluate(x);
-        //        double px = ((Math.Log10(x) - Math.Log10(xMin)) / (Math.Log10(xMax) - Math.Log10(xMin))) * canvasWidth;
-        //        px = Math.Max(0, Math.Min(canvasWidth, px));
-        //        double py = ((y - yMin) / (yMax - yMin)) * canvasHeight;
-        //        linePoints.Add(new Point(px, py));
-        //    }
+            canvas.Children.Add(line);
 
-        //    foreach (Point pt in linePoints)
-        //        line.Points.Add(pt);
+            string displayLabel = label.StartsWith("Zone", StringComparison.OrdinalIgnoreCase)
+                ? label.Substring(4).TrimStart()
+                : label;
 
-        //    canvas.Children.Add(line);
+            TextBlock labelText = new TextBlock
+            {
+                Text = displayLabel,
+                Foreground = color,
+                FontSize = 10,
+                Background = Brushes.White
+            };
 
-        //    // === Label_Full: strip "Zone" and show the rest ===
-        //    string displayLabel = label.StartsWith("Zone", StringComparison.OrdinalIgnoreCase)
-        //        ? label.Substring(4).TrimStart()
-        //        : label;
+            labelText.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            double labelW = labelText.DesiredSize.Width;
+            double labelH = labelText.DesiredSize.Height;
 
-        //    TextBlock labelText = new TextBlock
-        //    {
-        //        Text = displayLabel,
-        //        Foreground = color,
-        //        FontSize = 10,
-        //        Background = Brushes.White
-        //    };
+            double startX = 3;
+            startX = Math.Max(xMin, Math.Min(xMax, startX));
+            double pxStart = ((Math.Log10(startX) - Math.Log10(xMin)) / (Math.Log10(xMax) - Math.Log10(xMin))) * canvasWidth;
 
-        //    labelText.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        //    double labelW = labelText.DesiredSize.Width;
-        //    double labelH = labelText.DesiredSize.Height;
+            double yAtStartX = curve.Evaluate(startX);
+            double pyAtStartX = ((yAtStartX - yMin) / (yMax - yMin)) * canvasHeight;
 
-        //    // Padding for circle
-        //    double padding = 1;
-        //    double circleDiameter = Math.Max(labelW, labelH) + padding * 2;
+            double circleCenterX = pxStart + zoneIndex * 18;
+            double circleCenterY = pyAtStartX - labelH / 2 - 2.5;
+            double padding = 1;
+            double circleDiameter = Math.Max(labelW, labelH) + padding * 2;
 
-        //    // Position labels starting near x=3, spaced horizontally by zoneIndex
-        //    double horizontalSpacing = 18; // pixels between labels
-        //    double startX = 3;
-        //    startX = Math.Max(xMin, Math.Min(xMax, startX));
-        //    double pxStart = ((Math.Log10(startX) - Math.Log10(xMin)) / (Math.Log10(xMax) - Math.Log10(xMin))) * canvasWidth;
+            Ellipse circle = new Ellipse
+            {
+                Width = circleDiameter,
+                Height = circleDiameter,
+                Stroke = color,
+                StrokeThickness = 1,
+                Fill = Brushes.White
+            };
+            Canvas.SetLeft(circle, circleCenterX - circleDiameter / 2);
+            Canvas.SetTop(circle, circleCenterY - circleDiameter / 2);
+            canvas.Children.Add(circle);
 
-        //    double yAtStartX = curve.Evaluate(startX);
-        //    double pyAtStartX = ((yAtStartX - yMin) / (yMax - yMin)) * canvasHeight;
+            Canvas.SetLeft(labelText, circleCenterX - labelW / 2);
+            Canvas.SetTop(labelText, circleCenterY - labelH / 2);
+            canvas.Children.Add(labelText);
 
-        //    double circleCenterX = pxStart + zoneIndex * horizontalSpacing;
-        //    double circleCenterY = pyAtStartX - labelH / 2 - 2.5;
+            TextBlock leftYLabel = new TextBlock
+            {
+                Text = points.First().Y.ToString("0.00"),
+                Foreground = color,
+                FontSize = 10,
+                Background = Brushes.White
+            };
+            leftYLabel.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            Canvas.SetLeft(leftYLabel, linePoints.First().X - 15 - leftYLabel.DesiredSize.Width / 2);
+            Canvas.SetTop(leftYLabel, linePoints.First().Y - leftYLabel.DesiredSize.Height / 2);
+            canvas.Children.Add(leftYLabel);
 
-        //    // Draw the circle behind the label
-        //    Ellipse circle = new Ellipse
-        //    {
-        //        Width = circleDiameter,
-        //        Height = circleDiameter,
-        //        Stroke = color,
-        //        StrokeThickness = 1,
-        //        Fill = Brushes.White
-        //    };
-        //    Canvas.SetLeft(circle, circleCenterX - circleDiameter / 2);
-        //    Canvas.SetTop(circle, circleCenterY - circleDiameter / 2);
-        //    canvas.Children.Add(circle);
+            TextBlock rightYLabel = new TextBlock
+            {
+                Text = points.Last().Y.ToString("0.00"),
+                Foreground = color,
+                FontSize = 10,
+                Background = Brushes.White
+            };
+            rightYLabel.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            Canvas.SetLeft(rightYLabel, linePoints.Last().X + 15 - rightYLabel.DesiredSize.Width / 2);
+            Canvas.SetTop(rightYLabel, linePoints.Last().Y - rightYLabel.DesiredSize.Height / 2);
+            canvas.Children.Add(rightYLabel);
+        }
 
-        //    // Draw the label centered in the circle
-        //    Canvas.SetLeft(labelText, circleCenterX - labelW / 2);
-        //    Canvas.SetTop(labelText, circleCenterY - labelH / 2);
-        //    canvas.Children.Add(labelText);
+        private static void DrawGrid(Canvas canvas, double canvasWidth, double canvasHeight,
+                                     double xMin, double xMax, double yMin, double yMax,
+                                     IEnumerable<double> xValuesToLabel)
+        {
+            foreach (double xVal in xValuesToLabel)
+            {
+                if (xVal <= 0) continue;
 
-        //    // === Left Y-value label ===
-        //    double leftXVal = xPoints[0];
-        //    double leftYVal = curve.Evaluate(leftXVal);
-        //    Point leftPt = linePoints[0];
+                double px = ((Math.Log10(xVal) - Math.Log10(xMin)) / (Math.Log10(xMax) - Math.Log10(xMin))) * canvasWidth;
 
-        //    TextBlock leftYLabel = new TextBlock
-        //    {
-        //        Text = leftYVal.ToString("0.00"),
-        //        Foreground = color,
-        //        FontSize = 10,
-        //        Background = Brushes.White
-        //    };
-        //    leftYLabel.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        //    double lw = leftYLabel.DesiredSize.Width;
-        //    double lh = leftYLabel.DesiredSize.Height;
-        //    Canvas.SetLeft(leftYLabel, leftPt.X - lw / 2);
-        //    Canvas.SetTop(leftYLabel, leftPt.Y - lh / 2);
-        //    canvas.Children.Add(leftYLabel);
+                canvas.Children.Add(new Line
+                {
+                    X1 = px,
+                    Y1 = 0,
+                    X2 = px,
+                    Y2 = canvasHeight,
+                    Stroke = Brushes.Gray,
+                    StrokeThickness = 0.5,
+                    StrokeDashArray = new DoubleCollection() { 4, 2 }
+                });
 
-        //    // === Right Y-value label ===
-        //    double rightXVal = xPoints[xPoints.Count - 1];
-        //    double rightYVal = curve.Evaluate(rightXVal);
-        //    Point rightPt = linePoints[linePoints.Count - 1];
+                canvas.Children.Add(new Line
+                {
+                    X1 = px,
+                    Y1 = canvasHeight - 6,
+                    X2 = px,
+                    Y2 = canvasHeight,
+                    Stroke = Brushes.Black,
+                    StrokeThickness = 1
+                });
 
-        //    TextBlock rightYLabel = new TextBlock
-        //    {
-        //        Text = rightYVal.ToString("0.00"),
-        //        Foreground = color,
-        //        FontSize = 10,
-        //        Background = Brushes.White
-        //    };
-        //    rightYLabel.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        //    double rw = rightYLabel.DesiredSize.Width;
-        //    double rh = rightYLabel.DesiredSize.Height;
-        //    Canvas.SetLeft(rightYLabel, rightPt.X - rw / 2);
-        //    Canvas.SetTop(rightYLabel, rightPt.Y - rh / 2);
-        //    canvas.Children.Add(rightYLabel);
-        //}
+                TextBlock xLabel = new TextBlock
+                {
+                    Text = xVal >= 1000 ? $"{xVal / 1000:0.#}k" : xVal.ToString("0"),
+                    FontSize = 10,
+                    Foreground = Brushes.Black
+                };
+                xLabel.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                Canvas.SetLeft(xLabel, px - xLabel.DesiredSize.Width / 2);
+                Canvas.SetTop(xLabel, canvasHeight - 18);
+                canvas.Children.Add(xLabel);
+            }
 
-        //private static void DrawGrid(Canvas canvas, double canvasWidth, double canvasHeight,
-        //                             double xMin, double xMax, double yMin, double yMax,
-        //                             IEnumerable<double> xValuesToLabel)
-        //{
-        //    // === Draw X-axis ticks, dashed vertical lines, and centered labels ===
-        //    foreach (double xVal in xValuesToLabel)
-        //    {
-        //        if (xVal <= 0) continue;
+            double yStep = 0.2;
+            int yDivisions = (int)Math.Round((yMax - yMin) / yStep);
+            for (int i = 0; i <= yDivisions; i++)
+            {
+                double y = yMin + i * yStep;
+                double py = ((y - yMin) / (yMax - yMin)) * canvasHeight;
 
-        //        double px = ((Math.Log10(xVal) - Math.Log10(xMin)) / (Math.Log10(xMax) - Math.Log10(xMin))) * canvasWidth;
+                canvas.Children.Add(new Line
+                {
+                    X1 = 0,
+                    Y1 = py,
+                    X2 = canvasWidth,
+                    Y2 = py,
+                    Stroke = Brushes.LightGray,
+                    StrokeThickness = 0.5
+                });
 
-        //        // Dashed vertical grid line
-        //        Line vLine = new Line
-        //        {
-        //            X1 = px,
-        //            Y1 = 0,
-        //            X2 = px,
-        //            Y2 = canvasHeight,
-        //            Stroke = Brushes.Gray,
-        //            StrokeThickness = 0.5,
-        //            StrokeDashArray = new DoubleCollection() { 4, 2 }
-        //        };
-        //        canvas.Children.Add(vLine);
+                TextBlock yLabel = new TextBlock
+                {
+                    Text = y.ToString("0.0"),
+                    FontSize = 10,
+                    Foreground = Brushes.Black
+                };
+                yLabel.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                Canvas.SetLeft(yLabel, 2);
+                Canvas.SetTop(yLabel, py - yLabel.DesiredSize.Height / 2);
+                canvas.Children.Add(yLabel);
+            }
 
-        //        // Tick mark at bottom
-        //        Line tick = new Line
-        //        {
-        //            X1 = px,
-        //            Y1 = canvasHeight - 6,
-        //            X2 = px,
-        //            Y2 = canvasHeight,
-        //            Stroke = Brushes.Black,
-        //            StrokeThickness = 1
-        //        };
-        //        canvas.Children.Add(tick);
+            double[] dashedYVals = new double[] { -4, -3, -2, -1, 0, 1 };
+            foreach (double y in dashedYVals)
+            {
+                if (y < yMin || y > yMax) continue;
 
-        //        // X-axis label centered on tick
-        //        TextBlock xLabel = new TextBlock
-        //        {
-        //            Text = xVal >= 1000 ? $"{xVal / 1000:0.#}k" : xVal.ToString("0"),
-        //            FontSize = 10,
-        //            Foreground = Brushes.Black
-        //        };
-        //        // Measure label width to center it
-        //        xLabel.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        //        double labelWidth = xLabel.DesiredSize.Width;
-        //        Canvas.SetLeft(xLabel, px - labelWidth / 2);
-        //        Canvas.SetTop(xLabel, canvasHeight - 18);
-        //        canvas.Children.Add(xLabel);
-        //    }
+                double py = ((y - yMin) / (yMax - yMin)) * canvasHeight;
 
-        //    // === Draw horizontal lines at every 0.2 with labels ===
-        //    double yStep = 0.2;
-        //    int yDivisions = (int)Math.Round((yMax - yMin) / yStep);
-        //    for (int i = 0; i <= yDivisions; i++)
-        //    {
-        //        double y = yMin + i * yStep;
-        //        double normY = (y - yMin) / (yMax - yMin);
-        //        double py = normY * canvasHeight;
-
-        //        // Draw line
-        //        Line yLine = new Line
-        //        {
-        //            X1 = 0,
-        //            Y1 = py,
-        //            X2 = canvasWidth,
-        //            Y2 = py,
-        //            Stroke = Brushes.LightGray,
-        //            StrokeThickness = 0.5
-        //        };
-        //        canvas.Children.Add(yLine);
-
-        //        // Y label
-        //        TextBlock yLabel = new TextBlock
-        //        {
-        //            Text = y.ToString("0.0"),
-        //            FontSize = 10,
-        //            Foreground = Brushes.Black
-        //        };
-        //        // Center vertically: label height is about 12 px, shift up by ~6
-        //        yLabel.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        //        double labelHeight = yLabel.DesiredSize.Height;
-        //        Canvas.SetLeft(yLabel, 2);
-        //        Canvas.SetTop(yLabel, py - labelHeight / 2);
-        //        canvas.Children.Add(yLabel);
-        //    }
-
-        //    // === Draw dashed horizontal lines at special Y-values ===
-        //    double[] dashedYVals = new double[] { -4, -3, -2, -1, 0, 1 };
-        //    foreach (double y in dashedYVals)
-        //    {
-        //        if (y < yMin || y > yMax) continue;
-
-        //        double normY = (y - yMin) / (yMax - yMin);
-        //        double py = normY * canvasHeight;
-
-        //        Line dashedLine = new Line
-        //        {
-        //            X1 = 0,
-        //            Y1 = py,
-        //            X2 = canvasWidth,
-        //            Y2 = py,
-        //            Stroke = Brushes.Gray,
-        //            StrokeThickness = 1,
-        //            StrokeDashArray = new DoubleCollection() { 4, 2 }
-        //        };
-        //        canvas.Children.Add(dashedLine);
-        //    }
+                canvas.Children.Add(new Line
+                {
+                    X1 = 0,
+                    Y1 = py,
+                    X2 = canvasWidth,
+                    Y2 = py,
+                    Stroke = Brushes.Gray,
+                    StrokeThickness = 1,
+                    StrokeDashArray = new DoubleCollection() { 4, 2 }
+                });
+            }
         }
     }
 }
