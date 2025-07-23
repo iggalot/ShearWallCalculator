@@ -35,13 +35,14 @@ namespace ShearWallCalculator.BuildingInfo
             {
                 double h1 = Math.Tan(RoofPitch * Math.PI / 180.0) * BuildingLength / 2.0;
                 double h2 = Math.Tan(RoofPitch * Math.PI / 180.0) * BuildingWidth / 2.0;
-                return BuildingHeight + Math.Min(h1, h2);
+                return 0.5*(BuildingHeight + BuildingHeight + Math.Min(h1, h2))  // mean roof height is average of the peak height and the wall height
+                    ;
             }
             else if (RoofType == RoofTypes.ROOF_TYPE_GABLE)
             {
                 double h1 = Math.Tan(RoofPitch * Math.PI / 180.0) * BuildingLength / 2.0;
                 double h2 = Math.Tan(RoofPitch * Math.PI / 180.0) * BuildingWidth / 2.0;
-                return BuildingHeight + Math.Min(h1, h2);
+                return 0.5 * (BuildingHeight + BuildingHeight + Math.Min(h1, h2)); // // mean roof height is average of the peak height and the wall height
             } 
             else if (RoofType == RoofTypes.ROOF_TYPE_FLAT)
             {
