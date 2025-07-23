@@ -524,11 +524,13 @@ namespace ShearWallVisualizer
 
             CreateCC_DataGrid_Roof(figureCC_Roof, ccControl.RoofResultsDataGrid);
 
+            // For the BuildingLength wall
             CreateCC_DataGrid_Walls(figureCC_Wall, ccControl.WallsResultsDataGrid_SideWall,
-                windLoadParams.WallAreaCalculator_BldgLength.effWindAreas, "sidewall");
+                windLoadParams.WallAreaCalculator_BldgLength.effWindAreas, "building_length");
 
+            // For the BuildingWidth wall
             CreateCC_DataGrid_Walls(figureCC_Wall, ccControl.WallsResultsDataGrid_EndWall,
-                windLoadParams.WallAreaCalculator_BldgWidth.effWindAreas, "endwall");
+                windLoadParams.WallAreaCalculator_BldgWidth.effWindAreas, "building_width");
         }
 
         private void DrawEffectiveAreasOnResultCanvas()
@@ -800,33 +802,33 @@ namespace ShearWallVisualizer
                 double pressure_pos;
                 double pressure_neg;
 
-                if (wall_type == "sidewall")
+                if (wall_type == "building_length")
                 {
                     // positive max net pressure
-                    if (windLoadCalculator.TryGetPressureNet_Pos_SideWall(area.Value, out pressure_pos))
+                    if (windLoadCalculator.TryGetPressureNet_Pos_BuildingLengthWall(area.Value, out pressure_pos))
                     {
                         data.GCp_pos = figureCC.WallCurves_Pos[area.Value.Label_Full].Evaluate(area.Value.Area);
                         data.PosPress = pressure_pos;
                     }
 
                     // negative max net pressure
-                    if (windLoadCalculator.TryGetPressureNet_Neg_SideWall(area.Value, out pressure_neg))
+                    if (windLoadCalculator.TryGetPressureNet_Neg_BuildingLengthWall(area.Value, out pressure_neg))
                     {
                         data.GCp_neg = figureCC.WallCurves_Neg[area.Value.Label_Full].Evaluate(area.Value.Area);
                         data.NegPress = pressure_neg;
                     }
                 }
-                else if (wall_type == "endwall")
+                else if (wall_type == "building_width")
                 {
                     // positive max net pressure
-                    if (windLoadCalculator.TryGetPressureNet_Pos_EndWall(area.Value, out pressure_pos))
+                    if (windLoadCalculator.TryGetPressureNet_Pos_BuildingWidthWall(area.Value, out pressure_pos))
                     {
                         data.GCp_pos = figureCC.WallCurves_Pos[area.Value.Label_Full].Evaluate(area.Value.Area);
                         data.PosPress = pressure_pos;
                     }
 
                     // negative max net pressure
-                    if (windLoadCalculator.TryGetPressureNet_Neg_EndWall(area.Value, out pressure_neg))
+                    if (windLoadCalculator.TryGetPressureNet_Neg_BuildingWidthWall(area.Value, out pressure_neg))
                     {
                         data.GCp_neg = figureCC.WallCurves_Neg[area.Value.Label_Full].Evaluate(area.Value.Area);
                         data.NegPress = pressure_neg;

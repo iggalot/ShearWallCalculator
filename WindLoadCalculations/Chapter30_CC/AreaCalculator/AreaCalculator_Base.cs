@@ -18,6 +18,8 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator
             set => throw new NotSupportedException("This component does not support CritDim_a.");
         }
 
+        public virtual string Note { get; set; } = String.Empty;  // a holder for a note in the calculator -- useful for recording gable vs. non gable walls
+
         /// <summary>
         /// Function to compute the areas of the calculator.  To be overriden by the implementating class
         /// </summary>

@@ -61,6 +61,10 @@ namespace ShearWallVisualizer.Controls
                 tbl_hOverB.Text = (windLoadCalculator.buildingData.MeanRoofHeight / windLoadCalculator.buildingData.BuildingWidth).ToString("F2");
                 tbl_hOverL.Text = (windLoadCalculator.buildingData.MeanRoofHeight / windLoadCalculator.buildingData.BuildingLength).ToString("F2");
                 tbl_roof_type.Text = windLoadCalculator.buildingData.RoofType.ToString();
+
+                txtTitle_BuildingLengthWalls.Text = "BuildingLength Wall -- " + windLoadCalculator.Parameters.WallAreaCalculator_BldgLength.Note;
+                txtTitle_BuildingWidthWalls.Text = "BuildingWidth Walls -- " + windLoadCalculator.Parameters.WallAreaCalculator_BldgWidth.Note;
+
             }
         }
     }

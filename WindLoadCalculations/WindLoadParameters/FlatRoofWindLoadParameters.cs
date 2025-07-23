@@ -23,27 +23,25 @@ namespace ShearWallCalculator.WindLoadCalculations
             var lenParams = new Dictionary<string, double> { { "WallLength", len } };
             var widParams = new Dictionary<string, double> { { "WallLength", wid } };
 
-            // Use same logic: no gables on a flat roof
-            bool widthIsGable = false;
-            bool lengthIsGable = false;
-
-            WallAreaCalculator_BldgLength = CreateWallCalculator(version);
+            //SideWall
+            WallAreaCalculator_BldgLength = CreateWallCalculator(version, "NonGable");
             WallAreaCalculator_BldgLength.Compute(this, bldg_data, lenParams);
 
-            WallAreaCalculator_BldgWidth = CreateWallCalculator(version);
+            //EndWall
+            WallAreaCalculator_BldgWidth = CreateWallCalculator(version, "NonGable");
             WallAreaCalculator_BldgWidth.Compute(this, bldg_data, widParams);
         }
 
         // pseudo factory method here -- same code in the hip parameters
-        private AreaCalculator_Base CreateWallCalculator(ASCE7_Versions version)
+        private AreaCalculator_Base CreateWallCalculator(ASCE7_Versions version, string wall_type = "NonGable")
         {
             if (version == ASCE7_Versions.ASCE_VER_7_16)
             {
-                return new WallAreaCalculator_NonGableEnd_CC_ASCE7_16();
+                return new WallAreaCalculator_NonGableEnd_CC_ASCE7_16(wall_type);
             }
             else if (version == ASCE7_Versions.ASCE_VER_7_22)
             {
-                return new WallAreaCalculator_NonGableEnd_CC_ASCE7_22();
+                return new WallAreaCalculator_NonGableEnd_CC_ASCE7_22(wall_type);
             }
             else
             {

@@ -87,18 +87,18 @@ namespace ShearWallCalculator.WindLoadCalculations
 
         public Dictionary<int, double> windPressureRoof_Pos_External { get; set; } = new Dictionary<int, double>();
         public Dictionary<int, double> windPressureRoof_Neg_External { get; set; } = new Dictionary<int, double>();
-        public Dictionary<int, double> windPressureSideWall_Pos_External { get; set; } = new Dictionary<int, double>();
-        public Dictionary<int, double> windPressureSideWall_Neg_External { get; set; } = new Dictionary<int, double>();
-        public Dictionary<int, double> windPressureEndWall_Pos_External { get; set; } = new Dictionary<int, double>();
-        public Dictionary<int, double> windPressureEndWall_Neg_External { get; set; } = new Dictionary<int, double>();
+        public Dictionary<int, double> windPressureBuildingLengthWall_Pos_External { get; set; } = new Dictionary<int, double>();
+        public Dictionary<int, double> windPressureBuildingLengthWall_Neg_External { get; set; } = new Dictionary<int, double>();
+        public Dictionary<int, double> windPressureBuildingWidthWall_Pos_External { get; set; } = new Dictionary<int, double>();
+        public Dictionary<int, double> windPressureBuildingWidthWall_Neg_External { get; set; } = new Dictionary<int, double>();
         public Dictionary<int, double> windPressureOverhang_External { get; set; } = new Dictionary<int, double>();
 
-        public Dictionary<int, double> windPressureRoof_Pos_Net { get; set; } = new Dictionary<int, double>();
+        public Dictionary<int, double>  windPressureRoof_Pos_Net { get; set; } = new Dictionary<int, double>();
         public Dictionary<int, double> windPressureRoof_Neg_Net { get; set; } = new Dictionary<int, double>();
-        public Dictionary<int, double> windPressureSideWall_Pos_Net { get; set; } = new Dictionary<int, double>();
-        public Dictionary<int, double> windPressureSideWall_Neg_Net { get; set; } = new Dictionary<int, double>();
-        public Dictionary<int, double> windPressureEndWall_Pos_Net { get; set; } = new Dictionary<int, double>();
-        public Dictionary<int, double> windPressureEndWall_Neg_Net { get; set; } = new Dictionary<int, double>();
+        public Dictionary<int, double> windPressureBuildingLength_Pos_Net { get; set; } = new Dictionary<int, double>();
+        public Dictionary<int, double> windPressureBuildingLengthWall_Neg_Net { get; set; } = new Dictionary<int, double>();
+        public Dictionary<int, double> windPressureBuildingWidthWall_Pos_Net { get; set; } = new Dictionary<int, double>();
+        public Dictionary<int, double> windPressureBuildingWidthWall_Neg_Net { get; set; } = new Dictionary<int, double>();
 
         public void CreateExtGcpCurves()
         {
@@ -265,7 +265,7 @@ namespace ShearWallCalculator.WindLoadCalculations
         /// <param name="id">id of the area</param>
         /// <param name="gcp">thereturn GCP value</param>
         /// <returns></returns>
-        public virtual bool TryGetGCp_Pos_SideWall_ByArea(int id, out double gcp)
+        public virtual bool TryGetGCp_Pos_BuildingLengthWall_ByArea(int id, out double gcp)
         {
             gcp = 0.0;
 
@@ -291,7 +291,7 @@ namespace ShearWallCalculator.WindLoadCalculations
         /// <param name="id">id of the area</param>
         /// <param name="gcp">thereturn GCP value</param>
         /// <returns></returns>
-        public virtual bool TryGetGCp_Neg_SideWall_ByArea(int id, out double gcp)
+        public virtual bool TryGetGCp_Neg_BuildingLengthWall_ByArea(int id, out double gcp)
         {
             gcp = 0.0;
 
@@ -317,7 +317,7 @@ namespace ShearWallCalculator.WindLoadCalculations
         /// <param name="id">id of the area</param>
         /// <param name="gcp">thereturn GCP value</param>
         /// <returns></returns>
-        public virtual bool TryGetGCp_Pos_EndWall_ByArea(int id, out double gcp)
+        public virtual bool TryGetGCp_Pos_BuildingWidthWall_ByArea(int id, out double gcp)
         {
             gcp = 0.0;
 
@@ -343,7 +343,7 @@ namespace ShearWallCalculator.WindLoadCalculations
         /// <param name="id">id of the area</param>
         /// <param name="gcp">thereturn GCP value</param>
         /// <returns></returns>
-        public virtual bool TryGetGCp_Neg_EndWall_ByArea(int id, out double gcp)
+        public virtual bool TryGetGCp_Neg_BuildingWidthWall_ByArea(int id, out double gcp)
         {
             gcp = 0.0;
 
@@ -421,43 +421,43 @@ namespace ShearWallCalculator.WindLoadCalculations
                 }
             }
 
-            // endwall pressure positive
+            // BuildingWidth pressure positive
             foreach (var area in Parameters.WallAreaCalculator_BldgWidth.effWindAreas)
             {
-                if (TryGetGCp_Pos_EndWall_ByArea(area.Key, out var gcp))
+                if (TryGetGCp_Pos_BuildingWidthWall_ByArea(area.Key, out var gcp))
                 {
                     double pressure = CalculateDynamicWindPressure(buildingData.MeanRoofHeight) * gcp;
-                    windPressureEndWall_Pos_External.Add(area.Key, pressure);
+                    windPressureBuildingWidthWall_Pos_External.Add(area.Key, pressure);
                 }
             }
 
-            // endwall pressure negative
+            // BuildingWidth pressure negative
             foreach (var area in Parameters.WallAreaCalculator_BldgWidth.effWindAreas)
             {
-                if (TryGetGCp_Neg_EndWall_ByArea(area.Key, out var gcp))
+                if (TryGetGCp_Neg_BuildingWidthWall_ByArea(area.Key, out var gcp))
                 {
                     double pressure = CalculateDynamicWindPressure(buildingData.MeanRoofHeight) * gcp;
-                    windPressureEndWall_Neg_External.Add(area.Key, pressure);
+                    windPressureBuildingWidthWall_Neg_External.Add(area.Key, pressure);
                 }
             }
 
-            // sidewall pressure positive
+            // BuildingLength pressure positive
             foreach (var area in Parameters.WallAreaCalculator_BldgLength.effWindAreas)
             {
-                if (TryGetGCp_Pos_SideWall_ByArea(area.Key, out var gcp))
+                if (TryGetGCp_Pos_BuildingLengthWall_ByArea(area.Key, out var gcp))
                 {
                     double pressure = CalculateDynamicWindPressure(buildingData.MeanRoofHeight) * gcp;
-                    windPressureSideWall_Pos_External.Add(area.Key, pressure);
+                    windPressureBuildingLengthWall_Pos_External.Add(area.Key, pressure);
                 }
             }
 
-            // sidewall pressure negative
+            // BuildingLength pressure negative
             foreach (var area in Parameters.WallAreaCalculator_BldgLength.effWindAreas)
             {
-                if (TryGetGCp_Pos_SideWall_ByArea(area.Key, out var gcp))
+                if (TryGetGCp_Neg_BuildingLengthWall_ByArea(area.Key, out var gcp))
                 {
                     double pressure = CalculateDynamicWindPressure(buildingData.MeanRoofHeight) * gcp;
-                    windPressureSideWall_Neg_External.Add(area.Key, pressure);
+                    windPressureBuildingLengthWall_Neg_External.Add(area.Key, pressure);
                 }
             }
         }
@@ -471,7 +471,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             foreach (var items in windPressureRoof_Pos_External)
             {
                     double int_pressure = CalculateDynamicWindPressure(buildingData.MeanRoofHeight) * GetGCpi();
-                windPressureRoof_Pos_Net.Add(items.Key, items.Value + int_pressure);
+                    windPressureRoof_Pos_Net.Add(items.Key, items.Value + int_pressure);
             }
 
             // roof pressure negative
@@ -481,32 +481,32 @@ namespace ShearWallCalculator.WindLoadCalculations
                     windPressureRoof_Neg_Net.Add(items.Key, items.Value - int_pressure);
             }
 
-            // endwall pressure positive
-            foreach (var items in windPressureEndWall_Pos_External)
+            // BuildingWidth wall pressure positive
+            foreach (var items in windPressureBuildingWidthWall_Pos_External)
             {
                     double pressure = CalculateDynamicWindPressure(buildingData.MeanRoofHeight) * GetGCpi();
-                    windPressureEndWall_Pos_Net.Add(items.Key, items.Value + pressure);
+                    windPressureBuildingWidthWall_Pos_Net.Add(items.Key, items.Value + pressure);
             }
 
-            // endwall pressure negative
-            foreach (var items in windPressureEndWall_Neg_External)
+            // BuildingWidth wall pressure negative
+            foreach (var items in windPressureBuildingWidthWall_Neg_External)
             {
                     double pressure = CalculateDynamicWindPressure(buildingData.MeanRoofHeight) * GetGCpi();
-                    windPressureEndWall_Neg_Net.Add(items.Key, items.Value - pressure);
+                    windPressureBuildingWidthWall_Neg_Net.Add(items.Key, items.Value - pressure);
             }
 
-            // sidewall pressure positive
-            foreach (var items in windPressureSideWall_Pos_External)
+            // BuildingLength pressure positive
+            foreach (var items in windPressureBuildingLengthWall_Pos_External)
             {
                     double pressure = CalculateDynamicWindPressure(buildingData.MeanRoofHeight) * GetGCpi();
-                    windPressureSideWall_Pos_Net.Add(items.Key, items.Value - pressure);
+                    windPressureBuildingLength_Pos_Net.Add(items.Key, items.Value + pressure);
             }
 
-            // sidewall pressure negative
-            foreach (var items in windPressureSideWall_Neg_External)
+            // Building Length pressure negative
+            foreach (var items in windPressureBuildingLengthWall_Neg_External)
             {
                     double pressure = CalculateDynamicWindPressure(buildingData.MeanRoofHeight) * GetGCpi();
-                    windPressureSideWall_Neg_Net.Add(items.Key, items.Value - pressure);
+                    windPressureBuildingLengthWall_Neg_Net.Add(items.Key, items.Value - pressure);
             }
         }
 
@@ -542,7 +542,7 @@ namespace ShearWallCalculator.WindLoadCalculations
         /// <param name="area"></param>
         /// <param name="region"></param>
         /// <returns></returns>
-        private bool TryGetEffectiveWindAreaID_SideWall(string label, double area, out int id)
+        private bool TryGetEffectiveWindAreaID_BuildingLengthWall(string label, double area, out int id)
         {
             id = -1;
 
@@ -566,7 +566,7 @@ namespace ShearWallCalculator.WindLoadCalculations
         /// <param name="area"></param>
         /// <param name="region"></param>
         /// <returns></returns>
-        private bool TryGetEffectiveWindAreaID_EndWall(string label, double area, out int id)
+        private bool TryGetEffectiveWindAreaID_BuildingWidthWall(string label, double area, out int id)
         {
             id = -1;
 
@@ -576,52 +576,6 @@ namespace ShearWallCalculator.WindLoadCalculations
                 if ((item.Value.Label_Full == label) && (item.Value.Area == area))
                 {
                     id = item.Key;
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// Try to fetch a roof region by label and area
-        /// </summary>
-        /// <param name="label"></param>
-        /// <param name="area"></param>
-        /// <param name="region"></param>
-        /// <returns></returns>
-        private bool TryGetEffectiveWindArea_EndWall(string label, double area, out EffectiveWindArea region)
-        {
-            region = null;
-            foreach (KeyValuePair<int, EffectiveWindArea> item in Parameters.WallAreaCalculator_BldgWidth.effWindAreas)
-            {
-
-                if ((item.Value.Label_Full == label) && (item.Value.Area == area))
-                {
-                    region = item.Value;
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// Try to fetch a roof region by label and area
-        /// </summary>
-        /// <param name="label"></param>
-        /// <param name="area"></param>
-        /// <param name="region"></param>
-        /// <returns></returns>
-        private bool TryGetEffectiveWindArea_SideWall(string label, double area, out EffectiveWindArea region)
-        {
-            region = null;
-            foreach (KeyValuePair<int, EffectiveWindArea> item in Parameters.WallAreaCalculator_BldgLength.effWindAreas)
-            {
-
-                if ((item.Value.Label_Full == label) && (item.Value.Area == area))
-                {
-                    region = item.Value;
                     return true;
                 }
             }
@@ -677,14 +631,14 @@ namespace ShearWallCalculator.WindLoadCalculations
             return false;
         }
 
-        public bool TryGetPressureNet_Pos_SideWall(EffectiveWindArea area, out double pressure)
+        public bool TryGetPressureNet_Pos_BuildingLengthWall(EffectiveWindArea area, out double pressure)
         {
             int id;
             pressure = 0;
 
-            if (TryGetEffectiveWindAreaID_SideWall(area.Label_Full, area.Area, out id))
+            if (TryGetEffectiveWindAreaID_BuildingLengthWall(area.Label_Full, area.Area, out id))
             {
-                if (windPressureSideWall_Pos_Net.TryGetValue(id, out pressure))
+                if (windPressureBuildingLength_Pos_Net.TryGetValue(id, out pressure))
                 {
                     return true;
                 }
@@ -693,14 +647,14 @@ namespace ShearWallCalculator.WindLoadCalculations
             return false;
         }
 
-        public bool TryGetPressureNet_Neg_SideWall(EffectiveWindArea area, out double pressure)
+        public bool TryGetPressureNet_Neg_BuildingLengthWall(EffectiveWindArea area, out double pressure)
         {
             int id;
             pressure = 0;
 
-            if (TryGetEffectiveWindAreaID_SideWall(area.Label_Full, area.Area, out id))
+            if (TryGetEffectiveWindAreaID_BuildingLengthWall(area.Label_Full, area.Area, out id))
             {
-                if (windPressureSideWall_Neg_Net.TryGetValue(id, out pressure))
+                if (windPressureBuildingLengthWall_Neg_Net.TryGetValue(id, out pressure))
                 {
                     return true;
                 }
@@ -709,14 +663,14 @@ namespace ShearWallCalculator.WindLoadCalculations
             return false;
         }
 
-        public bool TryGetPressureNet_Pos_EndWall(EffectiveWindArea area, out double pressure)
+        public bool TryGetPressureNet_Pos_BuildingWidthWall(EffectiveWindArea area, out double pressure)
         {
             int id;
             pressure = 0;
 
-            if (TryGetEffectiveWindAreaID_EndWall(area.Label_Full, area.Area, out id))
+            if (TryGetEffectiveWindAreaID_BuildingWidthWall(area.Label_Full, area.Area, out id))
             {
-                if (windPressureEndWall_Pos_Net.TryGetValue(id, out pressure))
+                if (windPressureBuildingWidthWall_Pos_Net.TryGetValue(id, out pressure))
                 {
                     return true;
                 }
@@ -725,14 +679,14 @@ namespace ShearWallCalculator.WindLoadCalculations
             return false;
         }
 
-        public bool TryGetPressureNet_Neg_EndWall(EffectiveWindArea area, out double pressure)
+        public bool TryGetPressureNet_Neg_BuildingWidthWall(EffectiveWindArea area, out double pressure)
         {
             int id;
             pressure = 0;
 
-            if (TryGetEffectiveWindAreaID_EndWall(area.Label_Full, area.Area, out id))
+            if (TryGetEffectiveWindAreaID_BuildingWidthWall(area.Label_Full, area.Area, out id))
             {
-                if (windPressureEndWall_Neg_Net.TryGetValue(id, out pressure))
+                if (windPressureBuildingWidthWall_Neg_Net.TryGetValue(id, out pressure))
                 {
                     return true;
                 }
@@ -758,25 +712,25 @@ namespace ShearWallCalculator.WindLoadCalculations
             }
 
             str += "-- Positive end wall pressures\n";
-            foreach (var item in windPressureEndWall_Pos_External)
+            foreach (var item in windPressureBuildingWidthWall_Pos_External)
             {
                 str += "----" + item.Key + ": " + item.Value + "\n";
             }
 
             str += "-- Negative end wall pressures\n";
-            foreach (var item in windPressureEndWall_Neg_External)
+            foreach (var item in windPressureBuildingWidthWall_Neg_External)
             {
                 str += "----" + item.Key + ": " + item.Value + "\n";
             }
 
             str += "-- Positive side wall pressures\n";
-            foreach (var item in windPressureSideWall_Pos_External)
+            foreach (var item in windPressureBuildingLengthWall_Pos_External)
             {
                 str += "----" + item.Key + ": " + item.Value + "\n";
             }
 
             str += "-- Negative side wall pressures\n";
-            foreach (var item in windPressureSideWall_Neg_External)
+            foreach (var item in windPressureBuildingLengthWall_Neg_External)
             {
                 str += "----" + item.Key + ": " + item.Value + "\n";
             }
@@ -806,26 +760,26 @@ namespace ShearWallCalculator.WindLoadCalculations
                 str += "----" + item.Key + ": " + item.Value + "\n";
             }
 
-            str += "-- Positive end wall pressures\n";
-            foreach (var item in windPressureEndWall_Pos_Net)
+            str += "-- Positive BuildingWidth pressures\n";
+            foreach (var item in windPressureBuildingWidthWall_Pos_Net)
             {
                 str += "----" + item.Key + ": " + item.Value + "\n";
             }
 
-            str += "-- Negative end wall pressures\n";
-            foreach (var item in windPressureEndWall_Neg_Net)
+            str += "-- Negative BuildingWidth pressures\n";
+            foreach (var item in windPressureBuildingWidthWall_Neg_Net)
             {
                 str += "----" + item.Key + ": " + item.Value + "\n";
             }
 
-            str += "-- Positive side wall pressures\n";
-            foreach (var item in windPressureSideWall_Pos_Net)
+            str += "-- Positive BuildingLength pressures\n";
+            foreach (var item in windPressureBuildingLength_Pos_Net)
             {
                 str += "----" + item.Key + ": " + item.Value + "\n";
             }
 
-            str += "-- Negative side wall pressures\n";
-            foreach (var item in windPressureSideWall_Neg_Net)
+            str += "-- Negative BuildingLength pressures\n";
+            foreach (var item in windPressureBuildingLengthWall_Neg_Net)
             {
                 str += "----" + item.Key + ": " + item.Value + "\n";
             }

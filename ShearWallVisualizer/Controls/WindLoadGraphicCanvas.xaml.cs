@@ -46,7 +46,7 @@ namespace ShearWallVisualizer.Controls
             double ht = _bldg_data.BuildingHeight;
             double length = _bldg_data.BuildingLength;
             double width = _bldg_data.BuildingWidth;
-            double ridge_ht = ht + length * 0.5 * Math.Tan(_bldg_data.RoofPitch * 2.0 * Math.PI / 360);
+            double ridge_ht = ht + length * 0.5 * Math.Tan(_bldg_data.RoofPitch * Math.PI / 180.0);
 
 
             Canvas cnv_plan = cnvPlanView;
