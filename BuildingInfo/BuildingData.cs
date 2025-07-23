@@ -16,9 +16,9 @@ namespace ShearWallCalculator.BuildingInfo
     /// </summary>
     public class BuildingData
     {
-        public double BuildingLength { get; set; } = 60;
-        public double BuildingWidth { get; set; } = 60;
-        public double BuildingHeight { get; set; } = 10;
+        public double BuildingLength { get; set; } = 60; // L
+        public double BuildingWidth { get; set; } = 40;  // B
+        public double BuildingHeight { get; set; } = 15;
         public double RoofPitch { get; set; } = 0;
         public string RidgeDirection { get; set; } = string.Empty;
         public RoofTypes RoofType { get; set; } = RoofTypes.ROOF_TYPE_FLAT;

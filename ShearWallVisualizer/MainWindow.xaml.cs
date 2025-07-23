@@ -627,14 +627,14 @@ namespace ShearWallVisualizer
             var col_gcp_pos = new DataGridTextColumn
             {
                 Header = "GCp+",
-                Binding = new Binding("GCp_pos") { StringFormat = "0.0" }
+                Binding = new Binding("GCp_pos") { StringFormat = "0.00" }
             };
             data_grid.Columns.Add(col_gcp_pos);
 
             var col_gcp_neg = new DataGridTextColumn
             {
                 Header = "GCp-",
-                Binding = new Binding("GCp_neg") { StringFormat = "0.0" }
+                Binding = new Binding("GCp_neg") { StringFormat = "0.00" }
             };
             data_grid.Columns.Add(col_gcp_neg);
 
@@ -652,12 +652,12 @@ namespace ShearWallVisualizer
             };
             data_grid.Columns.Add(col_neg_press);
 
-            var col_overhang_press = new DataGridTextColumn
-            {
-                Header = "Overhang Press\n(psf)",
-                Binding = new Binding("OverhangPress") { StringFormat = "0.0" }
-            };
-            data_grid.Columns.Add(col_overhang_press);
+            //var col_overhang_press = new DataGridTextColumn
+            //{
+            //    Header = "Overhang Press\n(psf)",
+            //    Binding = new Binding("OverhangPress") { StringFormat = "0.0" }
+            //};
+            //data_grid.Columns.Add(col_overhang_press);
 
             var windLoadResults = new List<CC_WindLoadResults>();
             foreach (KeyValuePair<int, EffectiveWindArea> area in windLoadParams.RoofAreaCalculator.effWindAreas)
@@ -763,14 +763,14 @@ namespace ShearWallVisualizer
             var col_gcp_pos = new DataGridTextColumn
             {
                 Header = "GCp+",
-                Binding = new Binding("GCp_pos") { StringFormat = "0.0" }
+                Binding = new Binding("GCp_pos") { StringFormat = "0.00" }
             };
             data_grid.Columns.Add(col_gcp_pos);
 
             var col_gcp_neg = new DataGridTextColumn
             {
                 Header = "GCp-",
-                Binding = new Binding("GCp_neg") { StringFormat = "0.0" }
+                Binding = new Binding("GCp_neg") { StringFormat = "0.00" }
             };
             data_grid.Columns.Add(col_gcp_neg);
 

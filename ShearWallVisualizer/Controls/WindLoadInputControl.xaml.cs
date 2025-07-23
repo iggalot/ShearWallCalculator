@@ -52,6 +52,19 @@ namespace ShearWallVisualizer.Controls
         {
             InitializeComponent();
 
+            if (bldg_data == null)
+            {
+                bldg_data = new BuildingData();
+            }
+
+            if (parameters == null)
+            {
+                if(bldg_data.RoofType == RoofTypes.ROOF_TYPE_FLAT)  parameters = new FlatRoofWindLoadParameters();
+                else if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_GABLE) parameters = new GableRoofWindLoadParameters();
+                else if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_HIP) parameters = new HipRoofWindLoadParameters();
+                else throw new Exception("ERROR: In WindLoadInputControl: Unrecognized roof type." + bldg_data.RoofType.ToString());
+
+            }
             this.bldgData = bldg_data;
             this.Version = version;
             this.Parameters = parameters;

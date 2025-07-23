@@ -76,26 +76,26 @@
                     <!-- Wind Speed (Default to 115) -->
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                         <TextBlock Text="Wind Speed (V)" VerticalAlignment="Center" Margin="5"/>
-                        <TextBox x:Name="WindSpeedTextBox" Width="150" Margin="5" Text="115"/>
+                        <TextBox x:Name="WindSpeedTextBox" Width="150" Margin="5"/>
                     </StackPanel>
 
 
                     <!-- Kd -->
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                         <TextBlock Text="Kd" VerticalAlignment="Center" Margin="5"/>
-                        <TextBox x:Name="KdTextBox" Width="150" Margin="5" Text="0.85"/>
+                        <TextBox x:Name="KdTextBox" Width="150" Margin="5" />
                     </StackPanel>
 
                     <!-- Kzt -->
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                         <TextBlock Text="Kzt" VerticalAlignment="Center" Margin="5"/>
-                        <TextBox x:Name="KztTextBox" Width="150" Margin="5" Text="1.0"/>
+                        <TextBox x:Name="KztTextBox" Width="150" Margin="5" />
                     </StackPanel>
 
                     <!-- Importance Factor -->
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                         <TextBlock Text="Importance Factor (I)" VerticalAlignment="Center" Margin="5"/>
-                        <TextBox x:Name="ImportanceFactorTextBox" Width="150" Margin="5" Text="1.0"/>
+                        <TextBox x:Name="ImportanceFactorTextBox" Width="150" Margin="5" />
                     </StackPanel>
 
 

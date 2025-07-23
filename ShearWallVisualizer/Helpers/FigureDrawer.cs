@@ -222,7 +222,7 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.Figure30_3
                 canvas.Children.Add(yLabel);
             }
 
-            double[] dashedYVals = new double[] { -4, -3, -2, -1, 0, 1 };
+            double[] dashedYVals = new double[] { -4, -3.5, -3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1 };
             foreach (double y in dashedYVals)
             {
                 if (y < yMin || y > yMax) continue;
