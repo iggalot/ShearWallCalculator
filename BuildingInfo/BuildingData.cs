@@ -35,7 +35,7 @@ namespace ShearWallCalculator.BuildingInfo
             {
                 double h1 = Math.Tan(RoofPitch * Math.PI / 180.0) * BuildingLength / 2.0;
                 double h2 = Math.Tan(RoofPitch * Math.PI / 180.0) * BuildingWidth / 2.0;
-                return BuildingHeight + Math.Max(h1, h2);
+                return BuildingHeight + Math.Min(h1, h2);
             }
             else if (RoofType == RoofTypes.ROOF_TYPE_GABLE)
             {
