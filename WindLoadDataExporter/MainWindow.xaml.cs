@@ -4,11 +4,8 @@ using ShearWallCalculator.WindLoadCalculations.WindLoadCalculators;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Windows;
-using System.Windows.Documents;
-using System.Windows.Media.Media3D;
 
 namespace WindLoadDataExporter
 {
@@ -35,7 +32,7 @@ namespace WindLoadDataExporter
 
         List<WindLoadCalculator_Base> calculators = new List<WindLoadCalculator_Base>();
 
-        ASCE7_Versions version = ASCE7_Versions.ASCE_VER_7_16;
+        ASCE7_Versions version = ASCE7_Versions.ASCE_VER_7_22;
         WindExposureCategories exposure_cat = WindExposureCategories.WIND_EXP_CAT_C;
         WindLoadCalculationTypes calculation_type = WindLoadCalculationTypes.COMPONENT_AND_CLADDING;
 
@@ -160,38 +157,6 @@ namespace WindLoadDataExporter
 
                             calculator.CalculatePressures();
                             calculators.Add(calculator);
-
-                            //string str = String.Empty;
-                            //switch (rtype)
-                            //{
-                            //    case RoofTypes.ROOF_TYPE_GABLE:
-                            //        str += "GABLE,";
-                            //        break;
-                            //    case RoofTypes.ROOF_TYPE_HIP:
-                            //        str += "HIP,";
-                            //        break;
-                            //}
-                            //str += $"{size.Length},{size.Width},{height},{pitch}";  // the parameters that are common to all the sloped roofs
-
-                            //var h = calculator.buildingData.MeanRoofHeight;
-                            //var a = calculator.Parameters.RoofAreaCalculator.CritDim_a;
-                            //var qh = calculator.CalculateDynamicWindPressure(h);
-
-                            //str += ",";  // blank column
-                            //str += $",{h:F2},{qh:F1},{a:F1},,";  // the parameters that are common to all the sloped roofs
-
-                            //if (rtype == RoofTypes.ROOF_TYPE_GABLE)
-                            //{
-                            //    str += "number of HIP columns";
-                            //    str += GetGableRoofPressures(version, calculator);
-                            //}
-                            //else if (rtype == RoofTypes.ROOF_TYPE_HIP)
-                            //{
-                            //    str += GetHipRoofPressures(version, calculator);;
-                            //    str += "number of GABLE columnn headers";
-                            //}
-
-                            //Console.WriteLine(str);
                         }
                     }
                 }

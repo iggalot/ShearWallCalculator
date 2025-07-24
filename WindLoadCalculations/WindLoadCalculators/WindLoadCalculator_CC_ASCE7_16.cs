@@ -8,7 +8,7 @@ namespace ShearWallCalculator.WindLoadCalculations
     /// <summary>
     /// Computes C&C pressures for ASCE 7-16 using the analytical method of Part 3 on page 350
     /// </summary>
-    public class WindLoadCalculator_CC_ASCE7_16 : WindLoadCalculator_CC_Base
+    public class WindLoadCalculator_CC_ASCE7_16 : WindLoadCalculator_ASCE7_16_Base
     {
         public override ASCE7_Versions ASCEVersion { get => ASCE7_Versions.ASCE_VER_7_16; }
 
@@ -25,5 +25,7 @@ namespace ShearWallCalculator.WindLoadCalculations
                 throw new Exception("ERROR: Building max mean roof height has exceeded 60 ft -- " + buildingData.MeanRoofHeight + " ft.");
             }
         }
+
+
     }
 }
