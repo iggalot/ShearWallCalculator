@@ -12,11 +12,7 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator
         public abstract Dictionary<int, EffectiveWindArea> effWindAreas { get; set; }
 
         public virtual bool HasCritDim { get; set; } = false;
-        public virtual double CritDim_a
-        {
-            get => throw new NotSupportedException("This component does not support CritDim_a.");
-            set => throw new NotSupportedException("This component does not support CritDim_a.");
-        }
+        public virtual double CritDim_a { get; set; } = 0;
 
         public virtual string Note { get; set; } = String.Empty;  // a holder for a note in the calculator -- useful for recording gable vs. non gable walls
 

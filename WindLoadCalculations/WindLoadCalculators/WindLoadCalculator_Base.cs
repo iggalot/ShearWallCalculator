@@ -1,5 +1,6 @@
 ﻿using ShearWallCalculator.BuildingInfo;
 using ShearWallCalculator.WindLoadCalculations.Chapter30;
+using ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator;
 using ShearWallCalculator.WindLoadCalculations.Chapter30.Figure30_3;
 using System;
 using System.Collections.Generic;
@@ -599,6 +600,105 @@ namespace ShearWallCalculator.WindLoadCalculations
             return false;
         }
 
+        public bool TryGetPressureNet_MostPositiveByAreaName_Roof(string area_name, out double pressure)
+        {
+            int id;
+            pressure = double.MinValue;
+            
+            AreaCalculator_Base calc = Parameters.RoofAreaCalculator;
+
+            // get all ids that match the label
+            bool found = false;
+            foreach (var item in calc.effWindAreas)
+            {
+                if (item.Value.Label_Full == area_name)
+                {
+                    if(TryGetEffectiveWindAreaID_Roof(item.Value.Label_Full, item.Value.Area, out id))
+                    {
+                        double new_pressure;
+                        found = windPressureRoof_Pos_Net.TryGetValue(id, out new_pressure);
+                        if (found)
+                        {
+                            if(new_pressure > pressure)
+                            {
+                                pressure = new_pressure;
+                            }
+                        }
+
+                    }
+                }
+            }
+
+            return found;
+        }
+
+        public bool TryGetPressureNet_MostPositiveByAreaName_BuildingLengthWall(string area_name, out double pressure)
+        {
+            int id;
+            pressure = double.MinValue;
+
+            AreaCalculator_Base calc = Parameters.WallAreaCalculator_BldgLength;
+
+            // get all ids that match the label
+            bool found = false;
+            int found_count = 0;
+            foreach (var item in calc.effWindAreas)
+            {
+                if (item.Value.Label_Full == area_name)
+                {
+                    if (TryGetEffectiveWindAreaID_BuildingLengthWall(item.Value.Label_Full, item.Value.Area, out id))
+                    {
+                        double new_pressure;
+                        found = windPressureBuildingLength_Pos_Net.TryGetValue(id, out new_pressure);
+                        if (found)
+                        {
+                            found_count++;
+                            if (new_pressure > pressure)
+                            {
+                                pressure = new_pressure;
+                            }
+                        }
+                    }
+                }
+            }
+            //Console.WriteLine(found_count + " matches found for " + area_name + "!");
+            return found;
+        }
+        public bool TryGetPressureNet_MostPositiveByAreaName_BuildingWidthWall(string area_name, out double pressure)
+        {
+            int id;
+            pressure = double.MinValue;
+
+            AreaCalculator_Base calc = Parameters.WallAreaCalculator_BldgWidth;
+
+            // get all ids that match the label
+            bool found = false;
+            int found_count = 0;
+            foreach (var item in calc.effWindAreas)
+            {
+                if (item.Value.Label_Full == area_name)
+                {
+                    if (TryGetEffectiveWindAreaID_BuildingWidthWall(item.Value.Label_Full, item.Value.Area, out id))
+                    {
+                        double new_pressure;
+                        found = windPressureBuildingWidthWall_Pos_Net.TryGetValue(id, out new_pressure);
+                        if (found)
+                        {
+                            found_count++;
+                            if (new_pressure > pressure)
+                            {
+                                pressure = new_pressure;
+                            }
+                        }
+                    }
+                }
+            }
+            //Console.WriteLine(found_count + " matches found for " + area_name + "!");
+            return found;
+        }
+
+
+
         public bool TryGetPressureNet_Neg_Roof(EffectiveWindArea area, out double pressure)
         {
             int id;
@@ -614,6 +714,106 @@ namespace ShearWallCalculator.WindLoadCalculations
 
             return false;
         }
+
+        public bool TryGetPressureNet_MostNegativeByAreaName_Roof(string area_name, out double pressure)
+        {
+            int id;
+            pressure = double.MaxValue;
+
+            AreaCalculator_Base calc = Parameters.RoofAreaCalculator;
+
+            // get all ids that match the label
+            bool found = false;
+            int found_count = 0;
+            foreach (var item in calc.effWindAreas)
+            {
+                if (item.Value.Label_Full == area_name)
+                {
+                    if (TryGetEffectiveWindAreaID_Roof(item.Value.Label_Full, item.Value.Area, out id))
+                    {
+                        double new_pressure;
+                        found = windPressureRoof_Neg_Net.TryGetValue(id, out new_pressure);
+                        if (found)
+                        {
+                            found_count++;
+                            if (new_pressure < pressure)
+                            {
+                                pressure = new_pressure;
+                            }
+                        }
+                    }
+                }
+            }
+            //Console.WriteLine(found_count + " matches found for " + area_name + "!");
+            return found;
+        }
+
+        public bool TryGetPressureNet_MostNegativeByAreaName_BuildingLengthWall(string area_name, out double pressure)
+        {
+            int id;
+            pressure = double.MaxValue;
+
+            AreaCalculator_Base calc = Parameters.WallAreaCalculator_BldgLength;
+
+            // get all ids that match the label
+            bool found = false;
+            int found_count = 0;
+            foreach (var item in calc.effWindAreas)
+            {
+                if (item.Value.Label_Full == area_name)
+                {
+                    if (TryGetEffectiveWindAreaID_BuildingLengthWall(item.Value.Label_Full, item.Value.Area, out id))
+                    {
+                        double new_pressure;
+                        found = windPressureBuildingLengthWall_Neg_Net.TryGetValue(id, out new_pressure);
+                        if (found)
+                        {
+                            found_count++;
+                            if (new_pressure < pressure)
+                            {
+                                pressure = new_pressure;
+                            }
+                        }
+                    }
+                }
+            }
+            //Console.WriteLine(found_count + " matches found for " + area_name + "!");
+            return found;
+        }
+
+        public bool TryGetPressureNet_MostNegativeByAreaName_BuildingWidthWall(string area_name, out double pressure)
+        {
+            int id;
+            pressure = double.MaxValue;
+
+            AreaCalculator_Base calc = Parameters.WallAreaCalculator_BldgWidth;
+
+            // get all ids that match the label
+            bool found = false;
+            int found_count = 0;
+            foreach (var item in calc.effWindAreas)
+            {
+                if (item.Value.Label_Full == area_name)
+                {
+                    if (TryGetEffectiveWindAreaID_BuildingWidthWall(item.Value.Label_Full, item.Value.Area, out id))
+                    {
+                        double new_pressure;
+                        found = windPressureBuildingWidthWall_Neg_Net.TryGetValue(id, out new_pressure);
+                        if (found)
+                        {
+                            found_count++;
+                            if (new_pressure < pressure)
+                            {
+                                pressure = new_pressure;
+                            }
+                        }
+                    }
+                }
+            }
+            //Console.WriteLine(found_count + " matches found for " + area_name + "!");
+            return found;
+        }
+
 
         public bool TryGetPressureNet_Overhang_Roof(EffectiveWindArea area, out double pressure)
         {

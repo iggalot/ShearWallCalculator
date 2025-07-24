@@ -5,8 +5,9 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WindLoadDataExporter"
         mc:Ignorable="d"
-        Title="WindLoadDataExporter">
-    <Grid>
+        Title="WindLoadDataExporter"
+        >
+    <Grid Background="Blue">
         <Button x:Name="btnExport" Content="Export" HorizontalAlignment="Center" Margin="10" VerticalAlignment="Center" Width="75" Click="btnExport_Click"/>
     </Grid>
 </Window>
