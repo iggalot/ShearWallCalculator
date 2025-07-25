@@ -15,11 +15,11 @@ namespace ShearWallVisualizer.Controls
 
         public class OnWindInputCompleteEventArgs : EventArgs
         {
-            public WindLoadParameters_Base _parameters { get; }
+            public WindParameters_Base _parameters { get; }
             public ASCE7_Versions _version { get; }
             public BuildingData _bldg_data { get; }
 
-            public OnWindInputCompleteEventArgs(WindLoadParameters_Base parameters, ASCE7_Versions version)
+            public OnWindInputCompleteEventArgs(WindParameters_Base parameters, ASCE7_Versions version)
             {
                 _parameters = parameters;
                 _version = version;
@@ -27,7 +27,7 @@ namespace ShearWallVisualizer.Controls
         }
 
         public BuildingData bldgData { get; set; } = null;
-        public WindLoadParameters_Base Parameters { get; set; } = null;
+        public WindParameters_Base Parameters { get; set; } = null;
         public ASCE7_Versions Version { get; set; }
 
 
@@ -38,7 +38,7 @@ namespace ShearWallVisualizer.Controls
             this.Loaded += WindLoadInputControl_Loaded;
         }
 
-        public WindLoadInputControl(BuildingData bldg_data, WindLoadParameters_Base parameters = null)
+        public WindLoadInputControl(BuildingData bldg_data, WindParameters_Base parameters = null)
         {
             InitializeComponent();
 
@@ -48,7 +48,7 @@ namespace ShearWallVisualizer.Controls
             this.Loaded += WindLoadInputControl_Loaded;
         }
 
-        public WindLoadInputControl(BuildingData bldg_data, ASCE7_Versions version, WindLoadParameters_Base parameters = null)
+        public WindLoadInputControl(BuildingData bldg_data, ASCE7_Versions version, WindParameters_Base parameters = null)
         {
             InitializeComponent();
 
@@ -150,7 +150,7 @@ namespace ShearWallVisualizer.Controls
             }
         }
 
-        public virtual void OnWindInputComplete(WindLoadParameters_Base parameters, ASCE7_Versions version)
+        public virtual void OnWindInputComplete(WindParameters_Base parameters, ASCE7_Versions version)
         {
             WindInputComplete?.Invoke(this, new OnWindInputCompleteEventArgs(parameters, version));
         }
@@ -248,7 +248,7 @@ namespace ShearWallVisualizer.Controls
         }
 
         // Method to retrieve parameters from the input fields
-        private WindLoadParameters_Base GetWindLoadParameters(RoofTypes roof_type, ASCE7_Versions version)
+        private WindParameters_Base GetWindLoadParameters(RoofTypes roof_type, ASCE7_Versions version)
         {
             Version = version;
 

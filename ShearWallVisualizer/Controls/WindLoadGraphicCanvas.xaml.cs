@@ -21,17 +21,17 @@ namespace ShearWallVisualizer.Controls
 
         private double cnv_ht_elev, cnv_width_elev, cnv_ht_plan, cnv_width_plan;
 
-        WindLoadParameters_Base _parameters;
+        WindParameters_Base _parameters;
         BuildingData _bldg_data;
 
-        public WindLoadParameters_Base Parameters { get => _parameters; set => _parameters = value; }
+        public WindParameters_Base Parameters { get => _parameters; set => _parameters = value; }
 
         public WindLoadGraphicCanvas()
         {
             InitializeComponent();
         }
 
-        public WindLoadGraphicCanvas( WindLoadParameters_Base parameters, BuildingData bldg_data)
+        public WindLoadGraphicCanvas( WindParameters_Base parameters, BuildingData bldg_data)
         {
             _parameters = parameters;
             _bldg_data = bldg_data;

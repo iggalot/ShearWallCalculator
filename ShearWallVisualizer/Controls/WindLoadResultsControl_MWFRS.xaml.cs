@@ -14,29 +14,29 @@ namespace ShearWallVisualizer.Controls
 
         public class OnWindCalculatedEventArgs : EventArgs
         {
-            public WindLoadParameters_Base _parameters { get; }
+            public WindParameters_Base _parameters { get; }
             public BuildingData _bldg_data { get; }
 
-            public OnWindCalculatedEventArgs(WindLoadParameters_Base parameters, BuildingData bldg_data)
+            public OnWindCalculatedEventArgs(WindParameters_Base parameters, BuildingData bldg_data)
             {
                 _parameters = parameters;
                 _bldg_data = bldg_data;
             }
         }
 
-        protected virtual void OnWindCalculated(WindLoadParameters_Base parameters, BuildingData bldg_data)
+        protected virtual void OnWindCalculated(WindParameters_Base parameters, BuildingData bldg_data)
         {
             WindCalculated?.Invoke(this, new OnWindCalculatedEventArgs(parameters, bldg_data));
         }
 
-        private WindLoadParameters_Base _parameters;
+        private WindParameters_Base _parameters;
 
         public WindLoadResultsControl_MWFRS()
         {
             
         }
 
-        public WindLoadResultsControl_MWFRS(WindLoadParameters_Base parameters, BuildingData bldg_data)
+        public WindLoadResultsControl_MWFRS(WindParameters_Base parameters, BuildingData bldg_data)
         {
             InitializeComponent();
 
