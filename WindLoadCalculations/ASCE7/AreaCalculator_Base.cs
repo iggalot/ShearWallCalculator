@@ -2,6 +2,7 @@
 using ShearWallCalculator.WindLoadCalculations.Core.Interfaces;
 using System;
 using System.Collections.Generic;
+using System.Windows;
 
 namespace ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator
 {
@@ -19,7 +20,34 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator
 
         public virtual string Note { get; set; } = String.Empty;  // a holder for a note in the calculator -- useful for recording gable vs. non gable walls
 
-        public virtual void ComputeEffectiveWindAreas(WindParameters_Base p, BuildingData bldg_data, Dictionary<string, double> optionalDimension = null) { }
+        public virtual void ComputeEffectiveWindAreas(WindParameters_Base p, BuildingData bldg_data, bool windIsParallelToRidge = true, Dictionary<string, double> optionalDimension = null) { }
+
+
+        /// <summary>
+        /// Try to create a zone with positive area.  Otherwise return null;
+        /// </summary>
+        /// <param name="label"></param>
+        /// <param name="outer"></param>
+        /// <param name="holes"></param>
+        /// <returns></returns>
+        public static EffectiveWindArea TryCreateZone(int id, string label, IEnumerable<Point> outer, IEnumerable<IEnumerable<Point>> holes = null)
+        {
+            try
+            {
+                var zone = new EffectiveWindArea(label, outer, holes);
+                if (zone.Area > 0)
+                {
+                    Console.WriteLine($"Zone {id} ({label}) created: Area = {zone.Area:F2} ft²");
+                    return zone;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Zone {id} ({label}) failed: {ex.Message}");
+            }
+
+            return null;
+        }
 
         public string DisplayResults()
         {

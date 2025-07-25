@@ -14,39 +14,13 @@ namespace ShearWallCalculator.WindLoadCalculations
             buildingData = bldg_data;
         }
 
-        /// <summary>
-        /// Try to create a zone with positive area.  Otherwise return null;
-        /// </summary>
-        /// <param name="label"></param>
-        /// <param name="outer"></param>
-        /// <param name="holes"></param>
-        /// <returns></returns>
-        private static EffectiveWindArea TryCreateZone(int id, string label, IEnumerable<Point> outer, IEnumerable<IEnumerable<Point>> holes = null)
-        {
-            try
-            {
-                var zone = new EffectiveWindArea(label, outer, holes);
-                if (zone.Area > 0)
-                {
-                    Console.WriteLine($"Zone {id} ({label}) created: Area = {zone.Area:F2} ft²");
-                    return zone;
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Zone {id} ({label}) failed: {ex.Message}");
-            }
-
-            return null;
-        }
-
-        private static bool IsValidRectangle(double L, double B, double offset)
+        public static bool IsValidRectangle(double L, double B, double offset)
         {
             // Valid if offset is positive and less than half the smallest dimension
             return offset > 0 && 2 * offset < L && 2 * offset < B;
         }
 
-        public override void ComputeEffectiveWindAreas(WindParameters_Base parameters, BuildingData bldg_data, Dictionary<string, double> optionalParams = null)
+        public override void ComputeEffectiveWindAreas(WindParameters_Base parameters, BuildingData bldg_data, bool windIsParallelToRidge = false, Dictionary<string, double> optionalParams = null)
         {
             // Existing logic from ComputeFlatRoofAreas
             var L = bldg_data.BuildingLength;

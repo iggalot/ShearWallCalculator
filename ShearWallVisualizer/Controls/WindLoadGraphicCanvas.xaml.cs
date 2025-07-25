@@ -529,7 +529,7 @@ namespace ShearWallVisualizer.Controls
 
         private void DrawRoofWind(WindLoadCases load_case_num, Point p2, Point p3, Point p4)
         {
-            if (_bldg_data.RidgeDirection == "Perpendicular to Wind" && _bldg_data.RoofPitch >= 10.0)
+            if (_bldg_data.RidgeDirection == RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH && _bldg_data.RoofPitch >= 10.0)
             {
                 DrawRoofWind_PerpToRidge(load_case_num, p2, p3, p4);
             }

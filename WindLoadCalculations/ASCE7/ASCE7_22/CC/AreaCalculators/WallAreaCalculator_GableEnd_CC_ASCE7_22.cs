@@ -15,7 +15,7 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30_CC.AreaCalculator.A
             Note = note_string;
         }
 
-        public override void ComputeEffectiveWindAreas(WindParameters_Base p, BuildingData bldg_data, Dictionary<string, double> optionalParams = null)
+        public override void ComputeEffectiveWindAreas(WindParameters_Base p, BuildingData bldg_data, bool windIsParallelToRidge = false, Dictionary<string, double> optionalParams = null)
         {
             double length;
             if (optionalParams.ContainsKey("WallLength"))

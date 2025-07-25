@@ -1,5 +1,4 @@
-﻿using ShearWallCalculator.WindLoadCalculations;
-using System;
+﻿using System;
 
 namespace ShearWallCalculator.BuildingInfo
 {
@@ -10,7 +9,21 @@ namespace ShearWallCalculator.BuildingInfo
         BLDG_PARTIALLY_OPEN = 2,
         BLDG_OPEN = 3
     }
-    
+
+    public enum RidgeDirections
+    {
+        RIDGE_DIR_NONE = 0,
+        RIDGE_DIR_PERP_TO_BLDGLENGTH = 1,
+        RIDGE_DIR_PARALLEL_TO_BLDGLENGTH = 2
+    }
+
+    public enum RoofTypes
+    {
+        ROOF_TYPE_FLAT = 0,
+        ROOF_TYPE_GABLE = 1,
+        ROOF_TYPE_HIP = 2
+    }
+
     // <summary>
     /// A class for storing the building data
     /// </summary>
@@ -20,7 +33,7 @@ namespace ShearWallCalculator.BuildingInfo
         public double BuildingWidth { get; set; } = 40;  // B
         public double BuildingHeight { get; set; } = 15;
         public double RoofPitch { get; set; } = 15;
-        public string RidgeDirection { get; set; } = string.Empty;
+        public RidgeDirections RidgeDirection { get; set; } = RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH;
         public RoofTypes RoofType { get; set; } = RoofTypes.ROOF_TYPE_GABLE;
         public BuildingEnclosures EnclosureType { get; set; } = BuildingEnclosures.BLDG_ENCLOSED;
 
@@ -53,6 +66,16 @@ namespace ShearWallCalculator.BuildingInfo
                 throw new NotImplementedException("ERROR: In ComputeMeanRoofHeight(), Roof type " + RoofType + " is not implemented");
 
             }
+        }
+
+        public bool RoofTypeIsSloped()
+        {
+            return (RoofType == RoofTypes.ROOF_TYPE_HIP || RoofType == RoofTypes.ROOF_TYPE_GABLE);
+        }
+
+        public bool RoofTypeIsFlat()
+        {
+            return (RoofType == RoofTypes.ROOF_TYPE_FLAT);
         }
     }
 }

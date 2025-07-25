@@ -53,14 +53,23 @@ namespace ShearWallVisualizer.Controls
 
             cmbRoofType.Items.Clear();
             cmbEnclosure.Items.Clear();
+            cmbRidgeDirection.Items.Clear();
 
-            foreach (var value in Enum.GetValues(typeof(RoofTypes)))
+            // Ridge Direction
+            foreach (var value in Enum.GetValues(typeof(RidgeDirections)))
             {
-                cmbRoofType.Items.Add(value);
+                cmbRidgeDirection.Items.Add(value);
             }
 
-            cmbRoofType.SelectedIndex = 0;
+            switch (bldgData.RidgeDirection)
+            {
+                case RidgeDirections.RIDGE_DIR_NONE: cmbRidgeDirection.SelectedIndex = (int)RidgeDirections.RIDGE_DIR_NONE; break;
+                case RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH: cmbRidgeDirection.SelectedIndex = (int)RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH; break;
+                case RidgeDirections.RIDGE_DIR_PERP_TO_BLDGLENGTH: cmbRidgeDirection.SelectedIndex = (int)RidgeDirections.RIDGE_DIR_PERP_TO_BLDGLENGTH; break;
+                default: cmbRidgeDirection.SelectedIndex = (int)RidgeDirections.RIDGE_DIR_NONE; break;
+            }
 
+            // Building Enclosure type
             foreach (var value in Enum.GetValues(typeof(BuildingEnclosures)))
             {
                 cmbEnclosure.Items.Add(value);
@@ -68,32 +77,44 @@ namespace ShearWallVisualizer.Controls
 
             switch (bldgData.EnclosureType)
             {
-                case BuildingEnclosures.BLDG_ENCLOSED: cmbEnclosure.SelectedIndex = 0; break;
-                case BuildingEnclosures.BLDG_PARTIALLY_ENCLOSED: cmbEnclosure.SelectedIndex = 1; break;
-                case BuildingEnclosures.BLDG_PARTIALLY_OPEN: cmbEnclosure.SelectedIndex = 2; break;
-                case BuildingEnclosures.BLDG_OPEN: cmbEnclosure.SelectedIndex = 3; break;
-                default: cmbEnclosure.SelectedIndex = 0; break;
+                case BuildingEnclosures.BLDG_ENCLOSED: cmbEnclosure.SelectedIndex = (int)BuildingEnclosures.BLDG_ENCLOSED; break;
+                case BuildingEnclosures.BLDG_PARTIALLY_ENCLOSED: cmbEnclosure.SelectedIndex = (int)BuildingEnclosures.BLDG_PARTIALLY_ENCLOSED; break;
+                case BuildingEnclosures.BLDG_PARTIALLY_OPEN: cmbEnclosure.SelectedIndex = (int)BuildingEnclosures.BLDG_PARTIALLY_OPEN; break;
+                case BuildingEnclosures.BLDG_OPEN: cmbEnclosure.SelectedIndex = (int)BuildingEnclosures.BLDG_OPEN; break;
+                default: cmbEnclosure.SelectedIndex = (int)BuildingEnclosures.BLDG_ENCLOSED; break;
+            }
+
+
+            // Building Enclosure type
+            foreach (var value in Enum.GetValues(typeof(RoofTypes)))
+            {
+                cmbRoofType.Items.Add(value);
+            }
+
+            switch (bldgData.RoofType)
+            {
+                case RoofTypes.ROOF_TYPE_FLAT: cmbRoofType.SelectedIndex = (int)RoofTypes.ROOF_TYPE_FLAT; break;
+                case RoofTypes.ROOF_TYPE_GABLE: cmbRoofType.SelectedIndex = (int)RoofTypes.ROOF_TYPE_GABLE; break;
+                case RoofTypes.ROOF_TYPE_HIP: cmbRoofType.SelectedIndex = (int)RoofTypes.ROOF_TYPE_HIP; break;
+                default: cmbRoofType.SelectedIndex = (int)RoofTypes.ROOF_TYPE_FLAT; break;
             }
 
             BuildingHeightTextBox.Text = bldgData.BuildingHeight.ToString();
             BuildingLengthTextBox.Text = bldgData.BuildingLength.ToString();
             BuildingWidthTextBox.Text = bldgData.BuildingWidth.ToString();
-            RoofPitchTextBox.Text = bldgData.RoofPitch.ToString();
 
-            switch (bldgData.RidgeDirection)
+            if (bldgData.RoofType == RoofTypes.ROOF_TYPE_FLAT)
             {
-                case "Perpendicular to Wind": RidgeDirectionComboBox.SelectedIndex = 0; break;
-                case "Parallel to Wind": RidgeDirectionComboBox.SelectedIndex = 1; break;
+                bldgData.RoofPitch = 0;
+                spRoofPitch.Visibility = Visibility.Collapsed;
             }
+            else
+            {
+                spRoofPitch.Visibility = Visibility.Visible;
+            }
+                
+            tbRoofPitch.Text = bldgData.RoofPitch.ToString();
 
-            cmbRoofType.SelectedIndex = (int)bldgData.RoofType;
-            switch (bldgData.RoofType)
-            {
-                case RoofTypes.ROOF_TYPE_FLAT: cmbRoofType.SelectedIndex = 0; break;
-                case RoofTypes.ROOF_TYPE_GABLE: cmbRoofType.SelectedIndex = 1; break;
-                case RoofTypes.ROOF_TYPE_HIP: cmbRoofType.SelectedIndex = 2; break;
-                default: cmbRoofType.SelectedIndex = 0; break;
-            }
         }
 
         public virtual void OnBuildingDataInputComplete(BuildingData bldg_data)
@@ -107,8 +128,8 @@ namespace ShearWallVisualizer.Controls
             double buildingHeight = double.Parse(BuildingHeightTextBox.Text);
             double length = double.Parse(BuildingLengthTextBox.Text);
             double width = double.Parse(BuildingWidthTextBox.Text);
-            double pitch = double.Parse(RoofPitchTextBox.Text);
-            string ridgeDir = ((ComboBoxItem)RidgeDirectionComboBox.SelectedItem).Content.ToString();
+            double pitch = double.Parse(tbRoofPitch.Text);
+            RidgeDirections ridgeDir = (RidgeDirections)cmbRidgeDirection.SelectedIndex;
             RoofTypes roof_type = (RoofTypes)cmbRoofType.SelectedIndex;
             BuildingEnclosures enclosure = (BuildingEnclosures)cmbEnclosure.SelectedIndex;
 

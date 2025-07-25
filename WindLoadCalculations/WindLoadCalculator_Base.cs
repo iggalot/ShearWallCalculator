@@ -8,12 +8,6 @@ using System.ComponentModel;
 
 namespace ShearWallCalculator.WindLoadCalculations
 {
-    public enum RoofTypes
-    {
-        ROOF_TYPE_FLAT = 0,
-        ROOF_TYPE_GABLE = 1,
-        ROOF_TYPE_HIP = 2
-    }
     public enum ASCE7_Versions
     {
         ASCE_VER_7_16 = 0,  // this must start at index 0
@@ -139,19 +133,19 @@ namespace ShearWallCalculator.WindLoadCalculations
                 length_is_gable = true;
             } else
             {
+                // if it's a square building we arbitrarily assign the gable to the building width
                 width_is_gable = true;
-                length_is_gable = true;
             }
 
-                Dictionary<string, double> bldg_length_wall_param = new Dictionary<string, double>();
+            Dictionary<string, double> bldg_length_wall_param = new Dictionary<string, double>();
             bldg_length_wall_param.Add("WallLength", buildingData.BuildingLength);
             WallAreaCalculator_BldgLength = WallAreaCalculatorFactory.Create(buildingData, Parameters, ASCEVersion, length_is_gable);
-            WallAreaCalculator_BldgLength.ComputeEffectiveWindAreas(Parameters, buildingData, bldg_length_wall_param);
+            WallAreaCalculator_BldgLength.ComputeEffectiveWindAreas(Parameters, buildingData, length_is_gable, bldg_length_wall_param);
 
             Dictionary<string, double> bldg_width_wall_param = new Dictionary<string, double>();
             bldg_width_wall_param.Add("WallLength", buildingData.BuildingWidth);
             WallAreaCalculator_BldgWidth = WallAreaCalculatorFactory.Create(buildingData, Parameters, ASCEVersion, width_is_gable);
-            WallAreaCalculator_BldgWidth.ComputeEffectiveWindAreas(Parameters, buildingData, bldg_width_wall_param);
+            WallAreaCalculator_BldgWidth.ComputeEffectiveWindAreas(Parameters, buildingData, width_is_gable, bldg_width_wall_param);
         }
 
 

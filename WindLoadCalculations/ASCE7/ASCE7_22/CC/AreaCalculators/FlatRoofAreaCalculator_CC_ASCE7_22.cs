@@ -46,7 +46,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             return offset > 0 && 2 * offset < L && 2 * offset < B;
         }
 
-        public override void ComputeEffectiveWindAreas(WindParameters_Base parameters, BuildingData bldg_data, Dictionary<string, double> optionalParams = null)
+        public override void ComputeEffectiveWindAreas(WindParameters_Base parameters, BuildingData bldg_data, bool windIsParallelToRidge = false, Dictionary<string, double> optionalParams = null)
         {
             // Existing logic from ComputeFlatRoofAreas
             var L = bldg_data.BuildingLength;

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ShearWallCalculator.BuildingInfo;
+using System;
 
 namespace ShearWallCalculator.WindLoadCalculations.Chapter30.Figure30_3
 {

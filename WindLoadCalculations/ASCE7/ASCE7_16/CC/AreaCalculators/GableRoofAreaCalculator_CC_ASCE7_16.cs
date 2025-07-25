@@ -14,7 +14,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             buildingData = bldg_data;
         }
 
-        public override void ComputeEffectiveWindAreas(WindParameters_Base parameters, BuildingData bldg_data, Dictionary<string, double> optionalParams = null)
+        public override void ComputeEffectiveWindAreas(WindParameters_Base parameters, BuildingData bldg_data, bool windIsParallelToRidge = false, Dictionary<string, double> optionalParams = null)
         {
             /// <summary>
             /// The critical width dimenstion "a" used throughout chapter 30
