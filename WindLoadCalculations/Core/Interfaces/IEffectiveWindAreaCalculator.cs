@@ -1,0 +1,15 @@
+﻿using ShearWallCalculator.BuildingInfo;
+using System.Collections.Generic;
+
+namespace ShearWallCalculator.WindLoadCalculations.Core.Interfaces
+{
+    public interface IEffectiveWindAreaCalculator
+    {
+        /// <summary>
+        /// Function to compute the areas of the calculator.  To be overriden by the implementating class
+        /// </summary>
+        /// <param name="p"></param>
+        /// <param name="bldg_data"></param>
+        void ComputeEffectiveWindAreas(WindParameters_Base p, BuildingData bldg_data, Dictionary<string, double> optionalDimension = null);
+    }
+}

@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using ShearWallCalculator.BuildingInfo;
+using ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator;
 
 namespace ShearWallCalculator.WindLoadCalculations.ASCE7.ASCE7_16
 {
-    internal class AreaCalculator_ASCE7_16_Base
+    public class AreaCalculator_ASCE7_16_Base : AreaCalculator_Base
     {
+        public override BuildingData buildingData { get; set; }
     }
 }

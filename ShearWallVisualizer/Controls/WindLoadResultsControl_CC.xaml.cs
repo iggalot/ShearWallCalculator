@@ -1,6 +1,5 @@
 ﻿using ShearWallCalculator.WindLoadCalculations;
 using System;
-using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -50,10 +49,10 @@ namespace ShearWallVisualizer.Controls
                 tbl_theta.Text = windLoadCalculator.buildingData.RoofPitch.ToString("F2");
                 tbl_h.Text = windLoadCalculator.buildingData.MeanRoofHeight.ToString("F2");
 
-                if (windLoadCalculator.Parameters.RoofAreaCalculator.HasCritDim)
+                if (windLoadCalculator.RoofAreaCalculator.HasCritDim)
                 {
                     sp_a.Visibility = Visibility.Visible;
-                    tbl_a.Text = windLoadCalculator.Parameters.RoofAreaCalculator.CritDim_a.ToString("F2");
+                    tbl_a.Text = windLoadCalculator.RoofAreaCalculator.CritDim_a.ToString("F2");
                 } else {
                     sp_a.Visibility = Visibility.Collapsed;
                 }
@@ -62,8 +61,8 @@ namespace ShearWallVisualizer.Controls
                 tbl_hOverL.Text = (windLoadCalculator.buildingData.MeanRoofHeight / windLoadCalculator.buildingData.BuildingLength).ToString("F2");
                 tbl_roof_type.Text = windLoadCalculator.buildingData.RoofType.ToString();
 
-                txtTitle_BuildingLengthWalls.Text = "BuildingLength Wall -- " + windLoadCalculator.Parameters.WallAreaCalculator_BldgLength.Note;
-                txtTitle_BuildingWidthWalls.Text = "BuildingWidth Walls -- " + windLoadCalculator.Parameters.WallAreaCalculator_BldgWidth.Note;
+                txtTitle_BuildingLengthWalls.Text = "BuildingLength Wall -- " + windLoadCalculator.WallAreaCalculator_BldgLength.Note;
+                txtTitle_BuildingWidthWalls.Text = "BuildingWidth Walls -- " + windLoadCalculator.WallAreaCalculator_BldgWidth.Note;
 
             }
         }

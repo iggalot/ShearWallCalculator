@@ -1,11 +1,10 @@
 ﻿using ShearWallCalculator.BuildingInfo;
 using ShearWallCalculator.WindLoadCalculations.Chapter30;
 using ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator;
-using ShearWallCalculator.WindLoadCalculations.Chapter30.Figure30_3;
+using ShearWallCalculator.WindLoadCalculations.Chapter30_CC.AreaCalculator.ASCE7_22;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.IO.Packaging;
 
 namespace ShearWallCalculator.WindLoadCalculations
 {
@@ -77,8 +76,24 @@ namespace ShearWallCalculator.WindLoadCalculations
     public abstract class WindLoadCalculator_Base
     {
         public virtual ASCE7_Versions ASCEVersion { get; }
-        public WindLoadParameters_Base Parameters { get; set; }
+        public WindParameters_Base Parameters { get; set; }
         public BuildingData buildingData { get; set; }
+
+        /// <summary>
+        /// Contains the calculator that will be used to calculate the effective wind areas on the roof
+        /// </summary>
+        public AreaCalculator_Base RoofAreaCalculator { get; set; }
+
+        /// <summary>
+        /// Contains the calculator for the wall loads acting on the BuildingLength dimension
+        /// </summary>
+        public AreaCalculator_Base WallAreaCalculator_BldgLength { get; set; }
+        /// <summary>
+        /// Contains the calculator for the wall loads acting on the BuildingWidth dimension
+        /// </summary>
+        public AreaCalculator_Base WallAreaCalculator_BldgWidth { get; set; }
+
+
 
         // Which figure of Ch30_3_2A thru I to use for CC roof
         public Chapter30_BaseFigure extGCpCurve_Roof { get; set; }
@@ -101,25 +116,6 @@ namespace ShearWallCalculator.WindLoadCalculations
         public Dictionary<int, double> windPressureBuildingWidthWall_Pos_Net { get; set; } = new Dictionary<int, double>();
         public Dictionary<int, double> windPressureBuildingWidthWall_Neg_Net { get; set; } = new Dictionary<int, double>();
 
-        public void CreateExtGcpCurves()
-        {
-            switch (ASCEVersion)
-            {
-                case ASCE7_Versions.ASCE_VER_7_16:
-                    extGCpCurve_Roof = Chapter30RoofFigureFactory_ASCE7_16.CreateRoofFigure_ASCE7_16(
-                         buildingData.RoofType, buildingData.MeanRoofHeight, buildingData.BuildingWidth, buildingData.RoofPitch);
-                    extGCpCurve_Wall = new Figure30_3_1_ASCE7_16();
-                    break;
-                case ASCE7_Versions.ASCE_VER_7_22:
-                    extGCpCurve_Roof = Chapter30RoofFigureFactory_ASCE7_22.CreateRoofFigure_ASCE7_22(
-                        buildingData.RoofType, buildingData.MeanRoofHeight, buildingData.BuildingWidth, buildingData.RoofPitch);
-                    extGCpCurve_Wall = new Figure30_3_1_ASCE7_22();
-                    break;
-                default:
-                    throw new Exception("ERROR: Invalid ASCE Version: " + ASCEVersion + " in WindLoadCalculator_Base constructor.");
-            }
-        }
-
         /// <summary>
         /// Calculates the dyanmic wind pressure q at a specified height z per ASCE7_16 and ASCE7_22
         /// </summary>
@@ -127,6 +123,36 @@ namespace ShearWallCalculator.WindLoadCalculations
         /// <param name="z"></param>
         /// <returns></returns>
         public abstract double CalculateDynamicWindPressure(double z);
+
+        public void CreateAreaCalculators()
+        {
+            RoofAreaCalculator = RoofAreaCalculatorFactory.Create(buildingData, Parameters, ASCEVersion);
+            RoofAreaCalculator.ComputeEffectiveWindAreas(Parameters, buildingData);
+
+            bool length_is_gable = false;
+            bool width_is_gable = false;
+            if(buildingData.BuildingLength > buildingData.BuildingWidth)
+            {
+                width_is_gable = true;
+            } else if (buildingData.BuildingLength < buildingData.BuildingWidth)
+            {
+                length_is_gable = true;
+            } else
+            {
+                width_is_gable = true;
+                length_is_gable = true;
+            }
+
+                Dictionary<string, double> bldg_length_wall_param = new Dictionary<string, double>();
+            bldg_length_wall_param.Add("WallLength", buildingData.BuildingLength);
+            WallAreaCalculator_BldgLength = WallAreaCalculatorFactory.Create(buildingData, Parameters, ASCEVersion, length_is_gable);
+            WallAreaCalculator_BldgLength.ComputeEffectiveWindAreas(Parameters, buildingData, bldg_length_wall_param);
+
+            Dictionary<string, double> bldg_width_wall_param = new Dictionary<string, double>();
+            bldg_width_wall_param.Add("WallLength", buildingData.BuildingWidth);
+            WallAreaCalculator_BldgWidth = WallAreaCalculatorFactory.Create(buildingData, Parameters, ASCEVersion, width_is_gable);
+            WallAreaCalculator_BldgWidth.ComputeEffectiveWindAreas(Parameters, buildingData, bldg_width_wall_param);
+        }
 
 
         // Get Kz approximation based on building height and exposure category
@@ -205,7 +231,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             gcp = 0.0;
 
 
-            if (!Parameters.RoofAreaCalculator.effWindAreas.TryGetValue(id, out var area))
+            if (RoofAreaCalculator.effWindAreas.TryGetValue(id, out var area))
                 return false;
 
             foreach (var gcp_curve in extGCpCurve_Roof.RoofCurves_Pos)
@@ -231,7 +257,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             gcp = 0.0;
 
 
-            if (!Parameters.RoofAreaCalculator.effWindAreas.TryGetValue(id, out var area))
+            if (!RoofAreaCalculator.effWindAreas.TryGetValue(id, out var area))
                 return false;
 
             foreach (var gcp_curve in extGCpCurve_Roof.RoofCurves_Neg)
@@ -257,7 +283,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             gcp = 0.0;
 
 
-            if (!Parameters.WallAreaCalculator_BldgLength.effWindAreas.TryGetValue(id, out var area))
+            if (WallAreaCalculator_BldgLength.effWindAreas.TryGetValue(id, out var area))
                 return false;
 
             foreach (var gcp_curve in extGCpCurve_Wall.WallCurves_Pos)
@@ -283,7 +309,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             gcp = 0.0;
 
 
-            if (!Parameters.WallAreaCalculator_BldgLength.effWindAreas.TryGetValue(id, out var area))
+            if (WallAreaCalculator_BldgLength.effWindAreas.TryGetValue(id, out var area))
                 return false;
 
             foreach (var gcp_curve in extGCpCurve_Wall.WallCurves_Neg)
@@ -309,7 +335,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             gcp = 0.0;
 
 
-            if (!Parameters.WallAreaCalculator_BldgWidth.effWindAreas.TryGetValue(id, out var area))
+            if (WallAreaCalculator_BldgWidth.effWindAreas.TryGetValue(id, out var area))
                 return false;
 
             foreach (var gcp_curve in extGCpCurve_Wall.WallCurves_Pos)
@@ -335,7 +361,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             gcp = 0.0;
 
 
-            if (!Parameters.WallAreaCalculator_BldgWidth.effWindAreas.TryGetValue(id, out var area))
+            if (WallAreaCalculator_BldgWidth.effWindAreas.TryGetValue(id, out var area))
                 return false;
 
             foreach (var gcp_curve in extGCpCurve_Wall.WallCurves_Neg)
@@ -361,7 +387,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             gcp = 0.0;
 
 
-            if (!Parameters.RoofAreaCalculator.effWindAreas.TryGetValue(id, out var area))
+            if (RoofAreaCalculator.effWindAreas.TryGetValue(id, out var area))
                 return false;
 
             foreach (var gcp_curve in extGCpCurve_Roof.OverhangCurves)
@@ -405,7 +431,7 @@ namespace ShearWallCalculator.WindLoadCalculations
         {
             id = -1;
 
-            foreach(KeyValuePair<int, EffectiveWindArea> item in Parameters.RoofAreaCalculator.effWindAreas)
+            foreach(KeyValuePair<int, EffectiveWindArea> item in RoofAreaCalculator.effWindAreas)
             {
                 
                 if ((item.Value.Label_Full == label) && (item.Value.Area == area))
@@ -429,7 +455,7 @@ namespace ShearWallCalculator.WindLoadCalculations
         {
             id = -1;
 
-            foreach (KeyValuePair<int, EffectiveWindArea> item in Parameters.WallAreaCalculator_BldgLength.effWindAreas)
+            foreach (KeyValuePair<int, EffectiveWindArea> item in WallAreaCalculator_BldgLength.effWindAreas)
             {
 
                 if ((item.Value.Label_Full == label) && (item.Value.Area == area))
@@ -453,7 +479,7 @@ namespace ShearWallCalculator.WindLoadCalculations
         {
             id = -1;
 
-            foreach (KeyValuePair<int, EffectiveWindArea> item in Parameters.WallAreaCalculator_BldgWidth.effWindAreas)
+            foreach (KeyValuePair<int, EffectiveWindArea> item in WallAreaCalculator_BldgWidth.effWindAreas)
             {
 
                 if ((item.Value.Label_Full == label) && (item.Value.Area == area))
@@ -487,7 +513,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             int id;
             pressure = double.MinValue;
             
-            AreaCalculator_Base calc = Parameters.RoofAreaCalculator;
+            AreaCalculator_Base calc = RoofAreaCalculator;
 
             // get all ids that match the label
             bool found = false;
@@ -519,7 +545,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             int id;
             pressure = double.MinValue;
 
-            AreaCalculator_Base calc = Parameters.WallAreaCalculator_BldgLength;
+            AreaCalculator_Base calc = WallAreaCalculator_BldgLength;
 
             // get all ids that match the label
             bool found = false;
@@ -551,7 +577,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             int id;
             pressure = double.MinValue;
 
-            AreaCalculator_Base calc = Parameters.WallAreaCalculator_BldgWidth;
+            AreaCalculator_Base calc = WallAreaCalculator_BldgWidth;
 
             // get all ids that match the label
             bool found = false;
@@ -602,7 +628,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             int id;
             pressure = double.MaxValue;
 
-            AreaCalculator_Base calc = Parameters.RoofAreaCalculator;
+            AreaCalculator_Base calc = RoofAreaCalculator;
 
             // get all ids that match the label
             bool found = false;
@@ -635,7 +661,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             int id;
             pressure = double.MaxValue;
 
-            AreaCalculator_Base calc = Parameters.WallAreaCalculator_BldgLength;
+            AreaCalculator_Base calc = WallAreaCalculator_BldgLength;
 
             // get all ids that match the label
             bool found = false;
@@ -668,7 +694,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             int id;
             pressure = double.MaxValue;
 
-            AreaCalculator_Base calc = Parameters.WallAreaCalculator_BldgWidth;
+            AreaCalculator_Base calc = WallAreaCalculator_BldgWidth;
 
             // get all ids that match the label
             bool found = false;

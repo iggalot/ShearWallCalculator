@@ -1,7 +1,8 @@
 ﻿using ShearWallCalculator.BuildingInfo;
+using ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator;
 using System;
 
-namespace ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator
+namespace ShearWallCalculator.WindLoadCalculations
 {
     public static class RoofAreaCalculatorFactory
     {
@@ -22,17 +23,17 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator
                 {
                     if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_FLAT)
                     {
-                        return new FlatRoofAreaCalculator_CC_ASCE7_16();
+                        return new FlatRoofAreaCalculator_CC_ASCE7_16(bldg_data);
                     }
                     else if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_GABLE)
                     {
-                        if (bldg_data.RoofPitch < 7) return new FlatRoofAreaCalculator_CC_ASCE7_16();
-                        else return new GableRoofAreaCalculator_CC_ASCE7_16();
+                        if (bldg_data.RoofPitch < 7) return new FlatRoofAreaCalculator_CC_ASCE7_16(bldg_data);
+                        else return new GableRoofAreaCalculator_CC_ASCE7_16(bldg_data);
                     }
                     else if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_HIP)
                     {
-                        if (bldg_data.RoofPitch < 7) return new FlatRoofAreaCalculator_CC_ASCE7_16();
-                        else return new HipRoofAreaCalculator_CC_ASCE7_16();
+                        if (bldg_data.RoofPitch < 7) return new FlatRoofAreaCalculator_CC_ASCE7_16(bldg_data);
+                        else return new HipRoofAreaCalculator_CC_ASCE7_16(bldg_data);
                     }
                     else
                     {
@@ -44,17 +45,17 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator
                     // TODO:  implement the area calculators
                     if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_FLAT)
                     {
-                        return new FlatRoofAreaCalculator_MWFRS_ASCE7_16();
+                        return new FlatRoofAreaCalculator_MWFRS_ASCE7_16(bldg_data);
                     }
                     else if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_GABLE)
                     {
-                        if (bldg_data.RoofPitch < 7) return new FlatRoofAreaCalculator_MWFRS_ASCE7_16();
-                        else return new GableRoofAreaCalculator_MWFRS_ASCE7_16();
+                        if (bldg_data.RoofPitch < 7) return new FlatRoofAreaCalculator_MWFRS_ASCE7_16(bldg_data);
+                        else return new GableRoofAreaCalculator_MWFRS_ASCE7_16(bldg_data);
                     }
                     else if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_HIP)
                     {
-                        if (bldg_data.RoofPitch < 7) return new FlatRoofAreaCalculator_MWFRS_ASCE7_16();
-                        else return new HipRoofAreaCalculator_MWFRS_ASCE7_16();
+                        if (bldg_data.RoofPitch < 7) return new FlatRoofAreaCalculator_MWFRS_ASCE7_16(bldg_data);
+                        else return new HipRoofAreaCalculator_MWFRS_ASCE7_16(bldg_data);
                     }
                     else
                     {
@@ -67,17 +68,17 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator
                 {
                     if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_FLAT)
                     {
-                        return new FlatRoofAreaCalculator_CC_ASCE7_22();
+                        return new FlatRoofAreaCalculator_CC_ASCE7_22(bldg_data);
                     }
                     else if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_GABLE)
                     {
-                        if (bldg_data.RoofPitch < 7) return new FlatRoofAreaCalculator_CC_ASCE7_22();
-                        else return new GableRoofAreaCalculator_CC_ASCE7_22();
+                        if (bldg_data.RoofPitch < 7) return new FlatRoofAreaCalculator_CC_ASCE7_22(bldg_data);
+                        else return new GableRoofAreaCalculator_CC_ASCE7_22(bldg_data);
                     }
                     else if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_HIP)
                     {
-                        if (bldg_data.RoofPitch < 7) return new FlatRoofAreaCalculator_CC_ASCE7_22();
-                        else return new HipRoofAreaCalculator_CC_ASCE7_22();
+                        if (bldg_data.RoofPitch < 7) return new FlatRoofAreaCalculator_CC_ASCE7_22(bldg_data);
+                        else return new HipRoofAreaCalculator_CC_ASCE7_22(bldg_data);
                     }
                     else
                     {
@@ -89,17 +90,17 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator
                     // TODO:  implement the area calculators
                     if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_FLAT)
                     {
-                        return new FlatRoofAreaCalculator_MWFRS_ASCE7_22();
+                        return new FlatRoofAreaCalculator_MWFRS_ASCE7_22(bldg_data);
                     }
                     else if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_GABLE)
                     {
-                        if (bldg_data.RoofPitch < 7) return new FlatRoofAreaCalculator_MWFRS_ASCE7_22();
-                        else return new GableRoofAreaCalculator_MWFRS_ASCE7_22();
+                        if (bldg_data.RoofPitch < 7) return new FlatRoofAreaCalculator_MWFRS_ASCE7_22(bldg_data);
+                        else return new GableRoofAreaCalculator_MWFRS_ASCE7_22(bldg_data);
                     }
                     else if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_HIP)
                     {
-                        if (bldg_data.RoofPitch < 7) return new FlatRoofAreaCalculator_MWFRS_ASCE7_22();
-                        else return new HipRoofAreaCalculator_MWFRS_ASCE7_22();
+                        if (bldg_data.RoofPitch < 7) return new FlatRoofAreaCalculator_MWFRS_ASCE7_22(bldg_data);
+                        else return new HipRoofAreaCalculator_MWFRS_ASCE7_22(bldg_data);
                     } else
                     {
                         throw new NotImplementedException("ERROR: Invalid roof type: " + bldg_data.RoofType + " in RoofAreaCalculatorFactory.");

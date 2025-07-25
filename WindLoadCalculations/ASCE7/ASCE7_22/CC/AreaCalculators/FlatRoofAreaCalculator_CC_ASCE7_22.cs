@@ -1,17 +1,18 @@
 ﻿using ShearWallCalculator.BuildingInfo;
-using ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator;
+using ShearWallCalculator.WindLoadCalculations.ASCE7.ASCE7_16.CC.AreaCalculators;
 using System;
 using System.Collections.Generic;
 using System.Windows;
 
 namespace ShearWallCalculator.WindLoadCalculations
 {
-    public class FlatRoofAreaCalculator_CC_ASCE7_22 : AreaCalculator_Base
+    public class FlatRoofAreaCalculator_CC_ASCE7_22 : AreaCalculator_CC_ASCE7_22_Base
     {
-        /// <summary>
-        /// Effective wind areas for roof
-        /// </summary>
-        public override Dictionary<int, EffectiveWindArea> effWindAreas { get; set; } = new Dictionary<int, EffectiveWindArea>();
+        public override BuildingData buildingData { get; set; }
+        public FlatRoofAreaCalculator_CC_ASCE7_22(BuildingData bldg_data)
+        {
+            buildingData = bldg_data;
+        }
 
         /// <summary>
         /// Try to create a zone with positive area.  Otherwise return null;
@@ -45,7 +46,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             return offset > 0 && 2 * offset < L && 2 * offset < B;
         }
 
-        public override void Compute(WindParameters_Base parameters, BuildingData bldg_data, Dictionary<string, double> optionalParams = null)
+        public override void ComputeEffectiveWindAreas(WindParameters_Base parameters, BuildingData bldg_data, Dictionary<string, double> optionalParams = null)
         {
             // Existing logic from ComputeFlatRoofAreas
             var L = bldg_data.BuildingLength;

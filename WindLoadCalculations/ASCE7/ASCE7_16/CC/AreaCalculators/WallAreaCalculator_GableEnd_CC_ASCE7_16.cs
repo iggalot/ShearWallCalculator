@@ -1,37 +1,23 @@
 ﻿using ShearWallCalculator.BuildingInfo;
-using ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator;
+using ShearWallCalculator.WindLoadCalculations.ASCE7.ASCE7_16.CC.AreaCalculators;
 using System;
 using System.Collections.Generic;
 using System.Windows;
 
-namespace ShearWallCalculator.WindLoadCalculations.Chapter30_CC.AreaCalculator.ASCE7_22
+namespace ShearWallCalculator.WindLoadCalculations
 {
-    public class WallAreaCalculator_GableEnd_CC_ASCE7_22 : AreaCalculator_Base
+    public class WallAreaCalculator_GableEnd_CC_ASCE7_16 : AreaCalculator_CC_ASCE7_16_Base
     {
-        public override Dictionary<int, EffectiveWindArea> effWindAreas { get; set; } = new Dictionary<int, EffectiveWindArea>();
-        public override double CritDim_a { get; set; }
-        public override bool HasCritDim { get; set; }
+        public override BuildingData buildingData { get; set; }
 
-        public WallAreaCalculator_GableEnd_CC_ASCE7_22(string note_string)
+        public WallAreaCalculator_GableEnd_CC_ASCE7_16(BuildingData bldg_data, string note_string="")
         {
+            buildingData = bldg_data;
             Note = note_string;
         }
 
-        public override void Compute(WindParameters_Base p, BuildingData bldg_data, Dictionary<string, double> optionalParams = null)
+        public override void ComputeEffectiveWindAreas(WindParameters_Base p, BuildingData bldg_data, Dictionary<string, double> optionalParams = null)
         {
-            /// <summary>
-            /// The critical width dimenstion "a" used throughout chapter 30
-            /// -- minimum of 0.4 * building height and 0.1 * min(building Length, building width)
-            /// but not less than 4% of smallest dimension or 3 ft.
-            /// </summary>
-            CritDim_a = Math.Max(
-                Math.Min(0.4 * bldg_data.MeanRoofHeight, 0.1 * Math.Min(bldg_data.BuildingLength, bldg_data.BuildingWidth)),
-                Math.Max(0.04 * Math.Min(bldg_data.BuildingLength, bldg_data.BuildingWidth),
-                3)
-                );
-            HasCritDim = true;
-
-
             double length;
             if (optionalParams.ContainsKey("WallLength"))
             {
@@ -39,13 +25,13 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30_CC.AreaCalculator.A
             }
             else
             {
-                throw new Exception("ERROR: Wall length is required in WallAreaCalculator_GableEnd_CC_ASCE7_22 constructor.");
+                throw new Exception("ERROR: Wall length is required in WallAreaCalculator_GableEnd_CC_ASCE7_16 constructor.");
             }
 
             // Corners of the wall planes -- assumed to be perpendicular to wind
             Point A = new Point(0, 0);
             Point B = new Point(length, 0);
-            Point C = new Point(bldg_data.BuildingLength, bldg_data.BuildingHeight);
+            Point C = new Point(length, bldg_data.BuildingHeight);
             Point D = new Point(0, bldg_data.BuildingHeight);
             Point E = new Point(length, bldg_data.BuildingHeight + Math.Tan(bldg_data.RoofPitch * Math.PI / 180.0) * length / 2.0);
 

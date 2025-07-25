@@ -33,7 +33,7 @@ namespace ShearWallCalculator.WindLoadCalculations.WindLoadCalculators
             var kd = Parameters.Kd;
 
             // roof pressure positive
-            foreach (var area in Parameters.RoofAreaCalculator.effWindAreas)
+            foreach (var area in RoofAreaCalculator.effWindAreas)
             {
                 if (TryGetGCp_Pos_Roof_ByArea(area.Key, out var gcp))
                 {
@@ -43,7 +43,7 @@ namespace ShearWallCalculator.WindLoadCalculations.WindLoadCalculators
             }
 
             // roof pressure negative
-            foreach (var area in Parameters.RoofAreaCalculator.effWindAreas)
+            foreach (var area in RoofAreaCalculator.effWindAreas)
             {
                 if (TryGetGCp_Neg_Roof_ByArea(area.Key, out var gcp))
                 {
@@ -53,7 +53,7 @@ namespace ShearWallCalculator.WindLoadCalculations.WindLoadCalculators
             }
 
             // BuildingWidth pressure positive
-            foreach (var area in Parameters.WallAreaCalculator_BldgWidth.effWindAreas)
+            foreach (var area in WallAreaCalculator_BldgWidth.effWindAreas)
             {
                 if (TryGetGCp_Pos_BuildingWidthWall_ByArea(area.Key, out var gcp))
                 {
@@ -63,7 +63,7 @@ namespace ShearWallCalculator.WindLoadCalculations.WindLoadCalculators
             }
 
             // BuildingWidth pressure negative
-            foreach (var area in Parameters.WallAreaCalculator_BldgWidth.effWindAreas)
+            foreach (var area in WallAreaCalculator_BldgWidth.effWindAreas)
             {
                 if (TryGetGCp_Neg_BuildingWidthWall_ByArea(area.Key, out var gcp))
                 {
@@ -73,7 +73,7 @@ namespace ShearWallCalculator.WindLoadCalculations.WindLoadCalculators
             }
 
             // BuildingLength pressure positive
-            foreach (var area in Parameters.WallAreaCalculator_BldgLength.effWindAreas)
+            foreach (var area in WallAreaCalculator_BldgLength.effWindAreas)
             {
                 if (TryGetGCp_Pos_BuildingLengthWall_ByArea(area.Key, out var gcp))
                 {
@@ -83,7 +83,7 @@ namespace ShearWallCalculator.WindLoadCalculations.WindLoadCalculators
             }
 
             // BuildingLength pressure negative
-            foreach (var area in Parameters.WallAreaCalculator_BldgLength.effWindAreas)
+            foreach (var area in WallAreaCalculator_BldgLength.effWindAreas)
             {
                 if (TryGetGCp_Neg_BuildingLengthWall_ByArea(area.Key, out var gcp))
                 {

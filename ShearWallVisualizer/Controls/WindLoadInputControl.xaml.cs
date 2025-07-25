@@ -242,7 +242,6 @@ namespace ShearWallVisualizer.Controls
 
             }
             Parameters = GetWindLoadParameters(bldgData.RoofType, version);
-            Parameters.ComputeEffectiveWindAreas(bldgData, version);
 
             OnWindInputComplete(Parameters, version); // raise the event where input has been completed
         }
@@ -287,13 +286,6 @@ namespace ShearWallVisualizer.Controls
                 importance, 
                 analysis_type
                 );
-            if(bldgData != null)
-            {
-                windParams.ComputeEffectiveWindAreas(bldgData, version);
-            } else
-            {
-                windParams = null;
-            }
 
             return windParams;
         }

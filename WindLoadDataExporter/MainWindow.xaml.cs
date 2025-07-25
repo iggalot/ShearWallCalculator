@@ -112,13 +112,14 @@ namespace WindLoadDataExporter
                         EnclosureType = BuildingEnclosures.BLDG_ENCLOSED
                     };
 
-                    WindLoadParameters_Base parameters = WindLoadParametersFactory.Create(
+                    WindParameters_Base parameters = WindLoadParametersFactory.Create(
                         roofType, importanceCategory, windSpeed, exposure_cat, Kd, Ke, Kzt, calculation_type);
 
-                    parameters.ComputeEffectiveWindAreas(buildingData, version);
+
 
                     WindLoadCalculator_Base calculator = WindLoadCalculatorFactory.Create(
                         version, calculation_type, parameters, buildingData);
+                    calculator.CreateAreaCalculators();
 
                     calculator.CalculatePressures();
                     calculators.Add(calculator);
@@ -147,15 +148,15 @@ namespace WindLoadDataExporter
                                 EnclosureType = BuildingEnclosures.BLDG_ENCLOSED
                             };
 
-                            WindLoadParameters_Base parameters = WindLoadParametersFactory.Create(
+                            WindParameters_Base parameters = WindLoadParametersFactory.Create(
                                 rtype, importanceCategory, windSpeed, exposure_cat, Kd, Ke, Kzt, calculation_type);
-
-                            parameters.ComputeEffectiveWindAreas(buildingData, version);
 
                             WindLoadCalculator_Base calculator = WindLoadCalculatorFactory.Create(
                                 version, calculation_type, parameters, buildingData);
 
                             calculator.CalculatePressures();
+                            calculator.CreateAreaCalculators();
+
                             calculators.Add(calculator);
                         }
                     }
@@ -189,7 +190,7 @@ namespace WindLoadDataExporter
 
 
                 var h = calculator.buildingData.MeanRoofHeight;
-                var a = calculator.Parameters.RoofAreaCalculator.CritDim_a;
+                var a = calculator.RoofAreaCalculator.CritDim_a;
                 var qh = calculator.CalculateDynamicWindPressure(h);
                 List<string> prelim_calc_data = new List<string>()
                 {
@@ -340,7 +341,7 @@ namespace WindLoadDataExporter
             // get a list of all the area zone names
             List<string> list = new List<string>();
 
-            foreach (var area in calculator.Parameters.RoofAreaCalculator.effWindAreas.Values)
+            foreach (var area in calculator.RoofAreaCalculator.effWindAreas.Values)
             {
                 string label = area.Label_Full;
                 if (!list.Contains(label))
@@ -360,7 +361,7 @@ namespace WindLoadDataExporter
             // get a list of all the area zone names
             List<string> list = new List<string>();
 
-            foreach (var area in calculator.Parameters.RoofAreaCalculator.effWindAreas.Values)
+            foreach (var area in calculator.RoofAreaCalculator.effWindAreas.Values)
             {
                 string label = area.Label_Full;
                 if (!list.Contains(label))
@@ -380,7 +381,7 @@ namespace WindLoadDataExporter
             // get a list of all the area zone names
             List<string> list = new List<string>();
 
-            foreach (var area in calculator.Parameters.WallAreaCalculator_BldgLength.effWindAreas.Values)
+            foreach (var area in calculator.WallAreaCalculator_BldgLength.effWindAreas.Values)
             {
                 string label = area.Label_Full;
                 if (!list.Contains(label))
@@ -400,7 +401,7 @@ namespace WindLoadDataExporter
             // get a list of all the area zone names
             List<string> list = new List<string>();
 
-            foreach (var area in calculator.Parameters.WallAreaCalculator_BldgWidth.effWindAreas.Values)
+            foreach (var area in calculator.WallAreaCalculator_BldgWidth.effWindAreas.Values)
             {
                 string label = area.Label_Full;
                 if (!list.Contains(label))
@@ -420,7 +421,7 @@ namespace WindLoadDataExporter
             // get a list of all the area zone names
             List<string> list = new List<string>();
 
-            foreach (var area in calculator.Parameters.RoofAreaCalculator.effWindAreas.Values)
+            foreach (var area in calculator.RoofAreaCalculator.effWindAreas.Values)
             {
                 string label = area.Label_Full;
                 if (!list.Contains(label))
@@ -456,7 +457,7 @@ namespace WindLoadDataExporter
             // get a list of all the area zone names
             List<string> list = new List<string>();
 
-            foreach (var area in calculator.Parameters.RoofAreaCalculator.effWindAreas.Values)
+            foreach (var area in calculator.RoofAreaCalculator.effWindAreas.Values)
             {
                 string label = area.Label_Full;
                 if (!list.Contains(label))
@@ -507,7 +508,7 @@ namespace WindLoadDataExporter
             string str = String.Empty;
             // get a list of all the area zone names
             List<string> list = new List<string>();
-            foreach (var area in calculator.Parameters.RoofAreaCalculator.effWindAreas.Values)
+            foreach (var area in calculator.RoofAreaCalculator.effWindAreas.Values)
             {
                 string label = area.Label_Full;
                 if (!list.Contains(label))

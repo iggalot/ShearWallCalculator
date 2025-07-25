@@ -49,7 +49,7 @@ namespace ShearWallVisualizer
     public partial class MainWindow : Window
     {
         public ShearWallCalculatorBase Calculator = new ShearWallCalculator_RigidDiaphragm();
-        public WindLoadParameters_Base windLoadParams { get; set; }
+        public WindParameters_Base windLoadParams { get; set; }
         public ASCE7_Versions windVersion { get; set;
         }
         public BuildingData buildingData { get; set; } = null;
@@ -462,6 +462,7 @@ namespace ShearWallVisualizer
 
             // Create the wind load calculator and calculate the pressures
             windLoadCalculator = WindLoadCalculatorFactory.Create(windVersion, windLoadParams.AnalysisType, windLoadParams, buildingData);
+            windLoadCalculator.CreateAreaCalculators();
             windLoadCalculator.CalculatePressures();
 
             Console.WriteLine(windLoadCalculator.DisplayExternalPressures());
@@ -508,7 +509,7 @@ namespace ShearWallVisualizer
                 canvas.Children.Clear();
 
                 double scale = Math.Min(canvas.ActualWidth / buildingData.BuildingWidth, canvas.ActualHeight / buildingData.BuildingLength);
-                foreach (var area in windLoadParams.RoofAreaCalculator.effWindAreas)
+                foreach (var area in windLoadCalculator.RoofAreaCalculator.effWindAreas)
                 {
                     WindLoadInputControl.DrawEffectiveWindArea(canvas, area.Value, scale, GetColorForRegion(area.Value.Label_Short));
                 }
@@ -526,11 +527,11 @@ namespace ShearWallVisualizer
 
             // For the BuildingLength wall
             CreateCC_DataGrid_Walls(figureCC_Wall, ccControl.WallsResultsDataGrid_SideWall,
-                windLoadParams.WallAreaCalculator_BldgLength.effWindAreas, "building_length");
+                windLoadCalculator.WallAreaCalculator_BldgLength.effWindAreas, "building_length");
 
             // For the BuildingWidth wall
             CreateCC_DataGrid_Walls(figureCC_Wall, ccControl.WallsResultsDataGrid_EndWall,
-                windLoadParams.WallAreaCalculator_BldgWidth.effWindAreas, "building_width");
+                windLoadCalculator.WallAreaCalculator_BldgWidth.effWindAreas, "building_width");
         }
 
         private void DrawEffectiveAreasOnResultCanvas()
@@ -544,7 +545,7 @@ namespace ShearWallVisualizer
             resultCanvas.Children.Clear();
             double scale = Math.Min(resultCanvas.Width / buildingData.BuildingWidth, resultCanvas.Height / buildingData.BuildingLength);
 
-            foreach (var area in windLoadParams.RoofAreaCalculator.effWindAreas)
+            foreach (var area in windLoadCalculator.RoofAreaCalculator.effWindAreas)
             {
                 WindLoadInputControl.DrawEffectiveWindArea(resultCanvas, area.Value, scale, GetColorForRegion(area.Value.Label_Short));
             }
@@ -662,7 +663,7 @@ namespace ShearWallVisualizer
             //data_grid.Columns.Add(col_overhang_press);
 
             var windLoadResults = new List<CC_WindLoadResults>();
-            foreach (KeyValuePair<int, EffectiveWindArea> area in windLoadParams.RoofAreaCalculator.effWindAreas)
+            foreach (KeyValuePair<int, EffectiveWindArea> area in windLoadCalculator.RoofAreaCalculator.effWindAreas)
             {
 
                 CC_WindLoadResults data = new CC_WindLoadResults();

@@ -1,10 +1,8 @@
 ﻿using ShearWallCalculator.BuildingInfo;
 using ShearWallCalculator.WindLoadCalculations;
 using System;
-using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
-using static ShearWallCalculator.WindLoadCalculations.WindLoadCalculator_Base;
 
 namespace ShearWallVisualizer.Controls
 {

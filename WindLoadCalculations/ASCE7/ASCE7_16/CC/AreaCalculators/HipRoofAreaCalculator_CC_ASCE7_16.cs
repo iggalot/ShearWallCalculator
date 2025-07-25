@@ -1,34 +1,20 @@
 ﻿using ShearWallCalculator.BuildingInfo;
-using ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator;
-using System;
+using ShearWallCalculator.WindLoadCalculations.ASCE7.ASCE7_16.CC.AreaCalculators;
 using System.Collections.Generic;
 using System.Windows;
 
 namespace ShearWallCalculator.WindLoadCalculations
 {
-    public class HipRoofAreaCalculator_CC_ASCE7_16 : AreaCalculator_Base
+    public class HipRoofAreaCalculator_CC_ASCE7_16 : AreaCalculator_CC_ASCE7_16_Base
     {
-        /// <summary>
-        /// Effective wind areas for roof
-        /// </summary>
-        public override Dictionary<int, EffectiveWindArea> effWindAreas { get; set; } = new Dictionary<int, EffectiveWindArea>();
-        public override double CritDim_a { get; set; }
-        public override bool HasCritDim { get; set; }
-
-        public override void Compute(WindParameters_Base parameters, BuildingData bldg_data, Dictionary<string, double> optionalParams = null)
+        public override BuildingData buildingData { get; set; }
+        public HipRoofAreaCalculator_CC_ASCE7_16(BuildingData bldg_data)
         {
-            /// <summary>
-            /// The critical width dimenstion "a" used throughout chapter 30
-            /// -- minimum of 0.4 * building height and 0.1 * min(building Length, building width)
-            /// but not less than 4% of smallest dimension or 3 ft.
-            /// </summary>
-            CritDim_a = Math.Max(
-                Math.Min(0.4 * bldg_data.MeanRoofHeight, 0.1 * Math.Min(bldg_data.BuildingLength, bldg_data.BuildingWidth)),
-                Math.Max(0.04 * Math.Min(bldg_data.BuildingLength, bldg_data.BuildingWidth),
-                3)
-                );
-            HasCritDim = true;
+            buildingData = bldg_data;
+        }
 
+        public override void ComputeEffectiveWindAreas(WindParameters_Base parameters, BuildingData bldg_data, Dictionary<string, double> optionalParams = null)
+        {
             // Hip logic
             // Figure 30.3-2E / 2F / 2G / 2H / 2I -- Flat roof and Gable with slope greater than 7
             // Map if Length is less than width -- ridge is vertical on map
