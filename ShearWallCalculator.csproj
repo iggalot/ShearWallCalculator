@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
@@ -149,6 +149,8 @@
     <Compile Include="WindLoadCalculations\Chapter30_CC\Figure30_3_ASCE7_22\Figure30_3_2F_2G_INTERPOLATED_ASCE7_22.cs" />
     <Compile Include="WindLoadCalculations\Chapter30_CC\Figure30_3_ASCE7_22\Figure30_3_2G_ASCE7_22.cs" />
     <Compile Include="WindLoadCalculations\WindLoadCalculators\WindLoadCalculatorFactory.cs" />
+    <Compile Include="WindLoadCalculations\WindLoadCalculators\WindLoadCalculator_ASCE7_16_Base.cs" />
+    <Compile Include="WindLoadCalculations\WindLoadCalculators\WindLoadCalculator_ASCE7_22_Base.cs" />
     <Compile Include="WindLoadCalculations\WindLoadCalculators\WindLoadCalculator_CC_ASCE7_22.cs" />
     <Compile Include="WindLoadCalculations\WindLoadCalculators\WindLoadCalculator_CC_Base.cs" />
     <Compile Include="WindLoadCalculations\WindLoadCalculators\WindLoadCalculator_MWFRS_ASCE7_22.cs" />

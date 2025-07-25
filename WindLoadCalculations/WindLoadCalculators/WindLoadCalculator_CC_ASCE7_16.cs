@@ -1,5 +1,4 @@
 ﻿using ShearWallCalculator.BuildingInfo;
-using ShearWallCalculator.WindLoadCalculations.Chapter30;
 using ShearWallCalculator.WindLoadCalculations.WindLoadCalculators;
 using System;
 
