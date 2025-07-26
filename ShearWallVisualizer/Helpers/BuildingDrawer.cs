@@ -190,15 +190,7 @@ namespace ShearWallCalculator.Helpers
             if (canvasWidth <= 0 || canvasHeight <= 0) return;
 
             // Calculate ridge height if sloped gable roof
-            double ridgeHeight = eaveHeight;
-            double roofHeight = 0;
-            if (buildingData.RoofTypeIsSloped() && isGable)
-            {
-                double halfSpan = length / 2.0;
-                double pitchRadians = roofPitchDeg * Math.PI / 180.0;
-                roofHeight = Math.Tan(pitchRadians) * halfSpan;
-                ridgeHeight += roofHeight;
-            }
+            double ridgeHeight = buildingData.RidgeHeight;
 
             // Scale and margin
             double marginX = canvasWidth * marginRatio;
@@ -302,7 +294,7 @@ namespace ShearWallCalculator.Helpers
             canvas.Children.Add(labelHeight);
 
             // Label: Roof Height (R:) if sloped
-            if (roofHeight > 0)
+            if (buildingData.RidgeHeight > buildingData.BuildingHeight)
             {
                 var labelRoof = new TextBlock
                 {
@@ -382,15 +374,7 @@ namespace ShearWallCalculator.Helpers
             if (canvasWidth <= 0 || canvasHeight <= 0) return;
 
             // Calculate ridge height if sloped gable roof
-            double ridgeHeight = eaveHeight;
-            double roofHeight = 0;
-            if (buildingData.RoofTypeIsSloped() && isGable)
-            {
-                double halfSpan = length / 2.0;
-                double pitchRadians = roofPitchDeg * Math.PI / 180.0;
-                roofHeight = Math.Tan(pitchRadians) * halfSpan;
-                ridgeHeight += roofHeight;
-            }
+            double ridgeHeight = buildingData.RidgeHeight; ;
 
             // Scale and margin
             double marginX = canvasWidth * marginRatio;
@@ -494,7 +478,7 @@ namespace ShearWallCalculator.Helpers
             canvas.Children.Add(labelHeight);
 
             // Label: Roof Height (R:) if sloped
-            if (roofHeight > 0)
+            if (buildingData.RidgeHeight > buildingData.BuildingHeight)
             {
                 var labelRoof = new TextBlock
                 {

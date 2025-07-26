@@ -7,124 +7,121 @@
              mc:Ignorable="d" 
              Width="Auto" Height="Auto"
              >
-    <Border Padding="10">
-        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-            <StackPanel Orientation="Vertical">
+    <Border Padding="10" Background="LightBlue">
+        <StackPanel Orientation="Vertical">
 
-                <!-- Header -->
-                <StackPanel Orientation="Horizontal" Background="AliceBlue" Margin="0,0,0,10">
-                    <TextBlock x:Name="tbVersion" Text="VERSION XXX" FontSize="18" FontWeight="Bold"/>
-                    <TextBlock Text="  Components and Cladding Results" FontWeight="Bold" FontSize="18"/>
-                </StackPanel>
+            <!-- Header -->
+            <StackPanel Orientation="Horizontal" Background="AliceBlue" Margin="0,0,0,10">
+                <TextBlock x:Name="tbVersion" Text="VERSION XXX" FontSize="18" FontWeight="Bold"/>
+                <TextBlock Text="  Components and Cladding Results" FontWeight="Bold" FontSize="18"/>
+            </StackPanel>
 
+            <StackPanel Orientation="Horizontal">
                 <!-- Main Layout -->
-                <Grid Background="LightBlue">
+                <Grid >
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- Left Side: Data -->
-                    <StackPanel Name="spResultsAndCanvas"
+                    <StackPanel Orientation="horizontal">
+
+
+                        <!-- Left Side: Data -->
+                        <StackPanel Name="spResultsAndCanvas"
                                 Grid.Column="0"
                                 Orientation="Vertical"
                                 Margin="10"
                                 HorizontalAlignment="Left">
 
-                        <!-- Basic Properties -->
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-                            <TextBlock Text="h (ft) = " VerticalAlignment="Center"/>
-                            <TextBlock Name="tbl_h" Width="150"/>
-                            <StackPanel Orientation="Horizontal" Name="sp_a">
-                                <TextBlock Text="a (ft) = " VerticalAlignment="Center" Margin="10,10,0,0"/>
-                                <TextBlock Name="tbl_a" Width="150" Text="Junk"/>
+                            <!-- Basic Properties -->
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                <TextBlock Text="h (ft) = " VerticalAlignment="Center"/>
+                                <TextBlock Name="tbl_h" Width="150"/>
+                                <StackPanel Orientation="Horizontal" Name="sp_a">
+                                    <TextBlock Text="a (ft) = " VerticalAlignment="Center" Margin="10,10,0,0"/>
+                                    <TextBlock Name="tbl_a" Width="150" Text="Junk"/>
+                                </StackPanel>
                             </StackPanel>
-                        </StackPanel>
 
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-                            <TextBlock Text="RoofType = " VerticalAlignment="Center"/>
-                            <TextBlock Name="tbl_roof_type" Width="150"/>
-                            <TextBlock Text="theta (deg) = " VerticalAlignment="Center" Margin="10,10,0,0"/>
-                            <TextBlock Name="tbl_theta" Width="150"/>
-                        </StackPanel>
-
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                            <TextBlock Text="h/L = " VerticalAlignment="Center"/>
-                            <TextBlock Name="tbl_hOverL" Width="150"/>
-                            <TextBlock Text="h/B = " VerticalAlignment="Center" Margin="10,0,0,0"/>
-                            <TextBlock Name="tbl_hOverB" Width="150"/>
-                        </StackPanel>
-
-                        <!-- Scrollable Results -->
-                        <ScrollViewer VerticalScrollBarVisibility="Auto" Height="400">
-                            <StackPanel Orientation="Vertical">
-                                <TextBlock Text="Roof Zone Pressures" Margin="0,5"/>
-                                <DataGrid x:Name="RoofResultsDataGrid"
-                                          AutoGenerateColumns="False"
-                                          HeadersVisibility="Column"
-                                          CanUserAddRows="False"
-                                          IsReadOnly="True"
-                                          HorizontalScrollBarVisibility="Auto"
-                                          Margin="0,0,0,10"
-                                          ColumnWidth="Auto"
-                                          FontSize="10"/>
-
-                                <TextBlock x:Name="txtTitle_BuildingLengthWalls" Margin="0,5"/>
-                                <DataGrid x:Name="WallsResultsDataGrid_SideWall"
-                                          AutoGenerateColumns="False"
-                                          HeadersVisibility="Column"
-                                          CanUserAddRows="False"
-                                          IsReadOnly="True"
-                                          HorizontalScrollBarVisibility="Auto"
-                                          Margin="0,0,0,10"
-                                          ColumnWidth="Auto"
-                                          FontSize="10"/>
-
-                                <TextBlock x:Name="txtTitle_BuildingWidthWalls" Margin="0,5"/>
-                                <DataGrid x:Name="WallsResultsDataGrid_EndWall"
-                                          AutoGenerateColumns="False"
-                                          HeadersVisibility="Column"
-                                          CanUserAddRows="False"
-                                          IsReadOnly="True"
-                                          HorizontalScrollBarVisibility="Auto"
-                                          Margin="0,0,0,10"
-                                          ColumnWidth="Auto"
-                                          FontSize="10"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                <TextBlock Text="RoofType = " VerticalAlignment="Center"/>
+                                <TextBlock Name="tbl_roof_type" Width="150"/>
+                                <TextBlock Text="theta (deg) = " VerticalAlignment="Center" Margin="10,10,0,0"/>
+                                <TextBlock Name="tbl_theta" Width="150"/>
                             </StackPanel>
-                        </ScrollViewer>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <TextBlock Text="h/L = " VerticalAlignment="Center"/>
+                                <TextBlock Name="tbl_hOverL" Width="150"/>
+                                <TextBlock Text="h/B = " VerticalAlignment="Center" Margin="10,0,0,0"/>
+                                <TextBlock Name="tbl_hOverB" Width="150"/>
+                            </StackPanel>
+
+                            <!-- Scrollable Results -->
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" Height="400">
+                                <StackPanel Orientation="Vertical">
+                                    <TextBlock Text="Roof Zone Pressures" Margin="0,5"/>
+                                    <DataGrid x:Name="RoofResultsDataGrid"
+                                          AutoGenerateColumns="False"
+                                          HeadersVisibility="Column"
+                                          CanUserAddRows="False"
+                                          IsReadOnly="True"
+                                          HorizontalScrollBarVisibility="Auto"
+                                          Margin="0,0,0,10"
+                                          ColumnWidth="Auto"
+                                          FontSize="10"/>
+
+                                    <TextBlock x:Name="txtTitle_BuildingLengthWalls" Margin="0,5"/>
+                                    <DataGrid x:Name="WallsResultsDataGrid_SideWall"
+                                          AutoGenerateColumns="False"
+                                          HeadersVisibility="Column"
+                                          CanUserAddRows="False"
+                                          IsReadOnly="True"
+                                          HorizontalScrollBarVisibility="Auto"
+                                          Margin="0,0,0,10"
+                                          ColumnWidth="Auto"
+                                          FontSize="10"/>
+
+                                    <TextBlock x:Name="txtTitle_BuildingWidthWalls" Margin="0,5"/>
+                                    <DataGrid x:Name="WallsResultsDataGrid_EndWall"
+                                          AutoGenerateColumns="False"
+                                          HeadersVisibility="Column"
+                                          CanUserAddRows="False"
+                                          IsReadOnly="True"
+                                          HorizontalScrollBarVisibility="Auto"
+                                          Margin="0,0,0,10"
+                                          ColumnWidth="Auto"
+                                          FontSize="10"/>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </StackPanel>
                     </StackPanel>
 
-                    <!-- Right Side: Diagrams -->
-                    <StackPanel Orientation="Vertical" Width="250" HorizontalAlignment="Left" Grid.Column="1" Margin="10,10,0,0">
-                        <Canvas x:Name="cnvWindLoadResultCanvasCC"
-                                Width="100"
-                                Height="100"
-                                Background="Transparent"/>
-
-                        <!-- Roof Chart -->
-                        <StackPanel Orientation="Vertical" Margin="0,15,0,0">
-
-                            <Canvas x:Name="cnvMWFRSPlan"
-                                    Width="150"
-                                    Height="150"
-                                    Background="White"
-                                    Margin="10"/>
-
-                            <Canvas x:Name="cnvMWFRSElevation_BuildingLength"
-                                    Width="150"
-                                    Height="150"
-                                    Background="White"
-                                    Margin="10"/>
-                            
-                            <Canvas x:Name="cnvMWFRSElevation_BuildingWidth"
-                                    Width="150"
-                                    Height="150"
-                                    Background="White"
-                                    Margin="10"/>
-                        </StackPanel>
-                    </StackPanel>
                 </Grid>
+                <!-- Right Side: Diagrams -->
+                <!-- Building Figures -->
+                <StackPanel Orientation="Vertical" Margin="0,15,0,0">
+
+                    <Canvas x:Name="cnvMWFRSPlan"
+                                    Width="150"
+                                    Height="150"
+                                    Background="White"
+                                    Margin="10"/>
+
+                    <Canvas x:Name="cnvMWFRSElevation_BuildingLength"
+                                    Width="150"
+                                    Height="150"
+                                    Background="White"
+                                    Margin="10"/>
+
+                    <Canvas x:Name="cnvMWFRSElevation_BuildingWidth"
+                                    Width="150"
+                                    Height="150"
+                                    Background="White"
+                                    Margin="10"/>
+                </StackPanel>
             </StackPanel>
-        </ScrollViewer>
+        </StackPanel>
     </Border>
 </UserControl>
