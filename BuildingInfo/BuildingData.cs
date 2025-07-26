@@ -41,6 +41,8 @@ namespace ShearWallCalculator.BuildingInfo
         /// The mean roof height of the building, h per ASCE7
         /// </summary>
         public double MeanRoofHeight { get => ComputeMeanRoofHeight(); }
+        public double RidgeHeight { get => ComputeMeanRoofHeight(); }
+
 
         /// <summary>
         /// Validates the ridge direction.  
@@ -157,6 +159,42 @@ namespace ShearWallCalculator.BuildingInfo
         public bool RoofTypeIsFlat()
         {
             return (RoofType == RoofTypes.ROOF_TYPE_FLAT);
+        }
+
+        /// <summary>
+        /// A routine that flips the plan view of the building by 90 degrees
+        /// </summary>
+        public void FlipBuilding()
+        {
+            double temp = BuildingLength;
+            BuildingLength = BuildingWidth;
+            BuildingWidth = temp;
+
+            // if the roof is sloped, flip the ridge direction
+            if (RoofTypeIsSloped())
+            {
+                RidgeDirection = RidgeDirection == RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH ? RidgeDirections.RIDGE_DIR_PERP_TO_BLDGLENGTH : RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH;
+            }
+            // otherwise we have a non-sloped (flat) roof
+            else
+            {
+                RidgeDirection = RidgeDirections.RIDGE_DIR_NONE;
+            }
+            ValidateRidgeDirection();
+        }
+
+        public BuildingData Clone()
+        {
+            return new BuildingData()
+            {
+                BuildingLength = this.BuildingLength,
+                BuildingWidth = this.BuildingWidth,
+                BuildingHeight = this.BuildingHeight,
+                RoofPitch = this.RoofPitch,
+                RidgeDirection = this.RidgeDirection,
+                RoofType = this.RoofType,
+                EnclosureType = this.EnclosureType
+            };
         }
     }
 }

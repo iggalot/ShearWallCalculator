@@ -31,12 +31,12 @@ namespace ShearWallVisualizer.Dialogs
 
         private void WindCalculated(object sender, WindLoadInputControl.OnWindInputCompleteEventArgs e)
         {
-            MagnitudeX = 100;
-            MagnitudeY = 100;
+            //MagnitudeX = 100;
+            //MagnitudeY = 100;
 
-            gridASCEWind.Visibility = Visibility.Visible;
-            WindLoadResultsControl_MWFRS wlrc_MWFRS = new WindLoadResultsControl_MWFRS(e._parameters, e._bldg_data);
-            gridASCEWind.Children.Add(wlrc_MWFRS);
+            //gridASCEWind.Visibility = Visibility.Visible;
+            //WindLoadResultsControl_MWFRS wlrc_MWFRS = new WindLoadResultsControl_MWFRS(e._parameters, e._bldg_data);
+            //gridASCEWind.Children.Add(wlrc_MWFRS);
 
             //DialogResult = true; // signal that the input is complete
             //Close();

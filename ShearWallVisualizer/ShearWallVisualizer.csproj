@@ -119,19 +119,19 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Controls\WindLoadGraphicCanvas.xaml">
+    <Page Include="Controls\WindLoads\WindLoadGraphicCanvas.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Controls\WindLoadResultsControl_CC.xaml">
+    <Page Include="Controls\WindLoads\WindLoadResultsControl_CC.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Controls\WindLoadResultsControl_MWFRS.xaml">
+    <Page Include="Controls\WindLoads\WindLoadResultsControl_MWFRS.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Controls\WindLoadInputControl.xaml">
+    <Page Include="Controls\WindLoads\WindLoadInputControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -165,16 +165,16 @@
     <Compile Include="Controls\ShearWallResultsControl_Rigid.xaml.cs">
       <DependentUpon>ShearWallResultsControl_Rigid.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Controls\WindLoadGraphicCanvas.xaml.cs">
+    <Compile Include="Controls\WindLoads\WindLoadGraphicCanvas.xaml.cs">
       <DependentUpon>WindLoadGraphicCanvas.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Controls\WindLoadResultsControl_CC.xaml.cs">
+    <Compile Include="Controls\WindLoads\WindLoadResultsControl_CC.xaml.cs">
       <DependentUpon>WindLoadResultsControl_CC.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Controls\WindLoadResultsControl_MWFRS.xaml.cs">
+    <Compile Include="Controls\WindLoads\WindLoadResultsControl_MWFRS.xaml.cs">
       <DependentUpon>WindLoadResultsControl_MWFRS.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Controls\WindLoadInputControl.xaml.cs">
+    <Compile Include="Controls\WindLoads\WindLoadInputControl.xaml.cs">
       <DependentUpon>WindLoadInputControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="Dialogs\EnterMeasurementDialog.xaml.cs">

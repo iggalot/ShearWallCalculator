@@ -91,7 +91,8 @@
                     <!-- Wind Input control-->
                     <TabItem Header="WIND Input" x:Name="tabWindInputControlTabItem" Width="100" HorizontalAlignment="Center" Margin="5 0 5 0" />
 
-                    <TabItem x:Name="tabWindResultsTabItem_MWFRS" Header="MWFRS Wind Calcs" Width="100" HorizontalAlignment="Center" Margin="5 0 5 0" />
+                    <TabItem x:Name="tabWindResultsTabItem_MWFRS_BldgLength" Header="MWFRS 1" Width="100" HorizontalAlignment="Center" Margin="5 0 5 0" />
+                    <TabItem x:Name="tabWindResultsTabItem_MWFRS_BldgWidth" Header="MWFRS 2" Width="100" HorizontalAlignment="Center" Margin="5 0 5 0" />
 
                     <TabItem x:Name="tabWindResultsTabItem_CC"  Header="CC Wind Calcs" Width="100" HorizontalAlignment="Center" Margin="5 0 5 0" />
 
