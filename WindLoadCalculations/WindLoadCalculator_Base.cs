@@ -1,7 +1,6 @@
 ﻿using ShearWallCalculator.BuildingInfo;
 using ShearWallCalculator.WindLoadCalculations.Chapter30;
 using ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator;
-using ShearWallCalculator.WindLoadCalculations.Chapter30_CC.AreaCalculator.ASCE7_22;
 using ShearWallCalculator.WindLoadCalculations.Core.Interfaces;
 using System;
 using System.Collections.Generic;

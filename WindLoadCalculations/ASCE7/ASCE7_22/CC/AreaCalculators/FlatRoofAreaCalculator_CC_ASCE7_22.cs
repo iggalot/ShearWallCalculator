@@ -1,5 +1,4 @@
 ﻿using ShearWallCalculator.BuildingInfo;
-using ShearWallCalculator.WindLoadCalculations.ASCE7.ASCE7_16.CC.AreaCalculators;
 using System;
 using System.Collections.Generic;
 using System.Windows;
@@ -12,32 +11,6 @@ namespace ShearWallCalculator.WindLoadCalculations
         public FlatRoofAreaCalculator_CC_ASCE7_22(BuildingData bldg_data)
         {
             buildingData = bldg_data;
-        }
-
-        /// <summary>
-        /// Try to create a zone with positive area.  Otherwise return null;
-        /// </summary>
-        /// <param name="label"></param>
-        /// <param name="outer"></param>
-        /// <param name="holes"></param>
-        /// <returns></returns>
-        private static EffectiveWindArea TryCreateZone(int id, string label, IEnumerable<Point> outer, IEnumerable<IEnumerable<Point>> holes = null)
-        {
-            try
-            {
-                var zone = new EffectiveWindArea(label, outer, holes);
-                if (zone.Area > 0)
-                {
-                    Console.WriteLine($"Zone {id} ({label}) created: Area = {zone.Area:F2} ft²");
-                    return zone;
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Zone {id} ({label}) failed: {ex.Message}");
-            }
-
-            return null;
         }
 
         private static bool IsValidRectangle(double L, double B, double offset)

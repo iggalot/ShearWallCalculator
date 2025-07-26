@@ -1,6 +1,7 @@
 ﻿using ShearWallCalculator.BuildingInfo;
 using ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator;
 using System;
+using System.Collections.Generic;
 
 namespace ShearWallCalculator.WindLoadCalculations.ASCE7.ASCE7_22
 {
@@ -8,16 +9,9 @@ namespace ShearWallCalculator.WindLoadCalculations.ASCE7.ASCE7_22
     {
         public override BuildingData buildingData { get; set; }
 
-        public override double CritDim_a { get => ComputeCritDim_a(); }
-        public override bool HasCritDim { get; set; } = true;
-
-        public double ComputeCritDim_a()
+        public override void ComputeEffectiveWindAreas(WindParameters_Base p, BuildingData bldg_data, bool windIsParallelToRidge = true, Dictionary<string, double> optionalDimension = null)
         {
-            return Math.Max(
-                Math.Min(0.4 * buildingData.MeanRoofHeight, 0.1 * Math.Min(buildingData.BuildingLength, buildingData.BuildingWidth)),
-                Math.Max(0.04 * Math.Min(buildingData.BuildingLength, buildingData.BuildingWidth),
-                3)
-                );
+            throw new NotImplementedException();
         }
     }
 }

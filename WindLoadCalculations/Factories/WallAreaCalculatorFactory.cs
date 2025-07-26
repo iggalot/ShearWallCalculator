@@ -1,6 +1,5 @@
 ﻿using ShearWallCalculator.BuildingInfo;
 using ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator;
-using ShearWallCalculator.WindLoadCalculations.Chapter30_CC.AreaCalculator.ASCE7_22;
 using System;
 
 namespace ShearWallCalculator.WindLoadCalculations

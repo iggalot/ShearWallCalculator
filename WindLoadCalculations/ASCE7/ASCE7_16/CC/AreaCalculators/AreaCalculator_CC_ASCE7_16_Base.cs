@@ -9,8 +9,8 @@ namespace ShearWallCalculator.WindLoadCalculations.ASCE7.ASCE7_16.CC.AreaCalcula
         /// -- minimum of 0.4 * building height and 0.1 * min(building Length, building width)
         /// but not less than 4% of smallest dimension or 3 ft.
         /// </summary>
-        public override double CritDim_a { get=> ComputeCritDim_a(); }
-        public override bool HasCritDim { get; set; } = true;
+        public double CritDim_a { get=> ComputeCritDim_a(); }
+        public bool HasCritDim { get; set; } = true;
 
         public double ComputeCritDim_a()
         {

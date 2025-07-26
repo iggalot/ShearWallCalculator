@@ -1,10 +1,9 @@
 ﻿using ShearWallCalculator.BuildingInfo;
-using ShearWallCalculator.WindLoadCalculations.ASCE7.ASCE7_16.CC.AreaCalculators;
 using System;
 using System.Collections.Generic;
 using System.Windows;
 
-namespace ShearWallCalculator.WindLoadCalculations.Chapter30_CC.AreaCalculator.ASCE7_22
+namespace ShearWallCalculator.WindLoadCalculations
 {
     public class WallAreaCalculator_GableEnd_CC_ASCE7_22 : AreaCalculator_CC_ASCE7_22_Base
     {

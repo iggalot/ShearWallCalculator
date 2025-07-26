@@ -10,17 +10,17 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator
     {
         public abstract BuildingData buildingData { get; set; }
 
+        public virtual bool HasCritDim { get; set; } = false;
+        public virtual double CritDim_a { get; set; } = 0;
+
         /// <summary>
         /// Effective wind areas for roof To be overriden by the implementating class
         /// </summary>
         public Dictionary<int, EffectiveWindArea> effWindAreas { get; set; } = new Dictionary<int, EffectiveWindArea>();
 
-        public virtual double CritDim_a { get; set; } = 0;
-        public virtual bool HasCritDim { get; set; } = false;
-
         public virtual string Note { get; set; } = String.Empty;  // a holder for a note in the calculator -- useful for recording gable vs. non gable walls
 
-        public virtual void ComputeEffectiveWindAreas(WindParameters_Base p, BuildingData bldg_data, bool windIsParallelToRidge = true, Dictionary<string, double> optionalDimension = null) { }
+        public abstract void ComputeEffectiveWindAreas(WindParameters_Base p, BuildingData bldg_data, bool windIsParallelToRidge = true, Dictionary<string, double> optionalDimension = null);
 
 
         /// <summary>
