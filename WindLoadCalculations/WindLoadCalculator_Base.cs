@@ -2,6 +2,7 @@
 using ShearWallCalculator.WindLoadCalculations.Chapter30;
 using ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator;
 using ShearWallCalculator.WindLoadCalculations.Chapter30_CC.AreaCalculator.ASCE7_22;
+using ShearWallCalculator.WindLoadCalculations.Core.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -67,7 +68,7 @@ namespace ShearWallCalculator.WindLoadCalculations
         MWFRS_LR_Full = 5
     }
 
-    public abstract class WindLoadCalculator_Base
+    public abstract class WindLoadCalculator_Base : IWindLoadCalculator
     {
         public virtual ASCE7_Versions ASCEVersion { get; }
         public WindParameters_Base Parameters { get; set; }
@@ -225,7 +226,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             gcp = 0.0;
 
 
-            if (RoofAreaCalculator.effWindAreas.TryGetValue(id, out var area))
+            if (!RoofAreaCalculator.effWindAreas.TryGetValue(id, out var area))
                 return false;
 
             foreach (var gcp_curve in extGCpCurve_Roof.RoofCurves_Pos)
@@ -277,7 +278,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             gcp = 0.0;
 
 
-            if (WallAreaCalculator_BldgLength.effWindAreas.TryGetValue(id, out var area))
+            if (!WallAreaCalculator_BldgLength.effWindAreas.TryGetValue(id, out var area))
                 return false;
 
             foreach (var gcp_curve in extGCpCurve_Wall.WallCurves_Pos)
@@ -303,7 +304,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             gcp = 0.0;
 
 
-            if (WallAreaCalculator_BldgLength.effWindAreas.TryGetValue(id, out var area))
+            if (!WallAreaCalculator_BldgLength.effWindAreas.TryGetValue(id, out var area))
                 return false;
 
             foreach (var gcp_curve in extGCpCurve_Wall.WallCurves_Neg)
@@ -329,7 +330,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             gcp = 0.0;
 
 
-            if (WallAreaCalculator_BldgWidth.effWindAreas.TryGetValue(id, out var area))
+            if (!WallAreaCalculator_BldgWidth.effWindAreas.TryGetValue(id, out var area))
                 return false;
 
             foreach (var gcp_curve in extGCpCurve_Wall.WallCurves_Pos)
@@ -355,7 +356,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             gcp = 0.0;
 
 
-            if (WallAreaCalculator_BldgWidth.effWindAreas.TryGetValue(id, out var area))
+            if (!WallAreaCalculator_BldgWidth.effWindAreas.TryGetValue(id, out var area))
                 return false;
 
             foreach (var gcp_curve in extGCpCurve_Wall.WallCurves_Neg)
@@ -381,7 +382,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             gcp = 0.0;
 
 
-            if (RoofAreaCalculator.effWindAreas.TryGetValue(id, out var area))
+            if (!RoofAreaCalculator.effWindAreas.TryGetValue(id, out var area))
                 return false;
 
             foreach (var gcp_curve in extGCpCurve_Roof.OverhangCurves)
@@ -395,6 +396,10 @@ namespace ShearWallCalculator.WindLoadCalculations
 
             return false;
         }
+
+
+
+
 
 
         public void CalculatePressures()

@@ -225,29 +225,29 @@ namespace ShearWallCalculator.Helpers
             // Draw wall elevation outline
             Point[] points;
 
-            if (isGable && buildingData.RoofTypeIsSloped())
+            if (isGable && buildingData.RoofType == RoofTypes.ROOF_TYPE_GABLE)
             {
                 double halfLength = length / 2.0;
 
                 points = new[]
                 {
-            new Point(0, 0),
-            new Point(0, eaveHeight),
-            new Point(halfLength, ridgeHeight),
-            new Point(length, eaveHeight),
-            new Point(length, 0)
-        };
+                    new Point(0, 0),
+                    new Point(0, eaveHeight),
+                    new Point(halfLength, ridgeHeight),
+                    new Point(length, eaveHeight),
+                    new Point(length, 0)
+                };
             }
             else
             {
-                // Flat roof or ridge parallel to length
+                // Flat roof, hip roof or ridge parallel to length
                 points = new[]
                 {
-            new Point(0, 0),
-            new Point(0, eaveHeight),
-            new Point(length, eaveHeight),
-            new Point(length, 0)
-        };
+                    new Point(0, 0),
+                    new Point(0, eaveHeight),
+                    new Point(length, eaveHeight),
+                    new Point(length, 0)
+                };
             }
 
             Polygon wallOutline = new Polygon
@@ -417,29 +417,29 @@ namespace ShearWallCalculator.Helpers
             // Draw wall elevation outline
             Point[] points;
 
-            if (isGable && buildingData.RoofTypeIsSloped())
+            if (isGable && buildingData.RoofType == RoofTypes.ROOF_TYPE_GABLE)
             {
                 double halfLength = length / 2.0;
 
                 points = new[]
                 {
-            new Point(0, 0),
-            new Point(0, eaveHeight),
-            new Point(halfLength, ridgeHeight),
-            new Point(length, eaveHeight),
-            new Point(length, 0)
-        };
+                    new Point(0, 0),
+                    new Point(0, eaveHeight),
+                    new Point(halfLength, ridgeHeight),
+                    new Point(length, eaveHeight),
+                    new Point(length, 0)
+                };
             }
             else
             {
-                // Flat roof or ridge parallel to length
+                // Flat roof, hip, or ridge parallel to BuildingWidth
                 points = new[]
                 {
-            new Point(0, 0),
-            new Point(0, eaveHeight),
-            new Point(length, eaveHeight),
-            new Point(length, 0)
-        };
+                    new Point(0, 0),
+                    new Point(0, eaveHeight),
+                    new Point(length, eaveHeight),
+                    new Point(length, 0)
+                };
             }
 
             Polygon wallOutline = new Polygon
