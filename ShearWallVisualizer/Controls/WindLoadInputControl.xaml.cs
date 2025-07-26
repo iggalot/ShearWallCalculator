@@ -55,6 +55,7 @@ namespace ShearWallVisualizer.Controls
             if (bldg_data == null)
             {
                 bldg_data = new BuildingData();
+                bldg_data.ValidateRidgeDirection();
             }
 
             if (parameters == null)

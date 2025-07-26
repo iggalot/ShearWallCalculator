@@ -127,8 +127,6 @@ namespace ShearWallVisualizer
             // the function to run once the app has loaded.
             this.Loaded += (s, e) =>
             {
-                //buildingData = new BuildingData();
-
                 var ctrol_bldg_input = new BuildingDataInputControl(buildingData);
                 ctrol_bldg_input.BuildingDataInputComplete += BuildingDataInputControl_BuildingDataInputComplete;
                 tabBuildingDataControlTabItem.Content = ctrol_bldg_input;
@@ -410,6 +408,7 @@ namespace ShearWallVisualizer
         private void BuildingDataInputControl_BuildingDataInputComplete(object sender, BuildingDataInputControl.OnBuildingDataInputCompleteEventArgs e)
         {
             buildingData = e._bldg_data;
+            buildingData.ValidateRidgeDirection();  // check that the ridge direction is valid
 
             // Add the tabWindInputControlTabItem
             TabControlManager.ReAddTab(MainTabControl, "tabWindInputControlTabItem");
@@ -424,10 +423,13 @@ namespace ShearWallVisualizer
 
             
             // get the canvas from the building input control
-            var canvas = (tabBuildingDataControlTabItem.Content as BuildingDataInputControl).cnvBuildingPlanCanvas;
-            BuildingDrawer.DrawPlan(canvas, buildingData);
+            var plan_canvas = (tabBuildingDataControlTabItem.Content as BuildingDataInputControl).cnvBuildingPlanCanvas;
+            var bldG_length_elev_canvas = (tabBuildingDataControlTabItem.Content as BuildingDataInputControl).cnvBuildingLengthCanvas;
+            var bldG_width_elev_canvas = (tabBuildingDataControlTabItem.Content as BuildingDataInputControl).cnvBuildingWidthCanvas;
 
-
+            BuildingDrawer.DrawPlan(plan_canvas, buildingData);
+            BuildingDrawer.DrawElevation_BuildingLength(bldG_length_elev_canvas, buildingData);
+            BuildingDrawer.DrawElevation_BuildingWidth(bldG_width_elev_canvas, buildingData);
 
             // create the wind load input control
             var ctrol_wind_input = new WindLoadInputControl(buildingData, windVersion, windLoadParams);

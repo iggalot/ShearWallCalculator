@@ -111,6 +111,7 @@ namespace WindLoadDataExporter
                         RoofPitch = flatPitch,
                         EnclosureType = BuildingEnclosures.BLDG_ENCLOSED
                     };
+                    buildingData.ValidateRidgeDirection();
 
                     WindParameters_Base parameters = WindLoadParametersFactory.Create(
                         roofType, importanceCategory, windSpeed, exposure_cat, Kd, Ke, Kzt, calculation_type);
@@ -147,6 +148,7 @@ namespace WindLoadDataExporter
                                 RoofPitch = pitch,
                                 EnclosureType = BuildingEnclosures.BLDG_ENCLOSED
                             };
+                            buildingData.ValidateRidgeDirection();
 
                             WindParameters_Base parameters = WindLoadParametersFactory.Create(
                                 rtype, importanceCategory, windSpeed, exposure_cat, Kd, Ke, Kzt, calculation_type);
