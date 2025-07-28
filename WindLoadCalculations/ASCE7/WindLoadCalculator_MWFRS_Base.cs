@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator;
+using System;
 
 namespace ShearWallCalculator.WindLoadCalculations.WindLoadCalculators
 {

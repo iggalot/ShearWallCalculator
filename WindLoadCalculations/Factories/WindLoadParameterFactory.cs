@@ -12,8 +12,10 @@ namespace ShearWallCalculator.WindLoadCalculations
             WindExposureCategories exposureCategory,
             double kd,
             double kzt,
-            double importanceFactor,
-            WindLoadCalculationTypes analysisType)
+            double importanceFactor
+            //,
+            //WindLoadCalculationTypes analysisType
+            )
         {
             WindParameters_Base parameters;
 
@@ -40,7 +42,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             parameters.Kd = kd;
             parameters.Kzt = kzt;
             parameters.ImportanceFactor = importanceFactor;
-            parameters.AnalysisType = analysisType;
+            //parameters.AnalysisType = analysisType;
 
             return parameters;
         }

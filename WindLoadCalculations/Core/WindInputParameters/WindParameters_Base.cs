@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace ShearWallCalculator.WindLoadCalculations
 {
     // Wind Load Parameters class
-    public abstract class WindParameters_Base
+    public class WindParameters_Base
     {
         public string RiskCategory { get; set; } 
         public double WindSpeed { get; set; } = 150.0;
@@ -17,5 +17,25 @@ namespace ShearWallCalculator.WindLoadCalculations
         public WindLoadCalculationTypes AnalysisType { get; set; } = WindLoadCalculationTypes.COMPONENT_AND_CLADDING;
 
         public Dictionary<int, double> GCp_Values { get; set; } = new Dictionary<int, double>();
+
+        public WindParameters_Base Clone()
+        {
+            return new WindParameters_Base()
+            {
+                RiskCategory = this.RiskCategory,
+                WindSpeed = this.WindSpeed,
+                ExposureCategory = this.ExposureCategory,
+                EnclosureClassification = this.EnclosureClassification,
+                Kd = this.Kd,
+                Kzt = this.Kzt,
+                GustFactor = this.GustFactor,
+                ImportanceFactor = this.ImportanceFactor,
+                AnalysisType = this.AnalysisType,
+                GCp_Values = new Dictionary<int, double>(this.GCp_Values)
+            };
+        }
     }
+
+
+
 }

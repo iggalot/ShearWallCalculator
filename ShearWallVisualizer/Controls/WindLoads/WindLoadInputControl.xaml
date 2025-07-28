@@ -29,10 +29,10 @@
                         <TextBlock Text="ASCE 7 Version" VerticalAlignment="Center"/>
                         <ComboBox x:Name="cmbASCEVersion" Width="150" Margin="5"/>
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                    <!--<StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                         <TextBlock Text="Analysis Type" VerticalAlignment="Center" />
                         <ComboBox x:Name="cmbWindAnalysisType" Width="150" Margin="5" />
-                    </StackPanel>
+                    </StackPanel>-->
 
                     <!-- Wind Speed (Default to 115) -->
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">

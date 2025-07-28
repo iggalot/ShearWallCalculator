@@ -89,7 +89,7 @@ namespace ShearWallVisualizer.Controls
             }
 
             // populate the combo boxes.
-            cmbWindAnalysisType.Items.Clear();
+            //cmbWindAnalysisType.Items.Clear();
             cmbASCEVersion.Items.Clear();
 
 
@@ -99,10 +99,10 @@ namespace ShearWallVisualizer.Controls
             }
 
 
-            foreach (var value in Enum.GetValues(typeof(WindLoadCalculationTypes)))
-            {
-                cmbWindAnalysisType.Items.Add(value);
-            }
+            //foreach (var value in Enum.GetValues(typeof(WindLoadCalculationTypes)))
+            //{
+            //    cmbWindAnalysisType.Items.Add(value);
+            //}
 
             // populate existing parameters if any
             if (this.Parameters != null)
@@ -112,20 +112,20 @@ namespace ShearWallVisualizer.Controls
                 KdTextBox.Text = Parameters.Kd.ToString();
                 ImportanceFactorTextBox.Text = Parameters.ImportanceFactor.ToString();
 
-                bool found_analysis = false;
-                foreach (WindLoadCalculationTypes item in Enum.GetValues(typeof(WindLoadCalculationTypes)))
-                {
-                    if (item == Parameters.AnalysisType)
-                    {
-                        cmbWindAnalysisType.SelectedIndex = (int)item;
-                        found_analysis = true;
-                        break;
-                    }
-                }
-                if (found_analysis == false)
-                {
-                    throw new Exception("ERROR:  In WindLoadInputControl_Loaded() -- AnalysisType " + Parameters.AnalysisType.ToString() + " not found.");
-                }
+                //bool found_analysis = false;
+                //foreach (WindLoadCalculationTypes item in Enum.GetValues(typeof(WindLoadCalculationTypes)))
+                //{
+                //    if (item == Parameters.AnalysisType)
+                //    {
+                //        cmbWindAnalysisType.SelectedIndex = (int)item;
+                //        found_analysis = true;
+                //        break;
+                //    }
+                //}
+                //if (found_analysis == false)
+                //{
+                //    throw new Exception("ERROR:  In WindLoadInputControl_Loaded() -- AnalysisType " + Parameters.AnalysisType.ToString() + " not found.");
+                //}
 
                 bool found_version = false;
                 foreach (ASCE7_Versions item in Enum.GetValues(typeof(ASCE7_Versions)))
@@ -144,7 +144,7 @@ namespace ShearWallVisualizer.Controls
 
             } else
             {
-                cmbWindAnalysisType.SelectedIndex = (int)WindLoadCalculationTypes.COMPONENT_AND_CLADDING;
+                //cmbWindAnalysisType.SelectedIndex = (int)WindLoadCalculationTypes.COMPONENT_AND_CLADDING;
                 cmbASCEVersion.SelectedIndex = (int)ASCE7_Versions.ASCE_VER_7_16;
             }
         }
@@ -255,7 +255,7 @@ namespace ShearWallVisualizer.Controls
             double kzt = double.Parse(KztTextBox.Text);
             double importance = double.Parse(ImportanceFactorTextBox.Text);
             string risk = ((ComboBoxItem)RiskCategoryComboBox.SelectedItem).Content.ToString();
-            WindLoadCalculationTypes analysis_type = (WindLoadCalculationTypes)cmbWindAnalysisType.SelectedIndex;
+            //WindLoadCalculationTypes analysis_type = (WindLoadCalculationTypes)cmbWindAnalysisType.SelectedIndex;
             string exposure_string = ((ComboBoxItem)ExposureCategoryComboBox.SelectedItem).Content.ToString();
             WindExposureCategories exposure;
 
@@ -282,8 +282,10 @@ namespace ShearWallVisualizer.Controls
                 exposure, 
                 kd, 
                 kzt, 
-                importance, 
-                analysis_type
+                importance
+                
+                //, 
+                //analysis_type
                 );
 
             return windParams;

@@ -53,9 +53,18 @@ namespace ShearWallVisualizer
         public ASCE7_Versions windVersion { get; set;
         }
         public BuildingData buildingData { get; set; } = null;
-        public AreaCalculator_Base roofAreaCalculator { get; set; }
-        public WindLoadCalculator_Base windLoadCalculator_RidgeIsParallelToBuildingLength { get; set; }
-        public WindLoadCalculator_Base windLoadCalculator_RidgeIsPerpToBuildingLength { get; set; }
+
+        /// <summary>
+        /// The three calculators for this project
+        /// </summary>
+        public WindLoadCalculator_Base windLoadCalculator_MWFRS_Length { get; set; }
+        public WindLoadCalculator_Base windLoadCalculator_MWFRS_Width { get; set; }
+        public WindLoadCalculator_Base windLoadCalculator_CC { get; set; }
+
+
+        //public AreaCalculator_Base roofAreaCalculator { get; set; }
+        //public WindLoadCalculator_Base windLoadCalculator_RidgeIsParallelToBuildingLength { get; set; }
+        //public WindLoadCalculator_Base windLoadCalculator_RidgeIsPerpToBuildingLength { get; set; }
 
         public SimpsonCatalog simpsonCatalog { get; set; } = new SimpsonCatalog();  // contains the Simposon catalog connector and holddown data
 
@@ -437,15 +446,7 @@ namespace ShearWallVisualizer
             ctrol_wind_input.WindInputComplete += WindLoadInputControl_WindInputComplete;
             tabWindInputControlTabItem.Content = ctrol_wind_input;
 
-            // create the wind load results control
-            ContentControl ctrol_wind_mwfrs_results1 = new WindLoadResultsControl_MWFRS(windLoadCalculator_RidgeIsParallelToBuildingLength);
-            tabWindResultsTabItem_MWFRS_BldgLength.Content = ctrol_wind_mwfrs_results1;
 
-            ContentControl ctrol_wind_mwfrs_results2 = new WindLoadResultsControl_MWFRS(windLoadCalculator_RidgeIsPerpToBuildingLength);
-            tabWindResultsTabItem_MWFRS_BldgWidth.Content = ctrol_wind_mwfrs_results2;
-
-            var ctrol_wind_cc_results = new WindLoadResultsControl_CC(windLoadCalculator_RidgeIsParallelToBuildingLength);
-            tabWindResultsTabItem_CC.Content = ctrol_wind_cc_results;
 
             UpdateShearWallUI();
         }
@@ -462,6 +463,16 @@ namespace ShearWallVisualizer
             // create our calculators for each of the directions
             MakeCalculators();
 
+            //// create the wind load results control
+            //ContentControl ctrol_wind_mwfrs_results1 = new WindLoadResultsControl_MWFRS(windLoadCalculator_MWFRS_Length);
+            //tabWindResultsTabItem_MWFRS_BldgLength.Content = ctrol_wind_mwfrs_results1;
+
+            //ContentControl ctrol_wind_mwfrs_results2 = new WindLoadResultsControl_MWFRS(windLoadCalculator_MWFRS_Width);
+            //tabWindResultsTabItem_MWFRS_BldgWidth.Content = ctrol_wind_mwfrs_results2;
+
+            //var ctrol_wind_cc_results = new WindLoadResultsControl_CC(windLoadCalculator_CC);
+            //tabWindResultsTabItem_CC.Content = ctrol_wind_cc_results;
+
             WindLoadResultsControl_CC ccControl1;
             WindLoadResultsControl_MWFRS mwfrsControl1, mwfrsControl2;
             CreateAndAssignResultControls(out ccControl1, out mwfrsControl1, out mwfrsControl2);
@@ -470,9 +481,15 @@ namespace ShearWallVisualizer
             
             SetupMWFRSResultTab();
             
-            SetupComponentAndCladdingFigures(ccControl1);
-            DrawEffectiveAreas_OnCCResultCanvas(ccControl1);
-            PopulateComponentAndCladdingDataGrids(ccControl1);
+
+            // set up the component and cladding tabs
+            if(windLoadCalculator_CC.Parameters.AnalysisType == WindLoadCalculationTypes.COMPONENT_AND_CLADDING)
+            {
+                SetupComponentAndCladdingFigures(ccControl1);
+                DrawEffectiveAreas_OnCCResultCanvas(ccControl1);
+                PopulateComponentAndCladdingDataGrids(ccControl1);
+            }
+
             
             UpdateShearWallUI();
         }
@@ -493,26 +510,41 @@ namespace ShearWallVisualizer
 
             // Create Calculator #1 as the default orientation of the building -- assuming wind always acts from left of the plan view -- WW wall will be 
             // the BuildingWidth wall on left.
-            WindLoadCalculator_Base calculator1;
-            calculator1 = WindLoadCalculatorFactory.Create(windVersion, windLoadParams.AnalysisType, windLoadParams, bldg_data1);
-            calculator1.CreateAreaCalculators(); // create the wind area regions for this calculator
-            calculator1.CalculatePressures(); // do the computations
+            WindLoadCalculator_Base mwfrs_calc_building_length;
+            var mwfrs_params = windLoadParams.Clone();
+            mwfrs_params.AnalysisType = WindLoadCalculationTypes.MWFRS;
+            mwfrs_calc_building_length = WindLoadCalculatorFactory.Create(windVersion, WindLoadCalculationTypes.MWFRS, mwfrs_params, bldg_data1);
+            mwfrs_calc_building_length.CreateAreaCalculators(); // create the wind area regions for this calculator
+            mwfrs_calc_building_length.CalculatePressures(); // do the computations
 
-            WindLoadCalculator_Base calculator2;
-            calculator2 = WindLoadCalculatorFactory.Create(windVersion, windLoadParams.AnalysisType, windLoadParams, bldg_data2);
-            calculator2.CreateAreaCalculators(); // create the wind area regions for this calculator
-            calculator2.CalculatePressures(); // do the computations
+            // Create the second mwfrs calculator
+            WindLoadCalculator_Base mwfrs_calc_building_width;
+            mwfrs_calc_building_width = WindLoadCalculatorFactory.Create(windVersion, WindLoadCalculationTypes.MWFRS, mwfrs_params, bldg_data2);
+            mwfrs_calc_building_width.CreateAreaCalculators(); // create the wind area regions for this calculator
+            mwfrs_calc_building_width.CalculatePressures(); // do the computations
+
+            // create the CC calculator from the building length parameters of building defintion 1
+            WindLoadCalculator_Base cc_calc_building_width;
+            var cc_params = windLoadParams.Clone();
+            cc_params.AnalysisType = WindLoadCalculationTypes.COMPONENT_AND_CLADDING;
+            cc_calc_building_width = WindLoadCalculatorFactory.Create(windVersion, WindLoadCalculationTypes.COMPONENT_AND_CLADDING, cc_params, bldg_data1);
+            cc_calc_building_width.CreateAreaCalculators(); // create the wind area regions for this calculator
+            cc_calc_building_width.CalculatePressures(); // do the computations
+
 
             // Assign the wind load calculators
             if (buildingData.RidgeDirection == RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH)
             {
-                windLoadCalculator_RidgeIsParallelToBuildingLength = calculator1;
-                windLoadCalculator_RidgeIsPerpToBuildingLength = calculator2;
+                windLoadCalculator_MWFRS_Length = mwfrs_calc_building_length;
+                windLoadCalculator_MWFRS_Width= mwfrs_calc_building_width;
+                windLoadCalculator_CC = cc_calc_building_width;
             }
             else
             {
-                windLoadCalculator_RidgeIsParallelToBuildingLength = calculator2;
-                windLoadCalculator_RidgeIsPerpToBuildingLength = calculator1;
+                windLoadCalculator_MWFRS_Length = mwfrs_calc_building_width;
+                windLoadCalculator_MWFRS_Width = mwfrs_calc_building_length;
+                windLoadCalculator_CC = cc_calc_building_width;
+
             }
         }
 
@@ -525,13 +557,13 @@ namespace ShearWallVisualizer
         /// <param name="mwfrsControl2"></param>
         private void CreateAndAssignResultControls(out WindLoadResultsControl_CC ccControl1, out WindLoadResultsControl_MWFRS mwfrsControl1, out WindLoadResultsControl_MWFRS mwfrsControl2)
         {
-            mwfrsControl1 = new WindLoadResultsControl_MWFRS(windLoadCalculator_RidgeIsParallelToBuildingLength);
+            mwfrsControl1 = new WindLoadResultsControl_MWFRS(windLoadCalculator_MWFRS_Length);
             tabWindResultsTabItem_MWFRS_BldgLength.Content = mwfrsControl1;
 
-            mwfrsControl2 = new WindLoadResultsControl_MWFRS(windLoadCalculator_RidgeIsPerpToBuildingLength);
+            mwfrsControl2 = new WindLoadResultsControl_MWFRS(windLoadCalculator_MWFRS_Width);
             tabWindResultsTabItem_MWFRS_BldgWidth.Content = mwfrsControl2;
 
-            ccControl1 = new WindLoadResultsControl_CC(windLoadCalculator_RidgeIsParallelToBuildingLength);
+            ccControl1 = new WindLoadResultsControl_CC(windLoadCalculator_CC);
             tabWindResultsTabItem_CC.Content = ccControl1;
 
             TabControlManager.ReAddTab(MainTabControl, "tabWindResultsTabItem_CC");
@@ -553,7 +585,7 @@ namespace ShearWallVisualizer
                 canvas.Children.Clear();
                 double scale = Math.Min(canvas.ActualWidth / buildingData.BuildingWidth, canvas.ActualHeight / buildingData.BuildingLength);
                 
-                foreach (var area in windLoadCalculator_RidgeIsParallelToBuildingLength.RoofAreaCalculator.effWindAreas)
+                foreach (var area in windLoadCalculator_CC.RoofAreaCalculator.effWindAreas)
                 {
                     WindLoadInputControl.DrawEffectiveWindArea(canvas, area.Value, scale, GetColorForRegion(area.Value.Label_Short));
                 }
@@ -562,8 +594,8 @@ namespace ShearWallVisualizer
 
         private void PopulateComponentAndCladdingDataGrids(WindLoadResultsControl_CC ccControl)
         {
-            var figureCC_Roof = windLoadCalculator_RidgeIsParallelToBuildingLength.extGCpCurve_Roof;
-            var figureCC_Wall = windLoadCalculator_RidgeIsParallelToBuildingLength.extGCpCurve_Wall;
+            var figureCC_Roof = windLoadCalculator_CC.extGCpCurve_Roof;
+            var figureCC_Wall = windLoadCalculator_CC.extGCpCurve_Wall;
 
             if (ccControl == null || figureCC_Roof == null || figureCC_Wall == null) return;
 
@@ -571,11 +603,11 @@ namespace ShearWallVisualizer
 
             // For the BuildingLength wall
             CreateCC_DataGrid_Walls(figureCC_Wall, ccControl.WallsResultsDataGrid_SideWall,
-                windLoadCalculator_RidgeIsParallelToBuildingLength.WallAreaCalculator_BldgLength.effWindAreas, "building_length");
+                windLoadCalculator_CC.WallAreaCalculator_BldgLength.effWindAreas, "building_length");
 
             // For the BuildingWidth wall
             CreateCC_DataGrid_Walls(figureCC_Wall, ccControl.WallsResultsDataGrid_EndWall,
-                windLoadCalculator_RidgeIsParallelToBuildingLength.WallAreaCalculator_BldgWidth.effWindAreas, "building_width");
+                windLoadCalculator_CC.WallAreaCalculator_BldgWidth.effWindAreas, "building_width");
         }
 
         private void DrawEffectiveAreas_OnCCResultCanvas(WindLoadResultsControl_CC ccControl1)
@@ -587,7 +619,7 @@ namespace ShearWallVisualizer
             resultCanvasCC.Children.Clear();
             double scale = Math.Min(resultCanvasCC.Width / buildingData.BuildingWidth, resultCanvasCC.Height / buildingData.BuildingLength);
 
-            foreach (var area in windLoadCalculator_RidgeIsParallelToBuildingLength.RoofAreaCalculator.effWindAreas)
+            foreach (var area in windLoadCalculator_CC.RoofAreaCalculator.effWindAreas)
             {
                 WindLoadInputControl.DrawEffectiveWindArea(resultCanvasCC, area.Value, scale, GetColorForRegion(area.Value.Label_Short));
             }
@@ -613,8 +645,8 @@ namespace ShearWallVisualizer
             var wallTitle = ccControl.txtFigureTitle_Walls;
             var wallCriteria = ccControl.txtFigureCriteria_Walls;
 
-            var figureCC_Roof = windLoadCalculator_RidgeIsParallelToBuildingLength.extGCpCurve_Roof;
-            var figureCC_Wall = windLoadCalculator_RidgeIsParallelToBuildingLength.extGCpCurve_Wall;
+            var figureCC_Roof = windLoadCalculator_CC.extGCpCurve_Roof;
+            var figureCC_Wall = windLoadCalculator_CC.extGCpCurve_Wall;
 
             roofTitle.Text = figureCC_Roof?.ChartTitle;
             roofCriteria.Text = figureCC_Roof?.ChartCriteria;
@@ -706,33 +738,33 @@ namespace ShearWallVisualizer
             //data_grid.Columns.Add(col_overhang_press);
 
             var windLoadResults = new List<CC_WindLoadResults>();
-            foreach (KeyValuePair<int, EffectiveWindArea> area in windLoadCalculator_RidgeIsParallelToBuildingLength.RoofAreaCalculator.effWindAreas)
+            foreach (KeyValuePair<int, EffectiveWindArea> area in windLoadCalculator_CC.RoofAreaCalculator.effWindAreas)
             {
 
                 CC_WindLoadResults data = new CC_WindLoadResults();
                 data.Name = area.Value.Label_Short;
                 data.Region = area.Value.Label_Short;
                 data.Area = area.Value.Area;
-                data.qh = windLoadCalculator_RidgeIsParallelToBuildingLength.CalculateDynamicWindPressure(buildingData.MeanRoofHeight);
+                data.qh = windLoadCalculator_CC.CalculateDynamicWindPressure(buildingData.MeanRoofHeight);
 
                 double pressure_pos;
                 
                 // positive max net pressure
-                if (windLoadCalculator_RidgeIsParallelToBuildingLength.TryGetPressureNet_Pos_Roof(area.Value, out pressure_pos))
+                if (windLoadCalculator_CC.TryGetPressureNet_Pos_Roof(area.Value, out pressure_pos))
                 {
                     data.GCp_pos = figureCC.RoofCurves_Pos[area.Value.Label_Full].Evaluate(area.Value.Area);
                     data.PosPress = pressure_pos;
                 }
 
                 // negative max net pressure
-                if (windLoadCalculator_RidgeIsParallelToBuildingLength.TryGetPressureNet_Neg_Roof(area.Value, out pressure_pos))
+                if (windLoadCalculator_CC.TryGetPressureNet_Neg_Roof(area.Value, out pressure_pos))
                 {
                     data.GCp_neg = figureCC.RoofCurves_Neg[area.Value.Label_Full].Evaluate(area.Value.Area);
                     data.NegPress = pressure_pos;
                 }
 
                 // negative max net pressure
-                if (windLoadCalculator_RidgeIsParallelToBuildingLength.TryGetPressureNet_Overhang_Roof(area.Value, out pressure_pos))
+                if (windLoadCalculator_CC.TryGetPressureNet_Overhang_Roof(area.Value, out pressure_pos))
                 {
                     data.OverhangPress = pressure_pos;
                 }
@@ -841,7 +873,7 @@ namespace ShearWallVisualizer
                 data.Name = area.Value.Label_Short;
                 data.Region = area.Value.Label_Short;
                 data.Area = area.Value.Area;
-                data.qh = windLoadCalculator_RidgeIsParallelToBuildingLength.CalculateDynamicWindPressure(buildingData.MeanRoofHeight);
+                data.qh = windLoadCalculator_CC.CalculateDynamicWindPressure(buildingData.MeanRoofHeight);
 
                 double pressure_pos;
                 double pressure_neg;
@@ -849,14 +881,14 @@ namespace ShearWallVisualizer
                 if (wall_type == "building_length")
                 {
                     // positive max net pressure
-                    if (windLoadCalculator_RidgeIsParallelToBuildingLength.TryGetPressureNet_Pos_BuildingLengthWall(area.Value, out pressure_pos))
+                    if (windLoadCalculator_CC.TryGetPressureNet_Pos_BuildingLengthWall(area.Value, out pressure_pos))
                     {
                         data.GCp_pos = figureCC.WallCurves_Pos[area.Value.Label_Full].Evaluate(area.Value.Area);
                         data.PosPress = pressure_pos;
                     }
 
                     // negative max net pressure
-                    if (windLoadCalculator_RidgeIsParallelToBuildingLength.TryGetPressureNet_Neg_BuildingLengthWall(area.Value, out pressure_neg))
+                    if (windLoadCalculator_CC.TryGetPressureNet_Neg_BuildingLengthWall(area.Value, out pressure_neg))
                     {
                         data.GCp_neg = figureCC.WallCurves_Neg[area.Value.Label_Full].Evaluate(area.Value.Area);
                         data.NegPress = pressure_neg;
@@ -865,14 +897,14 @@ namespace ShearWallVisualizer
                 else if (wall_type == "building_width")
                 {
                     // positive max net pressure
-                    if (windLoadCalculator_RidgeIsParallelToBuildingLength.TryGetPressureNet_Pos_BuildingWidthWall(area.Value, out pressure_pos))
+                    if (windLoadCalculator_CC.TryGetPressureNet_Pos_BuildingWidthWall(area.Value, out pressure_pos))
                     {
                         data.GCp_pos = figureCC.WallCurves_Pos[area.Value.Label_Full].Evaluate(area.Value.Area);
                         data.PosPress = pressure_pos;
                     }
 
                     // negative max net pressure
-                    if (windLoadCalculator_RidgeIsParallelToBuildingLength.TryGetPressureNet_Neg_BuildingWidthWall(area.Value, out pressure_neg))
+                    if (windLoadCalculator_CC.TryGetPressureNet_Neg_BuildingWidthWall(area.Value, out pressure_neg))
                     {
                         data.GCp_neg = figureCC.WallCurves_Neg[area.Value.Label_Full].Evaluate(area.Value.Area);
                         data.NegPress = pressure_neg;

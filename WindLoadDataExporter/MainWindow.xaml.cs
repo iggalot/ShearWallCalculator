@@ -114,7 +114,9 @@ namespace WindLoadDataExporter
                     buildingData.ValidateRidgeDirection();
 
                     WindParameters_Base parameters = WindLoadParametersFactory.Create(
-                        roofType, importanceCategory, windSpeed, exposure_cat, Kd, Ke, Kzt, calculation_type);
+                        roofType, importanceCategory, windSpeed, exposure_cat, Kd, Ke, Kzt);
+                    parameters.AnalysisType = calculation_type;
+
 
 
 
@@ -151,7 +153,8 @@ namespace WindLoadDataExporter
                             buildingData.ValidateRidgeDirection();
 
                             WindParameters_Base parameters = WindLoadParametersFactory.Create(
-                                rtype, importanceCategory, windSpeed, exposure_cat, Kd, Ke, Kzt, calculation_type);
+                                rtype, importanceCategory, windSpeed, exposure_cat, Kd, Ke, Kzt);
+                            parameters.AnalysisType = calculation_type;
 
                             WindLoadCalculator_Base calculator = WindLoadCalculatorFactory.Create(
                                 version, calculation_type, parameters, buildingData);

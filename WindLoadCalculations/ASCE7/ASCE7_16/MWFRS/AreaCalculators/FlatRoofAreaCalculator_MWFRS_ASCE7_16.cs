@@ -26,20 +26,20 @@ namespace ShearWallCalculator.WindLoadCalculations
 
         public override void ComputeEffectiveWindAreas(WindParameters_Base parameters, BuildingData bldg_data, bool windIsParallelToRidge = false, Dictionary<string, double> optionalParams = null)
         {
-            if (optionalParams == null) return;
+            //if (optionalParams == null) return;
 
             double building_length = bldg_data.BuildingLength;
             double building_width = bldg_data.BuildingWidth;
 
-            if (optionalParams.ContainsKey("BuildingLength") && optionalParams.ContainsKey("BuildingWidth"))
-            {
-                building_length = optionalParams["BuildingLength"];
-                building_width = optionalParams["BuildingWidth"];
-            }
-            else
-            {
-                throw new Exception("ERROR: Building length and width are required in FlatRoofAreaCalculator_MWFRS_ASCE7_16 constructor.");
-            }
+            //if (optionalParams.ContainsKey("BuildingLength") && optionalParams.ContainsKey("BuildingWidth"))
+            //{
+            //    building_length = optionalParams["BuildingLength"];
+            //    building_width = optionalParams["BuildingWidth"];
+            //}
+            //else
+            //{
+            //    throw new Exception("ERROR: Building length and width are required in FlatRoofAreaCalculator_MWFRS_ASCE7_16 constructor.");
+            //}
 
             double h = bldg_data.MeanRoofHeight;
 
