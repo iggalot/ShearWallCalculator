@@ -82,12 +82,10 @@ namespace ShearWallVisualizer.Controls
             } else
             {
                 spBuildingData.Visibility = Visibility.Visible;
-                tbRoofType.Text = this.bldgData.RoofType.ToString();
-                tbBuildingLength.Text = this.bldgData.BuildingLength.ToString("F2");
-                tbBuildingWidth.Text = this.bldgData.BuildingWidth.ToString("F2");
-                tbBuildingHeight.Text = this.bldgData.BuildingHeight.ToString("F2");
-                tbRoofPitch.Text = this.bldgData.RoofPitch.ToString("F2");
-                tbMeanRoofHeight.Text = this.bldgData.MeanRoofHeight.ToString("F2");
+            
+                spBuildingData.Children.Clear();
+                BuildingInfoSummaryControl ctrl = new BuildingInfoSummaryControl(bldgData);
+                spBuildingData.Children.Add(ctrl);
             }
 
             // populate the combo boxes.

@@ -58,8 +58,11 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="Controls\BuildingDataInputControl.xaml.cs">
+    <Compile Include="Controls\BuildingData\BuildingDataInputControl.xaml.cs">
       <DependentUpon>BuildingDataInputControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\BuildingData\BuildingInfoSummaryControl.xaml.cs">
+      <DependentUpon>BuildingInfoSummaryControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="Controls\ImagePreviewControl.xaml.cs">
       <DependentUpon>ImagePreviewControl.xaml</DependentUpon>
@@ -79,7 +82,11 @@
     <Compile Include="Controls\DiaphragmSystemControl.xaml.cs">
       <DependentUpon>DiaphragmSystemControl.xaml</DependentUpon>
     </Compile>
-    <Page Include="Controls\BuildingDataInputControl.xaml">
+    <Page Include="Controls\BuildingData\BuildingDataInputControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\BuildingData\BuildingInfoSummaryControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

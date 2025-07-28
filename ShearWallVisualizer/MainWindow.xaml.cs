@@ -466,15 +466,14 @@ namespace ShearWallVisualizer
             WindLoadResultsControl_MWFRS mwfrsControl1, mwfrsControl2;
             CreateAndAssignResultControls(out ccControl1, out mwfrsControl1, out mwfrsControl2);
 
-            DrawInputCanvas(); 
-
-            if (windLoadParams.AnalysisType == WindLoadCalculationTypes.COMPONENT_AND_CLADDING)
-                SetupComponentAndCladdingFigures(ccControl1);
-            else if (windLoadParams.AnalysisType == WindLoadCalculationTypes.MWFRS)
-                SetupMWFRSResultTab();
-
-            DrawEffectiveAreas_CC_OnResultCanvas(ccControl1);
+            DrawEffectiveAreas_OnWindLoadParameterInputCanvas();
+            
+            SetupMWFRSResultTab();
+            
+            SetupComponentAndCladdingFigures(ccControl1);
+            DrawEffectiveAreas_OnCCResultCanvas(ccControl1);
             PopulateComponentAndCladdingDataGrids(ccControl1);
+            
             UpdateShearWallUI();
         }
 
@@ -517,7 +516,13 @@ namespace ShearWallVisualizer
             }
         }
 
-
+        /// <summary>
+        /// Assigns the two calculators to the appropriate tabs.
+        /// Since CC is the same for both, only the first calculator is used on that tab.
+        /// </summary>
+        /// <param name="ccControl1"></param>
+        /// <param name="mwfrsControl1"></param>
+        /// <param name="mwfrsControl2"></param>
         private void CreateAndAssignResultControls(out WindLoadResultsControl_CC ccControl1, out WindLoadResultsControl_MWFRS mwfrsControl1, out WindLoadResultsControl_MWFRS mwfrsControl2)
         {
             mwfrsControl1 = new WindLoadResultsControl_MWFRS(windLoadCalculator_RidgeIsParallelToBuildingLength);
@@ -534,14 +539,20 @@ namespace ShearWallVisualizer
             TabControlManager.ReAddTab(MainTabControl, "tabWindResultsTabItem_MWFRS_BldgWidth");
         }
 
-        private void DrawInputCanvas()
+        /// <summary>
+        /// Draws the effective wind areas on the wind load parameter input canvas
+        /// </summary>
+        private void DrawEffectiveAreas_OnWindLoadParameterInputCanvas()
         {
             if (tabWindInputControlTabItem.Content is WindLoadInputControl inputControl)
             {
                 var canvas = inputControl.cnvWindLoadInputCanvas;
-                canvas.Children.Clear();
 
+                if (canvas == null) return;
+
+                canvas.Children.Clear();
                 double scale = Math.Min(canvas.ActualWidth / buildingData.BuildingWidth, canvas.ActualHeight / buildingData.BuildingLength);
+                
                 foreach (var area in windLoadCalculator_RidgeIsParallelToBuildingLength.RoofAreaCalculator.effWindAreas)
                 {
                     WindLoadInputControl.DrawEffectiveWindArea(canvas, area.Value, scale, GetColorForRegion(area.Value.Label_Short));
@@ -567,13 +578,9 @@ namespace ShearWallVisualizer
                 windLoadCalculator_RidgeIsParallelToBuildingLength.WallAreaCalculator_BldgWidth.effWindAreas, "building_width");
         }
 
-        private void DrawEffectiveAreas_CC_OnResultCanvas(WindLoadResultsControl_CC ccControl1)
+        private void DrawEffectiveAreas_OnCCResultCanvas(WindLoadResultsControl_CC ccControl1)
         {
-            Canvas resultCanvasCC = null;
-            if(windLoadParams.AnalysisType == WindLoadCalculationTypes.COMPONENT_AND_CLADDING)
-            {
-                resultCanvasCC = ccControl1.cnvWindLoadResultCanvasCC;
-            }
+            Canvas resultCanvasCC = ccControl1.cnvWindLoadResultCanvasCC; ;
 
             if (resultCanvasCC == null) return;
 

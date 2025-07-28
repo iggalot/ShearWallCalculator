@@ -5,8 +5,8 @@ namespace ShearWallCalculator.WindLoadCalculations
 {
     public class AreaCalculator_CC_ASCE7_22_Base : AreaCalculator_ASCE7_22_Base
     {
-        public double CritDim_a { get=> ComputeCritDim_a(); }
-        public bool HasCritDim { get; set; } = true;
+        public override double CritDim_a { get=> ComputeCritDim_a(); }
+        public override bool HasCritDim { get; set; } = true;
 
         public double ComputeCritDim_a()
         {

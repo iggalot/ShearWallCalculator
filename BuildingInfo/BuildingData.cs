@@ -41,7 +41,16 @@ namespace ShearWallCalculator.BuildingInfo
         /// The mean roof height of the building, h per ASCE7
         /// </summary>
         public double MeanRoofHeight { get => ComputeMeanRoofHeight(); }
-        public double RidgeHeight { get => ComputeMeanRoofHeight(); }
+        public double RidgeHeight { get => ComputeRidgeHeight(); }
+
+        /// <summary>
+        /// Helper calclations
+        /// </summary>
+        public double h_Over_L { get => MeanRoofHeight / BuildingLength; }
+        public double h_Over_B { get => MeanRoofHeight / BuildingWidth; }
+        public double L_Over_B { get => BuildingLength / BuildingWidth; }   
+
+
 
 
         /// <summary>
@@ -90,29 +99,9 @@ namespace ShearWallCalculator.BuildingInfo
 
         private double ComputeMeanRoofHeight()
         {
-            if (RoofType == RoofTypes.ROOF_TYPE_HIP)
-            {
-                double h1 = Math.Tan(RoofPitch * Math.PI / 180.0) * BuildingLength / 2.0;
-                double h2 = Math.Tan(RoofPitch * Math.PI / 180.0) * BuildingWidth / 2.0;
-                return 0.5*(BuildingHeight + BuildingHeight + Math.Min(h1, h2))  // mean roof height is average of the peak height and the wall height
-                    ;
-            }
-            else if (RoofType == RoofTypes.ROOF_TYPE_GABLE)
-            {
-                double h1 = Math.Tan(RoofPitch * Math.PI / 180.0) * BuildingLength / 2.0;
-                double h2 = Math.Tan(RoofPitch * Math.PI / 180.0) * BuildingWidth / 2.0;
-                return 0.5 * (BuildingHeight + BuildingHeight + Math.Min(h1, h2)); // // mean roof height is average of the peak height and the wall height
-            } 
-            else if (RoofType == RoofTypes.ROOF_TYPE_FLAT)
-            {
-                return BuildingHeight;
-            }
-            else
-            {
-                throw new NotImplementedException("ERROR: In ComputeMeanRoofHeight(), Roof type " + RoofType + " is not implemented");
-
-            }
+            return 0.5 * (BuildingHeight + ComputeRidgeHeight());
         }
+
 
         public double ComputeRidgeHeight()
         {
@@ -127,26 +116,12 @@ namespace ShearWallCalculator.BuildingInfo
                 {
                     return BuildingHeight + Math.Tan(RoofPitch * Math.PI / 180.0) * BuildingWidth / 2.0;
                 }
-                if (RidgeDirection == RidgeDirections.RIDGE_DIR_PERP_TO_BLDGLENGTH)
-                {
-                    return BuildingHeight + Math.Tan(RoofPitch * Math.PI / 180.0) * BuildingLength / 2.0;
-                }
-                else if (RidgeDirection == RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH)
-                {
-                    return BuildingHeight + Math.Tan(RoofPitch * Math.PI / 180.0) * BuildingWidth / 2.0;
-                }
             }
             if(RoofType == RoofTypes.ROOF_TYPE_HIP)
             {
-                if (RidgeDirection == RidgeDirections.RIDGE_DIR_NONE)
-                {
-                    return BuildingHeight;
-                }
-                else
-                {
-                    return BuildingHeight + Math.Tan(RoofPitch * Math.PI / 180.0) * Math.Min(BuildingLength, BuildingWidth) / 2.0;
-                }
+                return BuildingHeight + Math.Tan(RoofPitch * Math.PI / 180.0) * Math.Min(BuildingLength, BuildingWidth) / 2.0;
             }
+
             return BuildingHeight;
 
         }

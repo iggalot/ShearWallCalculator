@@ -29,31 +29,13 @@
                                 Orientation="Vertical"
                                 Margin="10"
                                 HorizontalAlignment="Left">
+                        <StackPanel x:Name="spBuildingData" Background="LightGray" Margin="5"/>
 
-                        <!-- Basic Properties -->
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-                            <TextBlock Text="h (ft) = " VerticalAlignment="Center"/>
-                            <TextBlock Name="tbl_h" Width="150"/>
-                            <StackPanel Orientation="Horizontal" Name="sp_a">
-                                <TextBlock Text="a (ft) = " VerticalAlignment="Center" Margin="10,10,0,0"/>
-                                <TextBlock Name="tbl_a" Width="150" Text="Junk"/>
-                            </StackPanel>
+                        <StackPanel Orientation="Horizontal" x:Name="sp_a">
+                            <TextBlock Text="Crit dim, a " Margin="5 0 5 0"/>
+                            <TextBlock x:Name="tbl_a" Margin="5 0 5 0"/>
+                            <TextBlock Text="ft" Margin="5 0 5 0"/>
                         </StackPanel>
-
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-                            <TextBlock Text="RoofType = " VerticalAlignment="Center"/>
-                            <TextBlock Name="tbl_roof_type" Width="150"/>
-                            <TextBlock Text="theta (deg) = " VerticalAlignment="Center" Margin="10,10,0,0"/>
-                            <TextBlock Name="tbl_theta" Width="150"/>
-                        </StackPanel>
-
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                            <TextBlock Text="h/L = " VerticalAlignment="Center"/>
-                            <TextBlock Name="tbl_hOverL" Width="150"/>
-                            <TextBlock Text="h/B = " VerticalAlignment="Center" Margin="10,0,0,0"/>
-                            <TextBlock Name="tbl_hOverB" Width="150"/>
-                        </StackPanel>
-
                         <!-- Scrollable Results -->
                         <ScrollViewer VerticalScrollBarVisibility="Auto" Height="400">
                             <StackPanel Orientation="Vertical">

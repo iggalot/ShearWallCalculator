@@ -20,46 +20,7 @@
 
         <StackPanel Orientation="Horizontal">
             <StackPanel Orientation="Vertical">
-                <StackPanel x:Name="spBuildingData" Background="LightGray" Margin="5">
-                    <StackPanel Orientation="Horizontal">
-
-                        <StackPanel Orientation="Vertical">
-                            <!-- Building Height -->
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                                <TextBlock Text="Building Height (h)" VerticalAlignment="Center"/>
-                                <TextBlock x:Name="tbBuildingHeight" Width="150" />
-                            </StackPanel>
-
-                            <!-- Building Length -->
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                                <TextBlock Text="Building Length (L)" VerticalAlignment="Center" Margin="5"/>
-                                <TextBlock x:Name="tbBuildingLength" Width="150"/>
-                            </StackPanel>
-
-                            <!-- Building Width -->
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                                <TextBlock Text="Building Width (B)" VerticalAlignment="Center"/>
-                                <TextBlock x:Name="tbBuildingWidth" Width="150" />
-                            </StackPanel>
-
-                            <!-- Roof Type -->
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                                <TextBlock Text="Roof Type" VerticalAlignment="Center"/>
-                                <TextBlock x:Name="tbRoofType" Width="150"/>
-                            </StackPanel>
-
-                            <!-- Roof Pitch -->
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                                <TextBlock Text="Roof Pitch (θ)" VerticalAlignment="Center"/>
-                                <TextBlock x:Name="tbRoofPitch" Width="150"/>
-                            </StackPanel>
-                        </StackPanel>
-                        <StackPanel Orientation="Vertical" Background="LightBlue">
-                            <TextBlock Text="Mean Roof ht (ft)"/>
-                            <TextBlock x:Name="tbMeanRoofHeight"/>
-                        </StackPanel>
-                    </StackPanel>
-                </StackPanel>
+                <StackPanel x:Name="spBuildingData" Background="LightGray" Margin="5"/>
 
                 <!-- Wind Load Inputs -->
                 <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Vertical" HorizontalAlignment="Left" Margin="5">
