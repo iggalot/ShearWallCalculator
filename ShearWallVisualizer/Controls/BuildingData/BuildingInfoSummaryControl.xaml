@@ -63,6 +63,10 @@
                         <TextBlock Text="h/L = " Margin="5 0 5 0"/>
                         <TextBlock x:Name="tbh_Over_L" Margin="5 0 5 0"/>
                     </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="L/B = " Margin="5 0 5 0"/>
+                        <TextBlock x:Name="tbL_Over_B" Margin="5 0 5 0"/>
+                    </StackPanel>
                 </StackPanel>
             </StackPanel>
         </StackPanel>
