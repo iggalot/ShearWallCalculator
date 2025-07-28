@@ -32,8 +32,6 @@ namespace ShearWallVisualizer.Controls
                 tbh_Over_B.Text = this.buildingData.h_Over_B.ToString("F2");
                 tbh_Over_L.Text = this.buildingData.h_Over_L.ToString("F2");
                 tbL_Over_B.Text = this.buildingData.L_Over_B.ToString("F2");
-
-
             };
         }
     }

@@ -49,10 +49,10 @@ namespace ShearWallCalculator.Helpers
             // Draw building outline
             var corners = new[]
             {
-        new Point(0, 0),
-        new Point(length, 0),
-        new Point(length, width),
-        new Point(0, width),
+                new Point(0, 0),
+                new Point(length, 0),
+                new Point(length, width),
+                new Point(0, width),
     };
 
             Polygon outline = new Polygon
@@ -213,7 +213,7 @@ namespace ShearWallCalculator.Helpers
                 );
             }
 
-            // Draw wall elevation outline
+            // Draw wall elevation outline without bottom line
             Point[] points;
 
             if (isGable && buildingData.RoofType == RoofTypes.ROOF_TYPE_GABLE)
@@ -222,36 +222,55 @@ namespace ShearWallCalculator.Helpers
 
                 points = new[]
                 {
-                    new Point(0, 0),
-                    new Point(0, eaveHeight),
-                    new Point(halfLength, ridgeHeight),
-                    new Point(length, eaveHeight),
-                    new Point(length, 0)
-                };
+            new Point(0, 0),                         // Bottom-left
+            new Point(0, eaveHeight),               // Left wall
+            new Point(halfLength, ridgeHeight),     // Roof peak
+            new Point(length, eaveHeight),          // Right wall top
+            new Point(length, 0)                    // Bottom-right
+            // NOTE: No return to (0, 0)
+        };
             }
             else
             {
-                // Flat roof, hip roof or ridge parallel to length
+                // Flat, hip, or ridge parallel
                 points = new[]
                 {
-                    new Point(0, 0),
-                    new Point(0, eaveHeight),
-                    new Point(length, eaveHeight),
-                    new Point(length, 0)
-                };
+            new Point(0, 0),
+            new Point(0, eaveHeight),
+            new Point(length, eaveHeight),
+            new Point(length, 0)
+            // NOTE: No return to (0, 0)
+        };
             }
 
-            Polygon wallOutline = new Polygon
+            Polyline wallOutline = new Polyline
             {
                 Stroke = Brushes.Black,
-                StrokeThickness = 2,
-                Fill = Brushes.Transparent
+                StrokeThickness = 2
             };
 
             foreach (var pt in points)
                 wallOutline.Points.Add(ToCanvas(pt));
 
             canvas.Children.Add(wallOutline);
+
+            // Draw the ground line
+            // Add dashed green ground line between bottom of walls
+            Point groundLeft = ToCanvas(new Point(-5, 0));
+            Point groundRight = ToCanvas(new Point(length + 5, 0));
+
+            Line groundLine = new Line
+            {
+                X1 = groundLeft.X,
+                Y1 = groundLeft.Y,
+                X2 = groundRight.X,
+                Y2 = groundRight.Y,
+                Stroke = Brushes.DarkGreen,
+                StrokeThickness = 1.5,
+                StrokeDashArray = new DoubleCollection { 4, 2 }
+            };
+
+            canvas.Children.Add(groundLine);
 
             // Draw origin marker
             var origin = new Ellipse
@@ -288,7 +307,7 @@ namespace ShearWallCalculator.Helpers
                 LayoutTransform = new RotateTransform(-90)
             };
             double midY = canvasHeight - (offsetY + eaveHeight * scale / 2.0);
-            Canvas.SetLeft(labelHeight, offsetX - 20); // shift outside building
+            Canvas.SetLeft(labelHeight, offsetX - 20);
             Canvas.SetTop(labelHeight, midY - 10);
             canvas.Children.Add(labelHeight);
 
@@ -297,7 +316,7 @@ namespace ShearWallCalculator.Helpers
             {
                 var labelRoof = new TextBlock
                 {
-                    Text = $"R: {ridgeHeight.ToString("F2")} ft",
+                    Text = $"R: {ridgeHeight:F2} ft",
                     FontWeight = FontWeights.Bold,
                     FontSize = 12,
                     Foreground = Brushes.DarkRed
@@ -322,16 +341,17 @@ namespace ShearWallCalculator.Helpers
             double labelX = (canvasWidth - labelTitle.DesiredSize.Width) / 2;
             double labelY = canvasHeight - 20;
             Canvas.SetLeft(labelTitle, labelX);
-            //Canvas.SetTop(labelTitle, labelY);
             canvas.Children.Add(labelTitle);
 
             // Line from left to right wall at mean roof height
+            var meanPtLeft = ToCanvas(new Point(0, buildingData.MeanRoofHeight));
+            var meanPtRight = ToCanvas(new Point(length, buildingData.MeanRoofHeight));
             Line dashedLine = new Line
             {
-                X1 = ToCanvas(new Point(0, buildingData.MeanRoofHeight)).X,
-                Y1 = ToCanvas(new Point(0, buildingData.MeanRoofHeight)).Y,
-                X2 = ToCanvas(new Point(length, buildingData.MeanRoofHeight)).X,
-                Y2 = ToCanvas(new Point(length, buildingData.MeanRoofHeight)).Y,
+                X1 = meanPtLeft.X,
+                Y1 = meanPtLeft.Y,
+                X2 = meanPtRight.X,
+                Y2 = meanPtRight.Y,
                 Stroke = Brushes.DarkRed,
                 StrokeThickness = 1,
                 StrokeDashArray = new DoubleCollection { 4, 2 }
@@ -347,8 +367,8 @@ namespace ShearWallCalculator.Helpers
                 Foreground = Brushes.DarkRed
             };
 
-            double labelX_h = offsetX + length * scale + 5; // right of building
-            double labelY_h = ToCanvas(new Point(0, buildingData.MeanRoofHeight)).Y - 10;
+            double labelX_h = offsetX + length * scale + 5;
+            double labelY_h = meanPtLeft.Y - 10;
             Canvas.SetLeft(labelMeanRoof, labelX_h);
             Canvas.SetTop(labelMeanRoof, labelY_h);
             canvas.Children.Add(labelMeanRoof);
@@ -372,10 +392,8 @@ namespace ShearWallCalculator.Helpers
 
             if (canvasWidth <= 0 || canvasHeight <= 0) return;
 
-            // Calculate ridge height if sloped gable roof
-            double ridgeHeight = buildingData.RidgeHeight; ;
+            double ridgeHeight = buildingData.RidgeHeight;
 
-            // Scale and margin
             double marginX = canvasWidth * marginRatio;
             double marginY = canvasHeight * marginRatio;
 
@@ -397,47 +415,57 @@ namespace ShearWallCalculator.Helpers
                 );
             }
 
-            // Draw wall elevation outline
+            // Wall outline points (open base)
             Point[] points;
-
             if (isGable && buildingData.RoofType == RoofTypes.ROOF_TYPE_GABLE)
             {
                 double halfLength = length / 2.0;
-
                 points = new[]
                 {
-                    new Point(0, 0),
-                    new Point(0, eaveHeight),
-                    new Point(halfLength, ridgeHeight),
-                    new Point(length, eaveHeight),
-                    new Point(length, 0)
-                };
+            new Point(0, 0),
+            new Point(0, eaveHeight),
+            new Point(halfLength, ridgeHeight),
+            new Point(length, eaveHeight),
+            new Point(length, 0)
+        };
             }
             else
             {
-                // Flat roof, hip, or ridge parallel to BuildingWidth
                 points = new[]
                 {
-                    new Point(0, 0),
-                    new Point(0, eaveHeight),
-                    new Point(length, eaveHeight),
-                    new Point(length, 0)
-                };
+            new Point(0, 0),
+            new Point(0, eaveHeight),
+            new Point(length, eaveHeight),
+            new Point(length, 0)
+        };
             }
 
-            Polygon wallOutline = new Polygon
+            // Draw wall outline as open polyline
+            Polyline wallOutline = new Polyline
             {
                 Stroke = Brushes.Black,
-                StrokeThickness = 2,
-                Fill = Brushes.Transparent
+                StrokeThickness = 2
             };
-
             foreach (var pt in points)
                 wallOutline.Points.Add(ToCanvas(pt));
-
             canvas.Children.Add(wallOutline);
 
-            // Draw origin marker
+            // Draw dashed green ground line
+            Point groundLeft = ToCanvas(new Point(- 5, 0));
+            Point groundRight = ToCanvas(new Point(length + 5, 0 ));
+            Line groundLine = new Line
+            {
+                X1 = groundLeft.X,
+                Y1 = groundLeft.Y,
+                X2 = groundRight.X,
+                Y2 = groundRight.Y,
+                Stroke = Brushes.DarkGreen,
+                StrokeThickness = 1.5,
+                StrokeDashArray = new DoubleCollection { 4, 2 }
+            };
+            canvas.Children.Add(groundLine);
+
+            // Origin marker
             var origin = new Ellipse
             {
                 Width = 6,
@@ -449,7 +477,7 @@ namespace ShearWallCalculator.Helpers
             Canvas.SetTop(origin, originPt.Y - 3);
             canvas.Children.Add(origin);
 
-            // Label: Wall Width (L:)
+            // Width label
             var labelWidth = new TextBlock
             {
                 Text = $"W: {length} ft",
@@ -462,7 +490,7 @@ namespace ShearWallCalculator.Helpers
             Canvas.SetTop(labelWidth, canvasHeight - offsetY + 4);
             canvas.Children.Add(labelWidth);
 
-            // Label: Wall Height (H:) on left
+            // Height label
             var labelHeight = new TextBlock
             {
                 Text = $"H: {eaveHeight} ft",
@@ -472,21 +500,20 @@ namespace ShearWallCalculator.Helpers
                 LayoutTransform = new RotateTransform(-90)
             };
             double midY = canvasHeight - (offsetY + eaveHeight * scale / 2.0);
-            Canvas.SetLeft(labelHeight, offsetX - 20); // shift outside building
+            Canvas.SetLeft(labelHeight, offsetX - 20);
             Canvas.SetTop(labelHeight, midY - 10);
             canvas.Children.Add(labelHeight);
 
-            // Label: Roof Height (R:) if sloped
+            // Ridge label (if higher than eave)
             if (buildingData.RidgeHeight > buildingData.BuildingHeight)
             {
                 var labelRoof = new TextBlock
                 {
-                    Text = $"R: {ridgeHeight.ToString("F2")} ft",
+                    Text = $"R: {ridgeHeight:F2} ft",
                     FontWeight = FontWeights.Bold,
                     FontSize = 12,
                     Foreground = Brushes.DarkRed
                 };
-
                 double ridgeX = offsetX + (length * scale) / 2.0;
                 double ridgeY = canvasHeight - (offsetY + ridgeHeight * scale);
                 Canvas.SetLeft(labelRoof, ridgeX - 8);
@@ -494,7 +521,7 @@ namespace ShearWallCalculator.Helpers
                 canvas.Children.Add(labelRoof);
             }
 
-            // Add title at bottom center
+            // Title
             var labelTitle = new TextBlock
             {
                 Text = "ELEV. BLDG WIDTH",
@@ -506,23 +533,24 @@ namespace ShearWallCalculator.Helpers
             double labelX = (canvasWidth - labelTitle.DesiredSize.Width) / 2;
             double labelY = canvasHeight - 20;
             Canvas.SetLeft(labelTitle, labelX);
-            //Canvas.SetTop(labelTitle, labelY);
             canvas.Children.Add(labelTitle);
 
-            // Line from left to right wall
+            // Mean roof height line
+            var meanLeft = ToCanvas(new Point(0, buildingData.MeanRoofHeight));
+            var meanRight = ToCanvas(new Point(length, buildingData.MeanRoofHeight));
             Line dashedLine = new Line
             {
-                X1 = ToCanvas(new Point(0, buildingData.MeanRoofHeight)).X,
-                Y1 = ToCanvas(new Point(0, buildingData.MeanRoofHeight)).Y,
-                X2 = ToCanvas(new Point(length, buildingData.MeanRoofHeight)).X,
-                Y2 = ToCanvas(new Point(length, buildingData.MeanRoofHeight)).Y,
+                X1 = meanLeft.X,
+                Y1 = meanLeft.Y,
+                X2 = meanRight.X,
+                Y2 = meanRight.Y,
                 Stroke = Brushes.DarkRed,
                 StrokeThickness = 1,
                 StrokeDashArray = new DoubleCollection { 4, 2 }
             };
             canvas.Children.Add(dashedLine);
 
-            // Add label for mean roof height
+            // Mean roof height label
             var labelMeanRoof = new TextBlock
             {
                 Text = $"h: {buildingData.MeanRoofHeight:F2} ft",
@@ -530,9 +558,8 @@ namespace ShearWallCalculator.Helpers
                 FontSize = 12,
                 Foreground = Brushes.DarkRed
             };
-
-            double labelX_h = offsetX + length * scale + 5; // right of building
-            double labelY_h = ToCanvas(new Point(0, buildingData.MeanRoofHeight)).Y - 10;
+            double labelX_h = offsetX + length * scale + 5;
+            double labelY_h = meanLeft.Y - 10;
             Canvas.SetLeft(labelMeanRoof, labelX_h);
             Canvas.SetTop(labelMeanRoof, labelY_h);
             canvas.Children.Add(labelMeanRoof);
