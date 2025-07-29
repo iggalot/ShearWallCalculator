@@ -6,13 +6,12 @@
     /// h <= 60ft
     /// 20deg < slope <= 27deg
     /// </summary>
-    public class Figure30_3_2C_ASCE7_16 : Chapter30_BaseFigure
+    public class Figure30_3_2C_ASCE7_16 : Chapter27and30_GCpCurveBase
     {
+        public override string ChartTitle { get; set; } = "ASCE 7-16 Figure 30-3-2C - Gable Roofs";
+        public override string ChartCriteria { get; set; } = "h <= 60ft, 20deg < slope <= 27deg";
         public Figure30_3_2C_ASCE7_16()
         {
-            ChartTitle = "ASCE 7-16 Figure 30-3-2C - Gable Roofs";
-            ChartCriteria = "h <= 60ft, 20deg < slope <= 27deg";
-
             // ---- Roof: Negative Pressure Zones ----
             RoofCurves_Neg["Zone3r"] = new ExternalGCpCurve(new (double X, double Y)[]
             {

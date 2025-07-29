@@ -6,13 +6,12 @@
     /// h <= 60ft
     /// slope <= 7deg
     /// </summary>
-    public class Figure30_3_1_ASCE7_16 : Chapter30_BaseFigure
+    public class Figure30_3_1_ASCE7_16 : Chapter27and30_GCpCurveBase
     {
+        public override string ChartTitle { get; set; } = "ASCE 7-16 Figure 30-3-1";
+        public override string ChartCriteria { get; set; } = "h <= 60ft, Walls";
         public Figure30_3_1_ASCE7_16()
         {
-            ChartTitle = "ASCE 7-16 Figure 30-3-1";
-            ChartCriteria = "h <= 60ft, Walls";
-
             // Positive Pressure Wall Zones
             WallCurves_Pos["Zone5"] = new ExternalGCpCurve(new (double X, double Y)[]
             {

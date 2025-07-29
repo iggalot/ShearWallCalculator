@@ -12,10 +12,13 @@ namespace ShearWallCalculator.WindLoadCalculations
     ///         //ChartTitle = "ASCE 7-22 Interpolated 30-3-2F-2G - Hip Roofs";
     //    ChartCriteria = "h <= 60ft, 27deg < slope < 45deg";
 
-    public class Figure30_3_2F_2G_INTERPOLATED_ASCE7_22 : Chapter30_BaseFigure
+    public class Figure30_3_2F_2G_INTERPOLATED_ASCE7_22 : Chapter27and30_GCpCurveBase
     {
-        private readonly Chapter30_BaseFigure lowerFigure; // e.g. 27deg figure
-        private readonly Chapter30_BaseFigure upperFigure; // e.g. 45deg figure
+        public override string ChartTitle { get; set; } = "ASCE 7-16 Figure 30-3-2F and 2G Interpolated - Hip Roofs";
+        public override string ChartCriteria { get; set; } = "h <= 60ft, 7deg < slope <= 20deg";
+
+        private readonly Chapter27and30_GCpCurveBase lowerFigure; // e.g. 27deg figure
+        private readonly Chapter27and30_GCpCurveBase upperFigure; // e.g. 45deg figure
         private readonly double lowerAngle;
         private readonly double upperAngle;
         private readonly double targetAngle;
@@ -25,9 +28,9 @@ namespace ShearWallCalculator.WindLoadCalculations
         /// Angles must satisfy lowerAngle < targetAngle < upperAngle.
         /// </summary>
         public Figure30_3_2F_2G_INTERPOLATED_ASCE7_22(
-            Chapter30_BaseFigure lowerFigure,
+            Chapter27and30_GCpCurveBase lowerFigure,
             double lowerAngle,
-            Chapter30_BaseFigure upperFigure,
+            Chapter27and30_GCpCurveBase upperFigure,
             double upperAngle,
             double targetAngle)
         {

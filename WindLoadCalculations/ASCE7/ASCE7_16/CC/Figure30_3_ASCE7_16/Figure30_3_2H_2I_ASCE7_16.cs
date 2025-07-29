@@ -1,13 +1,13 @@
 ﻿namespace ShearWallCalculator.WindLoadCalculations
 {
-    public class Figure30_3_2H_2I_ASCE7_16 : Chapter30_BaseFigure
+    public class Figure30_3_2H_2I_ASCE7_16 : Chapter27and30_GCpCurveBase
     {
+        public override string ChartTitle { get; set; } = "ASCE 7-16 Figure 30-3-2H and 2I - Hip Roofs";
+        public override string ChartCriteria { get; set; } = "h <= 60ft, 27deg < slope <= 45deg";
+
         // TODO:  These figures have limits on Amax and Amin when retrieving values
         public Figure30_3_2H_2I_ASCE7_16(double h, double b, double slope)
         {
-            ChartTitle = "ASCE 7-16 Figure 30-3-2H and 2I - Hip Roofs";
-            ChartCriteria = "h <= 60ft, 27deg < slope <= 45deg";
-
             // Calculate parameters
             double a = -0.6175 - 0.02 * slope;    // Zone1_neg_Roof upper Y1
             double b1 = -0.0950 - 0.0135 * slope; // Zone1_neg_Roof lower Y2

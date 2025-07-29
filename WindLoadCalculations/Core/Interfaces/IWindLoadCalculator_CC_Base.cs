@@ -10,9 +10,9 @@
     public interface IWindLoadCalculator_CC_Base
     {
         // Which figure of Ch30_3_2A thru I to use for CC roof
-        Chapter30_BaseFigure extGCpCurve_Roof { get; set; }
+        Chapter27and30_GCpCurveBase extGCpCurve_Roof { get; set; }
 
         // The curve of Ch30_3_1 to use for CC walls
-        Chapter30_BaseFigure extGCpCurve_Wall { get; set; }
+        Chapter27and30_GCpCurveBase extGCpCurve_Wall { get; set; }
     }
 }

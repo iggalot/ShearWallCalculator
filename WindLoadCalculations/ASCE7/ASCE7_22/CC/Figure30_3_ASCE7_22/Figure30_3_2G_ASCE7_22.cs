@@ -6,13 +6,12 @@
     /// h <= 60ft
     /// slope = 45 deg
     /// </summary>
-    public class Figure30_3_2G_ASCE7_22 : Chapter30_BaseFigure
+    public class Figure30_3_2G_ASCE7_22 : Chapter27and30_GCpCurveBase
     {
+        public override string ChartTitle { get; set; } = "ASCE 7-22 Figure 30-3-2G - Hip Roofs";
+        public override string ChartCriteria { get; set; } = "h <= 60ft, slope = 45deg";
         public Figure30_3_2G_ASCE7_22()
         {
-            ChartTitle = "ASCE 7-22 Figure 30-3-2G - Hip Roofs";
-            ChartCriteria = "h <= 60ft, slope = 45deg";
-
             // Roof Negative Pressure Zones
             RoofCurves_Neg["Zone3"] = new ExternalGCpCurve(new (double X, double Y)[]
             {

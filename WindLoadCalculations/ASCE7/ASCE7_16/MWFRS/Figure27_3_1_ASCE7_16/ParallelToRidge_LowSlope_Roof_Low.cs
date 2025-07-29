@@ -1,0 +1,61 @@
+﻿namespace ShearWallCalculator.WindLoadCalculations
+{
+    public class ParallelToRidge_LowSlope_Roof_Low : Chapter27and30_GCpCurveBase
+    {
+        public override string ChartTitle { get; set; } = "ASCE 7-16 Figure 27.3-1";
+        public override string ChartCriteria { get; set; } = "Parallel to Ridge for slope or slope <= 10deg  -- h/L <= 0.5";
+        public ParallelToRidge_LowSlope_Roof_Low()
+        {
+            // Positive Pressure Roof Zones
+            RoofCurves_Pos["Zone4"] = new ExternalGCpCurve(new (double X, double Y)[]
+            {
+                (0,  -0.18),
+                (80, -0.18)
+            });
+            
+            RoofCurves_Pos["Zone3"] = new ExternalGCpCurve(new (double X, double Y)[]
+            {
+                (0,  -0.18),
+                (80, -0.18)
+            });
+            
+            RoofCurves_Pos["Zone2"] = new ExternalGCpCurve(new (double X, double Y)[]
+            {
+                (0,  -0.18),
+                (80, -0.18)
+            });
+
+            RoofCurves_Pos["Zone1"] = new ExternalGCpCurve(new (double X, double Y)[]
+            {
+                (0,  -0.18),
+                (80, -0.18)
+            });
+
+
+            // Most negative values
+            RoofCurves_Pos["Zone4"] = new ExternalGCpCurve(new (double X, double Y)[]
+            {
+                (0,  -0.9),
+                (80, -0.9)
+            });
+
+            RoofCurves_Pos["Zone3"] = new ExternalGCpCurve(new (double X, double Y)[]
+            {
+                (0,  -0.9),
+                (80, -0.9)
+            });
+            
+            RoofCurves_Pos["Zone2"] = new ExternalGCpCurve(new (double X, double Y)[]
+            {
+                (0,  -0.9),
+                (80, -0.9)
+            });
+            
+            RoofCurves_Pos["Zone1"] = new ExternalGCpCurve(new (double X, double Y)[]
+            {
+                (0,  -0.9),
+                (80, -0.9)
+            });
+        }
+    }
+}

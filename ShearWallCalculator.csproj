@@ -134,7 +134,7 @@
     <Compile Include="WindLoadCalculations\Factories\RoofAreaCalculatorFactory.cs" />
     <Compile Include="WindLoadCalculations\ASCE7\AreaCalculator_Base.cs" />
     <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\CC\Figure30_3_ASCE7_16\Chapter30RoofFigureFactory_ASCE7_16.cs" />
-    <Compile Include="WindLoadCalculations\ASCE7\Chapter30_BaseFigure.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\Chapter27and30_GCpCurveBase.cs" />
     <Compile Include="WindLoadCalculations\ASCE7\ExternalGCpCurve.cs" />
     <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\CC\Figure30_3_ASCE7_16\Figure30_3_1_ASCE7_16.cs" />
     <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\CC\Figure30_3_ASCE7_16\Figure30_3_2A_ASCE7_16.cs" />

@@ -10,8 +10,8 @@ namespace ShearWallCalculator.WindLoadCalculations
     /// </summary>
     public class WindLoadCalculator_CC_ASCE7_16 : WindLoadCalculator_ASCE7_16_Base, IWindLoadCalculator_CC_Base
     {
-        public Chapter30_BaseFigure extGCpCurve_Roof { get; set; }
-        public Chapter30_BaseFigure extGCpCurve_Wall { get; set; }
+        public Chapter27and30_GCpCurveBase extGCpCurve_Roof { get; set; }
+        public Chapter27and30_GCpCurveBase extGCpCurve_Wall { get; set; }
 
         public WindLoadCalculator_CC_ASCE7_16(WindParameters_Base p, BuildingData bldg_data) : base()
         {

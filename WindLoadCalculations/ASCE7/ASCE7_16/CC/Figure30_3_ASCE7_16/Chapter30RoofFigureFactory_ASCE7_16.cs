@@ -6,7 +6,7 @@ namespace ShearWallCalculator.WindLoadCalculations
 {
     public static class Chapter30RoofFigureFactory_ASCE7_16
     {
-        public static Chapter30_BaseFigure CreateRoofFigure_ASCE7_16(RoofTypes roofType, double h, double b, double slope)
+        public static Chapter27and30_GCpCurveBase CreateRoofFigure_ASCE7_16(RoofTypes roofType, double h, double b, double slope)
         {
             switch (roofType)
             {

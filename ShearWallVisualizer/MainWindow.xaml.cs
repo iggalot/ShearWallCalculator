@@ -592,8 +592,8 @@ namespace ShearWallVisualizer
 
         private void PopulateComponentAndCladdingDataGrids(WindLoadResultsControl_CC ccControl)
         {
-            Chapter30_BaseFigure figureCC_Roof = null ;
-            Chapter30_BaseFigure figureCC_Wall;
+            Chapter27and30_GCpCurveBase figureCC_Roof = null ;
+            Chapter27and30_GCpCurveBase figureCC_Wall;
             if (windLoadCalculator_CC.ASCEVersion == ASCE7_Versions.ASCE_VER_7_16)
             {
                 figureCC_Roof = ((WindLoadCalculator_CC_ASCE7_16)windLoadCalculator_CC).extGCpCurve_Roof;
@@ -656,8 +656,8 @@ namespace ShearWallVisualizer
             var wallCriteria = ccControl.txtFigureCriteria_Walls;
 
 
-            Chapter30_BaseFigure figureCC_Roof = null;
-            Chapter30_BaseFigure figureCC_Wall;
+            Chapter27and30_GCpCurveBase figureCC_Roof = null;
+            Chapter27and30_GCpCurveBase figureCC_Wall;
             if (windLoadCalculator_CC.ASCEVersion == ASCE7_Versions.ASCE_VER_7_16)
             {
                 figureCC_Roof = ((WindLoadCalculator_CC_ASCE7_16)windLoadCalculator_CC).extGCpCurve_Roof;
@@ -682,7 +682,7 @@ namespace ShearWallVisualizer
             FigureDrawer.DrawCurvesOnCanvas(wallCanvas, figureCC_Wall);
         }
 
-        private void CreateCC_DataGrid_Roof(Chapter30_BaseFigure figureCC, DataGrid data_grid)
+        private void CreateCC_DataGrid_Roof(Chapter27and30_GCpCurveBase figureCC, DataGrid data_grid)
         {
             // Get the datagrid from the results control
             data_grid.ItemsSource = null;
@@ -818,7 +818,7 @@ namespace ShearWallVisualizer
         }
 
 
-        private void CreateCC_DataGrid_Walls(Chapter30_BaseFigure figureCC, DataGrid data_grid, Dictionary<int, EffectiveWindArea> areas, string wall_type)
+        private void CreateCC_DataGrid_Walls(Chapter27and30_GCpCurveBase figureCC, DataGrid data_grid, Dictionary<int, EffectiveWindArea> areas, string wall_type)
         {
             // Get the datagrid from the results control
             data_grid.ItemsSource = null;

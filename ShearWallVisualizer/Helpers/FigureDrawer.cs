@@ -10,7 +10,7 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.Figure30_3
 {
     public static class FigureDrawer
     {
-        public static void DrawCurvesOnCanvas(Canvas canvas, Chapter30_BaseFigure figure)
+        public static void DrawCurvesOnCanvas(Canvas canvas, Chapter27and30_GCpCurveBase figure)
         {
             double canvasWidth = canvas.ActualWidth > 0 ? canvas.ActualWidth : canvas.Width;
             double canvasHeight = canvas.ActualHeight > 0 ? canvas.ActualHeight : canvas.Height;
