@@ -6,40 +6,39 @@ namespace ShearWallCalculator.WindLoadCalculations
 {
     public class GableRoofAreaCalculator_CC_ASCE7_22 : AreaCalculator_CC_ASCE7_22_Base
     {
-        public override BuildingData buildingData { get; set; }
         public GableRoofAreaCalculator_CC_ASCE7_22(BuildingData bldg_data)
         {
             buildingData = bldg_data;
         }
 
-        public override void ComputeEffectiveWindAreas(WindParameters_Base parameters, BuildingData bldg_data, bool windIsParallelToRidge = false, Dictionary<string, double> optionalParams = null)
+        public override void ComputeEffectiveWindAreas()
         {
             // Gable logic
-            if (bldg_data.BuildingLength < bldg_data.BuildingWidth)
+            if (buildingData.BuildingLength < buildingData.BuildingWidth)
             {
                 Point p1 = new Point(0, 0);
-                Point p3 = new Point(0.5 * bldg_data.BuildingLength - CritDim_a, 0);
-                Point p4 = new Point(0.5 * bldg_data.BuildingLength, 0);
-                Point p5 = new Point(0.5 * bldg_data.BuildingLength + CritDim_a, 0);
-                Point p7 = new Point(bldg_data.BuildingLength, 0);
+                Point p3 = new Point(0.5 * buildingData.BuildingLength - CritDim_a, 0);
+                Point p4 = new Point(0.5 * buildingData.BuildingLength, 0);
+                Point p5 = new Point(0.5 * buildingData.BuildingLength + CritDim_a, 0);
+                Point p7 = new Point(buildingData.BuildingLength, 0);
 
                 Point p11 = new Point(0, CritDim_a);
-                Point p13 = new Point(0.5 * bldg_data.BuildingLength - CritDim_a, CritDim_a);
-                Point p14 = new Point(0.5 * bldg_data.BuildingLength, CritDim_a);
-                Point p15 = new Point(0.5 * bldg_data.BuildingLength + CritDim_a, CritDim_a);
-                Point p17 = new Point(bldg_data.BuildingLength, CritDim_a);
+                Point p13 = new Point(0.5 * buildingData.BuildingLength - CritDim_a, CritDim_a);
+                Point p14 = new Point(0.5 * buildingData.BuildingLength, CritDim_a);
+                Point p15 = new Point(0.5 * buildingData.BuildingLength + CritDim_a, CritDim_a);
+                Point p17 = new Point(buildingData.BuildingLength, CritDim_a);
 
-                Point p21 = new Point(0, bldg_data.BuildingWidth - CritDim_a);
-                Point p23 = new Point(0.5 * bldg_data.BuildingLength - CritDim_a, bldg_data.BuildingWidth - CritDim_a);
-                Point p24 = new Point(0.5 * bldg_data.BuildingLength, bldg_data.BuildingWidth - CritDim_a);
-                Point p25 = new Point(0.5 * bldg_data.BuildingLength + CritDim_a, bldg_data.BuildingWidth - CritDim_a);
-                Point p27 = new Point(bldg_data.BuildingLength, bldg_data.BuildingWidth - CritDim_a);
+                Point p21 = new Point(0, buildingData.BuildingWidth - CritDim_a);
+                Point p23 = new Point(0.5 * buildingData.BuildingLength - CritDim_a, buildingData.BuildingWidth - CritDim_a);
+                Point p24 = new Point(0.5 * buildingData.BuildingLength, buildingData.BuildingWidth - CritDim_a);
+                Point p25 = new Point(0.5 * buildingData.BuildingLength + CritDim_a, buildingData.BuildingWidth - CritDim_a);
+                Point p27 = new Point(buildingData.BuildingLength, buildingData.BuildingWidth - CritDim_a);
 
-                Point p31 = new Point(0, bldg_data.BuildingWidth);
-                Point p33 = new Point(0.5 * bldg_data.BuildingLength - CritDim_a, bldg_data.BuildingWidth);
-                Point p34 = new Point(0.5 * bldg_data.BuildingLength, bldg_data.BuildingWidth);
-                Point p35 = new Point(0.5 * bldg_data.BuildingLength + CritDim_a, bldg_data.BuildingWidth);
-                Point p37 = new Point(bldg_data.BuildingLength, bldg_data.BuildingWidth);
+                Point p31 = new Point(0, buildingData.BuildingWidth);
+                Point p33 = new Point(0.5 * buildingData.BuildingLength - CritDim_a, buildingData.BuildingWidth);
+                Point p34 = new Point(0.5 * buildingData.BuildingLength, buildingData.BuildingWidth);
+                Point p35 = new Point(0.5 * buildingData.BuildingLength + CritDim_a, buildingData.BuildingWidth);
+                Point p37 = new Point(buildingData.BuildingLength, buildingData.BuildingWidth);
 
                 // Bottom row of rectangles
                 effWindAreas.Add(2, new EffectiveWindArea("Zone2", new List<Point> { p1, p3, p13, p11 }, null));
@@ -61,34 +60,34 @@ namespace ShearWallCalculator.WindLoadCalculations
 
                 return;
             }
-            else if (bldg_data.BuildingLength > bldg_data.BuildingWidth)
+            else if (buildingData.BuildingLength > buildingData.BuildingWidth)
             {
                 // Figure 30.3-2B / 2C / 2D -- Flat roof and Gable with slope greater than 7
 
                 Point p1 = new Point(0, 0);
                 Point p2 = new Point(CritDim_a, 0);
-                Point p3 = new Point(bldg_data.BuildingLength - CritDim_a, 0);
-                Point p4 = new Point(bldg_data.BuildingLength, 0);
+                Point p3 = new Point(buildingData.BuildingLength - CritDim_a, 0);
+                Point p4 = new Point(buildingData.BuildingLength, 0);
 
-                Point p21 = new Point(0, 0.5 * bldg_data.BuildingWidth - CritDim_a);
-                Point p22 = new Point(CritDim_a, 0.5 * bldg_data.BuildingWidth - CritDim_a);
-                Point p23 = new Point(bldg_data.BuildingLength - CritDim_a, 0.5 * bldg_data.BuildingWidth - CritDim_a);
-                Point p24 = new Point(bldg_data.BuildingLength, 0.5 * bldg_data.BuildingWidth - CritDim_a);
+                Point p21 = new Point(0, 0.5 * buildingData.BuildingWidth - CritDim_a);
+                Point p22 = new Point(CritDim_a, 0.5 * buildingData.BuildingWidth - CritDim_a);
+                Point p23 = new Point(buildingData.BuildingLength - CritDim_a, 0.5 * buildingData.BuildingWidth - CritDim_a);
+                Point p24 = new Point(buildingData.BuildingLength, 0.5 * buildingData.BuildingWidth - CritDim_a);
 
-                Point p31 = new Point(0, 0.5 * bldg_data.BuildingWidth);
-                Point p32 = new Point(CritDim_a, 0.5 * bldg_data.BuildingWidth);
-                Point p33 = new Point(bldg_data.BuildingLength - CritDim_a, 0.5 * bldg_data.BuildingWidth);
-                Point p34 = new Point(bldg_data.BuildingLength, 0.5 * bldg_data.BuildingWidth);
+                Point p31 = new Point(0, 0.5 * buildingData.BuildingWidth);
+                Point p32 = new Point(CritDim_a, 0.5 * buildingData.BuildingWidth);
+                Point p33 = new Point(buildingData.BuildingLength - CritDim_a, 0.5 * buildingData.BuildingWidth);
+                Point p34 = new Point(buildingData.BuildingLength, 0.5 * buildingData.BuildingWidth);
 
-                Point p41 = new Point(0, 0.5 * bldg_data.BuildingWidth + CritDim_a);
-                Point p42 = new Point(CritDim_a, 0.5 * bldg_data.BuildingWidth + CritDim_a);
-                Point p43 = new Point(bldg_data.BuildingLength - CritDim_a, 0.5 * bldg_data.BuildingWidth + CritDim_a);
-                Point p44 = new Point(bldg_data.BuildingLength, 0.5 * bldg_data.BuildingWidth + CritDim_a);
+                Point p41 = new Point(0, 0.5 * buildingData.BuildingWidth + CritDim_a);
+                Point p42 = new Point(CritDim_a, 0.5 * buildingData.BuildingWidth + CritDim_a);
+                Point p43 = new Point(buildingData.BuildingLength - CritDim_a, 0.5 * buildingData.BuildingWidth + CritDim_a);
+                Point p44 = new Point(buildingData.BuildingLength, 0.5 * buildingData.BuildingWidth + CritDim_a);
 
-                Point p51 = new Point(0, bldg_data.BuildingWidth);
-                Point p52 = new Point(CritDim_a, bldg_data.BuildingWidth);
-                Point p53 = new Point(bldg_data.BuildingLength - CritDim_a, bldg_data.BuildingWidth);
-                Point p54 = new Point(bldg_data.BuildingLength, bldg_data.BuildingWidth);
+                Point p51 = new Point(0, buildingData.BuildingWidth);
+                Point p52 = new Point(CritDim_a, buildingData.BuildingWidth);
+                Point p53 = new Point(buildingData.BuildingLength - CritDim_a, buildingData.BuildingWidth);
+                Point p54 = new Point(buildingData.BuildingLength, buildingData.BuildingWidth);
 
                 // Bottom row of rectangles
                 effWindAreas.Add(1, new EffectiveWindArea("Zone2", new List<Point> { p1, p2, p22, p21 }, null));
@@ -122,28 +121,28 @@ namespace ShearWallCalculator.WindLoadCalculations
             else
             {
                 Point p1 = new Point(0, 0);
-                Point p3 = new Point(0.5 * bldg_data.BuildingLength - CritDim_a, 0);
-                Point p4 = new Point(0.5 * bldg_data.BuildingLength, 0);
-                Point p5 = new Point(0.5 * bldg_data.BuildingLength + CritDim_a, 0);
-                Point p7 = new Point(bldg_data.BuildingLength, 0);
+                Point p3 = new Point(0.5 * buildingData.BuildingLength - CritDim_a, 0);
+                Point p4 = new Point(0.5 * buildingData.BuildingLength, 0);
+                Point p5 = new Point(0.5 * buildingData.BuildingLength + CritDim_a, 0);
+                Point p7 = new Point(buildingData.BuildingLength, 0);
 
                 Point p11 = new Point(0, CritDim_a);
-                Point p13 = new Point(0.5 * bldg_data.BuildingLength - CritDim_a, CritDim_a);
-                Point p14 = new Point(0.5 * bldg_data.BuildingLength, CritDim_a);
-                Point p15 = new Point(0.5 * bldg_data.BuildingLength + CritDim_a, CritDim_a);
-                Point p17 = new Point(bldg_data.BuildingLength, CritDim_a);
+                Point p13 = new Point(0.5 * buildingData.BuildingLength - CritDim_a, CritDim_a);
+                Point p14 = new Point(0.5 * buildingData.BuildingLength, CritDim_a);
+                Point p15 = new Point(0.5 * buildingData.BuildingLength + CritDim_a, CritDim_a);
+                Point p17 = new Point(buildingData.BuildingLength, CritDim_a);
 
-                Point p21 = new Point(0, bldg_data.BuildingWidth - CritDim_a);
-                Point p23 = new Point(0.5 * bldg_data.BuildingLength - CritDim_a, bldg_data.BuildingWidth - CritDim_a);
-                Point p24 = new Point(0.5 * bldg_data.BuildingLength, bldg_data.BuildingWidth - CritDim_a);
-                Point p25 = new Point(0.5 * bldg_data.BuildingLength + CritDim_a, bldg_data.BuildingWidth - CritDim_a);
-                Point p27 = new Point(bldg_data.BuildingLength, bldg_data.BuildingWidth - CritDim_a);
+                Point p21 = new Point(0, buildingData.BuildingWidth - CritDim_a);
+                Point p23 = new Point(0.5 * buildingData.BuildingLength - CritDim_a, buildingData.BuildingWidth - CritDim_a);
+                Point p24 = new Point(0.5 * buildingData.BuildingLength, buildingData.BuildingWidth - CritDim_a);
+                Point p25 = new Point(0.5 * buildingData.BuildingLength + CritDim_a, buildingData.BuildingWidth - CritDim_a);
+                Point p27 = new Point(buildingData.BuildingLength, buildingData.BuildingWidth - CritDim_a);
 
-                Point p31 = new Point(0, bldg_data.BuildingWidth);
-                Point p33 = new Point(0.5 * bldg_data.BuildingLength - CritDim_a, bldg_data.BuildingWidth);
-                Point p34 = new Point(0.5 * bldg_data.BuildingLength, bldg_data.BuildingWidth);
-                Point p35 = new Point(0.5 * bldg_data.BuildingLength + CritDim_a, bldg_data.BuildingWidth);
-                Point p37 = new Point(bldg_data.BuildingLength, bldg_data.BuildingWidth);
+                Point p31 = new Point(0, buildingData.BuildingWidth);
+                Point p33 = new Point(0.5 * buildingData.BuildingLength - CritDim_a, buildingData.BuildingWidth);
+                Point p34 = new Point(0.5 * buildingData.BuildingLength, buildingData.BuildingWidth);
+                Point p35 = new Point(0.5 * buildingData.BuildingLength + CritDim_a, buildingData.BuildingWidth);
+                Point p37 = new Point(buildingData.BuildingLength, buildingData.BuildingWidth);
 
                 // Bottom row of rectangles
                 effWindAreas.Add(2, new EffectiveWindArea("Zone2", new List<Point> { p1, p3, p13, p11 }, null));

@@ -10,6 +10,6 @@ namespace ShearWallCalculator.WindLoadCalculations.Core.Interfaces
         /// </summary>
         /// <param name="p"></param>
         /// <param name="bldg_data"></param>
-        void ComputeEffectiveWindAreas(WindParameters_Base p, BuildingData bldg_data, bool windIsParallelToRidge = false, Dictionary<string, double> optionalDimension = null);
+        void ComputeEffectiveWindAreas();
     }
 }

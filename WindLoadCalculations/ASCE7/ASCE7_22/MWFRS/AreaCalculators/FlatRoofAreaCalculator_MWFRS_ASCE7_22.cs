@@ -5,7 +5,6 @@ namespace ShearWallCalculator.WindLoadCalculations
 {
     public class FlatRoofAreaCalculator_MWFRS_ASCE7_22 : AreaCalculator_MWFRS_ASCE7_22_Base
     {
-        public override BuildingData buildingData { get; set; }
         public FlatRoofAreaCalculator_MWFRS_ASCE7_22(BuildingData bldg_data)
         {
             buildingData = bldg_data;

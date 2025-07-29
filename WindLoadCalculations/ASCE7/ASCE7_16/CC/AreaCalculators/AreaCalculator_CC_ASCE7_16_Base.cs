@@ -20,5 +20,7 @@ namespace ShearWallCalculator.WindLoadCalculations.ASCE7.ASCE7_16.CC.AreaCalcula
                 3)
                 );
         }
+
+
     }
 }

@@ -1,6 +1,5 @@
 ﻿using ShearWallCalculator.BuildingInfo;
 using ShearWallCalculator.WindLoadCalculations.ASCE7.ASCE7_16;
-using System;
 using System.Collections.Generic;
 using System.Windows;
 
@@ -8,8 +7,6 @@ namespace ShearWallCalculator.WindLoadCalculations
 {
     public class FlatRoofAreaCalculator_MWFRS_ASCE7_16 : AreaCalculator_ASCE7_16_Base
     {
-        public override BuildingData buildingData { get; set; }
-
         public FlatRoofAreaCalculator_MWFRS_ASCE7_16(BuildingData bldg_data)
         {
             buildingData = bldg_data;
@@ -24,24 +21,14 @@ namespace ShearWallCalculator.WindLoadCalculations
             return offset > 0 && offset < B;
         }
 
-        public override void ComputeEffectiveWindAreas(WindParameters_Base parameters, BuildingData bldg_data, bool windIsParallelToRidge = false, Dictionary<string, double> optionalParams = null)
+        public override void ComputeEffectiveWindAreas()
         {
             //if (optionalParams == null) return;
 
-            double building_length = bldg_data.BuildingLength;
-            double building_width = bldg_data.BuildingWidth;
+            double building_length = buildingData.BuildingLength;
+            double building_width = buildingData.BuildingWidth;
 
-            //if (optionalParams.ContainsKey("BuildingLength") && optionalParams.ContainsKey("BuildingWidth"))
-            //{
-            //    building_length = optionalParams["BuildingLength"];
-            //    building_width = optionalParams["BuildingWidth"];
-            //}
-            //else
-            //{
-            //    throw new Exception("ERROR: Building length and width are required in FlatRoofAreaCalculator_MWFRS_ASCE7_16 constructor.");
-            //}
-
-            double h = bldg_data.MeanRoofHeight;
+            double h = buildingData.MeanRoofHeight;
 
             var zones = new Dictionary<int, EffectiveWindArea>();
 
@@ -54,7 +41,7 @@ namespace ShearWallCalculator.WindLoadCalculations
 
             if (building_length > building_width)
             {
-                if (windIsParallelToRidge)
+                if (buildingData.RidgeDirection == RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH)
                 {
                     // Define when wind is parallel to ridge (parallel to BuildingLength) dimension
                     // D---p21---p22---p23---C
@@ -63,11 +50,11 @@ namespace ShearWallCalculator.WindLoadCalculations
                     // | 4  | 3  |  2   |  1 |
                     // A---p1----p2----p3----B
                     Point A = new Point(0, 0);
-                    Point B = new Point(buildingData.BuildingLength, 0);
-                    Point C = new Point(buildingData.BuildingWidth, buildingData.BuildingLength);
-                    Point D = new Point(0, buildingData.BuildingWidth);
-                    Point E = new Point(0, 0.5 * buildingData.BuildingWidth);
-                    Point F = new Point(buildingData.BuildingLength, 0.5 * buildingData.BuildingWidth);
+                    Point B = new Point(this.buildingData.BuildingLength, 0);
+                    Point C = new Point(this.buildingData.BuildingWidth, this.buildingData.BuildingLength);
+                    Point D = new Point(0, this.buildingData.BuildingWidth);
+                    Point E = new Point(0, 0.5 * this.buildingData.BuildingWidth);
+                    Point F = new Point(this.buildingData.BuildingLength, 0.5 * this.buildingData.BuildingWidth);
 
                     Point p1, p2, p3, p11, p12, p13, p21, p22, p23;
 
@@ -146,17 +133,17 @@ namespace ShearWallCalculator.WindLoadCalculations
                 // Note: Ridge can be in any of the four zones -- but Flat roofs don't care about the ridge
                 else
                 {
-                    building_length = buildingData.BuildingLength;
-                    building_width = buildingData.BuildingWidth;
+                    building_length = this.buildingData.BuildingLength;
+                    building_width = this.buildingData.BuildingWidth;
                     double ridge_offset = 0.5 * building_width;
 
 
                     Point A = new Point(0, 0);
-                    Point B = new Point(buildingData.BuildingLength, 0);
-                    Point C = new Point(buildingData.BuildingWidth, buildingData.BuildingLength);
-                    Point D = new Point(0, buildingData.BuildingWidth);
-                    Point R_L = new Point(0, 0.5 * buildingData.BuildingWidth);
-                    Point R_R = new Point(buildingData.BuildingLength, 0.5 * buildingData.BuildingWidth);
+                    Point B = new Point(this.buildingData.BuildingLength, 0);
+                    Point C = new Point(this.buildingData.BuildingWidth, this.buildingData.BuildingLength);
+                    Point D = new Point(0, this.buildingData.BuildingWidth);
+                    Point R_L = new Point(0, 0.5 * this.buildingData.BuildingWidth);
+                    Point R_R = new Point(this.buildingData.BuildingLength, 0.5 * this.buildingData.BuildingWidth);
 
                     Point p1, p2, p11, p12, p21, p22;
 
@@ -213,7 +200,7 @@ namespace ShearWallCalculator.WindLoadCalculations
             // Defined when building width is larger than building length
             else if (building_width > building_length)
             {
-                if (windIsParallelToRidge)
+                if (buildingData.RidgeDirection == RidgeDirections.RIDGE_DIR_PERP_TO_BLDGLENGTH)
                 {
                     // Define when wind is parallel to ridge (parallel to BuildingLength) dimension
                     // D---------------R2--------------C
@@ -228,9 +215,9 @@ namespace ShearWallCalculator.WindLoadCalculations
                     //  
                     //  Ridge = "="
                     Point A = new Point(0, 0);
-                    Point B = new Point(buildingData.BuildingLength, 0);
-                    Point C = new Point(buildingData.BuildingWidth, buildingData.BuildingLength);
-                    Point D = new Point(0, buildingData.BuildingWidth);
+                    Point B = new Point(this.buildingData.BuildingLength, 0);
+                    Point C = new Point(this.buildingData.BuildingWidth, this.buildingData.BuildingLength);
+                    Point D = new Point(0, this.buildingData.BuildingWidth);
                     Point R1 = new Point(0.5 * building_length, 0);
                     Point R2 = new Point(0.5 * building_length, building_width);
 
@@ -317,9 +304,9 @@ namespace ShearWallCalculator.WindLoadCalculations
                     //  
                     //  Ridge = "="
                     Point A = new Point(0, 0);
-                    Point B = new Point(buildingData.BuildingLength, 0);
-                    Point C = new Point(buildingData.BuildingWidth, buildingData.BuildingLength);
-                    Point D = new Point(0, buildingData.BuildingWidth);
+                    Point B = new Point(this.buildingData.BuildingLength, 0);
+                    Point C = new Point(this.buildingData.BuildingWidth, this.buildingData.BuildingLength);
+                    Point D = new Point(0, this.buildingData.BuildingWidth);
                     Point R1 = new Point(0.5 * building_length, 0);
                     Point R2 = new Point(0.5 * building_length, building_width);
 

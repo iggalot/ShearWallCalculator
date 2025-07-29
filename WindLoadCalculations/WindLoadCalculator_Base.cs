@@ -133,7 +133,7 @@ namespace ShearWallCalculator.WindLoadCalculations
         public void CreateAreaCalculators()
         {
             RoofAreaCalculator = RoofAreaCalculatorFactory.Create(buildingData, Parameters, ASCEVersion);
-            RoofAreaCalculator.ComputeEffectiveWindAreas(Parameters, buildingData);
+            RoofAreaCalculator.ComputeEffectiveWindAreas();
 
             bool length_is_gable = false;
             bool width_is_gable = false;
@@ -152,15 +152,13 @@ namespace ShearWallCalculator.WindLoadCalculations
             Dictionary<string, double> bldg_length_wall_param = new Dictionary<string, double>();
             bldg_length_wall_param.Add("WallLength", buildingData.BuildingLength);
             WallAreaCalculator_BldgLength = WallAreaCalculatorFactory.Create(buildingData, Parameters, ASCEVersion, length_is_gable);
-            WallAreaCalculator_BldgLength.ComputeEffectiveWindAreas(Parameters, buildingData, length_is_gable, bldg_length_wall_param);
+            WallAreaCalculator_BldgLength.ComputeEffectiveWindAreas();
 
             Dictionary<string, double> bldg_width_wall_param = new Dictionary<string, double>();
             bldg_width_wall_param.Add("WallLength", buildingData.BuildingWidth);
             WallAreaCalculator_BldgWidth = WallAreaCalculatorFactory.Create(buildingData, Parameters, ASCEVersion, width_is_gable);
-            WallAreaCalculator_BldgWidth.ComputeEffectiveWindAreas(Parameters, buildingData, width_is_gable, bldg_width_wall_param);
+            WallAreaCalculator_BldgWidth.ComputeEffectiveWindAreas();
         }
-
-
 
 
 

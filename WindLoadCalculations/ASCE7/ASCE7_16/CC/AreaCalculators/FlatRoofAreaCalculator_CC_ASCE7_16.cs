@@ -8,7 +8,6 @@ namespace ShearWallCalculator.WindLoadCalculations
 {
     public class FlatRoofAreaCalculator_CC_ASCE7_16 : AreaCalculator_CC_ASCE7_16_Base
     {
-        public override BuildingData buildingData { get; set; }
         public FlatRoofAreaCalculator_CC_ASCE7_16(BuildingData bldg_data)
         {
             buildingData = bldg_data;
@@ -20,13 +19,13 @@ namespace ShearWallCalculator.WindLoadCalculations
             return offset > 0 && 2 * offset < L && 2 * offset < B;
         }
 
-        public override void ComputeEffectiveWindAreas(WindParameters_Base parameters, BuildingData bldg_data, bool windIsParallelToRidge = false, Dictionary<string, double> optionalParams = null)
+        public override void ComputeEffectiveWindAreas()
         {
             // Existing logic from ComputeFlatRoofAreas
-            var L = bldg_data.BuildingLength;
-            var B = bldg_data.BuildingWidth;
+            var L = buildingData.BuildingLength;
+            var B = buildingData.BuildingWidth;
 
-            double h = bldg_data.MeanRoofHeight;
+            double h = buildingData.MeanRoofHeight;
             double offset1 = 1.2 * h;
             double offset2 = 0.6 * h;
 
@@ -81,11 +80,11 @@ namespace ShearWallCalculator.WindLoadCalculations
             // region 3 corner zones
             // lower left
             Point p13 = new Point(0, 0);
-            Point p14 = new Point(0.6 * bldg_data.MeanRoofHeight, 0);
-            Point p15 = new Point(0.6 * bldg_data.MeanRoofHeight, 0.2 * bldg_data.MeanRoofHeight);
-            Point p16 = new Point(0.2 * bldg_data.MeanRoofHeight, 0.2 * bldg_data.MeanRoofHeight);
-            Point p17 = new Point(0.2 * bldg_data.MeanRoofHeight, 0.6 * bldg_data.MeanRoofHeight);
-            Point p18 = new Point(0, 0.6 * bldg_data.MeanRoofHeight);
+            Point p14 = new Point(0.6 * buildingData.MeanRoofHeight, 0);
+            Point p15 = new Point(0.6 * buildingData.MeanRoofHeight, 0.2 * buildingData.MeanRoofHeight);
+            Point p16 = new Point(0.2 * buildingData.MeanRoofHeight, 0.2 * buildingData.MeanRoofHeight);
+            Point p17 = new Point(0.2 * buildingData.MeanRoofHeight, 0.6 * buildingData.MeanRoofHeight);
+            Point p18 = new Point(0, 0.6 * buildingData.MeanRoofHeight);
 
             var roof_area_3_1 = new EffectiveWindArea(
                 "Zone3",
@@ -94,12 +93,12 @@ namespace ShearWallCalculator.WindLoadCalculations
                 );
 
             // lower right
-            Point p19 = new Point(bldg_data.BuildingLength, 0);
-            Point p20 = new Point(bldg_data.BuildingLength, 0.6 * bldg_data.MeanRoofHeight);
-            Point p21 = new Point(bldg_data.BuildingLength - 0.2 * bldg_data.MeanRoofHeight, 0.6 * bldg_data.MeanRoofHeight);
-            Point p22 = new Point(bldg_data.BuildingLength - 0.2 * bldg_data.MeanRoofHeight, 0.2 * bldg_data.MeanRoofHeight);
-            Point p23 = new Point(bldg_data.BuildingLength - 0.6 * bldg_data.MeanRoofHeight, 0.2 * bldg_data.MeanRoofHeight);
-            Point p24 = new Point(bldg_data.BuildingLength - 0.6 * bldg_data.MeanRoofHeight, 0);
+            Point p19 = new Point(buildingData.BuildingLength, 0);
+            Point p20 = new Point(buildingData.BuildingLength, 0.6 * buildingData.MeanRoofHeight);
+            Point p21 = new Point(buildingData.BuildingLength - 0.2 * buildingData.MeanRoofHeight, 0.6 * buildingData.MeanRoofHeight);
+            Point p22 = new Point(buildingData.BuildingLength - 0.2 * buildingData.MeanRoofHeight, 0.2 * buildingData.MeanRoofHeight);
+            Point p23 = new Point(buildingData.BuildingLength - 0.6 * buildingData.MeanRoofHeight, 0.2 * buildingData.MeanRoofHeight);
+            Point p24 = new Point(buildingData.BuildingLength - 0.6 * buildingData.MeanRoofHeight, 0);
 
 
             var roof_area_3_2 = new EffectiveWindArea(
@@ -109,12 +108,12 @@ namespace ShearWallCalculator.WindLoadCalculations
                 );
 
             // upper right
-            Point p25 = new Point(bldg_data.BuildingLength - 0.6 * bldg_data.MeanRoofHeight, bldg_data.BuildingWidth);
-            Point p26 = new Point(bldg_data.BuildingLength - 0.6 * bldg_data.MeanRoofHeight, bldg_data.BuildingWidth - 0.2 * bldg_data.MeanRoofHeight);
-            Point p27 = new Point(bldg_data.BuildingLength - 0.2 * bldg_data.MeanRoofHeight, bldg_data.BuildingWidth - 0.2 * bldg_data.MeanRoofHeight);
-            Point p28 = new Point(bldg_data.BuildingLength - 0.2 * bldg_data.MeanRoofHeight, bldg_data.BuildingWidth - 0.6 * bldg_data.MeanRoofHeight);
-            Point p29 = new Point(bldg_data.BuildingLength, bldg_data.BuildingWidth - 0.6 * bldg_data.MeanRoofHeight);
-            Point p30 = new Point(bldg_data.BuildingLength, bldg_data.BuildingWidth);
+            Point p25 = new Point(buildingData.BuildingLength - 0.6 * buildingData.MeanRoofHeight, buildingData.BuildingWidth);
+            Point p26 = new Point(buildingData.BuildingLength - 0.6 * buildingData.MeanRoofHeight, buildingData.BuildingWidth - 0.2 * buildingData.MeanRoofHeight);
+            Point p27 = new Point(buildingData.BuildingLength - 0.2 * buildingData.MeanRoofHeight, buildingData.BuildingWidth - 0.2 * buildingData.MeanRoofHeight);
+            Point p28 = new Point(buildingData.BuildingLength - 0.2 * buildingData.MeanRoofHeight, buildingData.BuildingWidth - 0.6 * buildingData.MeanRoofHeight);
+            Point p29 = new Point(buildingData.BuildingLength, buildingData.BuildingWidth - 0.6 * buildingData.MeanRoofHeight);
+            Point p30 = new Point(buildingData.BuildingLength, buildingData.BuildingWidth);
 
             var roof_area_3_3 = new EffectiveWindArea(
                 "Zone3",
@@ -123,12 +122,12 @@ namespace ShearWallCalculator.WindLoadCalculations
                 );
 
             // upper left
-            Point p31 = new Point(0, bldg_data.BuildingWidth);
-            Point p32 = new Point(0, bldg_data.BuildingWidth - 0.6 * bldg_data.MeanRoofHeight);
-            Point p33 = new Point(0.2 * bldg_data.MeanRoofHeight, bldg_data.BuildingWidth - 0.6 * bldg_data.MeanRoofHeight);
-            Point p34 = new Point(0.2 * bldg_data.MeanRoofHeight, bldg_data.BuildingWidth - 0.2 * bldg_data.MeanRoofHeight);
-            Point p35 = new Point(0.6 * bldg_data.MeanRoofHeight, bldg_data.BuildingWidth - 0.2 * bldg_data.MeanRoofHeight);
-            Point p36 = new Point(0.6 * bldg_data.MeanRoofHeight, bldg_data.BuildingWidth);
+            Point p31 = new Point(0, buildingData.BuildingWidth);
+            Point p32 = new Point(0, buildingData.BuildingWidth - 0.6 * buildingData.MeanRoofHeight);
+            Point p33 = new Point(0.2 * buildingData.MeanRoofHeight, buildingData.BuildingWidth - 0.6 * buildingData.MeanRoofHeight);
+            Point p34 = new Point(0.2 * buildingData.MeanRoofHeight, buildingData.BuildingWidth - 0.2 * buildingData.MeanRoofHeight);
+            Point p35 = new Point(0.6 * buildingData.MeanRoofHeight, buildingData.BuildingWidth - 0.2 * buildingData.MeanRoofHeight);
+            Point p36 = new Point(0.6 * buildingData.MeanRoofHeight, buildingData.BuildingWidth);
 
             var roof_area_3_4 = new EffectiveWindArea(
                 "Zone3",
