@@ -4,7 +4,7 @@
     {
         public override string ChartTitle { get; set; } = "ASCE 7-16 Figure 27.3-1";
         public override string ChartCriteria { get; set; } = "Parallel to Ridge for slope or slope <= 10deg  -- h/L >= 1.0";
-        public ParallelToRidge_LowSlope_Roof_High(double area)
+        public ParallelToRidge_LowSlope_Roof_High(double area=50)
         {
             // Positive Pressure Roof Zones
             RoofCurves_Pos["Zone4"] = new ExternalGCpCurve(new (double X, double Y)[]

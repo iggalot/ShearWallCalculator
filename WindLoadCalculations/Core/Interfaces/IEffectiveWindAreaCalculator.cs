@@ -1,7 +1,4 @@
-﻿using ShearWallCalculator.BuildingInfo;
-using System.Collections.Generic;
-
-namespace ShearWallCalculator.WindLoadCalculations.Core.Interfaces
+﻿namespace ShearWallCalculator.WindLoadCalculations.Core.Interfaces
 {
     public interface IEffectiveWindAreaCalculator
     {

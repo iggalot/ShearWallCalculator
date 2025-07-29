@@ -1,5 +1,6 @@
 ﻿using ShearWallCalculator.BuildingInfo;
 using ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator;
+using ShearWallCalculator.WindLoadCalculations.WindLoadCalculators;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -65,7 +66,7 @@ namespace ShearWallCalculator.WindLoadCalculations
         MWFRS_LR_Full = 5
     }
 
-    public abstract class WindLoadCalculator_Base
+    public abstract class WindLoadCalculator_Base : IWindLoadCalculator_CC_Base, IWindLoadCalculator_MWFRS_Base
     {
         public abstract ASCE7_Versions ASCEVersion { get; }
         public abstract WindParameters_Base Parameters { get; set; }
@@ -86,6 +87,8 @@ namespace ShearWallCalculator.WindLoadCalculations
         public abstract AreaCalculator_Base WallAreaCalculator_BldgWidth { get; set; }
 
 
+        public abstract Chapter27and30_GCpCurveBase extGCpCurve_Roof { get; set; }
+        public abstract Chapter27and30_GCpCurveBase extGCpCurve_Wall { get; set; }
 
 
 

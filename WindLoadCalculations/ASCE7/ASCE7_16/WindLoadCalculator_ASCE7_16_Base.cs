@@ -20,6 +20,9 @@ namespace ShearWallCalculator.WindLoadCalculations.WindLoadCalculators
         public override AreaCalculator_Base WallAreaCalculator_BldgLength { get; set; }
         public override AreaCalculator_Base WallAreaCalculator_BldgWidth { get; set; }
 
+        public override Chapter27and30_GCpCurveBase extGCpCurve_Roof { get; set; }
+        public override Chapter27and30_GCpCurveBase extGCpCurve_Wall { get; set; }
+
         public override double CalculateDynamicWindPressure(double z)
         {
             if (Parameters == null)

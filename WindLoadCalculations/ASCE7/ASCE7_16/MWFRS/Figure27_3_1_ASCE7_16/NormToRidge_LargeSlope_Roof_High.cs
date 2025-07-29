@@ -4,7 +4,7 @@
     {
         public override string ChartTitle { get; set; } = "ASCE 7-16 Figure 27.3-1";
         public override string ChartCriteria { get; set; } = "Normal to Ridge for slope >= 10deg  -- h/L = 1.0";
-        public NormToRidge_LargeSlope_Roof_High(double slope, double area)
+        public NormToRidge_LargeSlope_Roof_High(double slope, double area=50)   // set area to 50 to make reduction factor = 1.0
         {
             // Positive Pressure Roof Zones
             RoofCurves_Pos["ZoneWW"] = new ExternalGCpCurve(new (double X, double Y)[]

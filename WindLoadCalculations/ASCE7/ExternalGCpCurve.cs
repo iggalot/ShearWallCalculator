@@ -5,7 +5,8 @@ namespace ShearWallCalculator.WindLoadCalculations
     public class ExternalGCpCurve
     {
         // Points defining the piecewise linear curve (exactly 8 points for 7 segments)
-        private readonly (double X, double Y)[] points;
+        private (double X, double Y)[] points;
+        public (double X, double Y)[] Points;
 
         public double LowerBoundX => points[0].X;
         public double UpperBoundX => points[points.Length - 1].X;
@@ -17,8 +18,6 @@ namespace ShearWallCalculator.WindLoadCalculations
         public ExternalGCpCurve((double X, double Y)[] points)
         {
             if (points == null) throw new ArgumentNullException(nameof(points));
-            if (points.Length != 8)
-                throw new ArgumentException("Exactly 8 points are required.");
 
             for (int i = 1; i < points.Length; i++)
             {

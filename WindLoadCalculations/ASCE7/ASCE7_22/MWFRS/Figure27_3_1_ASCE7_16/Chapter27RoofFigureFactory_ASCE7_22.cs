@@ -4,9 +4,9 @@ using System.Collections.Generic;
 
 namespace ShearWallCalculator.WindLoadCalculations
 {
-    public static class Chapter27RoofFigureFactory_ASCE7_16
+    public static class Chapter27RoofFigureFactory_ASCE7_22
     {
-        public static Chapter27and30_GCpCurveBase CreateRoofFigure_ASCE7_16(BuildingData buildingData, double area=50)
+        public static Chapter27and30_GCpCurveBase CreateRoofFigure_ASCE7_22(BuildingData buildingData, double area=50)
         {
 
             RidgeDirections ridgeDirection = buildingData.RidgeDirection;

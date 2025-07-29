@@ -1,6 +1,5 @@
 ﻿using ShearWallCalculator.BuildingInfo;
 using ShearWallCalculator.WindLoadCalculations.Chapter30.Figure30_3;
-using ShearWallCalculator.WindLoadCalculations.WindLoadCalculators;
 using System;
 
 namespace ShearWallCalculator.WindLoadCalculations
@@ -8,11 +7,9 @@ namespace ShearWallCalculator.WindLoadCalculations
     /// <summary>
     /// Computes C&C pressures for ASCE 7-16 using the analytical method of Part 3 on page 350
     /// </summary>
-    public class WindLoadCalculator_CC_ASCE7_22: WindLoadCalculator_ASCE7_22_Base, IWindLoadCalculator_CC_Base
+    public class WindLoadCalculator_CC_ASCE7_22: WindLoadCalculator_ASCE7_22_Base
     {
         public override ASCE7_Versions ASCEVersion { get => ASCE7_Versions.ASCE_VER_7_22; }
-        public Chapter27and30_GCpCurveBase extGCpCurve_Roof { get; set; }
-        public Chapter27and30_GCpCurveBase extGCpCurve_Wall { get; set; }
 
         public WindLoadCalculator_CC_ASCE7_22(WindParameters_Base p, BuildingData bldg_data)
         {

@@ -8,10 +8,8 @@ namespace ShearWallCalculator.WindLoadCalculations
     /// <summary>
     /// Computes C&C pressures for ASCE 7-16 using the analytical method of Part 3 on page 350
     /// </summary>
-    public class WindLoadCalculator_CC_ASCE7_16 : WindLoadCalculator_ASCE7_16_Base, IWindLoadCalculator_CC_Base
+    public class WindLoadCalculator_CC_ASCE7_16 : WindLoadCalculator_ASCE7_16_Base
     {
-        public Chapter27and30_GCpCurveBase extGCpCurve_Roof { get; set; }
-        public Chapter27and30_GCpCurveBase extGCpCurve_Wall { get; set; }
 
         public WindLoadCalculator_CC_ASCE7_16(WindParameters_Base p, BuildingData bldg_data) : base()
         {
@@ -32,13 +30,11 @@ namespace ShearWallCalculator.WindLoadCalculations
             switch (ASCEVersion)
             {
                 case ASCE7_Versions.ASCE_VER_7_16:
-                    extGCpCurve_Roof = Chapter30RoofFigureFactory_ASCE7_16.CreateRoofFigure_ASCE7_16(
-                         buildingData.RoofType, buildingData.MeanRoofHeight, buildingData.BuildingWidth, buildingData.RoofPitch);
+                    extGCpCurve_Roof = Chapter30RoofFigureFactory_ASCE7_16.CreateRoofFigure_ASCE7_16(buildingData);
                     extGCpCurve_Wall = new Figure30_3_1_ASCE7_16();
                     break;
                 case ASCE7_Versions.ASCE_VER_7_22:
-                    extGCpCurve_Roof = Chapter30RoofFigureFactory_ASCE7_22.CreateRoofFigure_ASCE7_22(
-                        buildingData.RoofType, buildingData.MeanRoofHeight, buildingData.BuildingWidth, buildingData.RoofPitch);
+                    extGCpCurve_Roof = Chapter30RoofFigureFactory_ASCE7_22.CreateRoofFigure_ASCE7_22(buildingData);
                     extGCpCurve_Wall = new Figure30_3_1_ASCE7_22();
                     break;
                 default:
