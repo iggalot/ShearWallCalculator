@@ -1,7 +1,5 @@
 ﻿using ShearWallCalculator.BuildingInfo;
-using ShearWallCalculator.WindLoadCalculations.Chapter30;
 using ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator;
-using ShearWallCalculator.WindLoadCalculations.Core.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -67,33 +65,29 @@ namespace ShearWallCalculator.WindLoadCalculations
         MWFRS_LR_Full = 5
     }
 
-    public abstract class WindLoadCalculator_Base : IWindLoadCalculator
+    public abstract class WindLoadCalculator_Base
     {
-        public virtual ASCE7_Versions ASCEVersion { get; }
-        public WindParameters_Base Parameters { get; set; }
-        public BuildingData buildingData { get; set; }
+        public abstract ASCE7_Versions ASCEVersion { get; }
+        public abstract WindParameters_Base Parameters { get; set; }
+        public abstract BuildingData buildingData { get; set; }
 
         /// <summary>
         /// Contains the calculator that will be used to calculate the effective wind areas on the roof
         /// </summary>
-        public AreaCalculator_Base RoofAreaCalculator { get; set; }
+        public abstract AreaCalculator_Base RoofAreaCalculator { get; set; }
 
         /// <summary>
         /// Contains the calculator for the wall loads acting on the BuildingLength dimension
         /// </summary>
-        public AreaCalculator_Base WallAreaCalculator_BldgLength { get; set; }
+        public abstract AreaCalculator_Base WallAreaCalculator_BldgLength { get; set; }
         /// <summary>
         /// Contains the calculator for the wall loads acting on the BuildingWidth dimension
         /// </summary>
-        public AreaCalculator_Base WallAreaCalculator_BldgWidth { get; set; }
+        public abstract AreaCalculator_Base WallAreaCalculator_BldgWidth { get; set; }
 
 
 
-        // Which figure of Ch30_3_2A thru I to use for CC roof
-        public Chapter30_BaseFigure extGCpCurve_Roof { get; set; }
 
-        // The curve of Ch30_3_1 to use for CC walls
-        public Chapter30_BaseFigure extGCpCurve_Wall { get; set; }
 
         public Dictionary<int, double> windPressureRoof_Pos_External { get; set; } = new Dictionary<int, double>();
         public Dictionary<int, double> windPressureRoof_Neg_External { get; set; } = new Dictionary<int, double>();
@@ -117,6 +111,24 @@ namespace ShearWallCalculator.WindLoadCalculations
         /// <param name="z"></param>
         /// <returns></returns>
         public abstract double CalculateDynamicWindPressure(double z);
+        // Get Kz approximation based on building height and exposure category
+        public abstract double GetKz(double z, WindExposureCategories exposure);
+
+        /// <summary>
+        /// Compute Kd coefficient for the specific version of ASCE7
+        /// </summary>
+        /// <param name="calc_type"></param>
+        /// <param name="version"></param>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public abstract double GetKd(WindLoadCalculationTypes calc_type);
+
+        /// <summary>
+        /// The +/- coefficient for internal pressure coefficient GCpi from ASCE7_16 & ASCE7-22 Table 26.13-1
+        /// </summary>
+        /// <returns></returns>
+        public abstract double GetGCpi();
+
 
         public void CreateAreaCalculators()
         {
@@ -149,72 +161,6 @@ namespace ShearWallCalculator.WindLoadCalculations
         }
 
 
-        // Get Kz approximation based on building height and exposure category
-        public virtual double GetKz(double z, WindExposureCategories exposure)
-        {
-            double zg, alpha;
-
-            switch (exposure)
-            {
-                case WindExposureCategories.WIND_EXP_CAT_B:
-                    zg = 1200.0;
-                    alpha = 7.0;
-                    break;
-                case WindExposureCategories.WIND_EXP_CAT_C:
-                    zg = 900.0;
-                    alpha = 9.5;
-                    break;
-                case WindExposureCategories.WIND_EXP_CAT_D:
-                    zg = 700.0;
-                    alpha = 11.5;
-                    break;
-                default:
-                    zg = 900.0;
-                    alpha = 9.5;
-                    break;
-            }
-
-            z = Math.Max(z, 15); // Minimum height for Kz is 15 ft
-            return 2.01 * Math.Pow(z / zg, 2.0 / alpha);
-        }
-
-        /// <summary>
-        /// Compute Kd coefficient for the specific version of ASCE7
-        /// </summary>
-        /// <param name="calc_type"></param>
-        /// <param name="version"></param>
-        /// <returns></returns>
-        /// <exception cref="NotImplementedException"></exception>
-        public virtual double GetKd(WindLoadCalculationTypes calc_type)
-        {
-            switch (calc_type)
-            {
-                case WindLoadCalculationTypes.COMPONENT_AND_CLADDING:
-                    return 0.85;
-                case WindLoadCalculationTypes.MWFRS:
-                    return 0.85;
-                default:
-                    throw new NotImplementedException("ERROR:  " + calc_type + " not supported. ");
-            }
-        }
-
-        /// <summary>
-        /// The +/- coefficient for internal pressure coefficient GCpi from ASCE7_16 & ASCE7-22 Table 26.13-1
-        /// </summary>
-        /// <returns></returns>
-        public virtual double GetGCpi()
-        {
-            switch (buildingData.EnclosureType)
-            {
-                case BuildingEnclosures.BLDG_ENCLOSED: return 0.18;
-                case BuildingEnclosures.BLDG_PARTIALLY_ENCLOSED: return 0.55;
-                case BuildingEnclosures.BLDG_PARTIALLY_OPEN: return 0.18;
-                case BuildingEnclosures.BLDG_OPEN: return 0.0;
-                default: throw new Exception("ERROR: Invalid enclosure type: " + buildingData.EnclosureType + " in WindLoadCalculator_MWFRS_ASCE7_22 constructor.");
-            }
-        }
-
-
 
 
 
@@ -234,6 +180,14 @@ namespace ShearWallCalculator.WindLoadCalculations
         /// Calculates the qh * GCP for external pressures minus the internal pressure qh * GCpi
         /// </summary>
         public abstract void CalculateNetPressures();
+
+
+
+
+
+
+
+
 
 
         /// <summary>

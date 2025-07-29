@@ -1,26 +1,18 @@
 ﻿namespace ShearWallCalculator.WindLoadCalculations.WindLoadCalculators
 {
+
     /// <summary>
     ///  In ASCE7-16, the dynamic wind pressure coefficient includes Kd in the dynamic wind calculation.  
     ///  In ASCE7_22 it does not -- instead applying Kd to the external and net pressure calculations separately.  
     ///  In the end the calculations are the same.  This now better matches these codes.  
     ///  But dyanmic wind pressure qz and qh will be drastically different.
     /// </summary>
-    public class WindLoadCalculator_CC_Base : WindLoadCalculator_Base
+    public interface IWindLoadCalculator_CC_Base
     {
-        public override double CalculateDynamicWindPressure(double z)
-        {
-            throw new System.NotImplementedException();
-        }
+        // Which figure of Ch30_3_2A thru I to use for CC roof
+        Chapter30_BaseFigure extGCpCurve_Roof { get; set; }
 
-        public override void CalculateExternalPressures()
-        {
-            throw new System.NotImplementedException();
-        }
-
-        public override void CalculateNetPressures()
-        {
-            throw new System.NotImplementedException();
-        }
+        // The curve of Ch30_3_1 to use for CC walls
+        Chapter30_BaseFigure extGCpCurve_Wall { get; set; }
     }
 }

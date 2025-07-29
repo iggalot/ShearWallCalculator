@@ -1,4 +1,4 @@
-﻿namespace ShearWallCalculator.WindLoadCalculations.Chapter30
+﻿namespace ShearWallCalculator.WindLoadCalculations
 {
     /// <summary>
     /// ASCE7-22 Figure 30-3-2C

@@ -134,7 +134,7 @@
     <Compile Include="WindLoadCalculations\Factories\RoofAreaCalculatorFactory.cs" />
     <Compile Include="WindLoadCalculations\ASCE7\AreaCalculator_Base.cs" />
     <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\CC\Figure30_3_ASCE7_16\Chapter30RoofFigureFactory_ASCE7_16.cs" />
-    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\CC\Figure30_3_ASCE7_22\Chapter30_BaseFigure.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\Chapter30_BaseFigure.cs" />
     <Compile Include="WindLoadCalculations\ASCE7\ExternalGCpCurve.cs" />
     <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\CC\Figure30_3_ASCE7_16\Figure30_3_1_ASCE7_16.cs" />
     <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\CC\Figure30_3_ASCE7_16\Figure30_3_2A_ASCE7_16.cs" />
@@ -156,15 +156,14 @@
     <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\CC\Figure30_3_ASCE7_22\Figure30_3_2E_ASCE7_22.cs" />
     <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\CC\Figure30_3_ASCE7_22\Figure30_3_2F_2G_INTERPOLATED_ASCE7_22.cs" />
     <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\CC\Figure30_3_ASCE7_22\Figure30_3_2G_ASCE7_22.cs" />
-    <Compile Include="WindLoadCalculations\Core\Interfaces\IWindLoadCalculator.cs" />
     <Compile Include="WindLoadCalculations\Factories\WindLoadCalculatorFactory.cs" />
     <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\WindLoadCalculator_ASCE7_16_Base.cs" />
     <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\WindLoadCalculator_ASCE7_22_Base.cs" />
     <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\CC\WindLoadCalculator_CC_ASCE7_22.cs" />
-    <Compile Include="WindLoadCalculations\ASCE7\WindLoadCalculator_CC_Base.cs" />
+    <Compile Include="WindLoadCalculations\Core\Interfaces\IWindLoadCalculator_CC_Base.cs" />
     <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\MWFRS\WindLoadCalculator_MWFRS_ASCE7_22.cs" />
     <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\MWFRS\WindLoadCalculator_MWFRS_ASCE7_16.cs" />
-    <Compile Include="WindLoadCalculations\ASCE7\WindLoadCalculator_MWFRS_Base.cs" />
+    <Compile Include="WindLoadCalculations\Core\Interfaces\IWindLoadCalculator_MWFRS_Base.cs" />
     <Compile Include="WindLoadCalculations\Core\WindInputParameters\FlatRoofWindLoadParameters.cs" />
     <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\CC\AreaCalculators\GableRoofAreaCalculator_CC_ASCE7_16.cs" />
     <Compile Include="WindLoadCalculations\Core\WindInputParameters\GableRoofWindLoadParameters.cs" />

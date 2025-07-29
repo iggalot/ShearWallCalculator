@@ -7,8 +7,6 @@ using ShearWallCalculator.BuildingInfo;
 using ShearWallCalculator.Helpers;
 using ShearWallCalculator.Interfaces;
 using ShearWallCalculator.WindLoadCalculations;
-using ShearWallCalculator.WindLoadCalculations.Chapter30;
-using ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator;
 using ShearWallCalculator.WindLoadCalculations.Chapter30.Figure30_3;
 using ShearWallCalculator.WindLoadCalculations.WindLoadCalculators;
 using ShearWallVisualizer.Controls;
@@ -524,12 +522,12 @@ namespace ShearWallVisualizer
             mwfrs_calc_building_width.CalculatePressures(); // do the computations
 
             // create the CC calculator from the building length parameters of building defintion 1
-            WindLoadCalculator_Base cc_calc_building_width;
+            WindLoadCalculator_Base cc_calc_building_length;
             var cc_params = windLoadParams.Clone();
             cc_params.AnalysisType = WindLoadCalculationTypes.COMPONENT_AND_CLADDING;
-            cc_calc_building_width = WindLoadCalculatorFactory.Create(windVersion, WindLoadCalculationTypes.COMPONENT_AND_CLADDING, cc_params, bldg_data1);
-            cc_calc_building_width.CreateAreaCalculators(); // create the wind area regions for this calculator
-            cc_calc_building_width.CalculatePressures(); // do the computations
+            cc_calc_building_length = WindLoadCalculatorFactory.Create(windVersion, WindLoadCalculationTypes.COMPONENT_AND_CLADDING, cc_params, bldg_data1);
+            cc_calc_building_length.CreateAreaCalculators(); // create the wind area regions for this calculator
+            cc_calc_building_length.CalculatePressures(); // do the computations
 
 
             // Assign the wind load calculators
@@ -537,13 +535,13 @@ namespace ShearWallVisualizer
             {
                 windLoadCalculator_MWFRS_Length = mwfrs_calc_building_length;
                 windLoadCalculator_MWFRS_Width= mwfrs_calc_building_width;
-                windLoadCalculator_CC = cc_calc_building_width;
+                windLoadCalculator_CC = cc_calc_building_length;
             }
             else
             {
                 windLoadCalculator_MWFRS_Length = mwfrs_calc_building_width;
                 windLoadCalculator_MWFRS_Width = mwfrs_calc_building_length;
-                windLoadCalculator_CC = cc_calc_building_width;
+                windLoadCalculator_CC = cc_calc_building_length;
 
             }
         }
@@ -594,8 +592,20 @@ namespace ShearWallVisualizer
 
         private void PopulateComponentAndCladdingDataGrids(WindLoadResultsControl_CC ccControl)
         {
-            var figureCC_Roof = windLoadCalculator_CC.extGCpCurve_Roof;
-            var figureCC_Wall = windLoadCalculator_CC.extGCpCurve_Wall;
+            Chapter30_BaseFigure figureCC_Roof = null ;
+            Chapter30_BaseFigure figureCC_Wall;
+            if (windLoadCalculator_CC.ASCEVersion == ASCE7_Versions.ASCE_VER_7_16)
+            {
+                figureCC_Roof = ((WindLoadCalculator_CC_ASCE7_16)windLoadCalculator_CC).extGCpCurve_Roof;
+                figureCC_Wall = ((WindLoadCalculator_CC_ASCE7_16)windLoadCalculator_CC).extGCpCurve_Wall;
+            } else if (windLoadCalculator_CC.ASCEVersion == ASCE7_Versions.ASCE_VER_7_22)
+            {
+                figureCC_Roof = ((WindLoadCalculator_CC_ASCE7_22)windLoadCalculator_CC).extGCpCurve_Roof;
+                figureCC_Wall = ((WindLoadCalculator_CC_ASCE7_22)windLoadCalculator_CC).extGCpCurve_Wall;
+            } else
+            {
+                throw new Exception("ERROR:  In PopulateComponentAndCladdingDataGrids() -- Version " + windLoadCalculator_CC.ASCEVersion.ToString() + " not found.");
+            }
 
             if (ccControl == null || figureCC_Roof == null || figureCC_Wall == null) return;
 
@@ -645,8 +655,23 @@ namespace ShearWallVisualizer
             var wallTitle = ccControl.txtFigureTitle_Walls;
             var wallCriteria = ccControl.txtFigureCriteria_Walls;
 
-            var figureCC_Roof = windLoadCalculator_CC.extGCpCurve_Roof;
-            var figureCC_Wall = windLoadCalculator_CC.extGCpCurve_Wall;
+
+            Chapter30_BaseFigure figureCC_Roof = null;
+            Chapter30_BaseFigure figureCC_Wall;
+            if (windLoadCalculator_CC.ASCEVersion == ASCE7_Versions.ASCE_VER_7_16)
+            {
+                figureCC_Roof = ((WindLoadCalculator_CC_ASCE7_16)windLoadCalculator_CC).extGCpCurve_Roof;
+                figureCC_Wall = ((WindLoadCalculator_CC_ASCE7_16)windLoadCalculator_CC).extGCpCurve_Wall;
+            }
+            else if (windLoadCalculator_CC.ASCEVersion == ASCE7_Versions.ASCE_VER_7_22)
+            {
+                figureCC_Roof = ((WindLoadCalculator_CC_ASCE7_22)windLoadCalculator_CC).extGCpCurve_Roof;
+                figureCC_Wall = ((WindLoadCalculator_CC_ASCE7_22)windLoadCalculator_CC).extGCpCurve_Wall;
+            }
+            else
+            {
+                throw new Exception("ERROR:  In PopulateComponentAndCladdingDataGrids() -- Version " + windLoadCalculator_CC.ASCEVersion.ToString() + " not found.");
+            }
 
             roofTitle.Text = figureCC_Roof?.ChartTitle;
             roofCriteria.Text = figureCC_Roof?.ChartCriteria;

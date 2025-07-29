@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace ShearWallCalculator.WindLoadCalculations.Chapter30
+namespace ShearWallCalculator.WindLoadCalculations
 {
     /// <summary>
     /// ASCE7-16 Interpolated Figures 30-3-2F && 30-3-2G

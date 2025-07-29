@@ -1,7 +1,8 @@
 ﻿using ShearWallCalculator.BuildingInfo;
+using ShearWallCalculator.WindLoadCalculations;
 using System;
 
-namespace ShearWallCalculator.WindLoadCalculations.Chapter30.Figure30_3
+namespace ShearWallCalculator.WindLoadCalculations
 {
     public static class Chapter30RoofFigureFactory_ASCE7_16
     {

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace ShearWallCalculator.WindLoadCalculations.Chapter30
+namespace ShearWallCalculator.WindLoadCalculations
 {
     public class ExternalGCpCurve
     {
