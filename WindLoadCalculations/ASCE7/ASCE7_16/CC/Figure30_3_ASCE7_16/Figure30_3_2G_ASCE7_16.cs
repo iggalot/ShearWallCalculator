@@ -10,7 +10,7 @@
     {
         public override string ChartTitle { get; set; } = "ASCE 7-16 Figure 30-3-2G - Hip Roofs";
         public override string ChartCriteria { get; set; } = "h <= 60ft, 20deg < slope <= 27deg";
-        public Figure30_3_2G_ASCE7_16(double h, double b)
+        public Figure30_3_2G_ASCE7_16()
         {
             // Roof Negative Pressure Zones
             RoofCurves_Neg["Zone3"] = new ExternalGCpCurve(new (double X, double Y)[]

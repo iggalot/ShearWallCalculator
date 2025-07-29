@@ -18,7 +18,19 @@
                 (0,  -0.18),
                 (80, -0.18)
             });
-            
+
+            RoofCurves_Pos["Zone2"] = new ExternalGCpCurve(new (double X, double Y)[]
+{
+                (0,  -0.7),
+                (80, -0.7)
+});
+
+            RoofCurves_Pos["Zone1"] = new ExternalGCpCurve(new (double X, double Y)[]
+{
+                (0,  -0.7),
+                (80, -0.7)
+});
+
             // Most negative values
             RoofCurves_Pos["Zone4"] = new ExternalGCpCurve(new (double X, double Y)[]
             {
@@ -31,6 +43,16 @@
                 (0,  -0.7),
                 (80, -0.7)
             });
+            RoofCurves_Pos["Zone2"] = new ExternalGCpCurve(new (double X, double Y)[]
+{
+                (0,  -0.7),
+                (80, -0.7)
+});
+            RoofCurves_Pos["Zone1"] = new ExternalGCpCurve(new (double X, double Y)[]
+{
+                (0,  -0.7),
+                (80, -0.7)
+});
         }
         private double GetReductionFactor(double area)
         {

@@ -19,10 +19,8 @@ namespace ShearWallCalculator.WindLoadCalculations
         /// </summary>
         /// <param name="h">mean roof height</param>
         /// <param name="B">width of building -- normal to wind</param>
-        public Figure30_3_2E_2F_ASCE7_16(double h, double B)
+        public Figure30_3_2E_2F_ASCE7_16(double ratio)
         {
-            double ratio = h / B;
-
             var low = new FigureDataSet();
             var high = new FigureDataSet();
 

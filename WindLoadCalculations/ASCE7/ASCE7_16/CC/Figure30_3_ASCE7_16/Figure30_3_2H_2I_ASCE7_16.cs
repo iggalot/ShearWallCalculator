@@ -6,7 +6,7 @@
         public override string ChartCriteria { get; set; } = "h <= 60ft, 27deg < slope <= 45deg";
 
         // TODO:  These figures have limits on Amax and Amin when retrieving values
-        public Figure30_3_2H_2I_ASCE7_16(double h, double b, double slope)
+        public Figure30_3_2H_2I_ASCE7_16(double slope)
         {
             // Calculate parameters
             double a = -0.6175 - 0.02 * slope;    // Zone1_neg_Roof upper Y1
