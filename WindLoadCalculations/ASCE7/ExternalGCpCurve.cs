@@ -6,7 +6,7 @@ namespace ShearWallCalculator.WindLoadCalculations
     {
         // Points defining the piecewise linear curve (exactly 8 points for 7 segments)
         private (double X, double Y)[] points;
-        public (double X, double Y)[] Points;
+        public (double X, double Y)[] Points { get => points; }
 
         public double LowerBoundX => points[0].X;
         public double UpperBoundX => points[points.Length - 1].X;

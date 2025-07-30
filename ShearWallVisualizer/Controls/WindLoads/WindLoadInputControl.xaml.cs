@@ -109,7 +109,6 @@ namespace ShearWallVisualizer.Controls
             {
                 WindSpeedTextBox.Text = Parameters.WindSpeed.ToString();
                 KztTextBox.Text = Parameters.Kzt.ToString();
-                KdTextBox.Text = Parameters.Kd.ToString();
                 ImportanceFactorTextBox.Text = Parameters.ImportanceFactor.ToString();
 
                 //bool found_analysis = false;
@@ -201,6 +200,7 @@ namespace ShearWallVisualizer.Controls
             }
 
             // Optional: Draw centroid as a small ellipse
+            Console.WriteLine($"AreaLabel: {area.Label_Short}  Area: {area.Area}");
             var center = area.Centroid;
             double radius = 3;
 
@@ -251,7 +251,6 @@ namespace ShearWallVisualizer.Controls
             Version = version;
 
             double windSpeed = double.Parse(WindSpeedTextBox.Text);
-            double kd = double.Parse(KdTextBox.Text);
             double kzt = double.Parse(KztTextBox.Text);
             double importance = double.Parse(ImportanceFactorTextBox.Text);
             string risk = ((ComboBoxItem)RiskCategoryComboBox.SelectedItem).Content.ToString();
@@ -280,7 +279,6 @@ namespace ShearWallVisualizer.Controls
                 risk, 
                 windSpeed, 
                 exposure, 
-                kd, 
                 kzt, 
                 importance
                 

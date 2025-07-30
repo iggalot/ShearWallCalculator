@@ -446,6 +446,7 @@ namespace ShearWallVisualizer
 
 
 
+
             UpdateShearWallUI();
         }
         /// <summary>
@@ -461,22 +462,20 @@ namespace ShearWallVisualizer
             // create our calculators for each of the directions
             MakeCalculators();
 
-            //// create the wind load results control
-            //ContentControl ctrol_wind_mwfrs_results1 = new WindLoadResultsControl_MWFRS(windLoadCalculator_MWFRS_Length);
-            //tabWindResultsTabItem_MWFRS_BldgLength.Content = ctrol_wind_mwfrs_results1;
-
-            //ContentControl ctrol_wind_mwfrs_results2 = new WindLoadResultsControl_MWFRS(windLoadCalculator_MWFRS_Width);
-            //tabWindResultsTabItem_MWFRS_BldgWidth.Content = ctrol_wind_mwfrs_results2;
-
-            //var ctrol_wind_cc_results = new WindLoadResultsControl_CC(windLoadCalculator_CC);
-            //tabWindResultsTabItem_CC.Content = ctrol_wind_cc_results;
-
             WindLoadResultsControl_CC ccControl1;
             WindLoadResultsControl_MWFRS mwfrsControl1, mwfrsControl2;
             CreateAndAssignResultControls(out ccControl1, out mwfrsControl1, out mwfrsControl2);
 
-            DrawEffectiveAreas_OnWindLoadParameterInputCanvas();
-            
+            DrawEffectiveAreas_CC_OnWindLoadParameterInputCanvas();
+            DrawEffectiveAreas_MWFRS_Length_OnWindLoadParameterInputCanvas();
+            DrawEffectiveAreas_MWFRS_Width_OnWindLoadParameterInputCanvas();
+
+            var ctrol_wind_input = tabWindInputControlTabItem.Content as WindLoadInputControl;
+            BuildingDrawer.DrawPlan(ctrol_wind_input.cnvBuildingPlan_CC, windLoadCalculator_CC.buildingData);
+            BuildingDrawer.DrawPlan(ctrol_wind_input.cnvBuildingPlan_MWFRS_Length, windLoadCalculator_MWFRS_Length.buildingData);
+            BuildingDrawer.DrawPlan(ctrol_wind_input.cnvBuildingplan_MWFRS_Width, windLoadCalculator_MWFRS_Width.buildingData);
+
+
             SetupMWFRSResultTab();
             
 
@@ -498,53 +497,44 @@ namespace ShearWallVisualizer
         /// </summary>
         private void MakeCalculators()
         {
-            // Create the wind load calculator and calculate the pressures
-            BuildingData bldg_data1 = buildingData;
-
-            // Clone the original building and flip the building data for making the building
-            // second calculator calculator.  Also flips the ridge direction, so that we get calculations for the same building
-            BuildingData bldg_data2 = bldg_data1.Clone();
+            var bldg_data1 = buildingData;
+            var bldg_data2 = bldg_data1.Clone();
             bldg_data2.FlipBuilding();
 
-            // Create Calculator #1 as the default orientation of the building -- assuming wind always acts from left of the plan view -- WW wall will be 
-            // the BuildingWidth wall on left.
-            WindLoadCalculator_Base mwfrs_calc_building_length;
-            var mwfrs_params = windLoadParams.Clone();
-            mwfrs_params.AnalysisType = WindLoadCalculationTypes.MWFRS;
-            mwfrs_calc_building_length = WindLoadCalculatorFactory.Create(windVersion, WindLoadCalculationTypes.MWFRS, mwfrs_params, bldg_data1);
-            mwfrs_calc_building_length.CreateAreaCalculators(); // create the wind area regions for this calculator
-            mwfrs_calc_building_length.CalculatePressures(); // do the computations
+            // Create MWFRS calculators
+            var mwfrs_calc_building_length = CreateAndComputeCalculator(bldg_data1, WindLoadCalculationTypes.MWFRS);
+            var mwfrs_calc_building_width = CreateAndComputeCalculator(bldg_data2, WindLoadCalculationTypes.MWFRS);
 
-            // Create the second mwfrs calculator
-            WindLoadCalculator_Base mwfrs_calc_building_width;
-            mwfrs_calc_building_width = WindLoadCalculatorFactory.Create(windVersion, WindLoadCalculationTypes.MWFRS, mwfrs_params, bldg_data2);
-            mwfrs_calc_building_width.CreateAreaCalculators(); // create the wind area regions for this calculator
-            mwfrs_calc_building_width.CalculatePressures(); // do the computations
+            // Create CC calculator using building data #1
+            var cc_calc_building_length = CreateAndComputeCalculator(bldg_data1, WindLoadCalculationTypes.COMPONENT_AND_CLADDING);
 
-            // create the CC calculator from the building length parameters of building defintion 1
-            WindLoadCalculator_Base cc_calc_building_length;
-            var cc_params = windLoadParams.Clone();
-            cc_params.AnalysisType = WindLoadCalculationTypes.COMPONENT_AND_CLADDING;
-            cc_calc_building_length = WindLoadCalculatorFactory.Create(windVersion, WindLoadCalculationTypes.COMPONENT_AND_CLADDING, cc_params, bldg_data1);
-            cc_calc_building_length.CreateAreaCalculators(); // create the wind area regions for this calculator
-            cc_calc_building_length.CalculatePressures(); // do the computations
-
-
-            // Assign the wind load calculators
+            // Assign based on ridge direction
             if (buildingData.RidgeDirection == RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH)
             {
                 windLoadCalculator_MWFRS_Length = mwfrs_calc_building_length;
-                windLoadCalculator_MWFRS_Width= mwfrs_calc_building_width;
-                windLoadCalculator_CC = cc_calc_building_length;
+                windLoadCalculator_MWFRS_Width = mwfrs_calc_building_width;
             }
             else
             {
                 windLoadCalculator_MWFRS_Length = mwfrs_calc_building_width;
                 windLoadCalculator_MWFRS_Width = mwfrs_calc_building_length;
-                windLoadCalculator_CC = cc_calc_building_length;
-
             }
+
+            windLoadCalculator_CC = cc_calc_building_length;
         }
+
+        private WindLoadCalculator_Base CreateAndComputeCalculator(BuildingData building, WindLoadCalculationTypes type)
+        {
+            var parameters = windLoadParams.Clone();
+            parameters.AnalysisType = type;
+
+            var calculator = WindLoadCalculatorFactory.Create(windVersion, type, parameters, building);
+            calculator.CreateAreaCalculators();
+            calculator.CalculatePressures();
+            return calculator;
+        }
+
+
 
         /// <summary>
         /// Assigns the two calculators to the appropriate tabs.
@@ -572,11 +562,11 @@ namespace ShearWallVisualizer
         /// <summary>
         /// Draws the effective wind areas on the wind load parameter input canvas
         /// </summary>
-        private void DrawEffectiveAreas_OnWindLoadParameterInputCanvas()
+        private void DrawEffectiveAreas_CC_OnWindLoadParameterInputCanvas()
         {
             if (tabWindInputControlTabItem.Content is WindLoadInputControl inputControl)
             {
-                var canvas = inputControl.cnvWindLoadInputCanvas;
+                var canvas = inputControl.cnvEffectiveRoofAreas_CC;
 
                 if (canvas == null) return;
 
@@ -584,6 +574,48 @@ namespace ShearWallVisualizer
                 double scale = Math.Min(canvas.ActualWidth / buildingData.BuildingWidth, canvas.ActualHeight / buildingData.BuildingLength);
                 
                 foreach (var area in windLoadCalculator_CC.RoofAreaCalculator.effWindAreas)
+                {
+                    WindLoadInputControl.DrawEffectiveWindArea(canvas, area.Value, scale, GetColorForRegion(area.Value.Label_Short));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Draws the effective wind areas on the wind load parameter input canvas
+        /// </summary>
+        private void DrawEffectiveAreas_MWFRS_Length_OnWindLoadParameterInputCanvas()
+        {
+            if (tabWindInputControlTabItem.Content is WindLoadInputControl inputControl)
+            {
+                var canvas = inputControl.cnvEffectiveRoofAreas_MWFRS_Length;
+
+                if (canvas == null) return;
+
+                canvas.Children.Clear();
+                double scale = Math.Min(canvas.ActualWidth / buildingData.BuildingWidth, canvas.ActualHeight / buildingData.BuildingLength);
+
+                foreach (var area in windLoadCalculator_MWFRS_Length.RoofAreaCalculator.effWindAreas)
+                {
+                    WindLoadInputControl.DrawEffectiveWindArea(canvas, area.Value, scale, GetColorForRegion(area.Value.Label_Short));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Draws the effective wind areas on the wind load parameter input canvas
+        /// </summary>
+        private void DrawEffectiveAreas_MWFRS_Width_OnWindLoadParameterInputCanvas()
+        {
+            if (tabWindInputControlTabItem.Content is WindLoadInputControl inputControl)
+            {
+                var canvas = inputControl.cnvEffectiveRoofAreas_MWFRS_Width;
+
+                if (canvas == null) return;
+
+                canvas.Children.Clear();
+                double scale = Math.Min(canvas.ActualWidth / buildingData.BuildingWidth, canvas.ActualHeight / buildingData.BuildingLength);
+
+                foreach (var area in windLoadCalculator_MWFRS_Width.RoofAreaCalculator.effWindAreas)
                 {
                     WindLoadInputControl.DrawEffectiveWindArea(canvas, area.Value, scale, GetColorForRegion(area.Value.Label_Short));
                 }

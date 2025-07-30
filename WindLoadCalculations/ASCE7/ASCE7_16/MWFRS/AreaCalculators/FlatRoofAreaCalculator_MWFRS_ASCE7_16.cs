@@ -51,7 +51,7 @@ namespace ShearWallCalculator.WindLoadCalculations
                     // A---p1----p2----p3----B
                     Point A = new Point(0, 0);
                     Point B = new Point(this.buildingData.BuildingLength, 0);
-                    Point C = new Point(this.buildingData.BuildingWidth, this.buildingData.BuildingLength);
+                    Point C = new Point(this.buildingData.BuildingLength, this.buildingData.BuildingWidth);
                     Point D = new Point(0, this.buildingData.BuildingWidth);
                     Point E = new Point(0, 0.5 * this.buildingData.BuildingWidth);
                     Point F = new Point(this.buildingData.BuildingLength, 0.5 * this.buildingData.BuildingWidth);
@@ -65,7 +65,7 @@ namespace ShearWallCalculator.WindLoadCalculations
                         p11 = new Point(offset1, 0.5 * building_width);
                         p21 = new Point(offset1, building_width);
 
-                        effWindAreas.Add(1, new EffectiveWindArea("Zone4", new List<Point> { A, p1, p11, D }, null));
+                        effWindAreas.Add(1, new EffectiveWindArea("Zone4", new List<Point> { A, p1, p11, E }, null));
                         effWindAreas.Add(2, new EffectiveWindArea("Zone4", new List<Point> { E, p11, p21, D }, null));
                     }
                     else
@@ -117,6 +117,8 @@ namespace ShearWallCalculator.WindLoadCalculations
                         return;
                     }
                 }
+                
+                
                 // Define when wind is perpendicular to ridge (parallel to BuildingWidth) dimension
                 // D----------------C
                 // |  1             |
@@ -140,7 +142,7 @@ namespace ShearWallCalculator.WindLoadCalculations
 
                     Point A = new Point(0, 0);
                     Point B = new Point(this.buildingData.BuildingLength, 0);
-                    Point C = new Point(this.buildingData.BuildingWidth, this.buildingData.BuildingLength);
+                    Point C = new Point(this.buildingData.BuildingLength, this.buildingData.BuildingWidth);
                     Point D = new Point(0, this.buildingData.BuildingWidth);
                     Point R_L = new Point(0, 0.5 * this.buildingData.BuildingWidth);
                     Point R_R = new Point(this.buildingData.BuildingLength, 0.5 * this.buildingData.BuildingWidth);
@@ -153,7 +155,7 @@ namespace ShearWallCalculator.WindLoadCalculations
                     {
                         p1 = new Point(0, offset1);
                         p2 = new Point(building_length, offset1);
-                        effWindAreas.Add(1, new EffectiveWindArea("Zone4", new List<Point> { A, B, p1, p2 }, null));
+                        effWindAreas.Add(1, new EffectiveWindArea("Zone4", new List<Point> { A, B, p2, p1 }, null));
                     }
                     else
                     {
@@ -300,12 +302,12 @@ namespace ShearWallCalculator.WindLoadCalculations
                     // |    |    |     ||      |     |
                     // |    |    |     ||      |     |
                     // | 4  | 3  |  2a ||  2b  |  1  |
-                    // A---p1----p2---R2------p2-----B
+                    // A---p1----p2---R2------p3-----B
                     //  
                     //  Ridge = "="
                     Point A = new Point(0, 0);
                     Point B = new Point(this.buildingData.BuildingLength, 0);
-                    Point C = new Point(this.buildingData.BuildingWidth, this.buildingData.BuildingLength);
+                    Point C = new Point(this.buildingData.BuildingLength, this.buildingData.BuildingWidth);
                     Point D = new Point(0, this.buildingData.BuildingWidth);
                     Point R1 = new Point(0.5 * building_length, 0);
                     Point R2 = new Point(0.5 * building_length, building_width);
@@ -353,13 +355,13 @@ namespace ShearWallCalculator.WindLoadCalculations
                         p13 = new Point(offset3, building_width);
 
                         // Zone 2
-                        effWindAreas.Add(5, new EffectiveWindArea("Zone2", new List<Point> { p2, p3, p13, p12 }, null));
-                        effWindAreas.Add(6, new EffectiveWindArea("Zone1", new List<Point> { p3, B, C, p13 }, null));
+                        effWindAreas.Add(3, new EffectiveWindArea("Zone2", new List<Point> { p2, p3, p13, p12 }, null));
+                        effWindAreas.Add(4, new EffectiveWindArea("Zone1", new List<Point> { p3, B, C, p13 }, null));
                     }
                     else
                     {
                         // Zone 2
-                        effWindAreas.Add(5, new EffectiveWindArea("Zone2", new List<Point> { p2, B, C, p12 }, null));
+                        effWindAreas.Add(3, new EffectiveWindArea("Zone2", new List<Point> { p2, B, C, p12 }, null));
                         return;
                     }
                 }

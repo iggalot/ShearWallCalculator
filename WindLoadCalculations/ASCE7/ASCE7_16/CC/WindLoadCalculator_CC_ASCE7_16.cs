@@ -16,12 +16,21 @@ namespace ShearWallCalculator.WindLoadCalculations
             buildingData = bldg_data;
             Parameters = p;
 
-            if (buildingData.MeanRoofHeight <= 60)
+            try
             {
-                CreateExtGcpCurves();
-            } else
+
+                if (buildingData.MeanRoofHeight <= 60)
+                {
+                    CreateExtGcpCurves();
+                }
+                else
+                {
+                    throw new Exception("ERROR: Building max mean roof height has exceeded 60 ft -- " + buildingData.MeanRoofHeight + " ft.");
+                }
+            }
+            catch (Exception ex)
             {
-                throw new Exception("ERROR: Building max mean roof height has exceeded 60 ft -- " + buildingData.MeanRoofHeight + " ft.");
+                Console.WriteLine(ex.Message);
             }
         }
 

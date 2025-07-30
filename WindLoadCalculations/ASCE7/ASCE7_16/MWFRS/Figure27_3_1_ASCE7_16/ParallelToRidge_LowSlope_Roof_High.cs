@@ -35,7 +35,7 @@
             RoofCurves_Pos["Zone4"] = new ExternalGCpCurve(new (double X, double Y)[]
             {
                 (0, -1.3 * GetReductionFactor(area)),  // TODO: this first value can be reduced by area of WW roof  <= 100 reduction factor = 1.0, 250 reduction factor = 0.9 and >= 1000 reduction factor = 0.8
-                (90, -1.3 * GetReductionFactor(area)),  // TODO: this first value can be reduced by area of WW roof  <= 100 reduction factor = 1.0, 250 reduction factor = 0.9 and >= 1000 reduction factor = 0.8
+                (80, -1.3 * GetReductionFactor(area)),  // TODO: this first value can be reduced by area of WW roof  <= 100 reduction factor = 1.0, 250 reduction factor = 0.9 and >= 1000 reduction factor = 0.8
             });
 
             RoofCurves_Pos["Zone3"] = new ExternalGCpCurve(new (double X, double Y)[]

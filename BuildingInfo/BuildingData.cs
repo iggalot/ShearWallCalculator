@@ -137,7 +137,7 @@ namespace ShearWallCalculator.BuildingInfo
         }
 
         /// <summary>
-        /// A routine that flips the plan view of the building by 90 degrees
+        /// A routine that flips the plan view of the building by 90 degrees, including the ridge direction if necessary
         /// </summary>
         public void FlipBuilding()
         {
@@ -158,6 +158,10 @@ namespace ShearWallCalculator.BuildingInfo
             ValidateRidgeDirection();
         }
 
+        /// <summary>
+        /// Creates a clone of this object
+        /// </summary>
+        /// <returns></returns>
         public BuildingData Clone()
         {
             return new BuildingData()

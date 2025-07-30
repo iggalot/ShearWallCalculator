@@ -10,7 +10,6 @@ namespace ShearWallCalculator.WindLoadCalculations
             string riskCategory,
             double windSpeed,
             WindExposureCategories exposureCategory,
-            double kd,
             double kzt,
             double importanceFactor
             //,
@@ -39,7 +38,6 @@ namespace ShearWallCalculator.WindLoadCalculations
             parameters.RiskCategory = riskCategory;
             parameters.WindSpeed = windSpeed;
             parameters.ExposureCategory = exposureCategory;
-            parameters.Kd = kd;
             parameters.Kzt = kzt;
             parameters.ImportanceFactor = importanceFactor;
             //parameters.AnalysisType = analysisType;

@@ -26,14 +26,18 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.Figure30_3
             DrawGrid(canvas, canvasWidth, canvasHeight, xMin, xMax, yMinNeg, yMaxPos, xTickValues);
 
             var allCurves = new List<(string label, ExternalGCpCurve curve, bool isNegative)>();
-            foreach (var kvp in figure.RoofCurves_Neg)
-                allCurves.Add((kvp.Key, kvp.Value, true));
-            foreach (var kvp in figure.RoofCurves_Pos)
-                allCurves.Add((kvp.Key, kvp.Value, false));
-            foreach (var kvp in figure.WallCurves_Neg)
-                allCurves.Add((kvp.Key, kvp.Value, true));
-            foreach (var kvp in figure.WallCurves_Pos)
-                allCurves.Add((kvp.Key, kvp.Value, false));
+
+            if(figure != null)
+            {
+                foreach (var kvp in figure.RoofCurves_Neg)
+                    allCurves.Add((kvp.Key, kvp.Value, true));
+                foreach (var kvp in figure.RoofCurves_Pos)
+                    allCurves.Add((kvp.Key, kvp.Value, false));
+                foreach (var kvp in figure.WallCurves_Neg)
+                    allCurves.Add((kvp.Key, kvp.Value, true));
+                foreach (var kvp in figure.WallCurves_Pos)
+                    allCurves.Add((kvp.Key, kvp.Value, false));
+            }
 
             var groupedByShape = allCurves
                 .GroupBy(item => string.Join("_", item.curve.GetPoints().Select(p => $"{p.X:F3}_{p.Y:F3}")))
