@@ -130,10 +130,24 @@ namespace ShearWallCalculator.WindLoadCalculations
                 Point B = new Point(building_length, 0);
                 Point C = new Point(building_length, building_width);
                 Point D = new Point(0, building_width);
-                Point R1 = new Point(0.5 * building_length, 0);
-                Point R2 = new Point(0.5 * building_length, building_width);
 
-                double ridge_position = 0.5 * building_length;
+                // set the ridge to the right most points on the roof -- so that its not within any of the possible roof regions.
+                Point R1;
+                Point R2;
+                double ridge_position;
+
+                if (buildingData.RoofTypeIsSloped())
+                {
+                    // and if we are hipped or sloped, move it back to the middle of the building
+                    R1 = new Point(0.5 * building_length, 0);
+                    R2 = new Point(0.5 * building_length, building_width);
+                    ridge_position = 0.5 * building_length;
+                } else
+                {
+                    R1 = B;
+                    R2 = C;
+                    ridge_position = building_length;
+                }
 
                 Point p1, p2, p3, p11, p12, p13;
                 bool ridge_already_found = false;
@@ -149,14 +163,26 @@ namespace ShearWallCalculator.WindLoadCalculations
                     // now check if the ridge is in this region
                     if (IsValidRectangle_BuildingLength(ridge_position, building_width, offset1))
                     {
-                        // yes, so split the whole area
-                        ridge_already_found = true;
-                        effWindAreas.Add(1, new EffectiveWindArea("Zone4", new List<Point> { A, R1, R2, D }, null));
-                        effWindAreas.Add(2, new EffectiveWindArea("Zone4", new List<Point> { R1, p1, p11, R2 }, null));
-                    } else
-                    {
                         // no draw the whole region without splitting
                         effWindAreas.Add(1, new EffectiveWindArea("Zone4", new List<Point> { A, p1, p11, D }, null));
+
+                    } else
+                    {
+                        // yes, so split the whole area
+                        ridge_already_found = true;
+
+                        // check if the ridge points are the same as p1 and p11
+                        if (R1 == p1 || R2 == p11)
+                        {
+                            // Ridge occurs at p1 or p11 so no need to split
+                            effWindAreas.Add(1, new EffectiveWindArea("Zone4", new List<Point> { A, R1, R2, D }, null));
+                        }
+                        else
+                        {
+                            effWindAreas.Add(1, new EffectiveWindArea("Zone4", new List<Point> { A, R1, R2, D }, null));
+                            effWindAreas.Add(2, new EffectiveWindArea("Zone4", new List<Point> { R1, p1, p11, R2 }, null));
+                        }
+
                     }
                 } else
                 {
@@ -166,19 +192,28 @@ namespace ShearWallCalculator.WindLoadCalculations
                     // now check if the ridge is in this region
                     if (IsValidRectangle_BuildingLength(ridge_position, building_width, offset1))
                     {
-                        // yes, so split the whole area
-                        ridge_already_found = true;
-                        effWindAreas.Add(1, new EffectiveWindArea("Zone4", new List<Point> { A, R1, R2, D }, null));
-                        effWindAreas.Add(2, new EffectiveWindArea("Zone4", new List<Point> { R1, B, C, R2 }, null));
-                    }
-                    else
-                    {
                         // no draw the whole region without splitting
                         effWindAreas.Add(1, new EffectiveWindArea("Zone4", new List<Point> { A, B, C, D }, null));
                     }
+                    else
+                    {
+                        // yes, so split the whole area
+                        ridge_already_found = true;
+
+                        // check if the ridge points are the same as p1 and p11
+                        if (R1 == p1 || R2 == p11)
+                        {
+                            // Ridge occurs at p1 or p11 so no need to split
+                            effWindAreas.Add(1, new EffectiveWindArea("Zone4", new List<Point> { A, B, C, D }, null));
+                        }
+                        else
+                        {
+                            effWindAreas.Add(1, new EffectiveWindArea("Zone4", new List<Point> { A, R1, R2, D }, null));
+                            effWindAreas.Add(2, new EffectiveWindArea("Zone4", new List<Point> { R1, B, C, R2 }, null));
+                        }
+                    }
                     return; // we are done
                 }
-
 
                 // Zone 3
                 // is Zone4 fully fit in the building?
@@ -200,16 +235,25 @@ namespace ShearWallCalculator.WindLoadCalculations
                         {
                             // yes, so split the whole area
                             ridge_already_found = true;
-                            effWindAreas.Add(10, new EffectiveWindArea("Zone3", new List<Point> { p1, R1, R2, p11 }, null));
-                            effWindAreas.Add(11, new EffectiveWindArea("Zone3", new List<Point> { R1, p2, p12, R2 }, null));
+                            // no draw the whole region without splitting
+                            effWindAreas.Add(10, new EffectiveWindArea("Zone3", new List<Point> { p1, p2, p12, p11 }, null));
                         }
                         else
                         {
                             // no draw the whole region without splitting
-                            effWindAreas.Add(10, new EffectiveWindArea("Zone3", new List<Point> { p1, p2, p12, p11 }, null));
+                            // check if the ridge points are the same as p1 and p11
+                            if (R1 == p2 || R2 == p12)
+                            {
+                                // Ridge occurs at p1 or p11 so no need to split
+                                effWindAreas.Add(10, new EffectiveWindArea("Zone3", new List<Point> { p1, R1, R2, p11 }, null));
+                            }
+                            else
+                            {
+                                effWindAreas.Add(10, new EffectiveWindArea("Zone3", new List<Point> { p1, R1, R2, p11 }, null));
+                                effWindAreas.Add(11, new EffectiveWindArea("Zone3", new List<Point> { R1, p2, p12, R2 }, null));
+                            }
                         }
                     }
-
                 }
                 // doesn't fit within the building
                 else
@@ -228,15 +272,24 @@ namespace ShearWallCalculator.WindLoadCalculations
                         // now check if the ridge is in this region
                         if (IsValidRectangle_BuildingLength(ridge_position, building_width, offset2))
                         {
-                            // yes, so split the whole area
                             ridge_already_found = true;
-                            effWindAreas.Add(10, new EffectiveWindArea("Zone3", new List<Point> { p1, R1, R2, p11 }, null));
-                            effWindAreas.Add(11, new EffectiveWindArea("Zone3", new List<Point> { R1, B, C, R2 }, null));
+                            // no draw the whole region without splitting
+                            effWindAreas.Add(10, new EffectiveWindArea("Zone3", new List<Point> { p1, B, C, p11 }, null));
                         }
                         else
                         {
-                            // no draw the whole region without splitting
-                            effWindAreas.Add(10, new EffectiveWindArea("Zone3", new List<Point> { p1, B, C, p11 }, null));
+                            // yes, so split the whole area
+                            if (R1 == p2 || R2 == p12)
+                            {
+                                // Ridge occurs at p2 or p12 so no need to split
+                                effWindAreas.Add(10, new EffectiveWindArea("Zone3", new List<Point> { p1, R1, R2, p11 }, null));
+                            }
+                            else
+                            {
+                                effWindAreas.Add(10, new EffectiveWindArea("Zone3", new List<Point> { p1, R1, R2, p11 }, null));
+                                effWindAreas.Add(11, new EffectiveWindArea("Zone3", new List<Point> { R1, B, C, R2 }, null));
+                            }
+
                         }
                     }
                     return;  // we are done
@@ -271,35 +324,57 @@ namespace ShearWallCalculator.WindLoadCalculations
                     if (IsValidRectangle_BuildingLength(ridge_position, building_width, offset3))
                     {
                         // no ridge is not in 2 -- and if we are here then it must be in 1 if it exists
+
+
                         if (IsValidRectangle_BuildingLength(building_length, building_width, offset3))
                         {
                             effWindAreas.Add(20, new EffectiveWindArea("Zone2", new List<Point> { p2, p3, p13, p12 }, null));
-                            effWindAreas.Add(30, new EffectiveWindArea("Zone1", new List<Point> { p3, R1, R2, p13 }, null));
-                            effWindAreas.Add(31, new EffectiveWindArea("Zone1", new List<Point> { R1, B, C, R2 }, null));
+
+                            // yes, so split the whole area
+                            if (R1 == p3 || R2 == p13)
+                            {
+                                // Ridge occurs at p3 or p13 so no need to split
+                                effWindAreas.Add(30, new EffectiveWindArea("Zone1", new List<Point> { p3, R1, R2, p13 }, null));
+                            }
+                            else
+                            {
+                                effWindAreas.Add(30, new EffectiveWindArea("Zone1", new List<Point> { p3, R1, R2, p13 }, null));
+                                effWindAreas.Add(31, new EffectiveWindArea("Zone1", new List<Point> { R1, B, C, R2 }, null));
+                            }
+
                         }
                         else
                         {
                             // 1 doesnt exist and 2 takes up remainder of building
                             effWindAreas.Add(20, new EffectiveWindArea("Zone2", new List<Point> { p2, B, C, p12 }, null));
+                            return;
                         }
                     }
                     else
                     {
-                        // the ridge is in 2
                         // no its not in 2 -- and if we are here then it must be in 1 if it exists
                         // first does 2 fit in the building?
                         if (IsValidRectangle_BuildingLength(building_length, building_width, offset3))
                         {
                             // yes it fits
-                            effWindAreas.Add(20, new EffectiveWindArea("Zone2", new List<Point> { p2, R1, R2, p12 }, null));
-                            effWindAreas.Add(30, new EffectiveWindArea("Zone2", new List<Point> { R1, p3, p13, R2 }, null));
+                            if (R1 == p3 || R2 == p13)
+                            {
+                                // Ridge occurs at p3 or p13 so no need to split
+                                effWindAreas.Add(20, new EffectiveWindArea("Zone2", new List<Point> { p2, R1, R2, p12 }, null));
+                            }
+                            else
+                            {
+                                effWindAreas.Add(20, new EffectiveWindArea("Zone2", new List<Point> { p2, R1, R2, p12 }, null));
+                                effWindAreas.Add(30, new EffectiveWindArea("Zone2", new List<Point> { R1, p3, p13, R2 }, null));
+                            }
+                            
                             effWindAreas.Add(31, new EffectiveWindArea("Zone1", new List<Point> { p3, B, C, p13 }, null));
                         }
                         else
                         {
                             // 1 doesnt exist and 2 takes up remainder of building
-                            effWindAreas.Add(20, new EffectiveWindArea("Zone2", new List<Point> { p2, R1, R2, p12 }, null));
-                            effWindAreas.Add(30, new EffectiveWindArea("Zone1", new List<Point> { R1, B, C, R2 }, null));
+                            effWindAreas.Add(20, new EffectiveWindArea("Zone2", new List<Point> { p2, B, C, p12 }, null));
+                            return;
                         }
                     }
                 }
