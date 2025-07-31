@@ -200,7 +200,7 @@ namespace ShearWallVisualizer.Controls
             }
 
             // Optional: Draw centroid as a small ellipse
-            Console.WriteLine($"AreaLabel: {area.Label_Short}  Area: {area.Area}");
+            Console.WriteLine($"JH_AreaLabel: {area.Label_Short}  Area: {area.Area}");
             var center = area.Centroid;
             double radius = 3;
 

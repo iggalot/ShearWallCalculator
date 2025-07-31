@@ -694,12 +694,13 @@ namespace ShearWallCalculator.WindLoadCalculations
         }
 
         /// <summary>
-        /// Returns the zone number that a point is in 
+        /// Returns the roof zone number that a point is in with 4 being closest to WW wall and 1
+        /// being farthest, based on 0.5h, h, and 2h offsets from ASCE7-16 and ASCE7-22
         /// -- points on an offset line belong to the zone number to the left of the line
         /// </summary>
         /// <param name="point"></param>
         /// <returns></returns>
-        public static int GetZoneNumber(Point point, double mean_roof_ht, double length)
+        public static int GetRoofZoneNumber(Point point, double mean_roof_ht, double length)
         {
             double offset1 = 0.5 * mean_roof_ht;
             double offset2 = 1.0 * mean_roof_ht;

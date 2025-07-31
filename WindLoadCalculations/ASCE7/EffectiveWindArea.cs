@@ -165,6 +165,13 @@ namespace ShearWallCalculator.WindLoadCalculations
                     i++;
                 }
             }
+
+
+            // Check if first and last points are equal after cleaning
+            if (points.Count > 1 && points[0].Equals(points[points.Count - 1]))
+            {
+                points.RemoveAt(points.Count - 1); // Remove the last duplicate point
+            }
         }
     }
 }

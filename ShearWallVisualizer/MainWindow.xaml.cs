@@ -508,18 +508,8 @@ namespace ShearWallVisualizer
             // Create CC calculator using building data #1
             var cc_calc_building_length = CreateAndComputeCalculator(bldg_data1, WindLoadCalculationTypes.COMPONENT_AND_CLADDING);
 
-            // Assign based on ridge direction
-            if (buildingData.RidgeDirection == RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH)
-            {
-                windLoadCalculator_MWFRS_Length = mwfrs_calc_building_length;
-                windLoadCalculator_MWFRS_Width = mwfrs_calc_building_width;
-            }
-            else
-            {
-                windLoadCalculator_MWFRS_Length = mwfrs_calc_building_width;
-                windLoadCalculator_MWFRS_Width = mwfrs_calc_building_length;
-            }
-
+            windLoadCalculator_MWFRS_Length = mwfrs_calc_building_length;
+            windLoadCalculator_MWFRS_Width = mwfrs_calc_building_width;
             windLoadCalculator_CC = cc_calc_building_length;
         }
 
@@ -564,6 +554,7 @@ namespace ShearWallVisualizer
         /// </summary>
         private void DrawEffectiveAreas_CC_OnWindLoadParameterInputCanvas()
         {
+            Console.WriteLine("DrawEffectiveAreas_CC_OnWindLoadParameterInputCanvas");
             if (tabWindInputControlTabItem.Content is WindLoadInputControl inputControl)
             {
                 var canvas = inputControl.cnvEffectiveRoofAreas_CC;
@@ -585,6 +576,7 @@ namespace ShearWallVisualizer
         /// </summary>
         private void DrawEffectiveAreas_MWFRS_Length_OnWindLoadParameterInputCanvas()
         {
+            Console.WriteLine("DrawEffectiveAreas_MWFRS_Length_OnWindLoadParameterInputCanvas");
             if (tabWindInputControlTabItem.Content is WindLoadInputControl inputControl)
             {
                 var canvas = inputControl.cnvEffectiveRoofAreas_MWFRS_Length;
@@ -606,6 +598,7 @@ namespace ShearWallVisualizer
         /// </summary>
         private void DrawEffectiveAreas_MWFRS_Width_OnWindLoadParameterInputCanvas()
         {
+            Console.WriteLine("DrawEffectiveAreas_MWFRS_Width_OnWindLoadParameterInputCanvas");
             if (tabWindInputControlTabItem.Content is WindLoadInputControl inputControl)
             {
                 var canvas = inputControl.cnvEffectiveRoofAreas_MWFRS_Width;
@@ -2761,6 +2754,10 @@ namespace ShearWallVisualizer
                     return Brushes.MediumOrchid;
                 case "5":
                     return Brushes.Purple;
+                case "WWR":
+                    return Brushes.LightGray;
+                case "LWR":
+                    return Brushes.Gray;
                 default:
                     return Brushes.Black;
             }

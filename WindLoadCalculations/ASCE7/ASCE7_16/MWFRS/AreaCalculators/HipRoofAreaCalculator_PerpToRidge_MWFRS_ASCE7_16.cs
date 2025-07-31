@@ -1,5 +1,6 @@
 ﻿using ShearWallCalculator.BuildingInfo;
 using ShearWallCalculator.WindLoadCalculations.ASCE7.ASCE7_16;
+using System;
 using System.Collections.Generic;
 using System.Windows;
 
@@ -25,269 +26,375 @@ namespace ShearWallCalculator.WindLoadCalculations
             double offset2 = 1.0 * h;
             double offset3 = 2.0 * h;
 
-
-            // Note: Ridge can be in any of the four zones -- but Flat roofs don't care about the ridge
-            // Define when wind is parallel to ridge (parallel to BuildingLength) dimension
-            // D---p11---p12-- R1-----p13----C
-            // |    |    |     ||      |     |
-            // |    |    |     ||      |     |
-            // |    |    |     ||      |     |
-            // | 4  | 3  |  2a ||  2b  |  1  |
-            // A---p1----p2---R2------p3-----B
-            //  
-            //  Ridge = "="
             Point A = new Point(0, 0);
             Point B = new Point(building_length, 0);
             Point C = new Point(building_length, building_width);
             Point D = new Point(0, building_width);
 
-            // set the ridge to the right most points on the roof -- so that its not within any of the possible roof regions.
-            Point R1;
-            Point R2;
-            double ridge_position;
+            int number_of_zones = WindLoadCalculator_Base.GetNumberRoofZones_MWFRS(buildingData.MeanRoofHeight, buildingData.BuildingLength);
 
-            if (buildingData.RoofTypeIsSloped())
+            // clear previous wind areas
+            effWindAreas.Clear();
+
+            switch (number_of_zones)
             {
-                // and if we are hipped or sloped, move it back to the middle of the building
-                R1 = new Point(0.5 * building_length, 0);
-                R2 = new Point(0.5 * building_length, building_width);
-                ridge_position = 0.5 * building_length;
+                case 4: ComputeAreas_FourZones(); break;
+                case 3: ComputeAreas_ThreeZones(); break;
+                case 2: ComputeAreas_TwoZones(); break;
+                case 1: ComputeAreas_OneZone(); break;
+            }
+        }
+
+        private void ComputeAreas_FourZones()
+        {
+            double building_length = buildingData.BuildingLength;
+            double building_width = buildingData.BuildingWidth;
+            double h = buildingData.MeanRoofHeight;
+            double ridge_offset = Math.Min(building_length, building_width) / 2.0;
+            Point bottom_ridge_pt = new Point(ridge_offset, ridge_offset);
+            Point top_ridge_pt = new Point(ridge_offset, building_width - ridge_offset);
+
+            double offset1 = 0.5 * h;
+            double offset2 = 1.0 * h;
+            double offset3 = 2.0 * h;
+
+            int top_ridge_zone = WindLoadCalculator_Base.GetRoofZoneNumber(top_ridge_pt, buildingData.MeanRoofHeight, buildingData.BuildingLength);
+            int bottom_ridge_zone = WindLoadCalculator_Base.GetRoofZoneNumber(bottom_ridge_pt, buildingData.MeanRoofHeight, buildingData.BuildingLength);
+
+            Point A = new Point(0, 0);
+            Point B = new Point(building_length, 0);
+            Point C = new Point(building_length, building_width);
+            Point D = new Point(0, building_width);
+
+            if (top_ridge_pt.Y < bottom_ridge_pt.Y)
+            {
+                // TODO should we crash here, or switch to a vertical direction?
+                throw new NotImplementedException("ERROR:  In ComputeAreas_OneZone(): Top ridge point cannot be below bottom ridge point");
+            }
+
+            // Zone 5
+            effWindAreas.Add(1, new EffectiveWindArea("ZoneWWR", new List<Point> { A, bottom_ridge_pt, top_ridge_pt, D }, null));
+            effWindAreas.Add(2, new EffectiveWindArea("ZoneLWR", new List<Point> { B, C, top_ridge_pt, bottom_ridge_pt }, null));
+
+            // ridge cannot be in zone 3 or 4 and have four roof zones, can it?
+            if (top_ridge_zone == 4 || top_ridge_zone == 3)
+            {
+                throw new NotImplementedException("ERROR:  In ComputeAreas_ThreeZones(): Top ridge point cannot be in zone 3 or 4 and be four zones");
+            }
+
+            else if (top_ridge_zone == 2)
+            {
+                Point p1 = new Point(offset1, 0);
+                Point p11 = new Point(offset1, offset1);
+                Point p21 = new Point(offset1, building_width - offset1);
+                Point p31 = new Point(offset1, building_width);
+
+                Point p2 = new Point(offset2, 0);
+                Point p12 = new Point(offset2, offset2);
+                Point p22 = new Point(offset2, building_width - offset2);
+                Point p32 = new Point(offset2, building_width);
+
+                Point p3 = new Point(offset3, 0);
+                Point p13 = new Point(offset3, building_length - offset3);
+                Point p23 = new Point(offset3, building_width - (building_length - offset3));
+                Point p33 = new Point(offset3, building_width);
+
+                // Zone 4
+                var area1 = new EffectiveWindArea("Zone4", new List<Point> { A, p1, p11 }, null);
+                EffectiveWindArea.RemoveConsecutiveDuplicates(area1.OuterBoundary);
+                effWindAreas.Add(10, area1);
+
+                var area2 = new EffectiveWindArea("Zone4", new List<Point> { D, p21, p31 }, null);
+                EffectiveWindArea.RemoveConsecutiveDuplicates(area2.OuterBoundary);
+                effWindAreas.Add(11, area2);
+
+                var area3 = new EffectiveWindArea("Zone3", new List<Point> { p1, p2, p12, p11 }, null);
+                EffectiveWindArea.RemoveConsecutiveDuplicates(area3.OuterBoundary);
+                effWindAreas.Add(20, area3);
+
+                var area4 = new EffectiveWindArea("Zone3", new List<Point> { p21, p22, p32, p31 }, null);
+                EffectiveWindArea.RemoveConsecutiveDuplicates(area4.OuterBoundary);
+                effWindAreas.Add(21, area4);
+
+                var area5 = new EffectiveWindArea("Zone2", new List<Point> { p2, p3, p13, bottom_ridge_pt, p12 }, null);
+                EffectiveWindArea.RemoveConsecutiveDuplicates(area5.OuterBoundary);
+                effWindAreas.Add(30, area5);
+
+                var area6 = new EffectiveWindArea("Zone2", new List<Point> { p22, top_ridge_pt, p23, p33, p32 }, null);
+                EffectiveWindArea.RemoveConsecutiveDuplicates(area6.OuterBoundary);
+                effWindAreas.Add(31, area6);
+
+                var area7 = new EffectiveWindArea("Zone1", new List<Point> { p3, B, p13 }, null);
+                EffectiveWindArea.RemoveConsecutiveDuplicates(area7.OuterBoundary);
+                effWindAreas.Add(40, area7);
+
+                var area8 = new EffectiveWindArea("Zone1", new List<Point> { p23, C, p33 }, null);
+                EffectiveWindArea.RemoveConsecutiveDuplicates(area8.OuterBoundary);
+                effWindAreas.Add(41, area8);
+            }
+            else if (top_ridge_zone == 1)
+            {
+                Point p1 = new Point(offset1, 0);
+                Point p11 = new Point(offset1, offset1);
+                Point p21 = new Point(offset1, building_width - offset1);
+                Point p31 = new Point(offset1, building_width);
+
+                Point p2 = new Point(offset2, 0);
+                Point p12 = new Point(offset2, offset2);
+                Point p22 = new Point(offset2, building_width - offset2);
+                Point p32 = new Point(offset2, building_width);
+
+                Point p3 = new Point(offset3, 0);
+                Point p13 = new Point(offset3, offset3);
+                Point p23 = new Point(offset3, building_width - offset3);
+                Point p33 = new Point(offset3, building_width);
+
+                // Zone 4
+                var area1 = new EffectiveWindArea("Zone4", new List<Point> { A, p1, p11 }, null);
+                EffectiveWindArea.RemoveConsecutiveDuplicates(area1.OuterBoundary);
+                effWindAreas.Add(10, area1);
+
+                var area2 = new EffectiveWindArea("Zone4", new List<Point> { D, p21, p31 }, null);
+                EffectiveWindArea.RemoveConsecutiveDuplicates(area2.OuterBoundary);
+                effWindAreas.Add(11, area2);
+
+                var area3 = new EffectiveWindArea("Zone3", new List<Point> { p1, p2, p12, p11 }, null);
+                EffectiveWindArea.RemoveConsecutiveDuplicates(area3.OuterBoundary);
+                effWindAreas.Add(20, area3);
+
+                var area4 = new EffectiveWindArea("Zone3", new List<Point> { p21, p22, p32, p31 }, null);
+                EffectiveWindArea.RemoveConsecutiveDuplicates(area4.OuterBoundary);
+                effWindAreas.Add(21, area4);
+
+                var area5 = new EffectiveWindArea("Zone2", new List<Point> { p2, p3, p13, p12 }, null);
+                EffectiveWindArea.RemoveConsecutiveDuplicates(area5.OuterBoundary);
+                effWindAreas.Add(30, area5);
+
+                var area6 = new EffectiveWindArea("Zone2", new List<Point> { p22, p23, p33, p32 }, null);
+                EffectiveWindArea.RemoveConsecutiveDuplicates(area6.OuterBoundary);
+                effWindAreas.Add(31, area6);
+
+                var area7 = new EffectiveWindArea("Zone1", new List<Point> { p3, B, bottom_ridge_pt, p13 }, null);
+                EffectiveWindArea.RemoveConsecutiveDuplicates(area7.OuterBoundary);
+                effWindAreas.Add(40, area7);
+
+                var area8 = new EffectiveWindArea("Zone1", new List<Point> { p23, top_ridge_pt, C, p33 }, null);
+                EffectiveWindArea.RemoveConsecutiveDuplicates(area8.OuterBoundary);
+                effWindAreas.Add(41, area8);
             }
             else
             {
-                R1 = B;
-                R2 = C;
-                ridge_position = building_length;
+                throw new NotImplementedException("ERROR:  In ComputeAreas_ThreeZones() -- Unknown zone configuration, Ridge is in zone " + top_ridge_zone);
+            }
+        }
+
+        private void ComputeAreas_ThreeZones()
+        {
+            double building_length = buildingData.BuildingLength;
+            double building_width = buildingData.BuildingWidth;
+            double h = buildingData.MeanRoofHeight;
+            double ridge_offset = Math.Min(building_length, building_width) / 2.0;
+            Point bottom_ridge_pt = new Point(ridge_offset, ridge_offset);
+            Point top_ridge_pt = new Point(ridge_offset, building_width - ridge_offset);
+
+            double offset1 = 0.5 * h;
+            double offset2 = 1.0 * h;
+            double offset3 = 2.0 * h;
+
+            int top_ridge_zone = WindLoadCalculator_Base.GetRoofZoneNumber(top_ridge_pt, buildingData.MeanRoofHeight, buildingData.BuildingLength);
+            int bottom_ridge_zone = WindLoadCalculator_Base.GetRoofZoneNumber(bottom_ridge_pt, buildingData.MeanRoofHeight, buildingData.BuildingLength);
+
+            Point A = new Point(0, 0);
+            Point B = new Point(building_length, 0);
+            Point C = new Point(building_length, building_width);
+            Point D = new Point(0, building_width);
+
+            if (top_ridge_pt.Y < bottom_ridge_pt.Y)
+            {
+                // TODO should we crash here, or switch to a vertical direction?
+                throw new NotImplementedException("ERROR:  In ComputeAreas_OneZone(): Top ridge point cannot be below bottom ridge point");
             }
 
-            Point p1, p2, p3, p11, p12, p13;
-            bool ridge_already_found = false;
+            // Zone 5
+            effWindAreas.Add(1, new EffectiveWindArea("ZoneWWR", new List<Point> { A, bottom_ridge_pt, top_ridge_pt, D }, null));
+            effWindAreas.Add(2, new EffectiveWindArea("ZoneLWR", new List<Point> { B, C, top_ridge_pt, bottom_ridge_pt }, null));
 
-            // Zone 4
-            // is Zone4 fully fit in the building?
-            if (IsValidRectangle_BuildingLength(building_length, building_width, offset1))
+            // ridge cannot be in zone 4 and have three roof zones, can it?
+            if (top_ridge_zone == 4)
             {
-                // yes
-                p1 = new Point(offset1, 0);
-                p11 = new Point(offset1, building_width);
-
-                // now check if the ridge is in this region
-                if (IsValidRectangle_BuildingLength(ridge_position, building_width, offset1))
-                {
-                    // no draw the whole region without splitting
-                    effWindAreas.Add(1, new EffectiveWindArea("Zone4", new List<Point> { A, p1, p11, D }, null));
-
-                }
-                else
-                {
-                    // yes, so split the whole area
-                    ridge_already_found = true;
-
-                    // check if the ridge points are the same as p1 and p11
-                    if (R1 == p1 || R2 == p11)
-                    {
-                        // Ridge occurs at p1 or p11 so no need to split
-                        effWindAreas.Add(1, new EffectiveWindArea("Zone4", new List<Point> { A, R1, R2, D }, null));
-                    }
-                    else
-                    {
-                        effWindAreas.Add(1, new EffectiveWindArea("Zone4", new List<Point> { A, R1, R2, D }, null));
-                        effWindAreas.Add(2, new EffectiveWindArea("Zone4", new List<Point> { R1, p1, p11, R2 }, null));
-                    }
-
-                }
-            }
-            else
-            {
-                p1 = new Point(building_length, 0);
-                p11 = new Point(building_length, building_width);
-
-                // now check if the ridge is in this region
-                if (IsValidRectangle_BuildingLength(ridge_position, building_width, offset1))
-                {
-                    // no draw the whole region without splitting
-                    effWindAreas.Add(1, new EffectiveWindArea("Zone4", new List<Point> { A, B, C, D }, null));
-                }
-                else
-                {
-                    // yes, so split the whole area
-                    ridge_already_found = true;
-
-                    // check if the ridge points are the same as p1 and p11
-                    if (R1 == p1 || R2 == p11)
-                    {
-                        // Ridge occurs at p1 or p11 so no need to split
-                        effWindAreas.Add(1, new EffectiveWindArea("Zone4", new List<Point> { A, B, C, D }, null));
-                    }
-                    else
-                    {
-                        effWindAreas.Add(1, new EffectiveWindArea("Zone4", new List<Point> { A, R1, R2, D }, null));
-                        effWindAreas.Add(2, new EffectiveWindArea("Zone4", new List<Point> { R1, B, C, R2 }, null));
-                    }
-                }
-                return; // we are done
+                throw new NotImplementedException("ERROR:  In ComputeAreas_ThreeZones(): Top ridge point cannot be in zone 4"); 
             }
 
-            // Zone 3
-            // is Zone4 fully fit in the building?
-            if (IsValidRectangle_BuildingLength(building_length, building_width, offset2))
+            else if (top_ridge_zone == 3)
             {
-                // yes
-                p2 = new Point(offset2, 0);
-                p12 = new Point(offset2, building_width);
+                Point p1 = new Point(offset1, 0);
+                Point p11 = new Point(offset1, offset1);
+                Point p21 = new Point(offset1, building_width - offset1);
+                Point p31 = new Point(offset1, building_width);
 
-                if (ridge_already_found)
-                {
-                    effWindAreas.Add(10, new EffectiveWindArea("Zone3", new List<Point> { p1, p2, p12, p11 }, null));
-                }
-                // ridge hasn't been located yet
-                else
-                {
-                    // now check if the ridge is in this region
-                    if (IsValidRectangle_BuildingLength(ridge_position, building_width, offset2))
-                    {
-                        // yes, so split the whole area
-                        ridge_already_found = true;
-                        // no draw the whole region without splitting
-                        effWindAreas.Add(10, new EffectiveWindArea("Zone3", new List<Point> { p1, p2, p12, p11 }, null));
-                    }
-                    else
-                    {
-                        // no draw the whole region without splitting
-                        // check if the ridge points are the same as p1 and p11
-                        if (R1 == p2 || R2 == p12)
-                        {
-                            // Ridge occurs at p1 or p11 so no need to split
-                            effWindAreas.Add(10, new EffectiveWindArea("Zone3", new List<Point> { p1, R1, R2, p11 }, null));
-                        }
-                        else
-                        {
-                            effWindAreas.Add(10, new EffectiveWindArea("Zone3", new List<Point> { p1, R1, R2, p11 }, null));
-                            effWindAreas.Add(11, new EffectiveWindArea("Zone3", new List<Point> { R1, p2, p12, R2 }, null));
-                        }
-                    }
-                }
-            }
-            // doesn't fit within the building
-            else
-            {
-                // yes
-                p2 = new Point(building_length, 0);
-                p12 = new Point(building_length, building_width);
+                Point p2 = new Point(offset2, 0);
+                Point p12 = new Point(offset2, building_length - offset2);
+                Point p22 = new Point(offset2, building_width - (building_length - offset2));
+                Point p32 = new Point(offset2, building_width);
 
-                if (ridge_already_found)
-                {
-                    effWindAreas.Add(10, new EffectiveWindArea("Zone3", new List<Point> { p1, B, C, p11 }, null));
-                }
-                // ridge hasn't been located yet
-                else
-                {
-                    // now check if the ridge is in this region
-                    if (IsValidRectangle_BuildingLength(ridge_position, building_width, offset2))
-                    {
-                        ridge_already_found = true;
-                        // no draw the whole region without splitting
-                        effWindAreas.Add(10, new EffectiveWindArea("Zone3", new List<Point> { p1, B, C, p11 }, null));
-                    }
-                    else
-                    {
-                        // yes, so split the whole area
-                        if (R1 == p2 || R2 == p12)
-                        {
-                            // Ridge occurs at p2 or p12 so no need to split
-                            effWindAreas.Add(10, new EffectiveWindArea("Zone3", new List<Point> { p1, R1, R2, p11 }, null));
-                        }
-                        else
-                        {
-                            effWindAreas.Add(10, new EffectiveWindArea("Zone3", new List<Point> { p1, R1, R2, p11 }, null));
-                            effWindAreas.Add(11, new EffectiveWindArea("Zone3", new List<Point> { R1, B, C, R2 }, null));
-                        }
-                    }
-                }
-                return;  // we are done
-            }
+                // Zone 4
+                var area1 = new EffectiveWindArea("Zone4", new List<Point> { A, p1, p11 }, null);
+                EffectiveWindArea.RemoveConsecutiveDuplicates(area1.OuterBoundary);
+                effWindAreas.Add(10, area1);
 
-            // Zone 2 and 1
-            // is ridge in Zone2
-            if (ridge_already_found)
-            {
-                // Does 2 fit in the building?
-                if (IsValidRectangle_BuildingLength(building_length, building_width, offset3))
-                {
-                    p3 = new Point(offset3, 0);
-                    p13 = new Point(offset3, building_width);
+                var area2 = new EffectiveWindArea("Zone4", new List<Point> { D, p21, p31 }, null);
+                EffectiveWindArea.RemoveConsecutiveDuplicates(area2.OuterBoundary);
+                effWindAreas.Add(11, area2);
 
-                    effWindAreas.Add(20, new EffectiveWindArea("Zone2", new List<Point> { p2, p3, p13, p12 }, null));
-                    effWindAreas.Add(30, new EffectiveWindArea("Zone1", new List<Point> { p3, B, C, p13 }, null));
-                }
-                else
-                {
-                    // no 2 doesnt fit and so theres no zone 1 on this roof
-                    effWindAreas.Add(20, new EffectiveWindArea("Zone2", new List<Point> { p2, B, C, p12 }, null));
-                    return;
-                }
+                var area3 = new EffectiveWindArea("Zone3", new List<Point> { p1, p2, p12, bottom_ridge_pt, p11 }, null);
+                EffectiveWindArea.RemoveConsecutiveDuplicates(area3.OuterBoundary);
+                effWindAreas.Add(20, area3);
+
+                var area4 = new EffectiveWindArea("Zone3", new List<Point> { p21, top_ridge_pt, p22, p32, p31 }, null);
+                EffectiveWindArea.RemoveConsecutiveDuplicates(area4.OuterBoundary);
+                effWindAreas.Add(21, area4);
+
+                var area5 = new EffectiveWindArea("Zone2", new List<Point> { p2, B, p12 }, null);
+                EffectiveWindArea.RemoveConsecutiveDuplicates(area5.OuterBoundary);
+                effWindAreas.Add(30, area5);
+
+                var area6 = new EffectiveWindArea("Zone2", new List<Point> { p22, C, p32 }, null);
+                EffectiveWindArea.RemoveConsecutiveDuplicates(area6.OuterBoundary);
+                effWindAreas.Add(31, area6);
             }
             else
             {
-                p3 = new Point(offset3, 0);
-                p13 = new Point(offset3, building_width);
+                throw new NotImplementedException("ERROR:  In ComputeAreas_ThreeZones() -- Unknown zone configuration, Ridge is in zone " + top_ridge_zone);
+            }
+        }
 
-                // is ridge in 2?
-                if (IsValidRectangle_BuildingLength(ridge_position, building_width, offset3))
-                {
-                    // no ridge is not in 2 -- and if we are here then it must be in 1 if it exists
+        private void ComputeAreas_TwoZones()
+        {
+            double building_length = buildingData.BuildingLength;
+            double building_width = buildingData.BuildingWidth;
+            double h = buildingData.MeanRoofHeight;
+            double ridge_offset = Math.Min(building_length, building_width) / 2.0;
+            Point bottom_ridge_pt = new Point(ridge_offset, ridge_offset);
+            Point top_ridge_pt = new Point(ridge_offset, building_width - ridge_offset);
 
+            double offset1 = 0.5 * h;
+            double offset2 = 1.0 * h;
+            double offset3 = 2.0 * h;
 
-                    if (IsValidRectangle_BuildingLength(building_length, building_width, offset3))
-                    {
-                        effWindAreas.Add(20, new EffectiveWindArea("Zone2", new List<Point> { p2, p3, p13, p12 }, null));
+            int top_ridge_zone = WindLoadCalculator_Base.GetRoofZoneNumber(top_ridge_pt, buildingData.MeanRoofHeight, buildingData.BuildingLength);
+            int bottom_ridge_zone = WindLoadCalculator_Base.GetRoofZoneNumber(bottom_ridge_pt, buildingData.MeanRoofHeight, buildingData.BuildingLength);
 
-                        // yes, so split the whole area
-                        if (R1 == p3 || R2 == p13)
-                        {
-                            // Ridge occurs at p3 or p13 so no need to split
-                            effWindAreas.Add(30, new EffectiveWindArea("Zone1", new List<Point> { p3, R1, R2, p13 }, null));
-                        }
-                        else
-                        {
-                            effWindAreas.Add(30, new EffectiveWindArea("Zone1", new List<Point> { p3, R1, R2, p13 }, null));
-                            effWindAreas.Add(31, new EffectiveWindArea("Zone1", new List<Point> { R1, B, C, R2 }, null));
-                        }
-                    }
-                    else
-                    {
-                        // 1 doesnt exist and 2 takes up remainder of building
-                        effWindAreas.Add(20, new EffectiveWindArea("Zone2", new List<Point> { p2, B, C, p12 }, null));
-                        return;
-                    }
-                }
-                else
-                {
-                    // no its not in 2 -- and if we are here then it must be in 1 if it exists
-                    // first does 2 fit in the building?
-                    if (IsValidRectangle_BuildingLength(building_length, building_width, offset3))
-                    {
-                        // yes it fits
-                        if (R1 == p3 || R2 == p13)
-                        {
-                            // Ridge occurs at p3 or p13 so no need to split
-                            effWindAreas.Add(20, new EffectiveWindArea("Zone2", new List<Point> { p2, R1, R2, p12 }, null));
-                        }
-                        else
-                        {
-                            effWindAreas.Add(20, new EffectiveWindArea("Zone2", new List<Point> { p2, R1, R2, p12 }, null));
-                            effWindAreas.Add(30, new EffectiveWindArea("Zone2", new List<Point> { R1, p3, p13, R2 }, null));
-                        }
+            Point A = new Point(0, 0);
+            Point B = new Point(building_length, 0);
+            Point C = new Point(building_length, building_width);
+            Point D = new Point(0, building_width);
 
-                        effWindAreas.Add(31, new EffectiveWindArea("Zone1", new List<Point> { p3, B, C, p13 }, null));
-                    }
-                    else
-                    {
-                        // 1 doesnt exist and 2 takes up remainder of building
-                        effWindAreas.Add(20, new EffectiveWindArea("Zone2", new List<Point> { p2, B, C, p12 }, null));
-                        return;
-                    }
-                }
+            if (top_ridge_pt.Y < bottom_ridge_pt.Y)
+            {
+                // TODO should we crash here, or switch to a vertical direction?
+                throw new NotImplementedException("ERROR:  In ComputeAreas_OneZone(): Top ridge point cannot be below bottom ridge point");
+            }
+
+            // Zone 5
+            effWindAreas.Add(1, new EffectiveWindArea("ZoneWWR", new List<Point> { A, bottom_ridge_pt, top_ridge_pt, D }, null));
+            effWindAreas.Add(2, new EffectiveWindArea("ZoneLWR", new List<Point> { B, C, top_ridge_pt, bottom_ridge_pt }, null));
+
+            if (top_ridge_zone == 4)
+            {
+                Point p1 = new Point(offset1, 0);
+                Point p11 = new Point(offset1, building_length - offset1);
+                Point p21 = new Point(offset1, building_width - (building_length - offset1));
+                Point p31 = new Point(offset1, building_width);
+
+                // Zone 4
+                var area1 = new EffectiveWindArea("Zone4", new List<Point> { A, p1, p11, bottom_ridge_pt }, null);
+                EffectiveWindArea.RemoveConsecutiveDuplicates(area1.OuterBoundary);
+                effWindAreas.Add(10, area1);
+
+                var area2 = new EffectiveWindArea("Zone4", new List<Point> { D, top_ridge_pt, p21, p31 }, null);
+                EffectiveWindArea.RemoveConsecutiveDuplicates(area2.OuterBoundary);
+                effWindAreas.Add(11, area2);
+
+                var area3 = new EffectiveWindArea("Zone3", new List<Point> { p1, B, p11 }, null);
+                EffectiveWindArea.RemoveConsecutiveDuplicates(area3.OuterBoundary);
+                effWindAreas.Add(20, area3);
+
+                var area4 = new EffectiveWindArea("Zone3", new List<Point> { p21, C, p31 }, null);
+                EffectiveWindArea.RemoveConsecutiveDuplicates(area4.OuterBoundary);
+                effWindAreas.Add(21, area4);
+            }
+
+            if (top_ridge_zone == 3)
+            {
+                Point p1 = new Point(offset1, 0);
+                Point p11 = new Point(offset1, building_length - offset1);
+                Point p21 = new Point(offset1, building_width - (building_length - offset1));
+                Point p31 = new Point(offset1, building_width);
+
+                // Zone 4
+                var area1 = new EffectiveWindArea("Zone4", new List<Point> { A, p1, p11 }, null);
+                EffectiveWindArea.RemoveConsecutiveDuplicates(area1.OuterBoundary);
+                effWindAreas.Add(10, area1);
+
+                var area2 = new EffectiveWindArea("Zone4", new List<Point> { D, p21, p31 }, null);
+                EffectiveWindArea.RemoveConsecutiveDuplicates(area2.OuterBoundary);
+                effWindAreas.Add(11, area2);
+
+                var area3 = new EffectiveWindArea("Zone3", new List<Point> { p1, B, bottom_ridge_pt, p11 }, null);
+                EffectiveWindArea.RemoveConsecutiveDuplicates(area3.OuterBoundary);
+                effWindAreas.Add(20, area3);
+
+                var area4 = new EffectiveWindArea("Zone3", new List<Point> { p21, top_ridge_pt, p31 }, null);
+                EffectiveWindArea.RemoveConsecutiveDuplicates(area4.OuterBoundary);
+                effWindAreas.Add(21, area4);
+            }
+            else
+            {
+                throw new NotImplementedException("ERROR:  In ComputeAreas_TwoZone() -- Unknown zone configuration, Ridge is in zone " + top_ridge_zone);
+            }
+        }
+
+        private void ComputeAreas_OneZone()
+        {
+            double building_length = buildingData.BuildingLength;
+            double building_width = buildingData.BuildingWidth;
+            double h = buildingData.MeanRoofHeight;
+            double ridge_offset = Math.Min(building_length, building_width) / 2.0;
+            Point bottom_ridge_pt = new Point(ridge_offset, ridge_offset);
+            Point top_ridge_pt = new Point (ridge_offset, building_width-ridge_offset);
+
+            int top_ridge_zone = WindLoadCalculator_Base.GetRoofZoneNumber(top_ridge_pt, buildingData.MeanRoofHeight, buildingData.BuildingLength);
+            int bottom_ridge_zone = WindLoadCalculator_Base.GetRoofZoneNumber(bottom_ridge_pt, buildingData.MeanRoofHeight, buildingData.BuildingLength);
+
+            Point A = new Point(0, 0);
+            Point B = new Point(building_length, 0);
+            Point C = new Point(building_length, building_width);
+            Point D = new Point(0, building_width);
+
+            if (top_ridge_pt.Y < bottom_ridge_pt.Y)
+            {
+                // TODO should we crash here, or switch to a vertical direction?
+                throw new NotImplementedException("ERROR:  In ComputeAreas_OneZone(): Top ridge point cannot be below bottom ridge point");
+            }
+
+            // Zone 5
+            effWindAreas.Add(1, new EffectiveWindArea("ZoneWWR", new List<Point> { A, bottom_ridge_pt, top_ridge_pt, D }, null));
+            effWindAreas.Add(2, new EffectiveWindArea("ZoneLWR", new List<Point> { B, C, top_ridge_pt, bottom_ridge_pt }, null));
+
+            if (top_ridge_zone == 4)
+            {
+                // Zone 4
+                var area1 = new EffectiveWindArea("Zone4", new List<Point> { A, B, bottom_ridge_pt }, null);
+                EffectiveWindArea.RemoveConsecutiveDuplicates(area1.OuterBoundary);
+                effWindAreas.Add(10, area1);
+
+                var area2 = new EffectiveWindArea("Zone4", new List<Point> { D, top_ridge_pt, C }, null);
+                EffectiveWindArea.RemoveConsecutiveDuplicates(area2.OuterBoundary);
+                effWindAreas.Add(11, area2);
+            }
+            else
+            {
+                throw new NotImplementedException("ERROR:  In ComputeAreas_OneZone(): Top ridge point cannot be below bottom ridge point");
             }
         }
     }

@@ -57,7 +57,7 @@ namespace ShearWallCalculator.WindLoadCalculations
                         // normal to ridge for slope < 10 deg
                         else if (bldg_data.RoofPitch <= 10 && bldg_data.RidgeDirection == RidgeDirections.RIDGE_DIR_PERP_TO_BLDGLENGTH)
                         {
-                            return new GableRoofAreaCalculator_ParallelToRidge_MWFRS_ASCE7_16(bldg_data);
+                            return new GableRoofAreaCalculator_PerpToRidge_MWFRS_ASCE7_16(bldg_data);
                         }
 
                         // parallel to slope
@@ -76,7 +76,7 @@ namespace ShearWallCalculator.WindLoadCalculations
                         // normal to ridge for slope < 10 deg
                         else if (bldg_data.RoofPitch <= 10 && bldg_data.RidgeDirection == RidgeDirections.RIDGE_DIR_PERP_TO_BLDGLENGTH)
                         {
-                            return new HipRoofAreaCalculator_ParallelToRidge_MWFRS_ASCE7_16(bldg_data);
+                            return new HipRoofAreaCalculator_PerpToRidge_MWFRS_ASCE7_16(bldg_data);
                         }
 
                         // parallel to slope
