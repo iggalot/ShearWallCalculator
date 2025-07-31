@@ -42,20 +42,48 @@ namespace ShearWallCalculator.WindLoadCalculations
                 }
                 else if (parameters.AnalysisType == WindLoadCalculationTypes.MWFRS)
                 {
-                    // TODO:  implement the area calculators
+
                     if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_FLAT)
                     {
-                        return new FlatRoofAreaCalculator_MWFRS_ASCE7_16(bldg_data);
+                        return new FlatRoofAreaCalculator_NoRidge_MWFRS_ASCE7_16(bldg_data);
                     }
                     else if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_GABLE)
                     {
-                        if (bldg_data.RoofPitch < 7) return new FlatRoofAreaCalculator_MWFRS_ASCE7_16(bldg_data);
-                        else return new GableRoofAreaCalculator_MWFRS_ASCE7_16(bldg_data);
+                        // normal to ridge for slope >= 10deg
+                        if(bldg_data.RoofPitch >= 10 && bldg_data.RidgeDirection == RidgeDirections.RIDGE_DIR_PERP_TO_BLDGLENGTH)
+                        {
+                            return new GableRoofAreaCalculator_PerpToRidge_MWFRS_ASCE7_16(bldg_data);
+                        } 
+                        // normal to ridge for slope < 10 deg
+                        else if (bldg_data.RoofPitch <= 10 && bldg_data.RidgeDirection == RidgeDirections.RIDGE_DIR_PERP_TO_BLDGLENGTH)
+                        {
+                            return new GableRoofAreaCalculator_ParallelToRidge_MWFRS_ASCE7_16(bldg_data);
+                        }
+
+                        // parallel to slope
+                        else if (bldg_data.RidgeDirection == RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH)
+                        {
+                            return new GableRoofAreaCalculator_ParallelToRidge_MWFRS_ASCE7_16(bldg_data);
+                        }
                     }
                     else if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_HIP)
                     {
-                        if (bldg_data.RoofPitch < 7) return new FlatRoofAreaCalculator_MWFRS_ASCE7_16(bldg_data);
-                        else return new HipRoofAreaCalculator_MWFRS_ASCE7_16(bldg_data);
+                        // normal to ridge for slope >= 10deg
+                        if (bldg_data.RoofPitch >= 10 && bldg_data.RidgeDirection == RidgeDirections.RIDGE_DIR_PERP_TO_BLDGLENGTH)
+                        {
+                            return new HipRoofAreaCalculator_PerpToRidge_MWFRS_ASCE7_16(bldg_data);
+                        }
+                        // normal to ridge for slope < 10 deg
+                        else if (bldg_data.RoofPitch <= 10 && bldg_data.RidgeDirection == RidgeDirections.RIDGE_DIR_PERP_TO_BLDGLENGTH)
+                        {
+                            return new HipRoofAreaCalculator_ParallelToRidge_MWFRS_ASCE7_16(bldg_data);
+                        }
+
+                        // parallel to slope
+                        else if (bldg_data.RidgeDirection == RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH)
+                        {
+                            return new HipRoofAreaCalculator_ParallelToRidge_MWFRS_ASCE7_16(bldg_data);
+                        }
                     }
                     else
                     {
@@ -87,24 +115,26 @@ namespace ShearWallCalculator.WindLoadCalculations
                 }
                 else if (parameters.AnalysisType == WindLoadCalculationTypes.MWFRS)
                 {
-                    // TODO:  implement the area calculators
-                    if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_FLAT)
-                    {
-                        return new FlatRoofAreaCalculator_MWFRS_ASCE7_22(bldg_data);
-                    }
-                    else if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_GABLE)
-                    {
-                        if (bldg_data.RoofPitch < 7) return new FlatRoofAreaCalculator_MWFRS_ASCE7_22(bldg_data);
-                        else return new GableRoofAreaCalculator_MWFRS_ASCE7_22(bldg_data);
-                    }
-                    else if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_HIP)
-                    {
-                        if (bldg_data.RoofPitch < 7) return new FlatRoofAreaCalculator_MWFRS_ASCE7_22(bldg_data);
-                        else return new HipRoofAreaCalculator_MWFRS_ASCE7_22(bldg_data);
-                    } else
-                    {
-                        throw new NotImplementedException("ERROR: Invalid roof type: " + bldg_data.RoofType + " in RoofAreaCalculatorFactory.");
-                    }
+                    throw new NotImplementedException("ERROR: MWFRS not implemented for ASCE7_22");
+
+                    //// TODO:  implement the area calculators
+                    //if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_FLAT)
+                    //{
+                    //    return new FlatRoofAreaCalculator_MWFRS_ASCE7_22(bldg_data);
+                    //}
+                    //else if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_GABLE)
+                    //{
+                    //    if (bldg_data.RoofPitch < 7) return new FlatRoofAreaCalculator_MWFRS_ASCE7_22(bldg_data);
+                    //    else return new GableRoofAreaCalculator_MWFRS_ASCE7_22(bldg_data);
+                    //}
+                    //else if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_HIP)
+                    //{
+                    //    if (bldg_data.RoofPitch < 7) return new FlatRoofAreaCalculator_MWFRS_ASCE7_22(bldg_data);
+                    //    else return new HipRoofAreaCalculator_MWFRS_ASCE7_22(bldg_data);
+                    //} else
+                    //{
+                    //    throw new NotImplementedException("ERROR: Invalid roof type: " + bldg_data.RoofType + " in RoofAreaCalculatorFactory.");
+                    //}
                 } else
                 {
                     throw new NotImplementedException("ERROR: Invalid analysis type: " + parameters.AnalysisType + " in RoofAreaCalculatorFactory.");

@@ -466,9 +466,9 @@ namespace ShearWallVisualizer
             WindLoadResultsControl_MWFRS mwfrsControl1, mwfrsControl2;
             CreateAndAssignResultControls(out ccControl1, out mwfrsControl1, out mwfrsControl2);
 
-//            DrawEffectiveAreas_CC_OnWindLoadParameterInputCanvas();
+            DrawEffectiveAreas_CC_OnWindLoadParameterInputCanvas();
             DrawEffectiveAreas_MWFRS_Length_OnWindLoadParameterInputCanvas();
-//            DrawEffectiveAreas_MWFRS_Width_OnWindLoadParameterInputCanvas();
+            DrawEffectiveAreas_MWFRS_Width_OnWindLoadParameterInputCanvas();
 
             var ctrol_wind_input = tabWindInputControlTabItem.Content as WindLoadInputControl;
             BuildingDrawer.DrawPlan(ctrol_wind_input.cnvBuildingPlan_CC, windLoadCalculator_CC.buildingData);

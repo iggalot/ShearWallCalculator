@@ -4,6 +4,7 @@ using ShearWallCalculator.WindLoadCalculations.WindLoadCalculators;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Windows;
 
 namespace ShearWallCalculator.WindLoadCalculations
 {
@@ -670,6 +671,44 @@ namespace ShearWallCalculator.WindLoadCalculations
             }
 
             return str;
+        }
+
+        /// <summary>
+        /// Determines the number of roof zones a building will have for MWFRS pressures
+        /// </summary>
+        /// <returns></returns>
+        public static int GetNumberRoofZones_MWFRS(double mean_roof_ht, double length)
+        {
+            double offset1 = 0.5 * mean_roof_ht;
+            double offset2 = 1.0 * mean_roof_ht;
+            double offset3 = 2.0 * mean_roof_ht;
+
+            if (length > offset1 && length <= offset2)
+                return 2;
+            else if (length > offset2 && length <= offset3)
+                return 3;
+            else if (length > offset3)
+                return 4;
+            else
+                return 1;
+        }
+
+        /// <summary>
+        /// Returns the zone number that a point is in 
+        /// -- points on an offset line belong to the zone number to the left of the line
+        /// </summary>
+        /// <param name="point"></param>
+        /// <returns></returns>
+        public static int GetZoneNumber(Point point, double mean_roof_ht, double length)
+        {
+            double offset1 = 0.5 * mean_roof_ht;
+            double offset2 = 1.0 * mean_roof_ht;
+            double offset3 = 2.0 * mean_roof_ht;
+
+            if (point.X <= offset1) return 4;
+            else if (point.X <= offset2) return 3;
+            else if (point.X <= offset3) return 2;
+            else return 1;
         }
     }
 }

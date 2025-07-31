@@ -147,5 +147,24 @@ namespace ShearWallCalculator.WindLoadCalculations
         {
             return $"{Label_Full}: Area = {Area:F2} ft², Centroid = ({Centroid.X:F2}, {Centroid.Y:F2})";
         }
+
+        public static void RemoveConsecutiveDuplicates(List<Point> points)
+        {
+            if (points == null || points.Count < 2)
+                return;
+
+            int i = 1;
+            while (i < points.Count)
+            {
+                if (points[i].Equals(points[i - 1]))
+                {
+                    points.RemoveAt(i); // Don't increment i; the next item shifts into position i
+                }
+                else
+                {
+                    i++;
+                }
+            }
+        }
     }
 }

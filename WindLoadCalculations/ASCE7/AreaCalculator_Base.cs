@@ -71,5 +71,16 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator
             }
             return sum;
         }
+
+        public static bool IsValidRectangle_BuildingLength(double L, double B, double offset)
+        {
+            return offset > 0 && offset < L;
+        }
+        public static bool IsValidRectangle_BuildingWidth(double L, double B, double offset)
+        {
+            return offset > 0 && offset < B;
+        }
+
+        
     }
 }
