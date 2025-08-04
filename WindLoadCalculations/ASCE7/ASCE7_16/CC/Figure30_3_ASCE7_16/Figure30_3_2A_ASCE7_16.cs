@@ -13,7 +13,7 @@
 
         public Figure30_3_2A_ASCE7_16()
         {
-            // Positive Pressure Roof Zones
+            // Positive ExternalPressure Roof Zones
             RoofCurves_Pos["Zone3"] = new ExternalGCpCurve(new (double X, double Y)[]
             {
                 (1.0, 0.3),
@@ -59,7 +59,7 @@
                 (1000, 0.2)
             });
 
-            // Negative Pressure Roof Zones
+            // Negative ExternalPressure Roof Zones
             RoofCurves_Neg["Zone3"] = new ExternalGCpCurve(new (double X, double Y)[]
             {
                 (1.0, -3.2),

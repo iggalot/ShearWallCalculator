@@ -44,15 +44,8 @@ namespace ShearWallCalculator.WindLoadCalculations.WindLoadCalculators
         /// </summary>
         public override void CalculateExternalPressures()
         {
-
-        }
-
-        /// <summary>
-        /// Calculates the qh * GCP for external pressures minus the internal pressure qh * GCpi
-        /// </summary>
-        public override void CalculateNetPressures()
-        {
-
+            // This should not get hit
+            throw new NotImplementedException("CalculateExternalPressures not implemented in ASCE7-16_Base -- check implementation at the ASCE7_16 CC and MWFRS classes");
         }
 
         // Get Kz approximation based on building height and exposure category

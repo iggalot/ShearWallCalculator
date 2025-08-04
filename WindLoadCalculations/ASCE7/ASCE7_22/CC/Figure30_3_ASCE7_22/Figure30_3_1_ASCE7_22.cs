@@ -13,7 +13,7 @@
 
         public Figure30_3_1_ASCE7_22()
         {
-            // Positive Pressure Wall Zones
+            // Positive ExternalPressure Wall Zones
             WallCurves_Pos["Zone5"] = new ExternalGCpCurve(new (double X, double Y)[]
             {
                 (1.0, 1.0),
@@ -38,7 +38,7 @@
                 (1000, 0.7)
             });
 
-            // Negative Pressure Wall Zones
+            // Negative ExternalPressure Wall Zones
             WallCurves_Neg["Zone5"] = new ExternalGCpCurve(new (double X, double Y)[]
             {
                 (1.0, -1.4),

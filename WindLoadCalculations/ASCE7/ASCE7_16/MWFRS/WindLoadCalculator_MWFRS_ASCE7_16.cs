@@ -50,5 +50,62 @@ namespace ShearWallCalculator.WindLoadCalculations
                     throw new Exception("ERROR: Invalid ASCE Version: " + ASCEVersion + " in WindLoadCalculator_Base constructor.");
             }
         }
+
+        public override void CalculateExternalPressures()
+        {
+
+            //var kd = Parameters.Kd;
+
+
+            //// roof pressure negative
+            //foreach (var area in RoofAreaCalculator.effWindAreas)
+            //{
+            //    if (TryGetGCp_Neg_Roof_ByArea(area.Key, out var gcp))
+            //    {
+            //        double pressure = CalculateDynamicWindPressure(buildingData.MeanRoofHeight) * gcp;
+            //        windPressureRoof_Neg_External.Add(area.Key, pressure);
+            //    }
+            //}
+
+            //// BuildingWidth pressure positive
+            //foreach (var area in WallAreaCalculator_BldgWidth.effWindAreas)
+            //{
+            //    if (TryGetGCp_Pos_BuildingWidthWall_ByArea(area.Key, out var gcp))
+            //    {
+            //        double pressure = CalculateDynamicWindPressure(buildingData.MeanRoofHeight) * gcp;
+            //        windPressureBuildingWidthWall_Pos_External.Add(area.Key, pressure);
+            //    }
+            //}
+
+            //// BuildingWidth pressure negative
+            //foreach (var area in WallAreaCalculator_BldgWidth.effWindAreas)
+            //{
+            //    if (TryGetGCp_Neg_BuildingWidthWall_ByArea(area.Key, out var gcp))
+            //    {
+            //        double pressure = CalculateDynamicWindPressure(buildingData.MeanRoofHeight) * gcp;
+            //        windPressureBuildingWidthWall_Neg_External.Add(area.Key, pressure);
+            //    }
+            //}
+
+            //// BuildingLength pressure positive
+            //foreach (var area in WallAreaCalculator_BldgLength.effWindAreas)
+            //{
+            //    if (TryGetGCp_Pos_BuildingLengthWall_ByArea(area.Key, out var gcp))
+            //    {
+            //        double pressure = CalculateDynamicWindPressure(buildingData.MeanRoofHeight) * gcp;
+            //        windPressureBuildingLengthWall_Pos_External.Add(area.Key, pressure);
+            //    }
+            //}
+
+            //// BuildingLength pressure negative
+            //foreach (var area in WallAreaCalculator_BldgLength.effWindAreas)
+            //{
+            //    if (TryGetGCp_Neg_BuildingLengthWall_ByArea(area.Key, out var gcp))
+            //    {
+            //        double pressure = CalculateDynamicWindPressure(buildingData.MeanRoofHeight) * gcp;
+            //        windPressureBuildingLengthWall_Neg_External.Add(area.Key, pressure);
+            //    }
+            //}
+        }
     }
 }

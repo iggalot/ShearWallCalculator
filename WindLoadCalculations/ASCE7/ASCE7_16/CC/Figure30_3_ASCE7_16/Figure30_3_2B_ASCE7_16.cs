@@ -14,7 +14,7 @@
         public Figure30_3_2B_ASCE7_16()
         {
 
-            // ---- Roof: Negative Pressure Zones ----
+            // ---- Roof: Negative ExternalPressure Zones ----
             RoofCurves_Neg["Zone3r"] = new ExternalGCpCurve(new (double X, double Y)[]
             {
                 (1.0, -3.6),
@@ -82,7 +82,7 @@
                 (1000, -0.5)
             });
 
-            // ---- Roof: Positive Pressure Zones ----
+            // ---- Roof: Positive ExternalPressure Zones ----
             RoofCurves_Pos["Zone3r"] = new ExternalGCpCurve(new (double X, double Y)[]
             {
                 (1.0, 0.7),
@@ -150,7 +150,7 @@
                 (1000, 0.3)
             });
 
-            // ---- Overhang: Negative Pressure Zones ----
+            // ---- Overhang: Negative ExternalPressure Zones ----
             OverhangCurves["Zone3r"] = new ExternalGCpCurve(new (double X, double Y)[]
             {
                 (1.0, -4.7),

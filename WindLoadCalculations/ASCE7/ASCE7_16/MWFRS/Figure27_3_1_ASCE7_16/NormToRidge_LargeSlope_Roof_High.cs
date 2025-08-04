@@ -6,7 +6,7 @@
         public override string ChartCriteria { get; set; } = "Normal to Ridge for slope >= 10deg  -- h/L = 1.0";
         public NormToRidge_LargeSlope_Roof_High(double slope, double area=50)   // set area to 50 to make reduction factor = 1.0
         {
-            // Positive Pressure Roof Zones
+            // Positive ExternalPressure Roof Zones
             RoofCurves_Pos["ZoneWW"] = new ExternalGCpCurve(new (double X, double Y)[]
             {
                 (10, -0.18),
@@ -19,7 +19,7 @@
                 (60, 0.01*slope),
                 (80, 0.8)
             });
-            // Negative Pressure Roof Zones
+            // Negative ExternalPressure Roof Zones
             RoofCurves_Neg["ZoneWW"] = new ExternalGCpCurve(new (double X, double Y)[]
             {
                 (10, -1.3 * GetReductionFactor(area)),  // TODO: this first value can be reduced by area of WW roof  <= 100 reduction factor = 1.0, 250 reduction factor = 0.9 and >= 1000 reduction factor = 0.8

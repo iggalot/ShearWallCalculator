@@ -42,56 +42,7 @@ namespace ShearWallCalculator.WindLoadCalculations
         /// </summary>
         public override void CalculateExternalPressures()
         {
-
-        }
-
-        /// <summary>
-        /// Calculates the qh * GCP for external pressures minus the internal pressure qh * GCpi
-        /// </summary>
-        public override void CalculateNetPressures()
-        {
-            var kd = Parameters.Kd;
-            // roof pressure positive
-            foreach (var items in windPressureRoof_Pos_External)
-            {
-                double int_pressure = CalculateDynamicWindPressure(buildingData.MeanRoofHeight) * GetGCpi() * kd;
-                windPressureRoof_Pos_Net.Add(items.Key, items.Value + int_pressure);
-            }
-
-            // roof pressure negative
-            foreach (var items in windPressureRoof_Neg_External)
-            {
-                double int_pressure = CalculateDynamicWindPressure(buildingData.MeanRoofHeight) * GetGCpi() * kd;
-                windPressureRoof_Neg_Net.Add(items.Key, items.Value - int_pressure);
-            }
-
-            // BuildingWidth wall pressure positive
-            foreach (var items in windPressureBuildingWidthWall_Pos_External)
-            {
-                double pressure = CalculateDynamicWindPressure(buildingData.MeanRoofHeight) * GetGCpi() * kd;
-                windPressureBuildingWidthWall_Pos_Net.Add(items.Key, items.Value + pressure);
-            }
-
-            // BuildingWidth wall pressure negative
-            foreach (var items in windPressureBuildingWidthWall_Neg_External)
-            {
-                double pressure = CalculateDynamicWindPressure(buildingData.MeanRoofHeight) * GetGCpi() * kd;
-                windPressureBuildingWidthWall_Neg_Net.Add(items.Key, items.Value - pressure);
-            }
-
-            // BuildingLength pressure positive
-            foreach (var items in windPressureBuildingLengthWall_Pos_External)
-            {
-                double pressure = CalculateDynamicWindPressure(buildingData.MeanRoofHeight) * GetGCpi() * kd;
-                windPressureBuildingLength_Pos_Net.Add(items.Key, items.Value + pressure);
-            }
-
-            // Building Length pressure negative
-            foreach (var items in windPressureBuildingLengthWall_Neg_External)
-            {
-                double pressure = CalculateDynamicWindPressure(buildingData.MeanRoofHeight) * GetGCpi() * kd;
-                windPressureBuildingLengthWall_Neg_Net.Add(items.Key, items.Value - pressure);
-            }
+            throw new NotImplementedException("CalculateExternalPressures not implemented in ASCE7-22_Base -- check implementation at the ASCE7_22 CC and MWFRS classes");
         }
 
         // Get Kz approximation based on building height and exposure category

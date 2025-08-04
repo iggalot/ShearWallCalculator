@@ -7,7 +7,7 @@
 
         public NormToRidge_LargeSlope_Roof_Mid(double slope)
         {
-            // Positive Pressure Roof Zones
+            // Positive ExternalPressure Roof Zones
             RoofCurves_Pos["ZoneWW"] = new ExternalGCpCurve(new (double X, double Y)[]
             {
                 (10,  -0.18),
@@ -20,7 +20,7 @@
                 (60, 0.01*slope),
                 (80, 0.8)
             });
-            // Negative Pressure Roof Zones
+            // Negative ExternalPressure Roof Zones
             RoofCurves_Neg["ZoneWW"] = new ExternalGCpCurve(new (double X, double Y)[]
             {
                 (10, -0.9),

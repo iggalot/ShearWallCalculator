@@ -13,7 +13,7 @@
             <!-- Header -->
             <StackPanel Orientation="Horizontal" Background="AliceBlue" Margin="0,0,0,10">
                 <TextBlock x:Name="tbVersion" Text="VERSION XXX" FontSize="18" FontWeight="Bold"/>
-                <TextBlock Text="  Components and Cladding Results" FontWeight="Bold" FontSize="18"/>
+                <TextBlock Text="  MWFRS" FontWeight="Bold" FontSize="18"/>
             </StackPanel>
 
             <StackPanel Orientation="Horizontal">

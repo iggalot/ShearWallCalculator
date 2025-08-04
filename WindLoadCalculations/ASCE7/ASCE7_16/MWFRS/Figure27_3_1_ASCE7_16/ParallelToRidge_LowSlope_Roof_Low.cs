@@ -6,7 +6,7 @@
         public override string ChartCriteria { get; set; } = "Parallel to Ridge for slope or slope <= 10deg  -- h/L <= 0.5";
         public ParallelToRidge_LowSlope_Roof_Low()
         {
-            // Positive Pressure Roof Zones
+            // Positive ExternalPressure Roof Zones
             RoofCurves_Pos["Zone4"] = new ExternalGCpCurve(new (double X, double Y)[]
             {
                 (0,  -0.18),

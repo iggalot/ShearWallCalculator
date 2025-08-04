@@ -12,7 +12,7 @@
         public override string ChartCriteria { get; set; } = "h <= 60ft, 20deg < slope <= 27deg";
         public Figure30_3_2C_ASCE7_22()
         {
-            // ---- Roof: Negative Pressure Zones ----
+            // ---- Roof: Negative ExternalPressure Zones ----
             RoofCurves_Neg["Zone3"] = new ExternalGCpCurve(new (double X, double Y)[]
             {
                 (1.0, -3.0),
@@ -47,7 +47,7 @@
                 (1000, -0.8),
             });
 
-            // ---- Roof: Positive Pressure Zones ----
+            // ---- Roof: Positive ExternalPressure Zones ----
             RoofCurves_Pos["Zone3"] = new ExternalGCpCurve(new (double X, double Y)[]
             {
                 (1.0, 0.6),

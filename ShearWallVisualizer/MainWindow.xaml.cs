@@ -7,6 +7,7 @@ using ShearWallCalculator.BuildingInfo;
 using ShearWallCalculator.Helpers;
 using ShearWallCalculator.Interfaces;
 using ShearWallCalculator.WindLoadCalculations;
+using ShearWallCalculator.WindLoadCalculations.ASCE7;
 using ShearWallCalculator.WindLoadCalculations.Chapter30.Figure30_3;
 using ShearWallCalculator.WindLoadCalculations.WindLoadCalculators;
 using ShearWallVisualizer.Controls;
@@ -519,12 +520,11 @@ namespace ShearWallVisualizer
             parameters.AnalysisType = type;
 
             var calculator = WindLoadCalculatorFactory.Create(windVersion, type, parameters, building);
+            Console.WriteLine(calculator.GetType().Name);
             calculator.CreateAreaCalculators();
             calculator.CalculatePressures();
             return calculator;
         }
-
-
 
         /// <summary>
         /// Assigns the two calculators to the appropriate tabs.
@@ -535,17 +535,16 @@ namespace ShearWallVisualizer
         /// <param name="mwfrsControl2"></param>
         private void CreateAndAssignResultControls(out WindLoadResultsControl_CC ccControl1, out WindLoadResultsControl_MWFRS mwfrsControl1, out WindLoadResultsControl_MWFRS mwfrsControl2)
         {
+            ccControl1 = new WindLoadResultsControl_CC(windLoadCalculator_CC);
+            tabWindResultsTabItem_CC.Content = ccControl1;
+            TabControlManager.ReAddTab(MainTabControl, "tabWindResultsTabItem_CC");
+
             mwfrsControl1 = new WindLoadResultsControl_MWFRS(windLoadCalculator_MWFRS_Length);
             tabWindResultsTabItem_MWFRS_BldgLength.Content = mwfrsControl1;
+            TabControlManager.ReAddTab(MainTabControl, "tabWindResultsTabItem_MWFRS_BldgLength");
 
             mwfrsControl2 = new WindLoadResultsControl_MWFRS(windLoadCalculator_MWFRS_Width);
             tabWindResultsTabItem_MWFRS_BldgWidth.Content = mwfrsControl2;
-
-            ccControl1 = new WindLoadResultsControl_CC(windLoadCalculator_CC);
-            tabWindResultsTabItem_CC.Content = ccControl1;
-
-            TabControlManager.ReAddTab(MainTabControl, "tabWindResultsTabItem_CC");
-            TabControlManager.ReAddTab(MainTabControl, "tabWindResultsTabItem_MWFRS_BldgLength");
             TabControlManager.ReAddTab(MainTabControl, "tabWindResultsTabItem_MWFRS_BldgWidth");
         }
 
@@ -735,7 +734,6 @@ namespace ShearWallVisualizer
             factory.SetBinding(Rectangle.FillProperty, new Binding("RectColor"));
 
             col_rectangle.CellTemplate = new DataTemplate { VisualTree = factory };
-
             data_grid.Columns.Add(col_rectangle);
 
             var col_area = new DataGridTextColumn
@@ -780,6 +778,20 @@ namespace ShearWallVisualizer
             };
             data_grid.Columns.Add(col_neg_press);
 
+            var col_pos_net_press = new DataGridTextColumn
+            {
+                Header = "+ Net\n(psf)",
+                Binding = new Binding("NetPosPress") { StringFormat = "0.0" }
+            };
+            data_grid.Columns.Add(col_pos_net_press);
+
+            var col_neg_net_press = new DataGridTextColumn
+            {
+                Header = "- Net\n(psf)",
+                Binding = new Binding("NetNegPress") { StringFormat = "0.0" }
+            };
+            data_grid.Columns.Add(col_neg_net_press);
+
             //var col_overhang_press = new DataGridTextColumn
             //{
             //    Header = "Overhang Press\n(psf)",
@@ -787,62 +799,39 @@ namespace ShearWallVisualizer
             //};
             //data_grid.Columns.Add(col_overhang_press);
 
-            var windLoadResults = new List<CC_WindLoadResults>();
+            var windLoadResults = new List<CC_WindLoadResultsDataGrid>();
             foreach (KeyValuePair<int, EffectiveWindArea> area in windLoadCalculator_CC.RoofAreaCalculator.effWindAreas)
             {
-
-                CC_WindLoadResults data = new CC_WindLoadResults();
+                CC_WindLoadResultsDataGrid data = new CC_WindLoadResultsDataGrid();
                 data.Name = area.Value.Label_Short;
                 data.Region = area.Value.Label_Short;
                 data.Area = area.Value.Area;
-                data.qh = windLoadCalculator_CC.CalculateDynamicWindPressure(buildingData.MeanRoofHeight);
 
-                double pressure_pos;
-                
-                // positive max net pressure
-                if (windLoadCalculator_CC.TryGetPressureNet_Pos_Roof(area.Value, out pressure_pos))
-                {
+                // positive max external pressure
+                ExternalPressureData ext_pressure;
+                if (windLoadCalculator_CC.windPressureRoof_Pos_External.TryGetValue(area.Key, out ext_pressure))
+                    {
+                    data.qh = ext_pressure.qh;
                     data.GCp_pos = figureCC.RoofCurves_Pos[area.Value.Label_Full].Evaluate(area.Value.Area);
-                    data.PosPress = pressure_pos;
+                    data.PosPress = ext_pressure.ExternalPressure;
+                    data.NetPosPress = ext_pressure.NetPressure;
+
                 }
 
-                // negative max net pressure
-                if (windLoadCalculator_CC.TryGetPressureNet_Neg_Roof(area.Value, out pressure_pos))
+                // negative max GCp value
+                if (windLoadCalculator_CC.windPressureRoof_Neg_External.TryGetValue(area.Key, out ext_pressure))
                 {
                     data.GCp_neg = figureCC.RoofCurves_Neg[area.Value.Label_Full].Evaluate(area.Value.Area);
-                    data.NegPress = pressure_pos;
+                    data.NegPress = ext_pressure.ExternalPressure;
+                    data.NetNegPress = ext_pressure.NetPressure;
+
                 }
-
-                // negative max net pressure
-                if (windLoadCalculator_CC.TryGetPressureNet_Overhang_Roof(area.Value, out pressure_pos))
-                {
-                    data.OverhangPress = pressure_pos;
-                }
-
-                //if (figureCC.RoofCurves_Pos != null && figureCC.RoofCurves_Pos.ContainsKey(area.Value.Label_Full))
-                //{
-                //    data.GCp_pos = figureCC.RoofCurves_Pos[area.Value.Label_Full].Evaluate(area.Value.Area);
-                //    data.PosPress = data.qh * data.GCp_pos;
-                //}
-
-                //if (figureCC.RoofCurves_Neg != null && figureCC.RoofCurves_Neg.ContainsKey(area.Value.Label_Full))
-                //{
-                //    data.GCp_neg = figureCC.RoofCurves_Neg[area.Value.Label_Full].Evaluate(area.Value.Area);
-                //    data.NegPress = data.qh * data.GCp_neg;
-                //}
-
-                //if (figureCC.OverhangCurves != null && figureCC.OverhangCurves.ContainsKey(area.Value.Label_Full))
-                //{
-                //    data.OverhangPress = figureCC.OverhangCurves[area.Value.Label_Full].Evaluate(area.Value.Area);
-                //}
 
                 windLoadResults.Add(data);
             }
 
             data_grid.ItemsSource = windLoadResults;
         }
-
-
         private void CreateCC_DataGrid_Walls(Chapter27and30_GCpCurveBase figureCC, DataGrid data_grid, Dictionary<int, EffectiveWindArea> areas, string wall_type)
         {
             // Get the datagrid from the results control
@@ -871,7 +860,6 @@ namespace ShearWallVisualizer
             factory.SetBinding(Rectangle.FillProperty, new Binding("RectColor"));
 
             col_rectangle.CellTemplate = new DataTemplate { VisualTree = factory };
-
             data_grid.Columns.Add(col_rectangle);
 
             var col_area = new DataGridTextColumn
@@ -916,66 +904,72 @@ namespace ShearWallVisualizer
             };
             data_grid.Columns.Add(col_neg_press);
 
-            var windLoadResults = new List<CC_WindLoadResults>();
+            var col_pos_net_press = new DataGridTextColumn
+            {
+                Header = "+ Net\n(psf)",
+                Binding = new Binding("NetPosPress") { StringFormat = "0.0" }
+            };
+            data_grid.Columns.Add(col_pos_net_press);
+
+            var col_neg_net_press = new DataGridTextColumn
+            {
+                Header = "- Net\n(psf)",
+                Binding = new Binding("NetNegPress") { StringFormat = "0.0" }
+            };
+            data_grid.Columns.Add(col_neg_net_press);
+
+            var windLoadResults = new List<CC_WindLoadResultsDataGrid>();
             foreach (var area in areas)
             {
-                CC_WindLoadResults data = new CC_WindLoadResults();
+                CC_WindLoadResultsDataGrid data = new CC_WindLoadResultsDataGrid();
                 data.Name = area.Value.Label_Short;
                 data.Region = area.Value.Label_Short;
                 data.Area = area.Value.Area;
-                data.qh = windLoadCalculator_CC.CalculateDynamicWindPressure(buildingData.MeanRoofHeight);
-
-                double pressure_pos;
-                double pressure_neg;
 
                 if (wall_type == "building_length")
                 {
-                    // positive max net pressure
-                    if (windLoadCalculator_CC.TryGetPressureNet_Pos_BuildingLengthWall(area.Value, out pressure_pos))
+                    // positive max external pressure
+                    ExternalPressureData ext_pressure;
+                    if (windLoadCalculator_CC.windPressureBuildingLengthWall_Pos_External.TryGetValue(area.Key, out ext_pressure))
                     {
+                        data.qh = ext_pressure.qh;
                         data.GCp_pos = figureCC.WallCurves_Pos[area.Value.Label_Full].Evaluate(area.Value.Area);
-                        data.PosPress = pressure_pos;
+                        data.PosPress = ext_pressure.ExternalPressure;
+                        data.NetPosPress = ext_pressure.NetPressure;
                     }
 
-                    // negative max net pressure
-                    if (windLoadCalculator_CC.TryGetPressureNet_Neg_BuildingLengthWall(area.Value, out pressure_neg))
+                    // negative max GCp value
+                    if (windLoadCalculator_CC.windPressureBuildingLengthWall_Neg_External.TryGetValue(area.Key, out ext_pressure))
                     {
                         data.GCp_neg = figureCC.WallCurves_Neg[area.Value.Label_Full].Evaluate(area.Value.Area);
-                        data.NegPress = pressure_neg;
+                        data.NegPress = ext_pressure.ExternalPressure;
+                        data.NetNegPress = ext_pressure.NetPressure;
                     }
                 }
                 else if (wall_type == "building_width")
                 {
-                    // positive max net pressure
-                    if (windLoadCalculator_CC.TryGetPressureNet_Pos_BuildingWidthWall(area.Value, out pressure_pos))
+                    // positive max external pressure
+                    ExternalPressureData ext_pressure;
+                    if (windLoadCalculator_CC.windPressureBuildingWidthWall_Pos_External.TryGetValue(area.Key, out ext_pressure))
                     {
+                        data.qh = ext_pressure.qh;
                         data.GCp_pos = figureCC.WallCurves_Pos[area.Value.Label_Full].Evaluate(area.Value.Area);
-                        data.PosPress = pressure_pos;
+                        data.PosPress = ext_pressure.ExternalPressure;
+                        data.NetPosPress = ext_pressure.NetPressure;
                     }
 
-                    // negative max net pressure
-                    if (windLoadCalculator_CC.TryGetPressureNet_Neg_BuildingWidthWall(area.Value, out pressure_neg))
+                    // negative max GCp value
+                    if (windLoadCalculator_CC.windPressureBuildingWidthWall_Neg_External.TryGetValue(area.Key, out ext_pressure))
                     {
                         data.GCp_neg = figureCC.WallCurves_Neg[area.Value.Label_Full].Evaluate(area.Value.Area);
-                        data.NegPress = pressure_neg;
+                        data.NegPress = ext_pressure.ExternalPressure;
+                        data.NetNegPress = ext_pressure.NetPressure;
                     }
                 }
                 else
                 {
                     throw new Exception("ERROR:  In CreateCC_DataGrid_Walls(): Unknown wall type " + wall_type);
                 }
-           
-                //if (figureCC.WallCurves_Pos != null && figureCC.WallCurves_Pos.ContainsKey(area.Value.Label_Full))
-                //{
-                //    data.GCp_pos = figureCC.WallCurves_Pos[area.Value.Label_Full].Evaluate(area.Value.Area);
-                //    data.PosPress = data.qh * data.GCp_pos;
-                //}
-
-                //if (figureCC.WallCurves_Neg != null && figureCC.WallCurves_Neg.ContainsKey(area.Value.Label_Full))
-                //{
-                //    data.GCp_neg = figureCC.WallCurves_Neg[area.Value.Label_Full].Evaluate(area.Value.Area);
-                //    data.NegPress = data.qh * data.GCp_neg;
-                //}
 
                 windLoadResults.Add(data);
             }
@@ -983,7 +977,7 @@ namespace ShearWallVisualizer
             data_grid.ItemsSource = windLoadResults;
         }
 
-        public class CC_WindLoadResults
+        public class CC_WindLoadResultsDataGrid
         {
             public string Name { get; set; }
             public double Area { get; set; }
@@ -994,7 +988,9 @@ namespace ShearWallVisualizer
 
             public double PosPress { get; set; }
             public double NegPress { get; set; }
-            public double OverhangPress { get; set; }
+            public double NetPosPress { get; set; }
+            public double NetNegPress { get; set; }
+
 
             public Brush RectColor => GetColorForRegion(Region);
         }
