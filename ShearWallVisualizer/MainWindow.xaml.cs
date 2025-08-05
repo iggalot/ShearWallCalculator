@@ -42,7 +42,6 @@ namespace ShearWallVisualizer
         WindLoadResultsMWFRS = 3,
         WindLoadResultsCC = 4,
         ShearWallCalculations = 5
-
     }
 
     public partial class MainWindow : Window
@@ -488,8 +487,8 @@ namespace ShearWallVisualizer
             // for MWFRS tab 1
             SetupMWFRSResultTab();
 
-            PopulateMWFRS_DataGrids(mwfrsControl1);
-            PopulateMWFRS_DataGrids(mwfrsControl2);
+            PopulateMWFRS_DataGrids(mwfrsControl1, windLoadCalculator_MWFRS_Length);
+            PopulateMWFRS_DataGrids(mwfrsControl2, windLoadCalculator_MWFRS_Width);
 
 
             UpdateShearWallUI();
@@ -530,8 +529,8 @@ namespace ShearWallVisualizer
         }
 
         /// <summary>
-        /// Assigns the two calculators to the appropriate tabs.
-        /// Since CC is the same for both, only the first calculator is used on that tab.
+        /// Assigns the three calculators to the appropriate tabs.
+        /// Since CC is the same for both, only the CC calculator is used on that tab.
         /// </summary>
         /// <param name="ccControl1"></param>
         /// <param name="mwfrsControl1"></param>
@@ -617,13 +616,11 @@ namespace ShearWallVisualizer
             }
         }
 
-        private void PopulateMWFRS_DataGrids(WindLoadResultsControl_MWFRS mwfrsControl)
+        private void PopulateMWFRS_DataGrids(WindLoadResultsControl_MWFRS mwfrsControl, WindLoadCalculator_Base calc)
         {
             //CreateCC_DataGrid_Roof(figureCC_Roof, ccControl.RoofResultsDataGrid);
 
-            // For the BuildingLength wall
-            CreateMWFRS_DataGrid_Walls(mwfrsControl.MWFRS_WallResultsDataGrid,
-                windLoadCalculator_MWFRS_Length.WallAreaCalculator_BldgLength.effWindAreas);
+            CreateMWFRS_DataGrid_Walls(mwfrsControl.MWFRS_WallResultsDataGrid, calc.WallAreaCalculator_BldgLength.effWindAreas, calc);
         }
 
         private void PopulateComponentAndCladdingDataGrids(WindLoadResultsControl_CC ccControl)
@@ -989,7 +986,7 @@ namespace ShearWallVisualizer
             data_grid.ItemsSource = windLoadResults;
         }
 
-        private void CreateMWFRS_DataGrid_Walls(DataGrid data_grid, Dictionary<int, EffectiveWindArea> areas)
+        private void CreateMWFRS_DataGrid_Walls(DataGrid data_grid, Dictionary<int, EffectiveWindArea> areas, WindLoadCalculator_Base calc)
         {
             // Get the datagrid from the results control
             data_grid.ItemsSource = null;
@@ -1065,21 +1062,13 @@ namespace ShearWallVisualizer
 
                 // positive max external pressure
                 PressureData ext_pressure;
-                if (windLoadCalculator_MWFRS_Length.windPressureWall_Pos_External_MWFRS.TryGetValue(area.Key, out ext_pressure))
+                if (calc.windPressureWall_Pos_External_MWFRS.TryGetValue(area.Key, out ext_pressure))
                 {
                     data.qh = ext_pressure.qh;
                     data.Cp = ext_pressure.GCp;
                     data.Press = ext_pressure.ExternalPressure;
                     data.NetPress = ext_pressure.NetPressure;
                 }
-
-                //// negative max GCp value
-                //if (windLoadCalculator_MWFRS_Length.windPressureWall_Neg_External_MWFRS.TryGetValue(area.Key, out ext_pressure))
-                //{
-                //    data.GCp_neg = ext_pressure.GCp;
-                //    data.NegPress = ext_pressure.ExternalPressure;
-                //    data.NetNegPress = ext_pressure.NetPressure;
-                //}
 
                 windLoadResults.Add(data);
             }
@@ -2847,7 +2836,8 @@ namespace ShearWallVisualizer
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="region">Should be in the form of "Zone1", "Zone2e", etc. </param>
+        /// <param name="region">Should be in the form of "1", "2e", etc. The regions will need a full name of with a prefix of "Zone"
+        /// so "Zone1" becomes "1"</param>
         /// <returns></returns>
         public static Brush GetColorForRegion(string region)
         {
