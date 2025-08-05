@@ -38,7 +38,7 @@ namespace ShearWallCalculator.WindLoadCalculations
                             var low = new NormToRidge_LargeSlope_Roof_Low(roofSlope);
                             var mid = new NormToRidge_LargeSlope_Roof_Mid(roofSlope);
 
-                            return new InterpolatedCurve(h_over_L, roofSlope, 0.25, 0.5, low, mid);
+                            return new InterpolatedCpCurve(h_over_L, roofSlope, 0.25, 0.5, low, mid);
 
                         } 
                         else if (h_over_L > 0.5 && h_over_L < 1.0)
@@ -46,7 +46,7 @@ namespace ShearWallCalculator.WindLoadCalculations
                             var mid = new NormToRidge_LargeSlope_Roof_Mid(roofSlope);
                             var high = new NormToRidge_LargeSlope_Roof_High(roofSlope);
 
-                            return new InterpolatedCurve(h_over_L, roofSlope, 0.5, 1.0, mid, high);
+                            return new InterpolatedCpCurve(h_over_L, roofSlope, 0.5, 1.0, mid, high);
                         }
                     }
                     else
@@ -63,7 +63,7 @@ namespace ShearWallCalculator.WindLoadCalculations
                             var low = new ParallelToRidge_LowSlope_Roof_Low();
                             var high = new ParallelToRidge_LowSlope_Roof_High();
 
-                            return new InterpolatedCurve(h_over_L, roofSlope, 0.5, 1.0, low, high);
+                            return new InterpolatedCpCurve(h_over_L, roofSlope, 0.5, 1.0, low, high);
                         }
                     }
                     break;
@@ -82,7 +82,7 @@ namespace ShearWallCalculator.WindLoadCalculations
                             var low = new ParallelToRidge_LowSlope_Roof_Low();
                             var high = new ParallelToRidge_LowSlope_Roof_High();
 
-                            return new InterpolatedCurve(h_over_L, roofSlope, 0.5, 1.0, low, high);
+                            return new InterpolatedCpCurve(h_over_L, roofSlope, 0.5, 1.0, low, high);
                         }
                     }
                     break;

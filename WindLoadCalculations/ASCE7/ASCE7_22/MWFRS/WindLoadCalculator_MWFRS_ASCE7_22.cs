@@ -1,5 +1,4 @@
 ﻿using ShearWallCalculator.BuildingInfo;
-using ShearWallCalculator.WindLoadCalculations.WindLoadCalculators;
 using System;
 
 namespace ShearWallCalculator.WindLoadCalculations
@@ -31,6 +30,11 @@ namespace ShearWallCalculator.WindLoadCalculations
                 default:
                     throw new Exception("ERROR: Invalid ASCE Version: " + ASCEVersion + " in WindLoadCalculator_Base constructor.");
             }
+        }
+
+        public override void CalculateExternalPressures()
+        {
+
         }
     }
 }

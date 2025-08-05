@@ -1,6 +1,8 @@
 ﻿using ShearWallCalculator.BuildingInfo;
+using ShearWallCalculator.WindLoadCalculations.ASCE7;
 using ShearWallCalculator.WindLoadCalculations.WindLoadCalculators;
 using System;
+using System.Collections.Generic;
 
 namespace ShearWallCalculator.WindLoadCalculations
 {
@@ -51,61 +53,89 @@ namespace ShearWallCalculator.WindLoadCalculations
             }
         }
 
+        private void CalculateRoofPressures(
+            TryGetGcpDelegate tryGetGcp,
+            Dictionary<int, PressureData> targetDict
+            )
+        {
+            foreach (var areaEntry in RoofAreaCalculator.effWindAreas)
+            {
+                int id = areaEntry.Key;
+
+                double cp;  // in ASCE 7-16, the Cp value is shown in the tables, not GCp...so we need to remember to multiply it back in 
+
+                if (!tryGetGcp(id, out cp))
+                    continue;
+
+                var G = 0.85; // gust factor 26.11.1
+                var q_h = CalculateDynamicWindPressure(buildingData.MeanRoofHeight);
+                var _gcpi = GetGCpi();
+                targetDict.Add(id, new PressureData()
+                {
+                    AreaID = id,
+                    qh = q_h,
+                    GCp = cp,
+                    ExternalPressure = q_h * cp * G,
+                    GCpi = _gcpi,
+                    InternalPressure = q_h * _gcpi,
+                });
+            }
+        }
+
+        private void CalculateWallPressures(
+            TryGetGcpDelegate tryGetGcp,
+            Dictionary<int, PressureData> targetDict
+            )
+        {
+            foreach (var areaEntry in WallAreaCalculator_BldgLength.effWindAreas)
+            {
+                int id = areaEntry.Key;
+
+                double cp;  // in ASCE 7-16, the Cp value is shown in the tables, not GCp...so we need to remember to multiply it back in 
+
+                var G = 0.85; // gust factor 26.11.1
+                var q_h = CalculateDynamicWindPressure(buildingData.MeanRoofHeight);
+                var _gcpi = GetGCpi();
+
+                // Windward wall
+                if (areaEntry.Value.Label_Full == "ZoneWW")
+                {
+                    cp = Cp_WW;
+                } 
+                // Leeward Wall
+                else if (areaEntry.Value.Label_Full == "ZoneLW")
+                {
+                    cp = Cp_LW;
+                } 
+                // SideWalls
+                else if (areaEntry.Value.Label_Full == "ZoneSW")
+                { 
+                    cp = Cp_SW;
+                } else
+                {
+                    throw new NotImplementedException("ERROR: In CalculateWallPressures_BuildingLength, Unkown wall zone: " + areaEntry.Value.Label_Full);
+                }
+
+                targetDict.Add(id, new PressureData()
+                {
+                    AreaID = id,
+                    qh = q_h,
+                    GCp = cp,
+                    ExternalPressure = q_h * cp * G,
+                    GCpi = _gcpi,
+                    InternalPressure = q_h * _gcpi,
+                });
+            }
+        }
+
         public override void CalculateExternalPressures()
         {
+            // Calculate the pressures andstore them in the appropriate dictionary.
+            CalculateRoofPressures(TryGetGCp_Pos_Roof_ByAreaID, windPressureRoof_Pos_External);
+            CalculateRoofPressures(TryGetGCp_Neg_Roof_ByAreaID, windPressureRoof_Neg_External);
 
-            //var kd = Parameters.Kd;
-
-
-            //// roof pressure negative
-            //foreach (var area in RoofAreaCalculator.effWindAreas)
-            //{
-            //    if (TryGetGCp_Neg_Roof_ByArea(area.Key, out var gcp))
-            //    {
-            //        double pressure = CalculateDynamicWindPressure(buildingData.MeanRoofHeight) * gcp;
-            //        windPressureRoof_Neg_External.Add(area.Key, pressure);
-            //    }
-            //}
-
-            //// BuildingWidth pressure positive
-            //foreach (var area in WallAreaCalculator_BldgWidth.effWindAreas)
-            //{
-            //    if (TryGetGCp_Pos_BuildingWidthWall_ByArea(area.Key, out var gcp))
-            //    {
-            //        double pressure = CalculateDynamicWindPressure(buildingData.MeanRoofHeight) * gcp;
-            //        windPressureBuildingWidthWall_Pos_External.Add(area.Key, pressure);
-            //    }
-            //}
-
-            //// BuildingWidth pressure negative
-            //foreach (var area in WallAreaCalculator_BldgWidth.effWindAreas)
-            //{
-            //    if (TryGetGCp_Neg_BuildingWidthWall_ByArea(area.Key, out var gcp))
-            //    {
-            //        double pressure = CalculateDynamicWindPressure(buildingData.MeanRoofHeight) * gcp;
-            //        windPressureBuildingWidthWall_Neg_External.Add(area.Key, pressure);
-            //    }
-            //}
-
-            //// BuildingLength pressure positive
-            //foreach (var area in WallAreaCalculator_BldgLength.effWindAreas)
-            //{
-            //    if (TryGetGCp_Pos_BuildingLengthWall_ByArea(area.Key, out var gcp))
-            //    {
-            //        double pressure = CalculateDynamicWindPressure(buildingData.MeanRoofHeight) * gcp;
-            //        windPressureBuildingLengthWall_Pos_External.Add(area.Key, pressure);
-            //    }
-            //}
-
-            //// BuildingLength pressure negative
-            //foreach (var area in WallAreaCalculator_BldgLength.effWindAreas)
-            //{
-            //    if (TryGetGCp_Neg_BuildingLengthWall_ByArea(area.Key, out var gcp))
-            //    {
-            //        double pressure = CalculateDynamicWindPressure(buildingData.MeanRoofHeight) * gcp;
-            //        windPressureBuildingLengthWall_Neg_External.Add(area.Key, pressure);
-            //    }
-            //}
+            CalculateWallPressures(TryGetGCp_Pos_BuildingLengthWall_ByAreaID, windPressureWall_Pos_External_MWFRS);
+            CalculateWallPressures(TryGetGCp_Neg_BuildingLengthWall_ByAreaID, windPressureWall_Neg_External_MWFRS);
         }
     }
 }

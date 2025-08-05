@@ -70,6 +70,8 @@ namespace ShearWallCalculator.WindLoadCalculations
 
     public abstract class WindLoadCalculator_Base : IWindLoadCalculator_CC_Base, IWindLoadCalculator_MWFRS_Base
     {
+        public delegate bool TryGetGcpDelegate(int id, out double gcp);
+
         public abstract ASCE7_Versions ASCEVersion { get; }
         public abstract WindParameters_Base Parameters { get; set; }
         public abstract BuildingData buildingData { get; set; }
@@ -94,22 +96,26 @@ namespace ShearWallCalculator.WindLoadCalculations
 
 
 
-        public Dictionary<int, ExternalPressureData> windPressureRoof_Pos_External { get; set; } = new Dictionary<int, ExternalPressureData>();
-        public Dictionary<int, ExternalPressureData> windPressureRoof_Neg_External { get; set; } = new Dictionary<int, ExternalPressureData>();
-        public Dictionary<int, ExternalPressureData> windPressureBuildingLengthWall_Pos_External { get; set; } = new Dictionary<int, ExternalPressureData>();
-        public Dictionary<int, ExternalPressureData> windPressureBuildingLengthWall_Neg_External { get; set; } = new Dictionary<int, ExternalPressureData>();
-        public Dictionary<int, ExternalPressureData> windPressureBuildingWidthWall_Pos_External { get; set; } = new Dictionary<int, ExternalPressureData>();
-        public Dictionary<int, ExternalPressureData> windPressureBuildingWidthWall_Neg_External { get; set; } = new Dictionary<int, ExternalPressureData>();
-        public Dictionary<int, ExternalPressureData> windPressureOverhang_External { get; set; } = new Dictionary<int, ExternalPressureData>();
+        public Dictionary<int, PressureData> windPressureRoof_Pos_External { get; set; } = new Dictionary<int, PressureData>();
+        public Dictionary<int, PressureData> windPressureRoof_Neg_External { get; set; } = new Dictionary<int, PressureData>();
+        public Dictionary<int, PressureData> windPressureBuildingLengthWall_Pos_External { get; set; } = new Dictionary<int, PressureData>();
+        public Dictionary<int, PressureData> windPressureBuildingLengthWall_Neg_External { get; set; } = new Dictionary<int, PressureData>();
+        public Dictionary<int, PressureData> windPressureBuildingWidthWall_Pos_External { get; set; } = new Dictionary<int, PressureData>();
+        public Dictionary<int, PressureData> windPressureBuildingWidthWall_Neg_External { get; set; } = new Dictionary<int, PressureData>();
+        public Dictionary<int, PressureData> windPressureOverhang_External { get; set; } = new Dictionary<int, PressureData>();
+
+        public Dictionary<int, PressureData> windPressureWall_Pos_External_MWFRS { get; set; } = new Dictionary<int, PressureData>();
+        public Dictionary<int, PressureData> windPressureWall_Neg_External_MWFRS { get; set; } = new Dictionary<int, PressureData>();
 
 
 
-        public Dictionary<int, double>  windPressureRoof_Pos_Net { get; set; } = new Dictionary<int, double>();
-        public Dictionary<int, double> windPressureRoof_Neg_Net { get; set; } = new Dictionary<int, double>();
-        public Dictionary<int, double> windPressureBuildingLength_Pos_Net { get; set; } = new Dictionary<int, double>();
-        public Dictionary<int, double> windPressureBuildingLengthWall_Neg_Net { get; set; } = new Dictionary<int, double>();
-        public Dictionary<int, double> windPressureBuildingWidthWall_Pos_Net { get; set; } = new Dictionary<int, double>();
-        public Dictionary<int, double> windPressureBuildingWidthWall_Neg_Net { get; set; } = new Dictionary<int, double>();
+        public Dictionary<int, PressureData> windPressureRoof_Pos_Net { get; set; } = new Dictionary<int, PressureData>();
+        public Dictionary<int, PressureData> windPressureRoof_Neg_Net { get; set; } = new Dictionary<int, PressureData>();
+        public Dictionary<int, PressureData> windPressureBuildingLength_Pos_Net_CC { get; set; } = new Dictionary<int, PressureData>();
+        public Dictionary<int, PressureData> windPressureBuildingLengthWall_Neg_Net_CC { get; set; } = new Dictionary<int, PressureData>();
+        public Dictionary<int, PressureData> windPressureBuildingWidthWall_Pos_Net_CC { get; set; } = new Dictionary<int, PressureData>();
+        public Dictionary<int, PressureData> windPressureBuildingWidthWall_Neg_Net_CC { get; set; } = new Dictionary<int, PressureData>();
+
 
         /// <summary>
         /// Calculates the dyanmic wind pressure q at a specified height z per ASCE7_16 and ASCE7_22
@@ -140,7 +146,11 @@ namespace ShearWallCalculator.WindLoadCalculations
         public void CreateAreaCalculators()
         {
             RoofAreaCalculator = RoofAreaCalculatorFactory.Create(buildingData, Parameters, ASCEVersion);
-            RoofAreaCalculator.ComputeEffectiveWindAreas();
+
+            if(RoofAreaCalculator != null)
+            {
+                RoofAreaCalculator.ComputeEffectiveWindAreas();
+            }
 
             bool length_is_gable = false;
             bool width_is_gable = false;
@@ -159,419 +169,24 @@ namespace ShearWallCalculator.WindLoadCalculations
             Dictionary<string, double> bldg_length_wall_param = new Dictionary<string, double>();
             bldg_length_wall_param.Add("WallLength", buildingData.BuildingLength);
             WallAreaCalculator_BldgLength = WallAreaCalculatorFactory.Create(buildingData, Parameters, ASCEVersion, length_is_gable);
-            WallAreaCalculator_BldgLength.ComputeEffectiveWindAreas();
+            if(WallAreaCalculator_BldgLength != null)
+            {
+                WallAreaCalculator_BldgLength.ComputeEffectiveWindAreas();
+            }
 
             Dictionary<string, double> bldg_width_wall_param = new Dictionary<string, double>();
             bldg_width_wall_param.Add("WallLength", buildingData.BuildingWidth);
             WallAreaCalculator_BldgWidth = WallAreaCalculatorFactory.Create(buildingData, Parameters, ASCEVersion, width_is_gable);
-            WallAreaCalculator_BldgWidth.ComputeEffectiveWindAreas();
-        }
-
-
-
-
-        public void CalculatePressures()
-        {
-            CalculateExternalPressures();
+            if(WallAreaCalculator_BldgWidth != null)
+            {
+                WallAreaCalculator_BldgWidth.ComputeEffectiveWindAreas();
+            }
         }
 
         /// <summary>
         /// Calculates the qh * GCP for external pressures
         /// </summary>
         public abstract void CalculateExternalPressures();
-
-
-
-
-
-
-
-
-
-
-
-        /////// <summary>
-        /////// Try to fetch a roof region by label and area
-        /////// </summary>
-        /////// <param name="label"></param>
-        /////// <param name="area"></param>
-        /////// <param name="region"></param>
-        /////// <returns></returns>
-        //private bool TryGetEffectiveWindAreaID_Roof(string label, double area, out int id)
-        //{
-        //    id = -1;
-
-        //    foreach (KeyValuePair<int, EffectiveWindArea> item in RoofAreaCalculator.effWindAreas)
-        //    {
-
-        //        if ((item.Value.Label_Full == label) && (item.Value.Area == area))
-        //        {
-        //            id = item.Key;
-        //            return true;
-        //        }
-        //    }
-
-        //    return false;
-        //}
-
-        ///// <summary>
-        ///// Try to fetch a roof region by label and area
-        ///// </summary>
-        ///// <param name="label"></param>
-        ///// <param name="area"></param>
-        ///// <param name="region"></param>
-        ///// <returns></returns>
-        //private bool TryGetEffectiveWindAreaID_BuildingLengthWall(string label, double area, out int id)
-        //{
-        //    id = -1;
-
-        //    foreach (KeyValuePair<int, EffectiveWindArea> item in WallAreaCalculator_BldgLength.effWindAreas)
-        //    {
-
-        //        if ((item.Value.Label_Full == label) && (item.Value.Area == area))
-        //        {
-        //            id = item.Key;
-        //            return true;
-        //        }
-        //    }
-
-        //    return false;
-        //}
-
-        ///// <summary>
-        ///// Try to fetch a roof region by label and area
-        ///// </summary>
-        ///// <param name="label"></param>
-        ///// <param name="area"></param>
-        ///// <param name="region"></param>
-        ///// <returns></returns>
-        //private bool TryGetEffectiveWindAreaID_BuildingWidthWall(string label, double area, out int id)
-        //{
-        //    id = -1;
-
-        //    foreach (KeyValuePair<int, EffectiveWindArea> item in WallAreaCalculator_BldgWidth.effWindAreas)
-        //    {
-
-        //        if ((item.Value.Label_Full == label) && (item.Value.Area == area))
-        //        {
-        //            id = item.Key;
-        //            return true;
-        //        }
-        //    }
-
-        //    return false;
-        //}
-
-        //public bool TryGetPressureNet_Pos_Roof(EffectiveWindArea area, out double pressure)
-        //{
-        //    int id;
-        //    pressure = 0;
-
-        //    if (TryGetEffectiveWindAreaID_Roof(area.Label_Full, area.Area, out id))
-        //    {
-        //        if (windPressureRoof_Pos_Net.TryGetValue(id, out pressure))
-        //        {
-        //            return true;
-        //        }
-        //    }
-
-        //    return false;
-        //}
-
-        //public bool TryGetPressureNet_MostPositiveByAreaName_Roof(string area_name, out double pressure)
-        //{
-        //    int id;
-        //    pressure = double.MinValue;
-
-        //    AreaCalculator_Base calc = RoofAreaCalculator;
-
-        //    // get all ids that match the label
-        //    bool found = false;
-        //    foreach (var item in calc.effWindAreas)
-        //    {
-        //        if (item.Value.Label_Full == area_name)
-        //        {
-        //            if(TryGetEffectiveWindAreaID_Roof(item.Value.Label_Full, item.Value.Area, out id))
-        //            {
-        //                double new_pressure;
-        //                found = windPressureRoof_Pos_Net.TryGetValue(id, out new_pressure);
-        //                if (found)
-        //                {
-        //                    if(new_pressure > pressure)
-        //                    {
-        //                        pressure = new_pressure;
-        //                    }
-        //                }
-
-        //            }
-        //        }
-        //    }
-
-        //    return found;
-        //}
-
-        //public bool TryGetPressureNet_MostPositiveByAreaName_BuildingLengthWall(string area_name, out double pressure)
-        //{
-        //    int id;
-        //    pressure = double.MinValue;
-
-        //    AreaCalculator_Base calc = WallAreaCalculator_BldgLength;
-
-        //    // get all ids that match the label
-        //    bool found = false;
-        //    int found_count = 0;
-        //    foreach (var item in calc.effWindAreas)
-        //    {
-        //        if (item.Value.Label_Full == area_name)
-        //        {
-        //            if (TryGetEffectiveWindAreaID_BuildingLengthWall(item.Value.Label_Full, item.Value.Area, out id))
-        //            {
-        //                double new_pressure;
-        //                found = windPressureBuildingLength_Pos_Net.TryGetValue(id, out new_pressure);
-        //                if (found)
-        //                {
-        //                    found_count++;
-        //                    if (new_pressure > pressure)
-        //                    {
-        //                        pressure = new_pressure;
-        //                    }
-        //                }
-        //            }
-        //        }
-        //    }
-        //    //Console.WriteLine(found_count + " matches found for " + area_name + "!");
-        //    return found;
-        //}
-        //public bool TryGetPressureNet_MostPositiveByAreaName_BuildingWidthWall(string area_name, out double pressure)
-        //{
-        //    int id;
-        //    pressure = double.MinValue;
-
-        //    AreaCalculator_Base calc = WallAreaCalculator_BldgWidth;
-
-        //    // get all ids that match the label
-        //    bool found = false;
-        //    int found_count = 0;
-        //    foreach (var item in calc.effWindAreas)
-        //    {
-        //        if (item.Value.Label_Full == area_name)
-        //        {
-        //            if (TryGetEffectiveWindAreaID_BuildingWidthWall(item.Value.Label_Full, item.Value.Area, out id))
-        //            {
-        //                double new_pressure;
-        //                found = windPressureBuildingWidthWall_Pos_Net.TryGetValue(id, out new_pressure);
-        //                if (found)
-        //                {
-        //                    found_count++;
-        //                    if (new_pressure > pressure)
-        //                    {
-        //                        pressure = new_pressure;
-        //                    }
-        //                }
-        //            }
-        //        }
-        //    }
-        //    //Console.WriteLine(found_count + " matches found for " + area_name + "!");
-        //    return found;
-        //}
-
-
-
-        //public bool TryGetPressureNet_Neg_Roof(EffectiveWindArea area, out double pressure)
-        //{
-        //    int id;
-        //    pressure = 0;
-
-        //    if (TryGetEffectiveWindAreaID_Roof(area.Label_Full, area.Area, out id))
-        //    {
-        //        if (windPressureRoof_Neg_Net.TryGetValue(id, out pressure))
-        //        {
-        //            return true;
-        //        }
-        //    }
-
-        //    return false;
-        //}
-
-        //public bool TryGetPressureNet_MostNegativeByAreaName_Roof(string area_name, out double pressure)
-        //{
-        //    int id;
-        //    pressure = double.MaxValue;
-
-        //    AreaCalculator_Base calc = RoofAreaCalculator;
-
-        //    // get all ids that match the label
-        //    bool found = false;
-        //    int found_count = 0;
-        //    foreach (var item in calc.effWindAreas)
-        //    {
-        //        if (item.Value.Label_Full == area_name)
-        //        {
-        //            if (TryGetEffectiveWindAreaID_Roof(item.Value.Label_Full, item.Value.Area, out id))
-        //            {
-        //                double new_pressure;
-        //                found = windPressureRoof_Neg_Net.TryGetValue(id, out new_pressure);
-        //                if (found)
-        //                {
-        //                    found_count++;
-        //                    if (new_pressure < pressure)
-        //                    {
-        //                        pressure = new_pressure;
-        //                    }
-        //                }
-        //            }
-        //        }
-        //    }
-        //    //Console.WriteLine(found_count + " matches found for " + area_name + "!");
-        //    return found;
-        //}
-
-        //public bool TryGetPressureNet_MostNegativeByAreaName_BuildingLengthWall(string area_name, out double pressure)
-        //{
-        //    int id;
-        //    pressure = double.MaxValue;
-
-        //    AreaCalculator_Base calc = WallAreaCalculator_BldgLength;
-
-        //    // get all ids that match the label
-        //    bool found = false;
-        //    int found_count = 0;
-        //    foreach (var item in calc.effWindAreas)
-        //    {
-        //        if (item.Value.Label_Full == area_name)
-        //        {
-        //            if (TryGetEffectiveWindAreaID_BuildingLengthWall(item.Value.Label_Full, item.Value.Area, out id))
-        //            {
-        //                double new_pressure;
-        //                found = windPressureBuildingLengthWall_Neg_Net.TryGetValue(id, out new_pressure);
-        //                if (found)
-        //                {
-        //                    found_count++;
-        //                    if (new_pressure < pressure)
-        //                    {
-        //                        pressure = new_pressure;
-        //                    }
-        //                }
-        //            }
-        //        }
-        //    }
-        //    //Console.WriteLine(found_count + " matches found for " + area_name + "!");
-        //    return found;
-        //}
-
-        //public bool TryGetPressureNet_MostNegativeByAreaName_BuildingWidthWall(string area_name, out double pressure)
-        //{
-        //    int id;
-        //    pressure = double.MaxValue;
-
-        //    AreaCalculator_Base calc = WallAreaCalculator_BldgWidth;
-
-        //    // get all ids that match the label
-        //    bool found = false;
-        //    int found_count = 0;
-        //    foreach (var item in calc.effWindAreas)
-        //    {
-        //        if (item.Value.Label_Full == area_name)
-        //        {
-        //            if (TryGetEffectiveWindAreaID_BuildingWidthWall(item.Value.Label_Full, item.Value.Area, out id))
-        //            {
-        //                double new_pressure;
-        //                found = windPressureBuildingWidthWall_Neg_Net.TryGetValue(id, out new_pressure);
-        //                if (found)
-        //                {
-        //                    found_count++;
-        //                    if (new_pressure < pressure)
-        //                    {
-        //                        pressure = new_pressure;
-        //                    }
-        //                }
-        //            }
-        //        }
-        //    }
-        //    //Console.WriteLine(found_count + " matches found for " + area_name + "!");
-        //    return found;
-        //}
-
-
-        //public bool TryGetPressureNet_Overhang_Roof(EffectiveWindArea area, out double pressure)
-        //{
-        //    int id;
-        //    pressure = 0;
-
-        //    if (TryGetEffectiveWindAreaID_Roof(area.Label_Full, area.Area, out id))
-        //    {
-        //        if (windPressureOverhang_External.TryGetValue(id, out pressure))
-        //        {
-        //            return true;
-        //        }
-        //    }
-
-        //    return false;
-        //}
-
-        //public bool TryGetPressureNet_Pos_BuildingLengthWall(EffectiveWindArea area, out double pressure)
-        //{
-        //    int id;
-        //    pressure = 0;
-
-        //    if (TryGetEffectiveWindAreaID_BuildingLengthWall(area.Label_Full, area.Area, out id))
-        //    {
-        //        if (windPressureBuildingLength_Pos_Net.TryGetValue(id, out pressure))
-        //        {
-        //            return true;
-        //        }
-        //    }
-
-        //    return false;
-        //}
-
-        //public bool TryGetPressureNet_Neg_BuildingLengthWall(EffectiveWindArea area, out double pressure)
-        //{
-        //    int id;
-        //    pressure = 0;
-
-        //    if (TryGetEffectiveWindAreaID_BuildingLengthWall(area.Label_Full, area.Area, out id))
-        //    {
-        //        if (windPressureBuildingLengthWall_Neg_Net.TryGetValue(id, out pressure))
-        //        {
-        //            return true;
-        //        }
-        //    }
-
-        //    return false;
-        //}
-
-        //public bool TryGetPressureNet_Pos_BuildingWidthWall(EffectiveWindArea area, out double pressure)
-        //{
-        //    int id;
-        //    pressure = 0;
-
-        //    if (TryGetEffectiveWindAreaID_BuildingWidthWall(area.Label_Full, area.Area, out id))
-        //    {
-        //        if (windPressureBuildingWidthWall_Pos_Net.TryGetValue(id, out pressure))
-        //        {
-        //            return true;
-        //        }
-        //    }
-
-        //    return false;
-        //}
-
-        //public bool TryGetPressureNet_Neg_BuildingWidthWall(EffectiveWindArea area, out double pressure)
-        //{
-        //    int id;
-        //    pressure = 0;
-
-        //    if (TryGetEffectiveWindAreaID_BuildingWidthWall(area.Label_Full, area.Area, out id))
-        //    {
-        //        if (windPressureBuildingWidthWall_Neg_Net.TryGetValue(id, out pressure))
-        //        {
-        //            return true;
-        //        }
-        //    }
-
-        //    return false;
-        //}
 
         public string DisplayExternalPressures()
         {
@@ -639,25 +254,25 @@ namespace ShearWallCalculator.WindLoadCalculations
             }
 
             str += "-- Positive BuildingWidth pressures\n";
-            foreach (var item in windPressureBuildingWidthWall_Pos_Net)
+            foreach (var item in windPressureBuildingWidthWall_Pos_Net_CC)
             {
                 str += "----" + item.Key + ": " + item.Value + "\n";
             }
 
             str += "-- Negative BuildingWidth pressures\n";
-            foreach (var item in windPressureBuildingWidthWall_Neg_Net)
+            foreach (var item in windPressureBuildingWidthWall_Neg_Net_CC)
             {
                 str += "----" + item.Key + ": " + item.Value + "\n";
             }
 
             str += "-- Positive BuildingLength pressures\n";
-            foreach (var item in windPressureBuildingLength_Pos_Net)
+            foreach (var item in windPressureBuildingLength_Pos_Net_CC)
             {
                 str += "----" + item.Key + ": " + item.Value + "\n";
             }
 
             str += "-- Negative BuildingLength pressures\n";
-            foreach (var item in windPressureBuildingLengthWall_Neg_Net)
+            foreach (var item in windPressureBuildingLengthWall_Neg_Net_CC)
             {
                 str += "----" + item.Key + ": " + item.Value + "\n";
             }
@@ -709,5 +324,188 @@ namespace ShearWallCalculator.WindLoadCalculations
             else if (point.X <= offset3) return 2;
             else return 1;
         }
+
+        /// <summary>
+        /// Function to retrieve a GCp value by area.  If successfull returns true
+        /// </summary>
+        /// <param name="id">id of the area</param>
+        /// <param name="gcp">thereturn GCP value</param>
+        /// <returns></returns>
+        public bool TryGetGCp_Pos_Roof_ByAreaID(int id, out double gcp)
+        {
+            gcp = 0.0;
+
+
+            if (!RoofAreaCalculator.effWindAreas.TryGetValue(id, out var area))
+                return false;
+
+            foreach (var gcp_curve in this.extGCpCurve_Roof.RoofCurves_Pos)
+            {
+                if (gcp_curve.Key == area.Label_Full)
+                {
+                    gcp = gcp_curve.Value.Evaluate(area.Area);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Function to retrieve a GCp value by area.  If successfull returns true
+        /// </summary>
+        /// <param name="id">id of the area</param>
+        /// <param name="gcp">thereturn GCP value</param>
+        /// <returns></returns>
+        public bool TryGetGCp_Neg_Roof_ByAreaID(int id, out double gcp)
+        {
+            gcp = 0.0;
+
+
+            if (!RoofAreaCalculator.effWindAreas.TryGetValue(id, out var area))
+                return false;
+
+            foreach (var gcp_curve in this.extGCpCurve_Roof.RoofCurves_Neg)
+            {
+                if (gcp_curve.Key == area.Label_Full)
+                {
+                    gcp = gcp_curve.Value.Evaluate(area.Area);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Function to retrieve a GCp value by area.  If successfull returns true
+        /// </summary>
+        /// <param name="id">id of the area</param>
+        /// <param name="gcp">thereturn GCP value</param>
+        /// <returns></returns>
+        public bool TryGetGCp_Pos_BuildingLengthWall_ByAreaID(int id, out double gcp)
+        {
+            gcp = 0.0;
+
+
+            if (!WallAreaCalculator_BldgLength.effWindAreas.TryGetValue(id, out var area))
+                return false;
+
+            foreach (var gcp_curve in this.extGCpCurve_Wall.WallCurves_Pos)
+            {
+                if (gcp_curve.Key == area.Label_Full)
+                {
+                    gcp = gcp_curve.Value.Evaluate(area.Area);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Function to retrieve a GCp value by area.  If successfull returns true
+        /// </summary>
+        /// <param name="id">id of the area</param>
+        /// <param name="gcp">thereturn GCP value</param>
+        /// <returns></returns>
+        public bool TryGetGCp_Neg_BuildingLengthWall_ByAreaID(int id, out double gcp)
+        {
+            gcp = 0.0;
+
+
+            if (!WallAreaCalculator_BldgLength.effWindAreas.TryGetValue(id, out var area))
+                return false;
+
+            foreach (var gcp_curve in this.extGCpCurve_Wall.WallCurves_Neg)
+            {
+                if (gcp_curve.Key == area.Label_Full)
+                {
+                    gcp = gcp_curve.Value.Evaluate(area.Area);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Function to retrieve a GCp value by area.  If successfull returns true
+        /// </summary>
+        /// <param name="id">id of the area</param>
+        /// <param name="gcp">thereturn GCP value</param>
+        /// <returns></returns>
+        public bool TryGetGCp_Pos_BuildingWidthWall_ByAreaID(int id, out double gcp)
+        {
+            gcp = 0.0;
+
+
+            if (!WallAreaCalculator_BldgWidth.effWindAreas.TryGetValue(id, out var area))
+                return false;
+
+            foreach (var gcp_curve in this.extGCpCurve_Wall.WallCurves_Pos)
+            {
+                if (gcp_curve.Key == area.Label_Full)
+                {
+                    gcp = gcp_curve.Value.Evaluate(area.Area);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Function to retrieve a GCp value by area.  If successfull returns true
+        /// </summary>
+        /// <param name="id">id of the area</param>
+        /// <param name="gcp">thereturn GCP value</param>
+        /// <returns></returns>
+        public bool TryGetGCp_Neg_BuildingWidthWall_ByAreaID(int id, out double gcp)
+        {
+            gcp = 0.0;
+
+
+            if (!WallAreaCalculator_BldgWidth.effWindAreas.TryGetValue(id, out var area))
+                return false;
+
+            foreach (var gcp_curve in this.extGCpCurve_Wall.WallCurves_Neg)
+            {
+                if (gcp_curve.Key == area.Label_Full)
+                {
+                    gcp = gcp_curve.Value.Evaluate(area.Area);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Function to retrieve a GCp value by area.  If successfull returns true
+        /// </summary>
+        /// <param name="id">id of the area</param>
+        /// <param name="gcp">thereturn GCP value</param>
+        /// <returns></returns>
+        public bool TryGetGCp_Overhang_ByArea(int id, out double gcp)
+        {
+            gcp = 0.0;
+
+
+            if (!RoofAreaCalculator.effWindAreas.TryGetValue(id, out var area))
+                return false;
+
+            foreach (var gcp_curve in this.extGCpCurve_Roof.OverhangCurves)
+            {
+                if (gcp_curve.Key == area.Label_Full)
+                {
+                    gcp = gcp_curve.Value.Evaluate(area.Area);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
     }
 }

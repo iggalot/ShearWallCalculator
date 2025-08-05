@@ -66,7 +66,6 @@ namespace ShearWallVisualizer.Controls
                 }
 
                 txtTitle_BuildingLengthWalls.Text = "BuildingLength Wall -- " + windLoadCalculator.WallAreaCalculator_BldgLength.Note;
-                txtTitle_BuildingWidthWalls.Text = "BuildingWidth Walls -- " + windLoadCalculator.WallAreaCalculator_BldgWidth.Note;
 
                 BuildingDrawer.DrawPlan(cnvMWFRSPlan, windLoadCalculator.buildingData);
                 BuildingDrawer.DrawElevation_BuildingLength(cnvMWFRSElevation_BuildingLength, windLoadCalculator.buildingData);

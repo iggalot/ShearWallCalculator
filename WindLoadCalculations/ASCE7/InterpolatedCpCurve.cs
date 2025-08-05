@@ -2,12 +2,12 @@
 
 namespace ShearWallCalculator.WindLoadCalculations
 {
-    public class InterpolatedCurve : Chapter27and30_GCpCurveBase
+    public class InterpolatedCpCurve : Chapter27and30_GCpCurveBase
     {
         public override string ChartTitle { get; set; } = "ASCE 7-16 Figure 27.3-1";
         public override string ChartCriteria { get; set; }
 
-        public InterpolatedCurve(double h_over_L, double slope, double low_val, double high_val, 
+        public InterpolatedCpCurve(double h_over_L, double slope, double low_val, double high_val, 
             Chapter27and30_GCpCurveBase lower_curve, Chapter27and30_GCpCurveBase upper_curve, double area = 50)
         {
             ChartCriteria = $"Slope = {slope:0.##} — interpolated h/L = {h_over_L:0.###}";

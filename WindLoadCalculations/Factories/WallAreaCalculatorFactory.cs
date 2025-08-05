@@ -6,7 +6,6 @@ namespace ShearWallCalculator.WindLoadCalculations
 {
     public static class WallAreaCalculatorFactory
     {
-
         public static AreaCalculator_Base Create(
             BuildingData bldg_data,
             WindParameters_Base parameters,
@@ -19,55 +18,119 @@ namespace ShearWallCalculator.WindLoadCalculations
                 return null;
             }
 
-            // figure out the wall arrangements
-            if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_FLAT)
+            if (version == ASCE7_Versions.ASCE_VER_7_16)
             {
-                if(version == ASCE7_Versions.ASCE_VER_7_16)
+                if (parameters.AnalysisType == WindLoadCalculationTypes.COMPONENT_AND_CLADDING)
                 {
-                    return new WallAreaCalculator_NonGableEnd_CC_ASCE7_16(bldg_data);
-                } else if (version == ASCE7_Versions.ASCE_VER_7_22)
-                {
-                    return new WallAreaCalculator_NonGableEnd_CC_ASCE7_22(bldg_data);
-                }
-            }
-            else if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_GABLE || bldg_data.RoofType == RoofTypes.ROOF_TYPE_HIP)
-            {
-                if(isGable is true)
-                {
-                    if (version == ASCE7_Versions.ASCE_VER_7_16)
-                    {
-                        return new WallAreaCalculator_GableEnd_CC_ASCE7_16(bldg_data);
-                    }
-                    else if (version == ASCE7_Versions.ASCE_VER_7_22)
-                    {
-                        return new WallAreaCalculator_GableEnd_CC_ASCE7_22(bldg_data);
-                    }
-                    else
-                    {
-                        throw new NotImplementedException("Wall calculator not implemented for version " + version);
-                    }
-                } else
-                {
-                    if (version == ASCE7_Versions.ASCE_VER_7_16)
+                    // figure out the wall arrangements
+                    if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_FLAT)
+                        return new WallAreaCalculator_NonGableEnd_CC_ASCE7_16(bldg_data);
+                    else if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_HIP)
                     {
                         return new WallAreaCalculator_NonGableEnd_CC_ASCE7_16(bldg_data);
                     }
-                    else if (version == ASCE7_Versions.ASCE_VER_7_22)
+
+                    else if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_GABLE)
                     {
-                        return new WallAreaCalculator_NonGableEnd_CC_ASCE7_22(bldg_data);
-                    } else
+                        if (isGable is true)
+                        {
+                            return new WallAreaCalculator_GableEnd_CC_ASCE7_16(bldg_data);
+                        } else
+                        {
+                            return new WallAreaCalculator_NonGableEnd_CC_ASCE7_16(bldg_data);
+                        }
+                    }
+                    else
                     {
-                        throw new NotImplementedException("Wall calculator not implemented for version " + version);
+                        throw new NotSupportedException("Unsupported roof type: " + bldg_data.RoofType);
+                    }
+                } else if (parameters.AnalysisType == WindLoadCalculationTypes.MWFRS)
+                {
+                    // figure out the wall arrangements
+                    if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_FLAT)
+                        return new WallAreaCalculator_NonGableEnd_MWFRS_ASCE7_16(bldg_data);
+                    else if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_HIP)
+                    {
+                        return new WallAreaCalculator_NonGableEnd_MWFRS_ASCE7_16(bldg_data);
+                    }
+
+                    else if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_GABLE)
+                    {
+                        if (isGable is true)
+                        {
+                            return new WallAreaCalculator_GableEnd_MWFRS_ASCE7_16(bldg_data);
+                        }
+                        else
+                        {
+                            return new WallAreaCalculator_NonGableEnd_MWFRS_ASCE7_16(bldg_data);
+                        }
+                    }
+                    else
+                    {
+                        throw new NotSupportedException("Unsupported roof type: " + bldg_data.RoofType);
                     }
                 }
-            }
-            else
+            } else if (version == ASCE7_Versions.ASCE_VER_7_22)
             {
-                throw new NotSupportedException("Unsupported roof type: " + bldg_data.RoofType);
+                if (parameters.AnalysisType == WindLoadCalculationTypes.COMPONENT_AND_CLADDING)
+                {
+                    // figure out the wall arrangements
+                    if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_FLAT)
+                        return new WallAreaCalculator_NonGableEnd_CC_ASCE7_22(bldg_data);
+                    else if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_HIP)
+                    {
+                        return new WallAreaCalculator_NonGableEnd_CC_ASCE7_22(bldg_data);
+                    }
+
+                    else if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_GABLE)
+                    {
+                        if (isGable is true)
+                        {
+                            return new WallAreaCalculator_GableEnd_CC_ASCE7_22(bldg_data);
+                        }
+                        else
+                        {
+                            return new WallAreaCalculator_NonGableEnd_CC_ASCE7_22(bldg_data);
+                        }
+                    }
+                    else
+                    {
+                        throw new NotSupportedException("Unsupported roof type: " + bldg_data.RoofType);
+                    }
+                }
+                else if (parameters.AnalysisType == WindLoadCalculationTypes.MWFRS)
+                {
+                    // figure out the wall arrangements
+                    if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_FLAT)
+                        return new WallAreaCalculator_NonGableEnd_MWFRS_ASCE7_22(bldg_data);
+                    else if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_HIP)
+                    {
+                        return new WallAreaCalculator_NonGableEnd_MWFRS_ASCE7_22(bldg_data);
+                    }
+
+                    else if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_GABLE)
+                    {
+                        if (isGable is true)
+                        {
+                            return new WallAreaCalculator_GableEnd_MWFRS_ASCE7_22(bldg_data);
+                        }
+                        else
+                        {
+                            return new WallAreaCalculator_NonGableEnd_MWFRS_ASCE7_22(bldg_data);
+                        }
+                    }
+                    else
+                    {
+                        throw new NotSupportedException("Unsupported roof type: " + bldg_data.RoofType);
+                    }
+                }
+                else
+                {
+                    throw new NotImplementedException("Wall calculator not implemented for version " + version);
+                }
             }
 
             return null;
         }
-
     }
 }

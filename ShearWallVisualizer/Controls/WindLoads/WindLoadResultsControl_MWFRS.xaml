@@ -42,7 +42,7 @@
                             <ScrollViewer VerticalScrollBarVisibility="Auto" Height="400">
                                 <StackPanel Orientation="Vertical">
                                     <TextBlock Text="Roof Zone Pressures" Margin="0,5"/>
-                                    <DataGrid x:Name="RoofResultsDataGrid"
+                                    <DataGrid x:Name="MWFRS_RoofResultsDataGrid"
                                           AutoGenerateColumns="False"
                                           HeadersVisibility="Column"
                                           CanUserAddRows="False"
@@ -53,18 +53,7 @@
                                           FontSize="10"/>
 
                                     <TextBlock x:Name="txtTitle_BuildingLengthWalls" Margin="0,5"/>
-                                    <DataGrid x:Name="WallsResultsDataGrid_SideWall"
-                                          AutoGenerateColumns="False"
-                                          HeadersVisibility="Column"
-                                          CanUserAddRows="False"
-                                          IsReadOnly="True"
-                                          HorizontalScrollBarVisibility="Auto"
-                                          Margin="0,0,0,10"
-                                          ColumnWidth="Auto"
-                                          FontSize="10"/>
-
-                                    <TextBlock x:Name="txtTitle_BuildingWidthWalls" Margin="0,5"/>
-                                    <DataGrid x:Name="WallsResultsDataGrid_EndWall"
+                                    <DataGrid x:Name="MWFRS_WallResultsDataGrid"
                                           AutoGenerateColumns="False"
                                           HeadersVisibility="Column"
                                           CanUserAddRows="False"

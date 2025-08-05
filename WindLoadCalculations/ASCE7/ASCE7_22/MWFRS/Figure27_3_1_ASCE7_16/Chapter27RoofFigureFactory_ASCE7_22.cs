@@ -24,10 +24,10 @@ namespace ShearWallCalculator.WindLoadCalculations
                     {
                         if(h_over_L <= 0.25)
                         {
-                            return new NormToRidge_LargeSlope_Roof_Low(roofSlope);
+                            return new NormToRidge_LargeSlope_Roof_Low_ASCE7_22(roofSlope);
                         } else if (h_over_L >= 1.0)
                         {
-                            var high = new NormToRidge_LargeSlope_Roof_High(roofSlope);
+                            var high = new NormToRidge_LargeSlope_Roof_High_ASCE7_22(roofSlope);
                         } else if (h_over_L == 0.5)
                         {
                             
@@ -35,35 +35,35 @@ namespace ShearWallCalculator.WindLoadCalculations
                         else if (h_over_L > 0.25 && h_over_L < 0.5)
                         {
                             // interpolate
-                            var low = new NormToRidge_LargeSlope_Roof_Low(roofSlope);
-                            var mid = new NormToRidge_LargeSlope_Roof_Mid(roofSlope);
+                            var low = new NormToRidge_LargeSlope_Roof_Low_ASCE7_22(roofSlope);
+                            var mid = new NormToRidge_LargeSlope_Roof_Mid_ASCE7_22(roofSlope);
 
-                            return new InterpolatedCurve(h_over_L, roofSlope, 0.25, 0.5, low, mid);
+                            return new InterpolatedCpCurve(h_over_L, roofSlope, 0.25, 0.5, low, mid);
 
                         } 
                         else if (h_over_L > 0.5 && h_over_L < 1.0)
                         {
-                            var mid = new NormToRidge_LargeSlope_Roof_Mid(roofSlope);
-                            var high = new NormToRidge_LargeSlope_Roof_High(roofSlope);
+                            var mid = new NormToRidge_LargeSlope_Roof_Mid_ASCE7_22(roofSlope);
+                            var high = new NormToRidge_LargeSlope_Roof_High_ASCE7_22(roofSlope);
 
-                            return new InterpolatedCurve(h_over_L, roofSlope, 0.5, 1.0, mid, high);
+                            return new InterpolatedCpCurve(h_over_L, roofSlope, 0.5, 1.0, mid, high);
                         }
                     }
                     else
                     {
                         if (h_over_L <= 0.5) 
                         {
-                            return new ParallelToRidge_LowSlope_Roof_Low();
+                            return new ParallelToRidge_LowSlope_Roof_Low_ASCE7_22();
                         } 
                         else if (h_over_L >= 1.0)
                         {
-                            return new ParallelToRidge_LowSlope_Roof_High();
+                            return new ParallelToRidge_LowSlope_Roof_High_ASCE7_22();
                         } else if (h_over_L > 0.5 && h_over_L < 1.0)
                         {
-                            var low = new ParallelToRidge_LowSlope_Roof_Low();
-                            var high = new ParallelToRidge_LowSlope_Roof_High();
+                            var low = new ParallelToRidge_LowSlope_Roof_Low_ASCE7_22();
+                            var high = new ParallelToRidge_LowSlope_Roof_High_ASCE7_22();
 
-                            return new InterpolatedCurve(h_over_L, roofSlope, 0.5, 1.0, low, high);
+                            return new InterpolatedCpCurve(h_over_L, roofSlope, 0.5, 1.0, low, high);
                         }
                     }
                     break;
@@ -71,18 +71,18 @@ namespace ShearWallCalculator.WindLoadCalculations
                     {
                         if (h_over_L <= 0.5)
                         {
-                            return new ParallelToRidge_LowSlope_Roof_Low();
+                            return new ParallelToRidge_LowSlope_Roof_Low_ASCE7_22();
                         }
                         else if (h_over_L >= 1.0)
                         {
-                            return new ParallelToRidge_LowSlope_Roof_High();
+                            return new ParallelToRidge_LowSlope_Roof_High_ASCE7_22();
                         }
                         else if (h_over_L > 0.5 && h_over_L < 1.0)
                         {
-                            var low = new ParallelToRidge_LowSlope_Roof_Low();
-                            var high = new ParallelToRidge_LowSlope_Roof_High();
+                            var low = new ParallelToRidge_LowSlope_Roof_Low_ASCE7_22();
+                            var high = new ParallelToRidge_LowSlope_Roof_High_ASCE7_22();
 
-                            return new InterpolatedCurve(h_over_L, roofSlope, 0.5, 1.0, low, high);
+                            return new InterpolatedCpCurve(h_over_L, roofSlope, 0.5, 1.0, low, high);
                         }
                     }
                     break;

@@ -1,6 +1,8 @@
 ﻿using ShearWallCalculator.BuildingInfo;
+using ShearWallCalculator.WindLoadCalculations.ASCE7;
 using ShearWallCalculator.WindLoadCalculations.Chapter30.Figure30_3;
 using System;
+using System.Collections.Generic;
 
 namespace ShearWallCalculator.WindLoadCalculations
 {
@@ -9,6 +11,8 @@ namespace ShearWallCalculator.WindLoadCalculations
     /// </summary>
     public class WindLoadCalculator_CC_ASCE7_22: WindLoadCalculator_ASCE7_22_Base
     {
+        public delegate bool TryGetGcpDelegate(int id, out double gcp);
+
         public override ASCE7_Versions ASCEVersion { get => ASCE7_Versions.ASCE_VER_7_22; }
 
         public WindLoadCalculator_CC_ASCE7_22(WindParameters_Base p, BuildingData bldg_data)
@@ -16,11 +20,124 @@ namespace ShearWallCalculator.WindLoadCalculations
             buildingData = bldg_data;
             Parameters = p;
 
-            if (buildingData.MeanRoofHeight <= 60)
+            try
             {
-                CreateExtGcpCurves();
+
+                if (buildingData.MeanRoofHeight <= 60)
+                {
+                    CreateExtGcpCurves();
+                }
+                else
+                {
+                    throw new Exception("ERROR: Building max mean roof height has exceeded 60 ft -- " + buildingData.MeanRoofHeight + " ft.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
             }
         }
+
+        private void CalculateRoofPressures(
+            TryGetGcpDelegate tryGetGcp,
+            Dictionary<int, PressureData> targetDict
+            )
+        {
+            foreach (var areaEntry in RoofAreaCalculator.effWindAreas)
+            {
+                int id = areaEntry.Key;
+
+                double gcp;
+                if (!tryGetGcp(id, out gcp))
+                    continue;
+
+                var q_h = CalculateDynamicWindPressure(buildingData.MeanRoofHeight);
+                var kd = GetKd(Parameters.AnalysisType);
+                var _gcpi = GetGCpi();
+                
+                targetDict.Add(id, new PressureData()
+                {
+                    AreaID = id,
+                    qh = q_h,
+                    GCp = gcp,
+                    ExternalPressure = q_h * gcp * kd,
+                    GCpi = _gcpi,
+                    InternalPressure = q_h * _gcpi * kd,
+                });
+            }
+        }
+
+        private void CalculateWallPressures_BuildingLength(
+            TryGetGcpDelegate tryGetGcp,
+            Dictionary<int, PressureData> targetDict
+            )
+        {
+            foreach (var areaEntry in WallAreaCalculator_BldgLength.effWindAreas)
+            {
+                int id = areaEntry.Key;
+
+                double gcp;
+                if (!tryGetGcp(id, out gcp))
+                    continue;
+
+                var q_h = CalculateDynamicWindPressure(buildingData.MeanRoofHeight);
+                var kd = GetKd(Parameters.AnalysisType);
+                var _gcpi = GetGCpi();
+
+                targetDict.Add(id, new PressureData()
+                {
+                    AreaID = id,
+                    qh = q_h,
+                    GCp = gcp,
+                    ExternalPressure = q_h * gcp * kd,
+                    GCpi = _gcpi,
+                    InternalPressure = q_h * _gcpi * kd,
+                });
+            }
+        }
+
+        private void CalculateWallPressures_BuildingWidth(
+            TryGetGcpDelegate tryGetGcp,
+            Dictionary<int, PressureData> targetDict
+            )
+        {
+            foreach (var areaEntry in WallAreaCalculator_BldgWidth.effWindAreas)
+            {
+                int id = areaEntry.Key;
+
+                double gcp;
+                if (!tryGetGcp(id, out gcp))
+                    continue;
+
+                var q_h = CalculateDynamicWindPressure(buildingData.MeanRoofHeight);
+                var kd = GetKd(Parameters.AnalysisType);
+                var _gcpi = GetGCpi();
+
+                targetDict.Add(id, new PressureData()
+                {
+                    AreaID = id,
+                    qh = q_h,
+                    GCp = gcp,
+                    ExternalPressure = q_h * gcp * kd,
+                    GCpi = _gcpi,
+                    InternalPressure = q_h * _gcpi * kd,
+                });
+            }
+        }
+
+        public override void CalculateExternalPressures()
+        {
+            // Calculate the pressures andstore them in the appropriate dictionary.
+            CalculateRoofPressures(TryGetGCp_Pos_Roof_ByAreaID, windPressureRoof_Pos_External);
+            CalculateRoofPressures(TryGetGCp_Neg_Roof_ByAreaID, windPressureRoof_Neg_External);
+
+            CalculateWallPressures_BuildingLength(TryGetGCp_Pos_BuildingLengthWall_ByAreaID, windPressureBuildingLengthWall_Pos_External);
+            CalculateWallPressures_BuildingLength(TryGetGCp_Neg_BuildingLengthWall_ByAreaID, windPressureBuildingLengthWall_Neg_External);
+
+            CalculateWallPressures_BuildingWidth(TryGetGCp_Pos_BuildingWidthWall_ByAreaID, windPressureBuildingWidthWall_Pos_External);
+            CalculateWallPressures_BuildingWidth(TryGetGCp_Neg_BuildingWidthWall_ByAreaID, windPressureBuildingWidthWall_Neg_External);
+        }
+
 
         public void CreateExtGcpCurves()
         {
@@ -40,80 +157,12 @@ namespace ShearWallCalculator.WindLoadCalculations
         }
 
         /// <summary>
-        /// Calculates the qh * GCP for external pressures
-        /// </summary>
-        public override void CalculateExternalPressures()
-        {
-            //var kd = Parameters.Kd;
-
-            //// roof pressure positive
-            //foreach (var area in RoofAreaCalculator.effWindAreas)
-            //{
-            //    if (TryGetGCp_Pos_Roof_ByArea(area.Key, out var gcp))
-            //    {
-            //        double pressure = CalculateDynamicWindPressure(buildingData.MeanRoofHeight) * gcp * kd;
-            //        windPressureRoof_Pos_External.Add(area.Key, pressure);
-            //    }
-            //}
-
-            //// roof pressure negative
-            //foreach (var area in RoofAreaCalculator.effWindAreas)
-            //{
-            //    if (TryGetGCp_Neg_Roof_ByArea(area.Key, out var gcp))
-            //    {
-            //        double pressure = CalculateDynamicWindPressure(buildingData.MeanRoofHeight) * gcp * kd;
-            //        windPressureRoof_Neg_External.Add(area.Key, pressure);
-            //    }
-            //}
-
-            //// BuildingWidth pressure positive
-            //foreach (var area in WallAreaCalculator_BldgWidth.effWindAreas)
-            //{
-            //    if (TryGetGCp_Pos_BuildingWidthWall_ByArea(area.Key, out var gcp))
-            //    {
-            //        double pressure = CalculateDynamicWindPressure(buildingData.MeanRoofHeight) * gcp * kd;
-            //        windPressureBuildingWidthWall_Pos_External.Add(area.Key, pressure);
-            //    }
-            //}
-
-            //// BuildingWidth pressure negative
-            //foreach (var area in WallAreaCalculator_BldgWidth.effWindAreas)
-            //{
-            //    if (TryGetGCp_Neg_BuildingWidthWall_ByArea(area.Key, out var gcp))
-            //    {
-            //        double pressure = CalculateDynamicWindPressure(buildingData.MeanRoofHeight) * gcp * kd;
-            //        windPressureBuildingWidthWall_Neg_External.Add(area.Key, pressure);
-            //    }
-            //}
-
-            //// BuildingLength pressure positive
-            //foreach (var area in WallAreaCalculator_BldgLength.effWindAreas)
-            //{
-            //    if (TryGetGCp_Pos_BuildingLengthWall_ByArea(area.Key, out var gcp))
-            //    {
-            //        double pressure = CalculateDynamicWindPressure(buildingData.MeanRoofHeight) * gcp * kd;
-            //        windPressureBuildingLengthWall_Pos_External.Add(area.Key, pressure);
-            //    }
-            //}
-
-            //// BuildingLength pressure negative
-            //foreach (var area in WallAreaCalculator_BldgLength.effWindAreas)
-            //{
-            //    if (TryGetGCp_Neg_BuildingLengthWall_ByArea(area.Key, out var gcp))
-            //    {
-            //        double pressure = CalculateDynamicWindPressure(buildingData.MeanRoofHeight) * gcp * kd;
-            //        windPressureBuildingLengthWall_Neg_External.Add(area.Key, pressure);
-            //    }
-            //}
-        }
-
-        /// <summary>
         /// Function to retrieve a GCp value by area.  If successfull returns true
         /// </summary>
         /// <param name="id">id of the area</param>
         /// <param name="gcp">thereturn GCP value</param>
         /// <returns></returns>
-        public virtual bool TryGetGCp_Pos_Roof_ByArea(int id, out double gcp)
+        public virtual bool TryGetGCp_Pos_Roof_ByAreaID(int id, out double gcp)
         {
             gcp = 0.0;
 
@@ -139,7 +188,7 @@ namespace ShearWallCalculator.WindLoadCalculations
         /// <param name="id">id of the area</param>
         /// <param name="gcp">thereturn GCP value</param>
         /// <returns></returns>
-        public virtual bool TryGetGCp_Neg_Roof_ByArea(int id, out double gcp)
+        public virtual bool TryGetGCp_Neg_Roof_ByAreaID(int id, out double gcp)
         {
             gcp = 0.0;
 
@@ -165,7 +214,7 @@ namespace ShearWallCalculator.WindLoadCalculations
         /// <param name="id">id of the area</param>
         /// <param name="gcp">thereturn GCP value</param>
         /// <returns></returns>
-        public virtual bool TryGetGCp_Pos_BuildingLengthWall_ByArea(int id, out double gcp)
+        public virtual bool TryGetGCp_Pos_BuildingLengthWall_ByAreaID(int id, out double gcp)
         {
             gcp = 0.0;
 
@@ -191,7 +240,7 @@ namespace ShearWallCalculator.WindLoadCalculations
         /// <param name="id">id of the area</param>
         /// <param name="gcp">thereturn GCP value</param>
         /// <returns></returns>
-        public virtual bool TryGetGCp_Neg_BuildingLengthWall_ByArea(int id, out double gcp)
+        public virtual bool TryGetGCp_Neg_BuildingLengthWall_ByAreaID(int id, out double gcp)
         {
             gcp = 0.0;
 
@@ -217,7 +266,7 @@ namespace ShearWallCalculator.WindLoadCalculations
         /// <param name="id">id of the area</param>
         /// <param name="gcp">thereturn GCP value</param>
         /// <returns></returns>
-        public virtual bool TryGetGCp_Pos_BuildingWidthWall_ByArea(int id, out double gcp)
+        public virtual bool TryGetGCp_Pos_BuildingWidthWall_ByAreaID(int id, out double gcp)
         {
             gcp = 0.0;
 
@@ -243,7 +292,7 @@ namespace ShearWallCalculator.WindLoadCalculations
         /// <param name="id">id of the area</param>
         /// <param name="gcp">thereturn GCP value</param>
         /// <returns></returns>
-        public virtual bool TryGetGCp_Neg_BuildingWidthWall_ByArea(int id, out double gcp)
+        public virtual bool TryGetGCp_Neg_BuildingWidthWall_ByAreaID(int id, out double gcp)
         {
             gcp = 0.0;
 
@@ -288,7 +337,6 @@ namespace ShearWallCalculator.WindLoadCalculations
 
             return false;
         }
-
 
     }
 }

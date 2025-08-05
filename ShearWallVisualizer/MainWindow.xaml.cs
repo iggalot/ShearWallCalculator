@@ -477,18 +477,21 @@ namespace ShearWallVisualizer
             BuildingDrawer.DrawPlan(ctrol_wind_input.cnvBuildingplan_MWFRS_Width, windLoadCalculator_MWFRS_Width.buildingData);
 
 
+
+
+            // For the CC tab
+            SetupComponentAndCladdingFigures(ccControl1);
+            DrawEffectiveAreas_OnCCResultCanvas(ccControl1);
+            PopulateComponentAndCladdingDataGrids(ccControl1);
+
+
+            // for MWFRS tab 1
             SetupMWFRSResultTab();
-            
 
-            // set up the component and cladding tabs
-            if(windLoadCalculator_CC.Parameters.AnalysisType == WindLoadCalculationTypes.COMPONENT_AND_CLADDING)
-            {
-                SetupComponentAndCladdingFigures(ccControl1);
-                DrawEffectiveAreas_OnCCResultCanvas(ccControl1);
-                PopulateComponentAndCladdingDataGrids(ccControl1);
-            }
+            PopulateMWFRS_DataGrids(mwfrsControl1);
+            PopulateMWFRS_DataGrids(mwfrsControl2);
 
-            
+
             UpdateShearWallUI();
         }
 
@@ -522,7 +525,7 @@ namespace ShearWallVisualizer
             var calculator = WindLoadCalculatorFactory.Create(windVersion, type, parameters, building);
             Console.WriteLine(calculator.GetType().Name);
             calculator.CreateAreaCalculators();
-            calculator.CalculatePressures();
+            calculator.CalculateExternalPressures();
             return calculator;
         }
 
@@ -612,6 +615,15 @@ namespace ShearWallVisualizer
                     WindLoadInputControl.DrawEffectiveWindArea(canvas, area.Value, scale, GetColorForRegion(area.Value.Label_Short));
                 }
             }
+        }
+
+        private void PopulateMWFRS_DataGrids(WindLoadResultsControl_MWFRS mwfrsControl)
+        {
+            //CreateCC_DataGrid_Roof(figureCC_Roof, ccControl.RoofResultsDataGrid);
+
+            // For the BuildingLength wall
+            CreateMWFRS_DataGrid_Walls(mwfrsControl.MWFRS_WallResultsDataGrid,
+                windLoadCalculator_MWFRS_Length.WallAreaCalculator_BldgLength.effWindAreas);
         }
 
         private void PopulateComponentAndCladdingDataGrids(WindLoadResultsControl_CC ccControl)
@@ -808,7 +820,7 @@ namespace ShearWallVisualizer
                 data.Area = area.Value.Area;
 
                 // positive max external pressure
-                ExternalPressureData ext_pressure;
+                PressureData ext_pressure;
                 if (windLoadCalculator_CC.windPressureRoof_Pos_External.TryGetValue(area.Key, out ext_pressure))
                     {
                     data.qh = ext_pressure.qh;
@@ -929,7 +941,7 @@ namespace ShearWallVisualizer
                 if (wall_type == "building_length")
                 {
                     // positive max external pressure
-                    ExternalPressureData ext_pressure;
+                    PressureData ext_pressure;
                     if (windLoadCalculator_CC.windPressureBuildingLengthWall_Pos_External.TryGetValue(area.Key, out ext_pressure))
                     {
                         data.qh = ext_pressure.qh;
@@ -949,7 +961,7 @@ namespace ShearWallVisualizer
                 else if (wall_type == "building_width")
                 {
                     // positive max external pressure
-                    ExternalPressureData ext_pressure;
+                    PressureData ext_pressure;
                     if (windLoadCalculator_CC.windPressureBuildingWidthWall_Pos_External.TryGetValue(area.Key, out ext_pressure))
                     {
                         data.qh = ext_pressure.qh;
@@ -977,6 +989,104 @@ namespace ShearWallVisualizer
             data_grid.ItemsSource = windLoadResults;
         }
 
+        private void CreateMWFRS_DataGrid_Walls(DataGrid data_grid, Dictionary<int, EffectiveWindArea> areas)
+        {
+            // Get the datagrid from the results control
+            data_grid.ItemsSource = null;
+            data_grid.Columns.Clear();
+            data_grid.AutoGenerateColumns = false;
+
+            // create our data object
+            var col_name = new DataGridTextColumn
+            {
+                Header = "Name",
+                Binding = new Binding("Name")
+            };
+            data_grid.Columns.Add(col_name);
+
+            var col_rectangle = new DataGridTemplateColumn
+            {
+                Header = ""
+            };
+
+            // Define the DataTemplate in code for drawing a colored rectangle
+            var factory = new FrameworkElementFactory(typeof(Rectangle));
+            factory.SetValue(Rectangle.WidthProperty, 15.0);
+            factory.SetValue(Rectangle.HeightProperty, 15.0);
+            factory.SetValue(Rectangle.StrokeProperty, Brushes.Black);
+            factory.SetBinding(Rectangle.FillProperty, new Binding("RectColor"));
+
+            col_rectangle.CellTemplate = new DataTemplate { VisualTree = factory };
+            data_grid.Columns.Add(col_rectangle);
+
+            var col_area = new DataGridTextColumn
+            {
+                Header = "Area\n(sq ft)",
+                Binding = new Binding("Area") { StringFormat = "0" }
+            };
+            data_grid.Columns.Add(col_area);
+
+            var col_qh = new DataGridTextColumn
+            {
+                Header = "qh\n(psf)",
+                Binding = new Binding("qh") { StringFormat = "0.0" }
+            };
+            data_grid.Columns.Add(col_qh);
+
+            var col_gcp_pos = new DataGridTextColumn
+            {
+                Header = "Cp",
+                Binding = new Binding("Cp") { StringFormat = "0.00" }
+            };
+            data_grid.Columns.Add(col_gcp_pos);
+
+
+            var col_pos_press = new DataGridTextColumn
+            {
+                Header = "Press\n(psf)",
+                Binding = new Binding("Press") { StringFormat = "0.0" }
+            };
+            data_grid.Columns.Add(col_pos_press);
+
+            var col_pos_net_press = new DataGridTextColumn
+            {
+                Header = "Net\n(psf)",
+                Binding = new Binding("NetPress") { StringFormat = "0.0" }
+            };
+            data_grid.Columns.Add(col_pos_net_press);
+
+            var windLoadResults = new List<MWFRS_WindLoadResultsDataGrid>();
+            foreach (var area in areas)
+            {
+                MWFRS_WindLoadResultsDataGrid data = new MWFRS_WindLoadResultsDataGrid();
+                data.Name = area.Value.Label_Short;
+                data.Region = area.Value.Label_Short;
+                data.Area = area.Value.Area;
+
+                // positive max external pressure
+                PressureData ext_pressure;
+                if (windLoadCalculator_MWFRS_Length.windPressureWall_Pos_External_MWFRS.TryGetValue(area.Key, out ext_pressure))
+                {
+                    data.qh = ext_pressure.qh;
+                    data.Cp = ext_pressure.GCp;
+                    data.Press = ext_pressure.ExternalPressure;
+                    data.NetPress = ext_pressure.NetPressure;
+                }
+
+                //// negative max GCp value
+                //if (windLoadCalculator_MWFRS_Length.windPressureWall_Neg_External_MWFRS.TryGetValue(area.Key, out ext_pressure))
+                //{
+                //    data.GCp_neg = ext_pressure.GCp;
+                //    data.NegPress = ext_pressure.ExternalPressure;
+                //    data.NetNegPress = ext_pressure.NetPressure;
+                //}
+
+                windLoadResults.Add(data);
+            }
+
+            data_grid.ItemsSource = windLoadResults;
+        }
+
         public class CC_WindLoadResultsDataGrid
         {
             public string Name { get; set; }
@@ -990,6 +1100,21 @@ namespace ShearWallVisualizer
             public double NegPress { get; set; }
             public double NetPosPress { get; set; }
             public double NetNegPress { get; set; }
+
+
+            public Brush RectColor => GetColorForRegion(Region);
+        }
+
+        public class MWFRS_WindLoadResultsDataGrid
+        {
+            public string Name { get; set; }
+            public double Area { get; set; }
+            public string Region { get; set; } // used to store the regions name so we can draw the rectangle from it
+            public double qh { get; set; }
+            public double Cp { get; set; }
+
+            public double Press { get; set; }
+            public double NetPress { get; set; }
 
 
             public Brush RectColor => GetColorForRegion(Region);
@@ -2754,6 +2879,12 @@ namespace ShearWallVisualizer
                     return Brushes.LightGray;
                 case "LWR":
                     return Brushes.Gray;
+                case "WW":
+                    return Brushes.LightGray;
+                case "LW":
+                    return Brushes.Gray;
+                case "SW":
+                    return Brushes.DarkGray;
                 default:
                     return Brushes.Black;
             }
