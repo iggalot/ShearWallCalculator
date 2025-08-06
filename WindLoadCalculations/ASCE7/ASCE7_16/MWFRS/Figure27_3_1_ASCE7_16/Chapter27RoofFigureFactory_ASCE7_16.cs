@@ -17,7 +17,23 @@ namespace ShearWallCalculator.WindLoadCalculations
             switch (ridgeDirection)
             {
                 case RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH: // parallel to ridge case
+                    {
+                        if (h_over_L <= 0.5)
+                        {
+                            return new ParallelToRidge_LowSlope_Roof_Low();
+                        }
+                        else if (h_over_L >= 1.0)
+                        {
+                            return new ParallelToRidge_LowSlope_Roof_High();
+                        }
+                        else if (h_over_L > 0.5 && h_over_L < 1.0)
+                        {
+                            var low = new ParallelToRidge_LowSlope_Roof_Low();
+                            var high = new ParallelToRidge_LowSlope_Roof_High();
 
+                            return new InterpolatedCpCurve(h_over_L, roofSlope, 0.5, 1.0, low, high);
+                        }
+                    }
                     break;
                 case RidgeDirections.RIDGE_DIR_PERP_TO_BLDGLENGTH:  // normal to ridge case
                     if (roofSlope >= 10)
@@ -25,13 +41,7 @@ namespace ShearWallCalculator.WindLoadCalculations
                         if(h_over_L <= 0.25)
                         {
                             return new NormToRidge_LargeSlope_Roof_Low(roofSlope);
-                        } else if (h_over_L >= 1.0)
-                        {
-                            var high = new NormToRidge_LargeSlope_Roof_High(roofSlope);
-                        } else if (h_over_L == 0.5)
-                        {
-                            
-                        }
+                        } 
                         else if (h_over_L > 0.25 && h_over_L < 0.5)
                         {
                             // interpolate
@@ -47,6 +57,9 @@ namespace ShearWallCalculator.WindLoadCalculations
                             var high = new NormToRidge_LargeSlope_Roof_High(roofSlope);
 
                             return new InterpolatedCpCurve(h_over_L, roofSlope, 0.5, 1.0, mid, high);
+                        } else if (h_over_L >= 1.0)
+                        {
+                            return new NormToRidge_LargeSlope_Roof_High(roofSlope);
                         }
                     }
                     else

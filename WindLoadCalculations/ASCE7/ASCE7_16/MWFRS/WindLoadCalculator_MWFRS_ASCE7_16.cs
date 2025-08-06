@@ -42,11 +42,9 @@ namespace ShearWallCalculator.WindLoadCalculations
             {
                 case ASCE7_Versions.ASCE_VER_7_16:
                     extGCpCurve_Roof = Chapter27RoofFigureFactory_ASCE7_16.CreateRoofFigure_ASCE7_16(buildingData);
-                    extGCpCurve_Wall = new Figure30_3_1_ASCE7_16();
                     break;
                 case ASCE7_Versions.ASCE_VER_7_22:
                     extGCpCurve_Roof = Chapter27RoofFigureFactory_ASCE7_22.CreateRoofFigure_ASCE7_22(buildingData);
-                    extGCpCurve_Wall = new Figure30_3_1_ASCE7_22();
                     break;
                 default:
                     throw new Exception("ERROR: Invalid ASCE Version: " + ASCEVersion + " in WindLoadCalculator_Base constructor.");
@@ -63,7 +61,6 @@ namespace ShearWallCalculator.WindLoadCalculations
                 int id = areaEntry.Key;
 
                 double cp;  // in ASCE 7-16, the Cp value is shown in the tables, not GCp...so we need to remember to multiply it back in 
-
                 if (!tryGetGcp(id, out cp))
                     continue;
 
@@ -130,9 +127,9 @@ namespace ShearWallCalculator.WindLoadCalculations
 
         public override void CalculateExternalPressures()
         {
-            // Calculate the pressures andstore them in the appropriate dictionary.
-            CalculateRoofPressures(TryGetGCp_Pos_Roof_ByAreaID, windPressureRoof_Pos_External);
-            CalculateRoofPressures(TryGetGCp_Neg_Roof_ByAreaID, windPressureRoof_Neg_External);
+            // Calculate the pressures and store them in the appropriate dictionaries.
+            CalculateRoofPressures(TryGetGCp_Pos_Roof_ByAreaID_MWFRS, windPressureRoof_Pos_External);
+            CalculateRoofPressures(TryGetGCp_Neg_Roof_ByAreaID_MWFRS, windPressureRoof_Neg_External);
 
             CalculateWallPressures(TryGetGCp_Pos_BuildingLengthWall_ByAreaID, windPressureWall_Pos_External_MWFRS);
             CalculateWallPressures(TryGetGCp_Neg_BuildingLengthWall_ByAreaID, windPressureWall_Neg_External_MWFRS);

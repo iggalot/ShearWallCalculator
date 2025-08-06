@@ -444,9 +444,6 @@ namespace ShearWallVisualizer
             ctrol_wind_input.WindInputComplete += WindLoadInputControl_WindInputComplete;
             tabWindInputControlTabItem.Content = ctrol_wind_input;
 
-
-
-
             UpdateShearWallUI();
         }
         /// <summary>
@@ -474,11 +471,6 @@ namespace ShearWallVisualizer
             BuildingDrawer.DrawPlan(ctrol_wind_input.cnvBuildingPlan_CC, windLoadCalculator_CC.buildingData);
             BuildingDrawer.DrawPlan(ctrol_wind_input.cnvBuildingPlan_MWFRS_Length, windLoadCalculator_MWFRS_Length.buildingData);
             BuildingDrawer.DrawPlan(ctrol_wind_input.cnvBuildingplan_MWFRS_Width, windLoadCalculator_MWFRS_Width.buildingData);
-
-
-            //PopulateMWFRS_DataGrids(mwfrsControl1, windLoadCalculator_MWFRS_Length);
-            //PopulateMWFRS_DataGrids(mwfrsControl2, windLoadCalculator_MWFRS_Width);
-
 
             UpdateShearWallUI();
         }
@@ -603,13 +595,6 @@ namespace ShearWallVisualizer
                     WindLoadInputControl.DrawEffectiveWindArea(canvas, area.Value, scale, BuildingDrawer.GetColorForRegion(area.Value.Label_Short));
                 }
             }
-        }
-
-        private void PopulateMWFRS_DataGrids(WindLoadResultsControl_MWFRS mwfrsControl, WindLoadCalculator_Base calc)
-        {
-            //CreateCC_DataGrid_Roof(figureCC_Roof, ccControl.RoofResultsDataGrid);
-
-          //  CreateMWFRS_DataGrid_Walls(mwfrsControl.MWFRS_WallResultsDataGrid, calc.WallAreaCalculator_BldgLength.effWindAreas, calc);
         }
 
         private void CreateWallDataControls()

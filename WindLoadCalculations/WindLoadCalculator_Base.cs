@@ -326,12 +326,12 @@ namespace ShearWallCalculator.WindLoadCalculations
         }
 
         /// <summary>
-        /// Function to retrieve a GCp value by area.  If successfull returns true
+        /// Function to retrieve a GCp value by area for a CC curve..  If successfull returns true
         /// </summary>
         /// <param name="id">id of the area</param>
         /// <param name="gcp">thereturn GCP value</param>
         /// <returns></returns>
-        public bool TryGetGCp_Pos_Roof_ByAreaID(int id, out double gcp)
+        public bool TryGetGCp_Pos_Roof_ByAreaID_CC(int id, out double gcp)
         {
             gcp = 0.0;
 
@@ -352,12 +352,12 @@ namespace ShearWallCalculator.WindLoadCalculations
         }
 
         /// <summary>
-        /// Function to retrieve a GCp value by area.  If successfull returns true
+        /// Function to retrieve a GCp value by area for a CC curve.  If successfull returns true
         /// </summary>
         /// <param name="id">id of the area</param>
         /// <param name="gcp">thereturn GCP value</param>
         /// <returns></returns>
-        public bool TryGetGCp_Neg_Roof_ByAreaID(int id, out double gcp)
+        public bool TryGetGCp_Neg_Roof_ByAreaID_CC(int id, out double gcp)
         {
             gcp = 0.0;
 
@@ -376,6 +376,81 @@ namespace ShearWallCalculator.WindLoadCalculations
 
             return false;
         }
+
+
+        /// <summary>
+        /// Function to retrieve a GCp value by area for a CC curve..  If successfull returns true
+        /// </summary>
+        /// <param name="id">id of the area</param>
+        /// <param name="gcp">thereturn GCP value</param>
+        /// <returns></returns>
+        public bool TryGetGCp_Pos_Roof_ByAreaID_MWFRS(int id, out double gcp)
+        {
+            gcp = 0.0;
+
+
+            if (!RoofAreaCalculator.effWindAreas.TryGetValue(id, out var area))
+                return false;
+
+            foreach (var gcp_curve in this.extGCpCurve_Roof.RoofCurves_Pos)
+            {
+                if (gcp_curve.Key == area.Label_Full)
+                {
+                    // if we are perpendicular to the ridge, use the slope to retrieve the roof Cp value
+                    if (buildingData.RidgeDirection == RidgeDirections.RIDGE_DIR_PERP_TO_BLDGLENGTH)
+                    {
+                        gcp = gcp_curve.Value.Evaluate(buildingData.RoofPitch);
+                    }
+                    else
+                    {
+                        gcp = gcp_curve.Value.Evaluate(area.Area);
+                    }
+
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Function to retrieve a GCp value by area for a CC curve.  If successfull returns true
+        /// </summary>
+        /// <param name="id">id of the area</param>
+        /// <param name="gcp">thereturn GCP value</param>
+        /// <returns></returns>
+        public bool TryGetGCp_Neg_Roof_ByAreaID_MWFRS(int id, out double gcp)
+        {
+            gcp = 0.0;
+
+
+            if (!RoofAreaCalculator.effWindAreas.TryGetValue(id, out var area))
+                return false;
+
+            foreach (var gcp_curve in this.extGCpCurve_Roof.RoofCurves_Neg)
+            {
+                if (gcp_curve.Key == area.Label_Full)
+                {
+                    // if we are perpendicular to the ridge, use the slope to retrieve the roof Cp value
+                    if(buildingData.RidgeDirection == RidgeDirections.RIDGE_DIR_PERP_TO_BLDGLENGTH)
+                    {
+                        gcp = gcp_curve.Value.Evaluate(buildingData.RoofPitch);
+                    } else
+                    {
+                        gcp = gcp_curve.Value.Evaluate(area.Area);
+                    }
+
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+
+
+
+
 
         /// <summary>
         /// Function to retrieve a GCp value by area.  If successfull returns true

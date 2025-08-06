@@ -119,8 +119,8 @@ namespace ShearWallCalculator.WindLoadCalculations
         public override void CalculateExternalPressures()
         {
             // Calculate the pressures andstore them in the appropriate dictionary.
-            CalculateRoofPressures(TryGetGCp_Pos_Roof_ByAreaID, windPressureRoof_Pos_External);
-            CalculateRoofPressures(TryGetGCp_Neg_Roof_ByAreaID, windPressureRoof_Neg_External);
+            CalculateRoofPressures(TryGetGCp_Pos_Roof_ByAreaID_CC, windPressureRoof_Pos_External);
+            CalculateRoofPressures(TryGetGCp_Neg_Roof_ByAreaID_CC, windPressureRoof_Neg_External);
 
             CalculateWallPressures_BuildingLength(TryGetGCp_Pos_BuildingLengthWall_ByAreaID, windPressureBuildingLengthWall_Pos_External);
             CalculateWallPressures_BuildingLength(TryGetGCp_Neg_BuildingLengthWall_ByAreaID, windPressureBuildingLengthWall_Neg_External);

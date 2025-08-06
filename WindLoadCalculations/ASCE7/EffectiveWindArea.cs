@@ -73,7 +73,7 @@ namespace ShearWallCalculator.WindLoadCalculations
                 }
 
                 if (netArea <= 0)
-                    throw new InvalidOperationException("Resulting polygon area is non-positive.");
+                    throw new InvalidOperationException("Resulting polygon area is non-positive." + Label_Full);
 
                 return new Point(cxTotal / netArea, cyTotal / netArea);
             }
