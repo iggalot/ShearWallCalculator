@@ -1,11 +1,9 @@
 ﻿using ShearWallCalculator.BuildingInfo;
+using ShearWallCalculator.Helpers;
 using ShearWallCalculator.WindLoadCalculations;
 using System;
-using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
-using System.Windows.Shapes;
 
 namespace ShearWallVisualizer.Controls
 {
@@ -25,8 +23,7 @@ namespace ShearWallVisualizer.Controls
                 _version = version;
             }
         }
-
-        public BuildingData bldgData { get; set; } = null;
+        public BuildingData buildingData { get; set; } = null;
         public WindParameters_Base Parameters { get; set; } = null;
         public ASCE7_Versions Version { get; set; }
 
@@ -43,7 +40,7 @@ namespace ShearWallVisualizer.Controls
             InitializeComponent();
 
             this.Parameters = parameters;
-            this.bldgData = bldg_data;
+            this.buildingData = bldg_data;
 
             this.Loaded += WindLoadInputControl_Loaded;
         }
@@ -52,10 +49,10 @@ namespace ShearWallVisualizer.Controls
         {
             InitializeComponent();
 
+            // in case we don't have a building defined (usually first run)
             if (bldg_data == null)
             {
                 bldg_data = new BuildingData();
-                bldg_data.ValidateRidgeDirection();
             }
 
             if (parameters == null)
@@ -66,7 +63,7 @@ namespace ShearWallVisualizer.Controls
                 else throw new Exception("ERROR: In WindLoadInputControl: Unrecognized roof type." + bldg_data.RoofType.ToString());
 
             }
-            this.bldgData = bldg_data;
+            this.buildingData = bldg_data;
             this.Version = version;
             this.Parameters = parameters;
 
@@ -76,7 +73,7 @@ namespace ShearWallVisualizer.Controls
         private void WindLoadInputControl_Loaded(object sender, RoutedEventArgs e)
         {
             // populate the bulding data summary
-            if(this.bldgData == null)
+            if(this.buildingData == null)
             {
                 spBuildingData.Visibility = Visibility.Collapsed;
             } else
@@ -84,25 +81,17 @@ namespace ShearWallVisualizer.Controls
                 spBuildingData.Visibility = Visibility.Visible;
             
                 spBuildingData.Children.Clear();
-                BuildingInfoSummaryControl ctrl = new BuildingInfoSummaryControl(bldgData);
+                BuildingInfoSummaryControl ctrl = new BuildingInfoSummaryControl(buildingData);
                 spBuildingData.Children.Add(ctrl);
             }
 
             // populate the combo boxes.
-            //cmbWindAnalysisType.Items.Clear();
             cmbASCEVersion.Items.Clear();
-
 
             foreach (var value in Enum.GetValues(typeof(ASCE7_Versions)))
             {
                 cmbASCEVersion.Items.Add(value);
             }
-
-
-            //foreach (var value in Enum.GetValues(typeof(WindLoadCalculationTypes)))
-            //{
-            //    cmbWindAnalysisType.Items.Add(value);
-            //}
 
             // populate existing parameters if any
             if (this.Parameters != null)
@@ -110,21 +99,6 @@ namespace ShearWallVisualizer.Controls
                 WindSpeedTextBox.Text = Parameters.WindSpeed.ToString();
                 KztTextBox.Text = Parameters.Kzt.ToString();
                 ImportanceFactorTextBox.Text = Parameters.ImportanceFactor.ToString();
-
-                //bool found_analysis = false;
-                //foreach (WindLoadCalculationTypes item in Enum.GetValues(typeof(WindLoadCalculationTypes)))
-                //{
-                //    if (item == Parameters.AnalysisType)
-                //    {
-                //        cmbWindAnalysisType.SelectedIndex = (int)item;
-                //        found_analysis = true;
-                //        break;
-                //    }
-                //}
-                //if (found_analysis == false)
-                //{
-                //    throw new Exception("ERROR:  In WindLoadInputControl_Loaded() -- AnalysisType " + Parameters.AnalysisType.ToString() + " not found.");
-                //}
 
                 bool found_version = false;
                 foreach (ASCE7_Versions item in Enum.GetValues(typeof(ASCE7_Versions)))
@@ -143,7 +117,6 @@ namespace ShearWallVisualizer.Controls
 
             } else
             {
-                //cmbWindAnalysisType.SelectedIndex = (int)WindLoadCalculationTypes.COMPONENT_AND_CLADDING;
                 cmbASCEVersion.SelectedIndex = (int)ASCE7_Versions.ASCE_VER_7_16;
             }
         }
@@ -153,74 +126,10 @@ namespace ShearWallVisualizer.Controls
             WindInputComplete?.Invoke(this, new OnWindInputCompleteEventArgs(parameters, version));
         }
 
-        public static void DrawEffectiveWindArea(Canvas canvas, EffectiveWindArea area, double scaleFactor, Brush fill_color)
-        {
-            if (canvas == null || area == null)
-                return;
-
-            //canvas.Children.Clear();
-
-            // Helper function to create a WPF polygon
-            Polygon CreatePolygon(IEnumerable<Point> pts, Brush stroke, Brush fill)
-            {
-
-
-                var polygon = new Polygon
-                {
-                    Stroke = stroke,
-                    Fill = fill,
-                    StrokeThickness = 1,
-                    Points = new PointCollection(),
-                    Opacity = 0.5
-                };
-
-                foreach (var pt in pts)
-                    polygon.Points.Add(new Point(pt.X * scaleFactor, pt.Y * scaleFactor));
-
-                return polygon;
-            }
-
-            // Draw outer boundary (light blue fill, blue border)
-            var outerPolygon = CreatePolygon(
-                area.OuterBoundary,
-                Brushes.Black,
-                fill_color
-            );
-            canvas.Children.Add(outerPolygon);
-
-            // Draw each hole (transparent fill, red border)
-            foreach (var hole in area.Holes)
-            {
-                var holePolygon = CreatePolygon(
-                    hole,
-                    Brushes.Red,
-                    Brushes.Transparent
-                );
-                canvas.Children.Add(holePolygon);
-            }
-
-            // Optional: Draw centroid as a small ellipse
-            Console.WriteLine($"JH_AreaLabel: {area.Label_Short}  Area: {area.Area}");
-            var center = area.Centroid;
-            double radius = 3;
-
-            var centroidDot = new Ellipse
-            {
-                Width = radius * 2,
-                Height = radius * 2,
-                Fill = Brushes.Black
-            };
-
-            Canvas.SetLeft(centroidDot, center.X * scaleFactor - radius);
-            Canvas.SetTop(centroidDot, center.Y * scaleFactor - radius);
-            canvas.Children.Add(centroidDot);
-        }
-
-
         // Event handler for the Compute Button click
         private void ComputeButton_Click(object sender, RoutedEventArgs e)
         {
-            if(bldgData == null)
+            if(buildingData == null)
             {
                 MessageBox.Show("Please input building data first");
                 return;
@@ -240,7 +149,7 @@ namespace ShearWallVisualizer.Controls
                     throw new Exception("ERROR:  In WindLoadInputControl_Loaded() -- Version " + version_index.ToString() + " not found.");
 
             }
-            Parameters = GetWindLoadParameters(bldgData.RoofType, version);
+            Parameters = GetWindLoadParameters(buildingData.RoofType, version);
 
             OnWindInputComplete(Parameters, version); // raise the event where input has been completed
         }

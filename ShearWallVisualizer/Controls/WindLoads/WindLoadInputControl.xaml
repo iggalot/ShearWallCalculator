@@ -63,7 +63,7 @@
             </StackPanel>
 
             <!-- Compute Button -->
-            <Button Content="Compute Wind Loads" Width="150" Margin="10" Click="ComputeButton_Click"/>
+            <Button Content="Update Calculations" Width="150" Margin="10" Click="ComputeButton_Click"/>
         </StackPanel>
 
         <!-- Effective Roof Areas -->

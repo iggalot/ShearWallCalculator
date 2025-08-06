@@ -142,10 +142,10 @@ namespace ShearWallVisualizer.Controls
         //{
         //    ParseBuildingData();
 
-        //    OnBuildingDataInputComplete(bldgData); // raise the event where input has been completed
+        //    OnBuildingDataInputComplete(buildingData); // raise the event where input has been completed
         //}
 
-        private void ParseBuildingData()
+        public void ParseBuildingData()
         {
             if (bIsParsing || bUpdatingUI)
                 return;

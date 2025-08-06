@@ -29,6 +29,7 @@ namespace ShearWallCalculator.BuildingInfo
     /// </summary>
     public class BuildingData
     {
+        // defalt values
         public double BuildingLength { get; set; } = 60; // L
         public double BuildingWidth { get; set; } = 40;  // B
         public double BuildingHeight { get; set; } = 15;
@@ -48,15 +49,18 @@ namespace ShearWallCalculator.BuildingInfo
         /// </summary>
         public double h_Over_L { get => MeanRoofHeight / BuildingLength; }
         public double h_Over_B { get => MeanRoofHeight / BuildingWidth; }
-        public double L_Over_B { get => BuildingLength / BuildingWidth; }   
+        public double L_Over_B { get => BuildingLength / BuildingWidth; }
 
 
-
+        public BuildingData()
+        {
+            ValidateRidgeDirection();
+        }
 
         /// <summary>
         /// Validates the ridge direction.  
         /// -- For flat roof, ridge direction is RIDGE_DIR_NONE
-        /// -- For hip roof, the ridge direction is parallel to the longest side
+        /// -- For hip roof, the ridge direction is parallel to the longest side, othrewise geometry doesn't work
         /// -- For gable roof, the ridge direction is user defined
         /// </summary>
         /// <exception cref="NotImplementedException"></exception>
@@ -139,7 +143,7 @@ namespace ShearWallCalculator.BuildingInfo
         /// <summary>
         /// A routine that flips the plan view of the building by 90 degrees, including the ridge direction if necessary
         /// </summary>
-        public void FlipBuilding()
+        public void RotateBuilding()
         {
             double temp = BuildingLength;
             BuildingLength = BuildingWidth;

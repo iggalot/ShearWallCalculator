@@ -7,8 +7,6 @@ using ShearWallCalculator.BuildingInfo;
 using ShearWallCalculator.Helpers;
 using ShearWallCalculator.Interfaces;
 using ShearWallCalculator.WindLoadCalculations;
-using ShearWallCalculator.WindLoadCalculations.ASCE7;
-using ShearWallCalculator.WindLoadCalculations.Chapter30.Figure30_3;
 using ShearWallCalculator.WindLoadCalculations.WindLoadCalculators;
 using ShearWallVisualizer.Controls;
 using ShearWallVisualizer.Dialogs;
@@ -21,11 +19,11 @@ using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 using static ShearWallVisualizer.Controls.DiaphragmDataControl;
 using static ShearWallVisualizer.Controls.WallDataControl;
 
@@ -135,6 +133,7 @@ namespace ShearWallVisualizer
             {
                 var ctrol_bldg_input = new BuildingDataInputControl(buildingData);
                 ctrol_bldg_input.BuildingDataInputComplete += BuildingDataInputControl_BuildingDataInputComplete;
+                ctrol_bldg_input.PreviewKeyDown += RunBuildingDataInputCalculations;
                 tabBuildingDataControlTabItem.Content = ctrol_bldg_input;
 
                 // create the wind load input control
@@ -224,7 +223,7 @@ namespace ShearWallVisualizer
 
             // Set the scale factors so both are the same -- for square grids
             zoomFactorX = Math.Min(zoomFactorX, zoomFactorY);
-            zoomFactorY = zoomFactorX; 
+            zoomFactorY = zoomFactorX;
 
             // Compute current screen position of world (0,0)
             Point screenOrigin = WorldToScreen(new Point(0, 0), dockpanel);
@@ -384,7 +383,7 @@ namespace ShearWallVisualizer
             {
                 if (Calculator._diaphragm_system == null)
                 {
-                        Calculator._diaphragm_system = new DiaphragmSystem();
+                    Calculator._diaphragm_system = new DiaphragmSystem();
                 }
 
                 Calculator._diaphragm_system.AddDiaphragm(new DiaphragmData_Rectangular(startPoint_world.Value, endPoint_world.Value));
@@ -429,7 +428,7 @@ namespace ShearWallVisualizer
             ctrol_bldg_input.BuildingDataInputComplete += BuildingDataInputControl_BuildingDataInputComplete;
             tabBuildingDataControlTabItem.Content = ctrol_bldg_input;
 
-            
+
             // get the canvas from the building input control
             var plan_canvas = (tabBuildingDataControlTabItem.Content as BuildingDataInputControl).cnvBuildingPlanCanvas;
             var bldG_length_elev_canvas = (tabBuildingDataControlTabItem.Content as BuildingDataInputControl).cnvBuildingLengthCanvas;
@@ -443,6 +442,9 @@ namespace ShearWallVisualizer
             var ctrol_wind_input = new WindLoadInputControl(buildingData, windVersion, windLoadParams);
             ctrol_wind_input.WindInputComplete += WindLoadInputControl_WindInputComplete;
             tabWindInputControlTabItem.Content = ctrol_wind_input;
+            
+            // Auto launch the windload input.
+            ctrol_wind_input.OnWindInputComplete(ctrol_wind_input.Parameters, ctrol_wind_input.Version);
 
             UpdateShearWallUI();
         }
@@ -463,14 +465,16 @@ namespace ShearWallVisualizer
             WindLoadResultsControl_MWFRS mwfrsControl1, mwfrsControl2;
             CreateAndAssignResultControls(out ccControl1, out mwfrsControl1, out mwfrsControl2);
 
-            DrawEffectiveAreas_CC_OnWindLoadParameterInputCanvas();
-            DrawEffectiveAreas_MWFRS_Length_OnWindLoadParameterInputCanvas();
-            DrawEffectiveAreas_MWFRS_Width_OnWindLoadParameterInputCanvas();
+            if (tabWindInputControlTabItem.Content is WindLoadInputControl inputControl)
+            {
+                EffectiveWindAreaRenderer.Draw(inputControl.cnvEffectiveRoofAreas_CC, windLoadCalculator_CC.RoofAreaCalculator, windLoadCalculator_CC.buildingData);
+                EffectiveWindAreaRenderer.Draw(inputControl.cnvEffectiveRoofAreas_MWFRS_Length, windLoadCalculator_MWFRS_Length.RoofAreaCalculator, windLoadCalculator_MWFRS_Length.buildingData);
+                EffectiveWindAreaRenderer.Draw(inputControl.cnvEffectiveRoofAreas_MWFRS_Width, windLoadCalculator_MWFRS_Width.RoofAreaCalculator, windLoadCalculator_MWFRS_Width.buildingData);
 
-            var ctrol_wind_input = tabWindInputControlTabItem.Content as WindLoadInputControl;
-            BuildingDrawer.DrawPlan(ctrol_wind_input.cnvBuildingPlan_CC, windLoadCalculator_CC.buildingData);
-            BuildingDrawer.DrawPlan(ctrol_wind_input.cnvBuildingPlan_MWFRS_Length, windLoadCalculator_MWFRS_Length.buildingData);
-            BuildingDrawer.DrawPlan(ctrol_wind_input.cnvBuildingplan_MWFRS_Width, windLoadCalculator_MWFRS_Width.buildingData);
+                BuildingDrawer.DrawPlan(inputControl.cnvBuildingPlan_CC, windLoadCalculator_CC.buildingData);
+                BuildingDrawer.DrawPlan(inputControl.cnvBuildingPlan_MWFRS_Length, windLoadCalculator_MWFRS_Length.buildingData);
+                BuildingDrawer.DrawPlan(inputControl.cnvBuildingplan_MWFRS_Width, windLoadCalculator_MWFRS_Width.buildingData);
+            }
 
             UpdateShearWallUI();
         }
@@ -481,19 +485,21 @@ namespace ShearWallVisualizer
         /// </summary>
         private void MakeCalculators()
         {
+            // Setup our buildings -- building 1 is the original building
+            // and building 2 is the rotated (flipped) building
             var bldg_data1 = buildingData;
             var bldg_data2 = bldg_data1.Clone();
-            bldg_data2.FlipBuilding();
+            bldg_data2.RotateBuilding();
 
             // Create MWFRS calculators
             var mwfrs_calc_building_length = CreateAndComputeCalculator(bldg_data1, WindLoadCalculationTypes.MWFRS);
+            windLoadCalculator_MWFRS_Length = mwfrs_calc_building_length;
+
             var mwfrs_calc_building_width = CreateAndComputeCalculator(bldg_data2, WindLoadCalculationTypes.MWFRS);
+            windLoadCalculator_MWFRS_Width = mwfrs_calc_building_width;
 
             // Create CC calculator using building data #1
             var cc_calc_building_length = CreateAndComputeCalculator(bldg_data1, WindLoadCalculationTypes.COMPONENT_AND_CLADDING);
-
-            windLoadCalculator_MWFRS_Length = mwfrs_calc_building_length;
-            windLoadCalculator_MWFRS_Width = mwfrs_calc_building_width;
             windLoadCalculator_CC = cc_calc_building_length;
         }
 
@@ -503,9 +509,7 @@ namespace ShearWallVisualizer
             parameters.AnalysisType = type;
 
             var calculator = WindLoadCalculatorFactory.Create(windVersion, type, parameters, building);
-            Console.WriteLine(calculator.GetType().Name);
-            calculator.CreateAreaCalculators();
-            calculator.CalculateExternalPressures();
+            calculator.Initialize();
             return calculator;
         }
 
@@ -529,72 +533,6 @@ namespace ShearWallVisualizer
             mwfrsControl2 = new WindLoadResultsControl_MWFRS(windLoadCalculator_MWFRS_Width);
             tabWindResultsTabItem_MWFRS_BldgWidth.Content = mwfrsControl2;
             TabControlManager.ReAddTab(MainTabControl, "tabWindResultsTabItem_MWFRS_BldgWidth");
-        }
-
-        /// <summary>
-        /// Draws the effective wind areas on the wind load parameter input canvas
-        /// </summary>
-        private void DrawEffectiveAreas_CC_OnWindLoadParameterInputCanvas()
-        {
-            Console.WriteLine("DrawEffectiveAreas_CC_OnWindLoadParameterInputCanvas");
-            if (tabWindInputControlTabItem.Content is WindLoadInputControl inputControl)
-            {
-                var canvas = inputControl.cnvEffectiveRoofAreas_CC;
-
-                if (canvas == null) return;
-
-                canvas.Children.Clear();
-                double scale = Math.Min(canvas.ActualWidth / buildingData.BuildingWidth, canvas.ActualHeight / buildingData.BuildingLength);
-                
-                foreach (var area in windLoadCalculator_CC.RoofAreaCalculator.effWindAreas)
-                {
-                    WindLoadInputControl.DrawEffectiveWindArea(canvas, area.Value, scale, BuildingDrawer.GetColorForRegion(area.Value.Label_Short));
-                }
-            }
-        }
-
-        /// <summary>
-        /// Draws the effective wind areas on the wind load parameter input canvas
-        /// </summary>
-        private void DrawEffectiveAreas_MWFRS_Length_OnWindLoadParameterInputCanvas()
-        {
-            Console.WriteLine("DrawEffectiveAreas_MWFRS_Length_OnWindLoadParameterInputCanvas");
-            if (tabWindInputControlTabItem.Content is WindLoadInputControl inputControl)
-            {
-                var canvas = inputControl.cnvEffectiveRoofAreas_MWFRS_Length;
-
-                if (canvas == null) return;
-
-                canvas.Children.Clear();
-                double scale = Math.Min(canvas.ActualWidth / buildingData.BuildingWidth, canvas.ActualHeight / buildingData.BuildingLength);
-
-                foreach (var area in windLoadCalculator_MWFRS_Length.RoofAreaCalculator.effWindAreas)
-                {
-                    WindLoadInputControl.DrawEffectiveWindArea(canvas, area.Value, scale, BuildingDrawer.GetColorForRegion(area.Value.Label_Short));
-                }
-            }
-        }
-
-        /// <summary>
-        /// Draws the effective wind areas on the wind load parameter input canvas
-        /// </summary>
-        private void DrawEffectiveAreas_MWFRS_Width_OnWindLoadParameterInputCanvas()
-        {
-            Console.WriteLine("DrawEffectiveAreas_MWFRS_Width_OnWindLoadParameterInputCanvas");
-            if (tabWindInputControlTabItem.Content is WindLoadInputControl inputControl)
-            {
-                var canvas = inputControl.cnvEffectiveRoofAreas_MWFRS_Width;
-
-                if (canvas == null) return;
-
-                canvas.Children.Clear();
-                double scale = Math.Min(canvas.ActualWidth / buildingData.BuildingWidth, canvas.ActualHeight / buildingData.BuildingLength);
-
-                foreach (var area in windLoadCalculator_MWFRS_Width.RoofAreaCalculator.effWindAreas)
-                {
-                    WindLoadInputControl.DrawEffectiveWindArea(canvas, area.Value, scale, BuildingDrawer.GetColorForRegion(area.Value.Label_Short));
-                }
-            }
         }
 
         private void CreateWallDataControls()
@@ -866,8 +804,8 @@ namespace ShearWallVisualizer
                         Brushes.Gray,
                         VisualTreeHelper.GetDpi(this).PixelsPerDip);
 
-                    
-                    ctx.DrawText(idLabel, new Point(p1.X-5, p1.Y));
+
+                    ctx.DrawText(idLabel, new Point(p1.X - 5, p1.Y));
                 }
             }
 
@@ -937,7 +875,7 @@ namespace ShearWallVisualizer
                         Brushes.Gray,
                         VisualTreeHelper.GetDpi(this).PixelsPerDip);
 
-                    ctx.DrawText(idLabel, new Point(p1.X-12, p1.Y-5));
+                    ctx.DrawText(idLabel, new Point(p1.X - 12, p1.Y - 5));
                 }
             }
 
@@ -1053,7 +991,7 @@ namespace ShearWallVisualizer
         /// </summary>
         private void DrawShapes(DrawingContext ctx)
         {
-            if(hideShapes is true)
+            if (hideShapes is true)
             {
                 return;
             }
@@ -1297,7 +1235,7 @@ namespace ShearWallVisualizer
         {
             if (Calculator == null) return;
             // do we have a wall system or BWL manager created yet?
-            if(Calculator._wall_system is null || Calculator._wall_system.BWL_Manager is null)
+            if (Calculator._wall_system is null || Calculator._wall_system.BWL_Manager is null)
             {
                 return;
             }
@@ -1417,7 +1355,7 @@ namespace ShearWallVisualizer
             // Draw a marker for the center of mass
             if (Calculator != null)
             {
-                if(Calculator._diaphragm_system != null)
+                if (Calculator._diaphragm_system != null)
                 {
                     // Draw the center of mass and center of rigidity
                     var com = Calculator._diaphragm_system.CtrMass;
@@ -1926,7 +1864,7 @@ namespace ShearWallVisualizer
 
         private void btnOpenLoadDialog_Click(object sender, RoutedEventArgs e)
         {
-            if(Calculator == null)
+            if (Calculator == null)
             {
                 Console.WriteLine("No valid calculator found in btnOpenLoadDialog_Click.");
                 return;
@@ -2164,7 +2102,7 @@ namespace ShearWallVisualizer
                     OpenFile(filePath);
                     AddToRecentFiles(filePath); // Move to top again
 
-                    if(Calculator != null)
+                    if (Calculator != null)
                     {
                         Calculator.selectedImageFilePath = filePath;
                     }
@@ -2321,5 +2259,56 @@ namespace ShearWallVisualizer
         }
         #endregion
 
+        // Add an effect where you can press enter or spacebar to commit the building data
+        private void RunBuildingDataInputCalculations(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter || e.Key == Key.Space)
+            {
+                BuildingDataInputControl ctrl = tabBuildingDataControlTabItem.Content as BuildingDataInputControl;
+                ctrl.ParseBuildingData();
+                ctrl.OnBuildingDataInputComplete(ctrl.bldgData);
+            }
+        }
+
+        private void MainTabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (tabWindInputControlTabItem.IsSelected &&
+            tabWindInputControlTabItem.Content is UIElement content)
+            {
+                // Ensure focus happens after layout is complete
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    FocusFirstFocusableChild(content);
+                }), DispatcherPriority.Input);
+            }
+        }
+
+        public static void FocusFirstFocusableChild(DependencyObject parent)
+        {
+            var scope = FocusManager.GetFocusScope(parent);
+            var firstFocusable = GetFirstFocusableChild(parent);
+
+            if (firstFocusable != null)
+            {
+                Keyboard.Focus(firstFocusable);
+            }
+        }
+
+        private static IInputElement GetFirstFocusableChild(DependencyObject parent)
+        {
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, i);
+
+                if (child is UIElement ui && ui.Focusable && ui.IsEnabled && ui.IsVisible)
+                    return ui;
+
+                var focusableChild = GetFirstFocusableChild(child);
+                if (focusableChild != null)
+                    return focusableChild;
+            }
+
+            return null;
+        }
     }
 }

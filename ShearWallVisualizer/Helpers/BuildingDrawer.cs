@@ -1,5 +1,7 @@
 ﻿using ShearWallCalculator.BuildingInfo;
+using ShearWallCalculator.WindLoadCalculations;
 using System;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -564,6 +566,72 @@ namespace ShearWallCalculator.Helpers
             Canvas.SetTop(labelMeanRoof, labelY_h);
             canvas.Children.Add(labelMeanRoof);
         }
+
+        /// <summary>
+        /// Function to draw the effective wind areas for our roof to a specified canvas
+        /// </summary>
+        /// <param name="canvas"></param>
+        /// <param name="area"></param>
+        /// <param name="scaleFactor"></param>
+        /// <param name="fill_color"></param>
+        public static void DrawEffectiveWindArea(Canvas canvas, EffectiveWindArea area, double scaleFactor, Brush fill_color)
+        {
+            if (canvas == null || area == null)
+                return;
+
+            // Helper function to create a WPF polygon
+            Polygon CreatePolygon(IEnumerable<Point> pts, Brush stroke, Brush fill)
+            {
+                var polygon = new Polygon
+                {
+                    Stroke = stroke,
+                    Fill = fill,
+                    StrokeThickness = 1,
+                    Points = new PointCollection(),
+                    Opacity = 0.5
+                };
+
+                foreach (var pt in pts)
+                    polygon.Points.Add(new Point(pt.X * scaleFactor, pt.Y * scaleFactor));
+
+                return polygon;
+            }
+
+            // Draw outer boundary (light blue fill, blue border)
+            var outerPolygon = CreatePolygon(
+                area.OuterBoundary,
+                Brushes.Black,
+                fill_color
+            );
+            canvas.Children.Add(outerPolygon);
+
+            // Draw each hole (transparent fill, red border)
+            foreach (var hole in area.Holes)
+            {
+                var holePolygon = CreatePolygon(
+                    hole,
+                    Brushes.Red,
+                    Brushes.Transparent
+                );
+                canvas.Children.Add(holePolygon);
+            }
+
+            // Optional: Draw centroid as a small ellipse
+            var center = area.Centroid;
+            double radius = 3;
+
+            var centroidDot = new Ellipse
+            {
+                Width = radius * 2,
+                Height = radius * 2,
+                Fill = Brushes.Black
+            };
+
+            Canvas.SetLeft(centroidDot, center.X * scaleFactor - radius);
+            Canvas.SetTop(centroidDot, center.Y * scaleFactor - radius);
+            canvas.Children.Add(centroidDot);
+        }
+
 
         /// <summary>
         /// 

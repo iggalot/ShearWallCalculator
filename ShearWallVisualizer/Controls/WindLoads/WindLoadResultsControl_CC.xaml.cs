@@ -426,7 +426,7 @@ namespace ShearWallVisualizer.Controls
 
             foreach (var area in windLoadCalculator.RoofAreaCalculator.effWindAreas)
             {
-                WindLoadInputControl.DrawEffectiveWindArea(resultCanvasCC, area.Value, scale, BuildingDrawer.GetColorForRegion(area.Value.Label_Short));
+                BuildingDrawer.DrawEffectiveWindArea(resultCanvasCC, area.Value, scale, BuildingDrawer.GetColorForRegion(area.Value.Label_Short));
             }
         }
 

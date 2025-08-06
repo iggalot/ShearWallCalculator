@@ -91,6 +91,9 @@ namespace ShearWallCalculator.WindLoadCalculations
         public abstract AreaCalculator_Base WallAreaCalculator_BldgWidth { get; set; }
 
 
+        /// <summary>
+        /// Gcp and Cp curves for the roofs as defined in the appropriate ASCE7 volume
+        /// </summary>
         public abstract Chapter27and30_GCpCurveBase extGCpCurve_Roof { get; set; }
         public abstract Chapter27and30_GCpCurveBase extGCpCurve_Wall { get; set; }
 
@@ -104,6 +107,9 @@ namespace ShearWallCalculator.WindLoadCalculations
         public Dictionary<int, PressureData> windPressureBuildingWidthWall_Neg_External { get; set; } = new Dictionary<int, PressureData>();
         public Dictionary<int, PressureData> windPressureOverhang_External { get; set; } = new Dictionary<int, PressureData>();
 
+        /// <summary>
+        /// MWFRS pressures
+        /// </summary>
         public Dictionary<int, PressureData> windPressureWall_Pos_External_MWFRS { get; set; } = new Dictionary<int, PressureData>();
         public Dictionary<int, PressureData> windPressureWall_Neg_External_MWFRS { get; set; } = new Dictionary<int, PressureData>();
 
@@ -143,7 +149,13 @@ namespace ShearWallCalculator.WindLoadCalculations
         public abstract double GetGCpi();
 
 
-        public void CreateAreaCalculators()
+        public void Initialize()
+        {
+            CreateAreaCalculators();
+            CalculateExternalPressures();
+        }
+
+        private void CreateAreaCalculators()
         {
             RoofAreaCalculator = RoofAreaCalculatorFactory.Create(buildingData, Parameters, ASCEVersion);
 
