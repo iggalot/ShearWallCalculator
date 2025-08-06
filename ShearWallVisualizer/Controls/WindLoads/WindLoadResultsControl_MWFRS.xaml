@@ -69,6 +69,12 @@
 
                 </Grid>
                 <!-- Right Side: Diagrams -->
+                <StackPanel Grid.Column="1" Orientation="Vertical">
+                    <Canvas x:Name="cnvEffectiveRoofAreas" Width="200" Height="200" Margin="10" />
+                    <Canvas x:Name="cnvEffectiveWallAreas_Length" Width="200" Height="200" Margin="10" />
+                    <Canvas x:Name="cnvEffectiveWallAreas_Width" Width="200" Height="200" Margin="10" />
+                </StackPanel>
+
                 <!-- Building Figures -->
                 <StackPanel Orientation="Vertical" Margin="0,15,0,0">
 
