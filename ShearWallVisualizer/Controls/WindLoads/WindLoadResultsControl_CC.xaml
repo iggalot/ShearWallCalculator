@@ -32,8 +32,8 @@
                         <StackPanel Orientation="Horizontal">
                             <StackPanel x:Name="spBuildingData" Background="LightGray" Margin="5"/>
                             <Canvas x:Name="cnvWindLoadResultCanvasCC"
-                                Width="100"
-                                Height="100"
+                                Width="150"
+                                Height="150"
                                 Background="Transparent"/>
                         </StackPanel>
 
@@ -85,7 +85,7 @@
                     <StackPanel Orientation="Vertical" Width="250" HorizontalAlignment="Left" Grid.Column="1" Margin="10,10,0,0">
 
                         <!-- Roof Chart -->
-                        <StackPanel Orientation="Vertical" HorizontalAlignment="Left">
+                        <StackPanel Orientation="Vertical">
                             <TextBlock x:Name="txtFigureTitle_Roof" Text="Title"
                                        FontSize="10" FontWeight="Bold"
                                        HorizontalAlignment="Center"/>
@@ -101,7 +101,7 @@
                         </StackPanel>
 
                         <!-- Wall Chart -->
-                        <StackPanel Orientation="Vertical" HorizontalAlignment="Left">
+                        <StackPanel Orientation="Vertical">
                             <TextBlock x:Name="txtFigureTitle_Walls" Text="Title"
                                        FontSize="10" FontWeight="Bold"
                                        HorizontalAlignment="Center"/>

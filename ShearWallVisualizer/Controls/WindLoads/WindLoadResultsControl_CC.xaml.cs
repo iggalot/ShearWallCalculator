@@ -434,7 +434,7 @@ namespace ShearWallVisualizer.Controls
                 double offsetX = 0;
                 double offsetY = 0;
 
-                Brush color = BuildingDrawer.GetColorForRegion(area.Value.Label_Short);
+                Brush color = EffectiveWindAreaRenderer.GetColorForRegion(area.Value.Label_Short);
                 EffectiveWindAreaRenderer.DrawEffectiveWindArea(cnvWindLoadResultCanvasCC,
                     windLoadCalculator.buildingData,
                     area.Value, boundingBox, offsetX, offsetY, color, Brushes.Black, 1);
@@ -455,7 +455,7 @@ namespace ShearWallVisualizer.Controls
             public double NetPosPress { get; set; }
             public double NetNegPress { get; set; }
 
-            public Brush RectColor => BuildingDrawer.GetColorForRegion(Region);
+            public Brush RectColor => EffectiveWindAreaRenderer.GetColorForRegion(Region);
         }
 
     }

@@ -566,52 +566,5 @@ namespace ShearWallCalculator.Helpers
             Canvas.SetTop(labelMeanRoof, labelY_h);
             canvas.Children.Add(labelMeanRoof);
         }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="region">Should be in the form of "1", "2e", etc. The regions will need a full name of with a prefix of "Zone"
-        /// so "Zone1" becomes "1"</param>
-        /// <returns></returns>
-        public static Brush GetColorForRegion(string region)
-        {
-            switch (region)
-            {
-                case "1":
-                    return Brushes.Red;
-                case "1'":
-                    return Brushes.IndianRed;
-                case "2":
-                    return Brushes.Yellow;
-                case "2e":
-                    return Brushes.LightYellow;
-                case "2r":
-                    return Brushes.Goldenrod;
-                case "2n":
-                    return Brushes.YellowGreen;
-                case "3":
-                    return Brushes.Green;
-                case "3e":
-                    return Brushes.GreenYellow;
-                case "3r":
-                    return Brushes.LightGreen;
-                case "4":
-                    return Brushes.MediumOrchid;
-                case "5":
-                    return Brushes.Purple;
-                case "WWR":
-                    return Brushes.LightGray;
-                case "LWR":
-                    return Brushes.Gray;
-                case "WW":
-                    return Brushes.LightGray;
-                case "LW":
-                    return Brushes.Gray;
-                case "SW":
-                    return Brushes.DarkGray;
-                default:
-                    return Brushes.Black;
-            }
-        }
     }
 }

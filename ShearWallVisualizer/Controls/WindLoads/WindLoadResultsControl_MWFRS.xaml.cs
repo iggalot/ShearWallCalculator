@@ -84,6 +84,8 @@ namespace ShearWallVisualizer.Controls
                 CreateMWFRS_DataGrid_Walls(MWFRS_WallResultsDataGrid, windLoadCalculator.WallAreaCalculator_BldgLength.effWindAreas, windLoadCalculator);
 
                 CreateMWFRS_DataGrid_Roof(MWFRS_RoofResultsDataGrid, windLoadCalculator.RoofAreaCalculator.effWindAreas, windLoadCalculator);
+
+                DrawEffectiveAreas_OnMWFRSResultCanvas();
             }
 
         }
@@ -319,7 +321,7 @@ namespace ShearWallVisualizer.Controls
             public double NetPress { get; set; }
 
 
-            public Brush RectColor => GetColorForRegion(Region);
+            public Brush RectColor => EffectiveWindAreaRenderer.GetColorForRegion(Region);
         }
 
         public class MWFRS_WindLoadResultsDataGrid_Roof
@@ -336,53 +338,42 @@ namespace ShearWallVisualizer.Controls
             public double NetPress_A { get; set; }
             public double NetPress_B { get; set; }
 
-            public Brush RectColor => BuildingDrawer.GetColorForRegion(Region);
+            public Brush RectColor => EffectiveWindAreaRenderer.GetColorForRegion(Region);
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="region">Should be in the form of "1", "2e", etc. The regions will need a full name of with a prefix of "Zone"
-        /// so "Zone1" becomes "1"</param>
-        /// <returns></returns>
-        public static Brush GetColorForRegion(string region)
+        private void DrawEffectiveAreas_OnMWFRSResultCanvas()
         {
-            switch (region)
+            cnvEffectiveRoofAreas.Children.Clear();
+            cnvEffectiveWallAreas_Length.Children.Clear();
+            
+            foreach (var area in windLoadCalculator.RoofAreaCalculator.effWindAreas)
             {
-                case "1":
-                    return Brushes.Red;
-                case "1'":
-                    return Brushes.IndianRed;
-                case "2":
-                    return Brushes.Yellow;
-                case "2e":
-                    return Brushes.LightYellow;
-                case "2r":
-                    return Brushes.Goldenrod;
-                case "2n":
-                    return Brushes.YellowGreen;
-                case "3":
-                    return Brushes.Green;
-                case "3e":
-                    return Brushes.GreenYellow;
-                case "3r":
-                    return Brushes.LightGreen;
-                case "4":
-                    return Brushes.MediumOrchid;
-                case "5":
-                    return Brushes.Purple;
-                case "WWR":
-                    return Brushes.LightGray;
-                case "LWR":
-                    return Brushes.Gray;
-                case "WW":
-                    return Brushes.LightGray;
-                case "LW":
-                    return Brushes.Gray;
-                case "SW":
-                    return Brushes.DarkGray;
-                default:
-                    return Brushes.Black;
+                Rect boundingBox = windLoadCalculator.RoofAreaCalculator.GetBoundingExtents(windLoadCalculator.RoofAreaCalculator.effWindAreas);
+                double canvasWidth = cnvEffectiveRoofAreas.ActualWidth;
+                double canvasHeight = cnvEffectiveRoofAreas.ActualHeight;
+
+                double offsetX = 0;
+                double offsetY = 0;
+
+                Brush color = EffectiveWindAreaRenderer.GetColorForRegion(area.Value.Label_Short);
+                EffectiveWindAreaRenderer.DrawEffectiveWindArea(cnvEffectiveRoofAreas,
+                    windLoadCalculator.buildingData,
+                    area.Value, boundingBox, offsetX, offsetY, color, Brushes.Black, 1);
+            }
+
+            foreach (var area in windLoadCalculator.WallAreaCalculator_BldgLength.effWindAreas)
+            {
+                Rect boundingBox = windLoadCalculator.WallAreaCalculator_BldgLength.GetBoundingExtents(windLoadCalculator.WallAreaCalculator_BldgLength.effWindAreas);
+                double canvasWidth = cnvEffectiveWallAreas_Length.ActualWidth;
+                double canvasHeight = cnvEffectiveWallAreas_Length.ActualHeight;
+
+                double offsetX = 0;
+                double offsetY = 0;
+
+                Brush color = EffectiveWindAreaRenderer.GetColorForRegion(area.Value.Label_Short);
+                EffectiveWindAreaRenderer.DrawEffectiveWindArea(cnvEffectiveWallAreas_Length,
+                    windLoadCalculator.buildingData,
+                    area.Value, boundingBox, offsetX, offsetY, color, Brushes.Black, 1);
             }
         }
     }

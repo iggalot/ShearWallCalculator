@@ -72,27 +72,26 @@
                 <StackPanel Grid.Column="1" Orientation="Vertical">
                     <Canvas x:Name="cnvEffectiveRoofAreas" Width="200" Height="200" Margin="10" />
                     <Canvas x:Name="cnvEffectiveWallAreas_Length" Width="200" Height="200" Margin="10" />
-                    <Canvas x:Name="cnvEffectiveWallAreas_Width" Width="200" Height="200" Margin="10" />
                 </StackPanel>
 
                 <!-- Building Figures -->
                 <StackPanel Orientation="Vertical" Margin="0,15,0,0">
 
                     <Canvas x:Name="cnvMWFRSPlan"
-                                    Width="150"
-                                    Height="150"
+                                    Width="200"
+                                    Height="200"
                                     Background="White"
                                     Margin="10"/>
 
                     <Canvas x:Name="cnvMWFRSElevation_BuildingLength"
-                                    Width="150"
-                                    Height="150"
+                                    Width="200"
+                                    Height="200"
                                     Background="White"
                                     Margin="10"/>
 
                     <Canvas x:Name="cnvMWFRSElevation_BuildingWidth"
-                                    Width="150"
-                                    Height="150"
+                                    Width="200"
+                                    Height="200"
                                     Background="White"
                                     Margin="10"/>
                 </StackPanel>

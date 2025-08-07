@@ -117,8 +117,7 @@
     <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\MWFRS\AreaCalculators\AreaCalculator_MWFRS_ASCE7_16_Base.cs" />
     <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\MWFRS\AreaCalculators\GableRoofAreaCalculator_ParallelToRidge_MWFRS_ASCE7_16.cs" />
     <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\MWFRS\AreaCalculators\HipRoofAreaCalculator_ParallelToRidge_MWFRS_ASCE7_16.cs" />
-    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\MWFRS\AreaCalculators\WallAreaCalculator_GableEnd_MWFRS_ASCE7_16.cs" />
-    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\MWFRS\AreaCalculators\WallAreaCalculator_NonGableEnd_MWFRS_ASCE7_16.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\MWFRS\AreaCalculators\WallAreaCalculator_MWFRS_ASCE7_16.cs" />
     <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\MWFRS\Figure27_3_1_ASCE7_16\Chapter27RoofFigureFactory_ASCE7_16.cs" />
     <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\MWFRS\AreaCalculators\WallAreaCalculator_GableEnd_MWFRS_ASCE7_22.cs" />
     <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\MWFRS\AreaCalculators\WallAreaCalculator_NonGableEnd_MWFRS_ASCE7_22.cs" />

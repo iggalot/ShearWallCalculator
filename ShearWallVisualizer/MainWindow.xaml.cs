@@ -476,7 +476,7 @@ namespace ShearWallVisualizer
                     double offsetX = 0;
                     double offsetY = 0;
 
-                    Brush color = BuildingDrawer.GetColorForRegion(area.Value.Label_Short);
+                    Brush color = EffectiveWindAreaRenderer.GetColorForRegion(area.Value.Label_Short);
                     EffectiveWindAreaRenderer.DrawEffectiveWindArea(inputControl.cnvEffectiveRoofAreas_CC, 
                         windLoadCalculator_CC.buildingData,
                         area.Value, boundingBox, offsetX, offsetY, color, Brushes.Black, 1);
@@ -491,7 +491,7 @@ namespace ShearWallVisualizer
                     double offsetX = 0;
                     double offsetY = 0;
 
-                    Brush color = BuildingDrawer.GetColorForRegion(area.Value.Label_Short);
+                    Brush color = EffectiveWindAreaRenderer.GetColorForRegion(area.Value.Label_Short);
                     EffectiveWindAreaRenderer.DrawEffectiveWindArea(inputControl.cnvEffectiveRoofAreas_MWFRS_Length, 
                         windLoadCalculator_MWFRS_Length.buildingData,
                         area.Value, boundingBox, offsetX, offsetY, color, Brushes.Black, 1);
@@ -506,7 +506,7 @@ namespace ShearWallVisualizer
                     double offsetX = 0;
                     double offsetY = 0;
 
-                    Brush color = BuildingDrawer.GetColorForRegion(area.Value.Label_Short);
+                    Brush color = EffectiveWindAreaRenderer.GetColorForRegion(area.Value.Label_Short);
                     EffectiveWindAreaRenderer.DrawEffectiveWindArea(inputControl.cnvEffectiveRoofAreas_MWFRS_Width,
                         windLoadCalculator_MWFRS_Width.buildingData,
                         area.Value, boundingBox, offsetX, offsetY, color, Brushes.Black, 1);
