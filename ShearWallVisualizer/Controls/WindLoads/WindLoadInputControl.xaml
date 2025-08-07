@@ -68,16 +68,16 @@
 
         <!-- Effective Roof Areas -->
         <StackPanel Grid.Column="1" Orientation="Vertical">
-            <Canvas x:Name="cnvEffectiveRoofAreas_CC" Width="200" Height="200" Margin="10" />
-            <Canvas x:Name="cnvEffectiveRoofAreas_MWFRS_Length" Width="200" Height="200" Margin="10" />
-            <Canvas x:Name="cnvEffectiveRoofAreas_MWFRS_Width" Width="200" Height="200" Margin="10" />
+            <Canvas x:Name="cnvEffectiveRoofAreas_CC" Width="200" Height="200" Margin="30" Background="Lavender"/>
+            <Canvas x:Name="cnvEffectiveRoofAreas_MWFRS_Length" Width="200" Height="200" Margin="30" Background="Lavender"/>
+            <Canvas x:Name="cnvEffectiveRoofAreas_MWFRS_Width" Width="200" Height="200" Margin="30" Background="Lavender"/>
         </StackPanel>
 
         <!-- Building Plans -->
         <StackPanel Grid.Column="2" Orientation="Vertical">
-            <Canvas x:Name="cnvBuildingPlan_CC" Width="200" Height="200" Margin="10" />
-            <Canvas x:Name="cnvBuildingPlan_MWFRS_Length" Width="200" Height="200" Margin="10" />
-            <Canvas x:Name="cnvBuildingplan_MWFRS_Width" Width="200" Height="200" Margin="10"/>
+            <Canvas x:Name="cnvBuildingPlan_CC" Width="200" Height="200" Margin="30" />
+            <Canvas x:Name="cnvBuildingPlan_MWFRS_Length" Width="200" Height="200" Margin="30" />
+            <Canvas x:Name="cnvBuildingplan_MWFRS_Width" Width="200" Height="200" Margin="30"/>
         </StackPanel>
     </Grid>
 </UserControl>

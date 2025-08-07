@@ -3,6 +3,7 @@ using ShearWallCalculator.Helpers;
 using ShearWallCalculator.WindLoadCalculations;
 using ShearWallCalculator.WindLoadCalculations.ASCE7;
 using ShearWallCalculator.WindLoadCalculations.Chapter30.Figure30_3;
+using ShearWallVisualizer.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Windows;
@@ -426,7 +427,17 @@ namespace ShearWallVisualizer.Controls
 
             foreach (var area in windLoadCalculator.RoofAreaCalculator.effWindAreas)
             {
-                BuildingDrawer.DrawEffectiveWindArea(resultCanvasCC, area.Value, scale, BuildingDrawer.GetColorForRegion(area.Value.Label_Short));
+                Rect boundingBox = windLoadCalculator.RoofAreaCalculator.GetBoundingExtents(windLoadCalculator.RoofAreaCalculator.effWindAreas);
+                double canvasWidth = cnvWindLoadResultCanvasCC.ActualWidth;
+                double canvasHeight = cnvWindLoadResultCanvasCC.ActualHeight;
+
+                double offsetX = 0;
+                double offsetY = 0;
+
+                Brush color = BuildingDrawer.GetColorForRegion(area.Value.Label_Short);
+                EffectiveWindAreaRenderer.DrawEffectiveWindArea(cnvWindLoadResultCanvasCC,
+                    windLoadCalculator.buildingData,
+                    area.Value, boundingBox, offsetX, offsetY, color, Brushes.Black, 1);
             }
         }
 

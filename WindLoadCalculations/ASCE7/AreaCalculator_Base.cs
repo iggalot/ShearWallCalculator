@@ -81,6 +81,38 @@ namespace ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator
             return offset > 0 && offset < B;
         }
 
-        
+        public Rect GetBoundingExtents(Dictionary<int, EffectiveWindArea> areas)
+        {
+            if (areas == null || areas.Count == 0)
+                return Rect.Empty;
+
+            double minX = double.MaxValue;
+            double maxX = double.MinValue;
+            double minY = double.MaxValue;
+            double maxY = double.MinValue;
+
+            foreach (var area in areas)
+            {
+                if (area.Value?.OuterBoundary == null)
+                    continue;
+
+                foreach (var pt in area.Value.OuterBoundary)
+                {
+                    if (pt.X < minX) minX = pt.X;
+                    if (pt.X > maxX) maxX = pt.X;
+                    if (pt.Y < minY) minY = pt.Y;
+                    if (pt.Y > maxY) maxY = pt.Y;
+                }
+            }
+
+            if (minX == double.MaxValue || minY == double.MaxValue)
+                return Rect.Empty; // no valid points found
+
+            double width = maxX - minX;
+            double height = maxY - minY;
+
+            return new Rect(minX, minY, width, height);
+        }
+
     }
 }

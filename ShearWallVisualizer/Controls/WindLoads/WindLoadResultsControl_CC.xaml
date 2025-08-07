@@ -19,7 +19,7 @@
                 <!-- Main Layout -->
                 <Grid Background="LightBlue">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
@@ -29,7 +29,13 @@
                                 Orientation="Vertical"
                                 Margin="10"
                                 HorizontalAlignment="Left">
-                        <StackPanel x:Name="spBuildingData" Background="LightGray" Margin="5"/>
+                        <StackPanel Orientation="Horizontal">
+                            <StackPanel x:Name="spBuildingData" Background="LightGray" Margin="5"/>
+                            <Canvas x:Name="cnvWindLoadResultCanvasCC"
+                                Width="100"
+                                Height="100"
+                                Background="Transparent"/>
+                        </StackPanel>
 
                         <StackPanel Orientation="Horizontal" x:Name="sp_a">
                             <TextBlock Text="Crit dim, a " Margin="5 0 5 0"/>
@@ -77,19 +83,15 @@
 
                     <!-- Right Side: Diagrams -->
                     <StackPanel Orientation="Vertical" Width="250" HorizontalAlignment="Left" Grid.Column="1" Margin="10,10,0,0">
-                        <Canvas x:Name="cnvWindLoadResultCanvasCC"
-                                Width="100"
-                                Height="100"
-                                Background="Transparent"/>
 
                         <!-- Roof Chart -->
-                        <StackPanel Orientation="Vertical" Margin="0,15,0,0">
+                        <StackPanel Orientation="Vertical" HorizontalAlignment="Left">
                             <TextBlock x:Name="txtFigureTitle_Roof" Text="Title"
                                        FontSize="10" FontWeight="Bold"
                                        HorizontalAlignment="Center"/>
                             <Canvas x:Name="cnvFigure30_3"
-                                    Width="150"
-                                    Height="150"
+                                    Width="225"
+                                    Height="225"
                                     Background="White"/>
                             <TextBlock x:Name="txtFigureCriteria_Roof"
                                        Text="Criteria"
@@ -99,13 +101,13 @@
                         </StackPanel>
 
                         <!-- Wall Chart -->
-                        <StackPanel Orientation="Vertical" Margin="0,15,0,0">
+                        <StackPanel Orientation="Vertical" HorizontalAlignment="Left">
                             <TextBlock x:Name="txtFigureTitle_Walls" Text="Title"
                                        FontSize="10" FontWeight="Bold"
                                        HorizontalAlignment="Center"/>
                             <Canvas x:Name="cnvFigure30_1"
-                                    Width="150"
-                                    Height="150"
+                                    Width="225"
+                                    Height="225"
                                     Background="White"/>
                             <TextBlock x:Name="txtFigureCriteria_Walls"
                                        Text="Criteria"

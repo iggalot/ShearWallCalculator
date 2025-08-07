@@ -77,9 +77,9 @@ namespace ShearWallVisualizer.Controls
                 BuildingDrawer.DrawElevation_BuildingLength(cnvMWFRSElevation_BuildingLength, windLoadCalculator.buildingData);
                 BuildingDrawer.DrawElevation_BuildingWidth(cnvMWFRSElevation_BuildingWidth, windLoadCalculator.buildingData);
 
-                EffectiveWindAreaRenderer.Draw(cnvEffectiveRoofAreas, windLoadCalculator.RoofAreaCalculator, windLoadCalculator.buildingData, "Effective Roof Areas");
-                EffectiveWindAreaRenderer.Draw(cnvEffectiveWallAreas_Length, windLoadCalculator.WallAreaCalculator_BldgLength, windLoadCalculator.buildingData, "Effective Wall Areas");
-                EffectiveWindAreaRenderer.Draw(cnvEffectiveWallAreas_Width, windLoadCalculator.WallAreaCalculator_BldgWidth, windLoadCalculator.buildingData, "Effective Wall Areas");
+                //EffectiveWindAreaRenderer.Draw(cnvEffectiveRoofAreas, windLoadCalculator.RoofAreaCalculator, windLoadCalculator.buildingData, "Effective Roof Areas");
+                //EffectiveWindAreaRenderer.Draw(cnvEffectiveWallAreas_Length, windLoadCalculator.WallAreaCalculator_BldgLength, windLoadCalculator.buildingData, "Effective Wall Areas");
+                //EffectiveWindAreaRenderer.Draw(cnvEffectiveWallAreas_Width, windLoadCalculator.WallAreaCalculator_BldgWidth, windLoadCalculator.buildingData, "Effective Wall Areas");
 
                 CreateMWFRS_DataGrid_Walls(MWFRS_WallResultsDataGrid, windLoadCalculator.WallAreaCalculator_BldgLength.effWindAreas, windLoadCalculator);
 

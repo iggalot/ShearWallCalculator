@@ -467,9 +467,51 @@ namespace ShearWallVisualizer
 
             if (tabWindInputControlTabItem.Content is WindLoadInputControl inputControl)
             {
-                EffectiveWindAreaRenderer.Draw(inputControl.cnvEffectiveRoofAreas_CC, windLoadCalculator_CC.RoofAreaCalculator, windLoadCalculator_CC.buildingData);
-                EffectiveWindAreaRenderer.Draw(inputControl.cnvEffectiveRoofAreas_MWFRS_Length, windLoadCalculator_MWFRS_Length.RoofAreaCalculator, windLoadCalculator_MWFRS_Length.buildingData);
-                EffectiveWindAreaRenderer.Draw(inputControl.cnvEffectiveRoofAreas_MWFRS_Width, windLoadCalculator_MWFRS_Width.RoofAreaCalculator, windLoadCalculator_MWFRS_Width.buildingData);
+                foreach (var area in windLoadCalculator_CC.RoofAreaCalculator.effWindAreas)
+                {
+                    Rect boundingBox = windLoadCalculator_CC.RoofAreaCalculator.GetBoundingExtents(windLoadCalculator_CC.RoofAreaCalculator.effWindAreas);
+                    double canvasWidth = inputControl.cnvEffectiveRoofAreas_CC.ActualWidth;
+                    double canvasHeight = inputControl.cnvEffectiveRoofAreas_CC.ActualHeight;
+
+                    double offsetX = 0;
+                    double offsetY = 0;
+
+                    Brush color = BuildingDrawer.GetColorForRegion(area.Value.Label_Short);
+                    EffectiveWindAreaRenderer.DrawEffectiveWindArea(inputControl.cnvEffectiveRoofAreas_CC, 
+                        windLoadCalculator_CC.buildingData,
+                        area.Value, boundingBox, offsetX, offsetY, color, Brushes.Black, 1);
+                }
+
+                foreach (var area in windLoadCalculator_MWFRS_Length.RoofAreaCalculator.effWindAreas)
+                {
+                    Rect boundingBox = windLoadCalculator_CC.RoofAreaCalculator.GetBoundingExtents(windLoadCalculator_MWFRS_Length.RoofAreaCalculator.effWindAreas);
+                    double canvasWidth = inputControl.cnvEffectiveRoofAreas_MWFRS_Length.ActualWidth;
+                    double canvasHeight = inputControl.cnvEffectiveRoofAreas_MWFRS_Length.ActualHeight;
+
+                    double offsetX = 0;
+                    double offsetY = 0;
+
+                    Brush color = BuildingDrawer.GetColorForRegion(area.Value.Label_Short);
+                    EffectiveWindAreaRenderer.DrawEffectiveWindArea(inputControl.cnvEffectiveRoofAreas_MWFRS_Length, 
+                        windLoadCalculator_MWFRS_Length.buildingData,
+                        area.Value, boundingBox, offsetX, offsetY, color, Brushes.Black, 1);
+                }
+
+                foreach (var area in windLoadCalculator_MWFRS_Width.RoofAreaCalculator.effWindAreas)
+                {
+                    Rect boundingBox = windLoadCalculator_MWFRS_Width.RoofAreaCalculator.GetBoundingExtents(windLoadCalculator_MWFRS_Length.RoofAreaCalculator.effWindAreas);
+                    double canvasWidth = inputControl.cnvEffectiveRoofAreas_MWFRS_Width.ActualWidth;
+                    double canvasHeight = inputControl.cnvEffectiveRoofAreas_MWFRS_Width.ActualHeight;
+
+                    double offsetX = 0;
+                    double offsetY = 0;
+
+                    Brush color = BuildingDrawer.GetColorForRegion(area.Value.Label_Short);
+                    EffectiveWindAreaRenderer.DrawEffectiveWindArea(inputControl.cnvEffectiveRoofAreas_MWFRS_Width,
+                        windLoadCalculator_MWFRS_Width.buildingData,
+                        area.Value, boundingBox, offsetX, offsetY, color, Brushes.Black, 1);
+                }
+
 
                 BuildingDrawer.DrawPlan(inputControl.cnvBuildingPlan_CC, windLoadCalculator_CC.buildingData);
                 BuildingDrawer.DrawPlan(inputControl.cnvBuildingPlan_MWFRS_Length, windLoadCalculator_MWFRS_Length.buildingData);
