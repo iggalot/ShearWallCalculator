@@ -1,5 +1,4 @@
 ﻿using ShearWallCalculator.BuildingInfo;
-using ShearWallCalculator.WindLoadCalculations.ASCE7.ASCE7_22;
 using System;
 
 namespace ShearWallCalculator.WindLoadCalculations

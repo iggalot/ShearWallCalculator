@@ -89,22 +89,15 @@ namespace ShearWallCalculator.WindLoadCalculations
                 {
                     // figure out the wall arrangements
                     if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_FLAT)
-                        return new WallAreaCalculator_NonGableEnd_MWFRS_ASCE7_22(bldg_data);
+                        return new WallAreaCalculator_MWFRS_ASCE7_22(bldg_data);
                     else if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_HIP)
                     {
-                        return new WallAreaCalculator_NonGableEnd_MWFRS_ASCE7_22(bldg_data);
+                        return new WallAreaCalculator_MWFRS_ASCE7_22(bldg_data);
                     }
 
                     else if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_GABLE)
                     {
-                        if (isGable is true)
-                        {
-                            return new WallAreaCalculator_GableEnd_MWFRS_ASCE7_22(bldg_data);
-                        }
-                        else
-                        {
-                            return new WallAreaCalculator_NonGableEnd_MWFRS_ASCE7_22(bldg_data);
-                        }
+                            return new WallAreaCalculator_MWFRS_ASCE7_22(bldg_data);
                     }
                     else
                     {

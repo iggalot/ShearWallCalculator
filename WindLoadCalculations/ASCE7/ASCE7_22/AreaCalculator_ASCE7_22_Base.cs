@@ -2,7 +2,7 @@
 using ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator;
 using System;
 
-namespace ShearWallCalculator.WindLoadCalculations.ASCE7.ASCE7_22
+namespace ShearWallCalculator.WindLoadCalculations
 {
     public class AreaCalculator_ASCE7_22_Base : AreaCalculator_Base
     {

@@ -1,5 +1,4 @@
-﻿using ShearWallCalculator.WindLoadCalculations.ASCE7.ASCE7_22;
-using System;
+﻿using System;
 
 namespace ShearWallCalculator.WindLoadCalculations
 {
