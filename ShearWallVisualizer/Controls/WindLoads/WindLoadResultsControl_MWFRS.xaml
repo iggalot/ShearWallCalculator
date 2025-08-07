@@ -31,7 +31,6 @@
                         <StackPanel Name="spResultsAndCanvas"
                                 Grid.Column="0"
                                 Orientation="Vertical"
-                                Margin="10"
                                 HorizontalAlignment="Left">
 
                             <!-- Building Data -->
@@ -70,13 +69,23 @@
                 </Grid>
                 <!-- Right Side: Diagrams -->
                 <StackPanel Grid.Column="1" Orientation="Vertical">
-                    <Canvas x:Name="cnvEffectiveRoofAreas" Width="200" Height="200" Margin="10" />
-                    <Canvas x:Name="cnvEffectiveWallAreas_Length" Width="200" Height="200" Margin="10" />
+                    <Canvas x:Name="cnvEffectiveRoofAreas" Width="125" Height="125" Margin="5" />
+                    <TextBlock Text="Roof" FontWeight="Bold" />
+
+                    <Canvas x:Name="cnvEffectiveWallAreas_WW" Width="125" Height="125" Margin="0, 5, 0, 0" />
+                    <TextBlock Text="WW Wall" FontWeight="Bold" />
+
+                    <TextBlock x:Name="tbLW_title"/>
+                    <Canvas x:Name="cnvEffectiveWallAreas_LW" Width="125" Height="125" Margin="0, 5, 0, 0" />
+                    <TextBlock Text="LW Wall" FontWeight="Bold" />
+
+                    <Canvas x:Name="cnvEffectiveWallAreas_SW" Width="125" Height="125" Margin="0, 5, 0, 0" />
+                    <TextBlock Text="SW Wall" FontWeight="Bold" />
+
                 </StackPanel>
 
                 <!-- Building Figures -->
-                <StackPanel Orientation="Vertical" Margin="0,15,0,0">
-
+                <StackPanel Orientation="Vertical">
                     <Canvas x:Name="cnvMWFRSPlan"
                                     Width="200"
                                     Height="200"

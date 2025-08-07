@@ -71,7 +71,7 @@ namespace ShearWallVisualizer.Controls
                     spBuildingData.Children.Add(ctrl);
                 }
 
-                txtTitle_BuildingLengthWalls.Text = "BuildingLength Wall -- " + windLoadCalculator.WallAreaCalculator_BldgLength.Note;
+                txtTitle_BuildingLengthWalls.Text = "Walls -- " + windLoadCalculator.WallAreaCalculator_BldgLength.Note;
 
                 BuildingDrawer.DrawPlan(cnvMWFRSPlan, windLoadCalculator.buildingData);
                 BuildingDrawer.DrawElevation_BuildingLength(cnvMWFRSElevation_BuildingLength, windLoadCalculator.buildingData);
@@ -344,8 +344,12 @@ namespace ShearWallVisualizer.Controls
         private void DrawEffectiveAreas_OnMWFRSResultCanvas()
         {
             cnvEffectiveRoofAreas.Children.Clear();
-            cnvEffectiveWallAreas_Length.Children.Clear();
-            
+            cnvEffectiveWallAreas_WW.Children.Clear();
+            cnvEffectiveWallAreas_LW.Children.Clear();
+            cnvEffectiveWallAreas_SW.Children.Clear();
+
+
+            // Draw the roof areas
             foreach (var area in windLoadCalculator.RoofAreaCalculator.effWindAreas)
             {
                 Rect boundingBox = windLoadCalculator.RoofAreaCalculator.GetBoundingExtents(windLoadCalculator.RoofAreaCalculator.effWindAreas);
@@ -361,17 +365,35 @@ namespace ShearWallVisualizer.Controls
                     area.Value, boundingBox, offsetX, offsetY, color, Brushes.Black, 1);
             }
 
+            // Draw WW wall areas
             foreach (var area in windLoadCalculator.WallAreaCalculator_BldgLength.effWindAreas)
             {
+                Canvas cnv = null;
+
+                switch (area.Value.Label_Short)
+                {
+                    case "WW":
+                        cnv = cnvEffectiveWallAreas_WW;
+                        break;
+                    case "SW":
+                        cnv = cnvEffectiveWallAreas_SW;
+                        break;
+                    case "LW":
+                        cnv = cnvEffectiveWallAreas_LW;
+                        break;
+                }
+
+                if (cnv == null) continue;
+
                 Rect boundingBox = windLoadCalculator.WallAreaCalculator_BldgLength.GetBoundingExtents(windLoadCalculator.WallAreaCalculator_BldgLength.effWindAreas);
-                double canvasWidth = cnvEffectiveWallAreas_Length.ActualWidth;
-                double canvasHeight = cnvEffectiveWallAreas_Length.ActualHeight;
+                double canvasWidth = cnv.ActualWidth;
+                double canvasHeight = cnv.ActualHeight;
 
                 double offsetX = 0;
                 double offsetY = 0;
 
                 Brush color = EffectiveWindAreaRenderer.GetColorForRegion(area.Value.Label_Short);
-                EffectiveWindAreaRenderer.DrawEffectiveWindArea(cnvEffectiveWallAreas_Length,
+                EffectiveWindAreaRenderer.DrawEffectiveWindArea(cnv,
                     windLoadCalculator.buildingData,
                     area.Value, boundingBox, offsetX, offsetY, color, Brushes.Black, 1);
             }

@@ -67,6 +67,7 @@ namespace ShearWallCalculator.WindLoadCalculations
                 var G = 0.85; // gust factor 26.11.1
                 var q_h = CalculateDynamicWindPressure(buildingData.MeanRoofHeight);
                 var _gcpi = GetGCpi();
+
                 targetDict.Add(id, new PressureData()
                 {
                     AreaID = id,
