@@ -1,4 +1,4 @@
-﻿namespace ShearWallCalculator.WindLoadCalculations.WindLoadCalculators
+﻿namespace ShearWallCalculator.WindLoadCalculations
 {
 
     /// <summary>

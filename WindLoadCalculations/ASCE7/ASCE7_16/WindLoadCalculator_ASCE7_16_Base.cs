@@ -2,7 +2,7 @@
 using ShearWallCalculator.WindLoadCalculations.Chapter30.AreaCalculator;
 using System;
 
-namespace ShearWallCalculator.WindLoadCalculations.WindLoadCalculators
+namespace ShearWallCalculator.WindLoadCalculations
 {
     /// <summary>
     ///  In ASCE7-16, the dynamic wind pressure coefficient includes Kd in the dynamic wind calculation.  
@@ -31,7 +31,7 @@ namespace ShearWallCalculator.WindLoadCalculations.WindLoadCalculators
             WindParameters_Base p = Parameters;
 
             double V = p.WindSpeed;
-            double Kd = p.Kd;
+            double Kd = GetKd(Parameters.AnalysisType);
             double Kzt = p.Kzt;
             double I = p.ImportanceFactor;
             double Kz = GetKz(z, p.ExposureCategory);

@@ -1,4 +1,5 @@
-﻿using static ShearWallCalculator.WindLoadCalculations.Chapter27RoofFigureFactory_ASCE7_16;
+﻿using System;
+using System.Collections.Generic;
 
 namespace ShearWallCalculator.WindLoadCalculations
 {
@@ -29,6 +30,43 @@ namespace ShearWallCalculator.WindLoadCalculations
                 upper_curve.RoofCurves_Neg[key],
                 h_over_L, low_val, high_val);
             }
+        }
+    }
+
+    public static class GCpCurveInterpolator
+    {
+        public static ExternalGCpCurve Interpolate(
+            ExternalGCpCurve lowCurve,
+            ExternalGCpCurve highCurve,
+            double inputValue,
+            double lowPoint,
+            double highPoint)
+        {
+            if (inputValue < lowPoint || inputValue > highPoint)
+                throw new ArgumentOutOfRangeException(nameof(inputValue), $"Value must be between {lowPoint} and {highPoint}.");
+
+            double t = (inputValue - lowPoint) / (highPoint - lowPoint);
+
+            var pLow = lowCurve.Points;
+            var pHigh = highCurve.Points;
+
+            if (pLow.Length != pHigh.Length)
+                throw new InvalidOperationException("Curves must have the same number of points.");
+
+            var interpolated = new List<(double X, double Y)>();
+
+            for (int i = 0; i < pLow.Length; i++)
+            {
+                if (pLow[i].X != pHigh[i].X)
+                    throw new InvalidOperationException("Curves must have matching X coordinates.");
+
+                double x = pLow[i].X;
+                double y = pLow[i].Y + (pHigh[i].Y - pLow[i].Y) * t;
+
+                interpolated.Add((x, y));
+            }
+
+            return new ExternalGCpCurve(interpolated.ToArray());
         }
     }
 

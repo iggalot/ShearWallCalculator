@@ -11,7 +11,7 @@
         public NormToRidge_LargeSlope_Roof_High_ASCE7_22(double slope, double area=50)   // set area to 50 to make reduction factor = 1.0
         {
             // Positive ExternalPressure Roof Zones
-            RoofCurves_Pos["ZoneWW"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Pos["ZoneWWR"] = new ExternalGCpCurve(new (double X, double Y)[]
             {
                 (10, -0.18),
                 (15, -0.18),
@@ -24,7 +24,7 @@
                 (80, 0.8)
             });
             // Negative ExternalPressure Roof Zones
-            RoofCurves_Neg["ZoneWW"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Neg["ZoneWWR"] = new ExternalGCpCurve(new (double X, double Y)[]
             {
                 (10, -1.3 * GetReductionFactor(area)),  // TODO: this first value can be reduced by area of WW roof  <= 100 reduction factor = 1.0, 250 reduction factor = 0.9 and >= 1000 reduction factor = 0.8
                 (15, -1.0),
@@ -37,7 +37,7 @@
                 (80, 0.0)
             });
 
-            RoofCurves_Neg["ZoneLW"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Neg["ZoneLWR"] = new ExternalGCpCurve(new (double X, double Y)[]
             {
                 (10, -0.7),
                 (15, -0.6),

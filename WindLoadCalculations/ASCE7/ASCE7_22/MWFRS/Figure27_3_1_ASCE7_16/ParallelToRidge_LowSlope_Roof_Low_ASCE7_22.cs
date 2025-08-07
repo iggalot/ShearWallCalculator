@@ -33,25 +33,25 @@
 
 
             // Most negative values
-            RoofCurves_Pos["Zone4"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Neg["Zone4"] = new ExternalGCpCurve(new (double X, double Y)[]
             {
                 (0,  -0.9),
                 (80, -0.9)
             });
 
-            RoofCurves_Pos["Zone3"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Neg["Zone3"] = new ExternalGCpCurve(new (double X, double Y)[]
             {
                 (0,  -0.9),
                 (80, -0.9)
             });
             
-            RoofCurves_Pos["Zone2"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Neg["Zone2"] = new ExternalGCpCurve(new (double X, double Y)[]
             {
                 (0,  -0.5),
                 (80, -0.5)
             });
             
-            RoofCurves_Pos["Zone1"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Neg["Zone1"] = new ExternalGCpCurve(new (double X, double Y)[]
             {
                 (0,  -0.3),
                 (80, -0.3)

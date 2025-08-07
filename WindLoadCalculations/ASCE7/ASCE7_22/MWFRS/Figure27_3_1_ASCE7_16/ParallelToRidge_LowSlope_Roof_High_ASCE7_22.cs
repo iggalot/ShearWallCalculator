@@ -10,48 +10,48 @@
         public ParallelToRidge_LowSlope_Roof_High_ASCE7_22(double area=50)
         {
             // Most positive (least negative) ExternalPressure Roof Zones
-            RoofCurves_Neg["Zone4"] = new ExternalGCpCurve(new (double X, double Y)[]
-            {
-                (0,  -0.18),
-                (80, -0.18)
-            });
-            
-            RoofCurves_Neg["Zone3"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Pos["Zone4"] = new ExternalGCpCurve(new (double X, double Y)[]
             {
                 (0,  -0.18),
                 (80, -0.18)
             });
 
-            RoofCurves_Neg["Zone2"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Pos["Zone3"] = new ExternalGCpCurve(new (double X, double Y)[]
             {
                 (0,  -0.18),
                 (80, -0.18)
             });
 
-            RoofCurves_Neg["Zone1"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Pos["Zone2"] = new ExternalGCpCurve(new (double X, double Y)[]
+            {
+                (0,  -0.18),
+                (80, -0.18)
+            });
+
+            RoofCurves_Pos["Zone1"] = new ExternalGCpCurve(new (double X, double Y)[]
             {
                 (0,  -0.18),
                 (80, -0.18)
             });
 
             // Most negative values
-            RoofCurves_Pos["Zone4"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Neg["Zone4"] = new ExternalGCpCurve(new (double X, double Y)[]
             {
                 (0, -1.3 * GetReductionFactor(area)),  // TODO: this first value can be reduced by area of WW roof  <= 100 reduction factor = 1.0, 250 reduction factor = 0.9 and >= 1000 reduction factor = 0.8
                 (80, -1.3 * GetReductionFactor(area)),  // TODO: this first value can be reduced by area of WW roof  <= 100 reduction factor = 1.0, 250 reduction factor = 0.9 and >= 1000 reduction factor = 0.8
             });
 
-            RoofCurves_Pos["Zone3"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Neg["Zone3"] = new ExternalGCpCurve(new (double X, double Y)[]
             {
                 (0,  -0.7),
                 (80, -0.7)
             });
-            RoofCurves_Pos["Zone2"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Neg["Zone2"] = new ExternalGCpCurve(new (double X, double Y)[]
 {
                 (0,  -0.7),
                 (80, -0.7)
 });
-            RoofCurves_Pos["Zone1"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Neg["Zone1"] = new ExternalGCpCurve(new (double X, double Y)[]
 {
                 (0,  -0.7),
                 (80, -0.7)

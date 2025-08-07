@@ -1,6 +1,5 @@
 ﻿using ShearWallCalculator.BuildingInfo;
 using ShearWallCalculator.WindLoadCalculations.ASCE7;
-using ShearWallCalculator.WindLoadCalculations.WindLoadCalculators;
 using System;
 using System.Collections.Generic;
 
@@ -51,6 +50,12 @@ namespace ShearWallCalculator.WindLoadCalculations
             }
         }
 
+        /// <summary>
+        /// In ASCE7-22, the calculations for pressure are multiplied by Kd after qh is calculated.
+        /// In ASCE7-16 they are included in the dynamic wind pressure calculation for qh.
+        /// </summary>
+        /// <param name="tryGetGcp"></param>
+        /// <param name="targetDict"></param>
         private void CalculateRoofPressures(
             TryGetGcpDelegate tryGetGcp,
             Dictionary<int, PressureData> targetDict

@@ -1,10 +1,10 @@
 ﻿namespace ShearWallCalculator.WindLoadCalculations
 {
-    public class ParallelToRidge_LowSlope_Roof_High : Chapter27and30_GCpCurveBase
+    public class ParallelToRidge_LowSlope_Roof_High_ASCE7_16 : Chapter27and30_GCpCurveBase
     {
         public override string ChartTitle { get; set; } = "ASCE 7-16 Figure 27.3-1";
         public override string ChartCriteria { get; set; } = "Parallel to Ridge for slope or slope <= 10deg  -- h/L >= 1.0";
-        public ParallelToRidge_LowSlope_Roof_High(double area=50)
+        public ParallelToRidge_LowSlope_Roof_High_ASCE7_16(double area=50)
         {
             // Positive ExternalPressure Roof Zones
             RoofCurves_Pos["Zone4"] = new ExternalGCpCurve(new (double X, double Y)[]

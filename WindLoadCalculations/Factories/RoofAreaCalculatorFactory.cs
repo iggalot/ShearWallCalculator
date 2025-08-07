@@ -115,6 +115,7 @@ namespace ShearWallCalculator.WindLoadCalculations
                 }
                 else if (parameters.AnalysisType == WindLoadCalculationTypes.MWFRS)
                 {
+
                     if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_FLAT)
                     {
                         return new FlatRoofAreaCalculator_NoRidge_MWFRS_ASCE7_22(bldg_data);
@@ -157,7 +158,11 @@ namespace ShearWallCalculator.WindLoadCalculations
                             return new HipRoofAreaCalculator_ParallelToRidge_MWFRS_ASCE7_22(bldg_data);
                         }
                     }
-                } 
+                    else
+                    {
+                        throw new NotImplementedException("ERROR: Invalid roof type: " + bldg_data.RoofType + " in RoofAreaCalculatorFactory.");
+                    }
+                }
                 else
                 {
                     throw new NotImplementedException("ERROR: Invalid analysis type: " + parameters.AnalysisType + " in RoofAreaCalculatorFactory.");

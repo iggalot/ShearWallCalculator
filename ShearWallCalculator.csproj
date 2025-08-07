@@ -121,11 +121,11 @@
     <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\MWFRS\Figure27_3_1_ASCE7_16\Chapter27RoofFigureFactory_ASCE7_16.cs" />
     <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\MWFRS\AreaCalculators\WallAreaCalculator_MWFRS_ASCE7_22.cs" />
     <Compile Include="WindLoadCalculations\ASCE7\InterpolatedCpCurve.cs" />
-    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\MWFRS\Figure27_3_1_ASCE7_16\ParallelToRidge_LowSlope_Roof_High.cs" />
-    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\MWFRS\Figure27_3_1_ASCE7_16\ParallelToRidge_LowSlope_Roof_Low.cs" />
-    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\MWFRS\Figure27_3_1_ASCE7_16\NormToRidge_LargeSlope_Roof_High.cs" />
-    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\MWFRS\Figure27_3_1_ASCE7_16\NormToRidge_LargeSlope_Roof_Mid.cs" />
-    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\MWFRS\Figure27_3_1_ASCE7_16\NormToRidge_LargeSlope_Roof_Low.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\MWFRS\Figure27_3_1_ASCE7_16\ParallelToRidge_LowSlope_Roof_High_ASCE7_16.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\MWFRS\Figure27_3_1_ASCE7_16\ParallelToRidge_LowSlope_Roof_Low_ASCE7_16.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\MWFRS\Figure27_3_1_ASCE7_16\NormToRidge_LargeSlope_Roof_High_ASCE7_16.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\MWFRS\Figure27_3_1_ASCE7_16\NormToRidge_LargeSlope_Roof_Mid_ASCE7_16.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\MWFRS\Figure27_3_1_ASCE7_16\NormToRidge_LargeSlope_Roof_Low_ASCE7_16.cs" />
     <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\AreaCalculator_ASCE7_22_Base.cs" />
     <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\CC\AreaCalculators\AreaCalculator_CC_ASCE7_22_Base.cs" />
     <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\CC\AreaCalculators\FlatRoofAreaCalculator_CC_ASCE7_22.cs" />

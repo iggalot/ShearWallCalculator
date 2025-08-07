@@ -1,10 +1,10 @@
 ﻿namespace ShearWallCalculator.WindLoadCalculations
 {
-    public class NormToRidge_LargeSlope_Roof_High : Chapter27and30_GCpCurveBase
+    public class NormToRidge_LargeSlope_Roof_High_ASCE7_16 : Chapter27and30_GCpCurveBase
     {
         public override string ChartTitle { get; set; } = "ASCE 7-16 Figure 27.3-1";
         public override string ChartCriteria { get; set; } = "Normal to Ridge for slope >= 10deg  -- h/L = 1.0";
-        public NormToRidge_LargeSlope_Roof_High(double slope, double area=50)   // set area to 50 to make reduction factor = 1.0
+        public NormToRidge_LargeSlope_Roof_High_ASCE7_16(double slope, double area=50)   // set area to 50 to make reduction factor = 1.0
         {
             // Positive ExternalPressure Roof Zones
             RoofCurves_Pos["ZoneWWR"] = new ExternalGCpCurve(new (double X, double Y)[]

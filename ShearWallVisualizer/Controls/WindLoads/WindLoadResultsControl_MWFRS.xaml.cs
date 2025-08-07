@@ -207,6 +207,7 @@ namespace ShearWallVisualizer.Controls
                 // negative max GCp value
                 if (windLoadCalculator.windPressureRoof_Neg_External.TryGetValue(area.Key, out ext_pressure))
                 {
+                    data.qh = ext_pressure.qh;
                     data.GCp_B = ext_pressure.GCp;
                     data.Press_B = ext_pressure.ExternalPressure;
                     data.NetPress_B = ext_pressure.NetPressure;
