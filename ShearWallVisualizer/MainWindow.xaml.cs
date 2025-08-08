@@ -442,27 +442,26 @@ namespace ShearWallVisualizer
         /// <param name="e"></param>
         private void WindLoadInputControl_WindInputComplete(object sender, WindLoadInputControl.OnWindInputCompleteEventArgs e)
         {
-            if(windLoadCalculator_CC != null)
+            if(e._windLoadCalculator_CC != null)
             {
                 windLoadCalculator_CC = e._windLoadCalculator_CC;
                 windVersion = e._windLoadCalculator_CC.ASCEVersion;
                 windLoadParams = e._windLoadCalculator_CC.Parameters;
             }
 
-            if(windLoadCalculator_MWFRS_Length != null)
+            if(e._windLoadCalculator_MWFRS_Length != null)
             {
                 windLoadCalculator_MWFRS_Length = e._windLoadCalculator_MWFRS_Length;
             }
 
-            if(windLoadCalculator_MWFRS_Width != null)
+            if(e._windLoadCalculator_MWFRS_Width != null)
             {
                 windLoadCalculator_MWFRS_Width = e._windLoadCalculator_MWFRS_Width;
             }
 
-
-
             WindLoadResultsControl_CC ccControl1;
             WindLoadResultsControl_MWFRS mwfrsControl1, mwfrsControl2;
+
             CreateAndAssignResultControls(out ccControl1, out mwfrsControl1, out mwfrsControl2);
 
             UpdateShearWallUI();
