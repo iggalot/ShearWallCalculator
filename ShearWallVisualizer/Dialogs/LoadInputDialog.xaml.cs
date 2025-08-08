@@ -1,4 +1,5 @@
-﻿using ShearWallVisualizer.Controls;
+﻿using ASCE7WindLoadCalculator;
+using ShearWallVisualizer.Controls;
 using System.Windows;
 using System.Windows.Media;
 

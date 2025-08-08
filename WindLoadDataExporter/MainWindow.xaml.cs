@@ -1,10 +1,6 @@
-﻿using ShearWallCalculator.BuildingInfo;
-using ShearWallCalculator.WindLoadCalculations;
-using ShearWallCalculator.WindLoadCalculations.WindLoadCalculators;
+﻿using ASCE7WindLoadCalculator;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Text;
 using System.Windows;
 
 namespace WindLoadDataExporter

@@ -1,13 +1,10 @@
-﻿using calculator;
+﻿using ASCE7WindLoadCalculator;
+using calculator;
 using Microsoft.Win32;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using ShearWallCalculator;
-using ShearWallCalculator.BuildingInfo;
-using ShearWallCalculator.Helpers;
 using ShearWallCalculator.Interfaces;
-using ShearWallCalculator.WindLoadCalculations;
-using ShearWallCalculator.WindLoadCalculations.WindLoadCalculators;
 using ShearWallVisualizer.Controls;
 using ShearWallVisualizer.Dialogs;
 using ShearWallVisualizer.Helpers;

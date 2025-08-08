@@ -4,7 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ShearWallVisualizer.Dialogs"
-        xmlns:ctrl="clr-namespace:ShearWallVisualizer.Controls"
+        xmlns:ctrl="clr-namespace:ASCE7WindLoadCalculator;assembly=ASCE7WindLoadCalculator"
         mc:Ignorable="d"
         Title="Enter Load Information" SizeToContent="WidthAndHeight">
     <StackPanel Orientation="Horizontal">

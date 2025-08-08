@@ -2,9 +2,7 @@
 using ShearWallCalculator;
 using System;
 using System.Drawing;
-using System.IO;
 using System.Numerics;
-using System.Windows.Media;
 
 namespace calculator
 {

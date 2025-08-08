@@ -58,12 +58,6 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="Controls\BuildingData\BuildingDataInputControl.xaml.cs">
-      <DependentUpon>BuildingDataInputControl.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Controls\BuildingData\BuildingInfoSummaryControl.xaml.cs">
-      <DependentUpon>BuildingInfoSummaryControl.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Controls\ImagePreviewControl.xaml.cs">
       <DependentUpon>ImagePreviewControl.xaml</DependentUpon>
     </Compile>
@@ -82,14 +76,6 @@
     <Compile Include="Controls\DiaphragmSystemControl.xaml.cs">
       <DependentUpon>DiaphragmSystemControl.xaml</DependentUpon>
     </Compile>
-    <Page Include="Controls\BuildingData\BuildingDataInputControl.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Controls\BuildingData\BuildingInfoSummaryControl.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Page Include="Controls\DiaphragmDataControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -126,22 +112,6 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Controls\WindLoads\WindLoadGraphicCanvas.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Controls\WindLoads\WindLoadResultsControl_CC.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Controls\WindLoads\WindLoadResultsControl_MWFRS.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Controls\WindLoads\WindLoadInputControl.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Page Include="Dialogs\EnterMeasurementDialog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -172,18 +142,6 @@
     <Compile Include="Controls\ShearWallResultsControl_Rigid.xaml.cs">
       <DependentUpon>ShearWallResultsControl_Rigid.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Controls\WindLoads\WindLoadGraphicCanvas.xaml.cs">
-      <DependentUpon>WindLoadGraphicCanvas.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Controls\WindLoads\WindLoadResultsControl_CC.xaml.cs">
-      <DependentUpon>WindLoadResultsControl_CC.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Controls\WindLoads\WindLoadResultsControl_MWFRS.xaml.cs">
-      <DependentUpon>WindLoadResultsControl_MWFRS.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Controls\WindLoads\WindLoadInputControl.xaml.cs">
-      <DependentUpon>WindLoadInputControl.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Dialogs\EnterMeasurementDialog.xaml.cs">
       <DependentUpon>EnterMeasurementDialog.xaml</DependentUpon>
     </Compile>
@@ -193,10 +151,7 @@
     <Compile Include="Dialogs\LoadInputDialog.xaml.cs">
       <DependentUpon>LoadInputDialog.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Helpers\BuildingDrawer.cs" />
     <Compile Include="Helpers\DrawingHelpers.cs" />
-    <Compile Include="Helpers\EffectiveWindAreaRenderer.cs" />
-    <Compile Include="Helpers\FigureDrawer.cs" />
     <Compile Include="Helpers\MathHelpers.cs" />
     <Compile Include="Helpers\TabControlManager.cs" />
     <Compile Include="ImageLayer.cs" />
@@ -236,6 +191,10 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\ASCE7WindLoadCalculator\ASCE7WindLoadCalculator.csproj">
+      <Project>{bf46f412-7e29-442d-8dc8-6bb94a8afa68}</Project>
+      <Name>ASCE7WindLoadCalculator</Name>
+    </ProjectReference>
     <ProjectReference Include="..\ShearWallCalculator.csproj">
       <Project>{482e885f-e3a1-45d1-8d5b-29faa85bf317}</Project>
       <Name>ShearWallCalculator</Name>
