@@ -39,6 +39,7 @@
             </Grid>
             <StackPanel Orientation="Horizontal">
                 <StackPanel Orientation="Horizontal" Name="gridASCEWind" Margin="10" Visibility="Collapsed">
+                    <ctrl:BuildingDataInputControl x:Name="ctrBuildingDataInputControl" Margin="5"  />
                     <ctrl:WindLoadInputControl x:Name="ctrlWindLoadInputControl" Margin="5"  />
                 </StackPanel>
             </StackPanel>

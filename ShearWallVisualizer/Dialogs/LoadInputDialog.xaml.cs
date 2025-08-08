@@ -1,5 +1,4 @@
 ﻿using ASCE7WindLoadCalculator;
-using ShearWallVisualizer.Controls;
 using System.Windows;
 using System.Windows.Media;
 
@@ -14,12 +13,17 @@ namespace ShearWallVisualizer.Dialogs
             MODE_ASCEWIND = 1
         }
 
+        private BuildingData buildingData;
         private LoadInputModes inputMode;
 
         public double MagnitudeX { get; private set; }
         public double MagnitudeY { get; private set; }
 
-        public LoadInputDialog(double initialMagX = 0, double initialLocX = 0,
+        public LoadInputDialog(
+            BuildingData buildingData,
+            WindParameters_Base parameters = null,
+            ASCE7_Versions version = ASCE7_Versions.ASCE_VER_7_16,
+            double initialMagX = 0, double initialLocX = 0,
                                double initialMagY = 0, double initialLocY = 0)
         {
             InitializeComponent();
@@ -27,7 +31,13 @@ namespace ShearWallVisualizer.Dialogs
             MagnitudeXBox.Text = initialMagX.ToString();
             MagnitudeYBox.Text = initialMagY.ToString();
 
-            ctrlWindLoadInputControl.WindInputComplete += WindCalculated; // the listener event for the ASCE wind load calcs
+            this.Loaded += (s, e) =>
+            {
+                ctrBuildingDataInputControl.Content = new BuildingDataInputControl(buildingData);
+                ctrlWindLoadInputControl.Content = new WindLoadInputControl(buildingData); // pass the initial values to the ctrBuildingDataInputControl.
+
+                ctrlWindLoadInputControl.WindInputComplete += WindCalculated; // the listener event for the ASCE wind load calcs
+            };
         }
 
         private void WindCalculated(object sender, WindLoadInputControl.OnWindInputCompleteEventArgs e)
@@ -99,6 +109,7 @@ namespace ShearWallVisualizer.Dialogs
         private void btnASCEWind_Click(object sender, RoutedEventArgs e)
         {
             inputMode = LoadInputModes.MODE_ASCEWIND;
+
             Update();
         }
 

@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\ASCE7WindLoadCalculator\ASCE7WindLoadCalculator.csproj" />
+    <ProjectReference Include="..\..\ASCE7-Wind-Load-Calculator\ASCE7WindLoadCalculator.csproj" />
     <ProjectReference Include="..\ShearWallCalculator.csproj" />
   </ItemGroup>
 

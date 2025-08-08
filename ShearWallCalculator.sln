@@ -11,7 +11,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShearWallVisualizer", "Shea
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WindLoadDataExporter", "WindLoadDataExporter\WindLoadDataExporter.csproj", "{983703E2-4E32-4DA2-BFF7-67BBDE970DE5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ASCE7WindLoadCalculator", "..\ASCE7WindLoadCalculator\ASCE7WindLoadCalculator.csproj", "{BF46F412-7E29-442D-8DC8-6BB94A8AFA68}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ASCE7WindLoadCalculator", "..\ASCE7-Wind-Load-Calculator\ASCE7WindLoadCalculator.csproj", "{BF46F412-7E29-442D-8DC8-6BB94A8AFA68}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
