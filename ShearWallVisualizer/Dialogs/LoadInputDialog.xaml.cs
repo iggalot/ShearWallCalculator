@@ -1,10 +1,13 @@
 ﻿using ASCE7WindLoadCalculator;
+using System;
 using System.Windows;
 using System.Windows.Media;
 
 namespace ShearWallVisualizer.Dialogs
 {
-
+    /// <summary>
+    /// This class comptues the ASCE7 wind loads on our shear wall building, or allows manual override of the loads to be used in the shear wall calculator
+    /// </summary>
     public partial class LoadInputDialog : Window
     {
         private enum LoadInputModes
@@ -13,8 +16,24 @@ namespace ShearWallVisualizer.Dialogs
             MODE_ASCEWIND = 1
         }
 
-        private BuildingData buildingData;
+        /// the event that signals that the loads have been computed -- controls will listen for this at the time they are created.
+        public event EventHandler<OnLoadsComputedCompleteEventArgs> LoadsComputedComplete;  
+        public class OnLoadsComputedCompleteEventArgs : EventArgs
+        {
+            public double _magnitude_x { get; set;  }
+            public double _magnitude_y { get; set; }
+
+            public OnLoadsComputedCompleteEventArgs(double x, double y)
+            {
+                _magnitude_x = x;
+                _magnitude_y = y;
+            }
+        }
+
         private LoadInputModes inputMode;
+        private BuildingData _buildingData;
+        private WindParameters_Base _parameters;
+        private ASCE7_Versions _version;
 
         public double MagnitudeX { get; private set; }
         public double MagnitudeY { get; private set; }
@@ -28,29 +47,108 @@ namespace ShearWallVisualizer.Dialogs
         {
             InitializeComponent();
 
+            _buildingData = buildingData;
+            _parameters = parameters;
+            _version = version;
+
             MagnitudeXBox.Text = initialMagX.ToString();
             MagnitudeYBox.Text = initialMagY.ToString();
 
             this.Loaded += (s, e) =>
             {
-                ctrBuildingDataInputControl.Content = new BuildingDataInputControl(buildingData);
-                ctrlWindLoadInputControl.Content = new WindLoadInputControl(buildingData); // pass the initial values to the ctrBuildingDataInputControl.
+                var buildingControl = new BuildingDataInputControl(buildingData);
+                //buildingControl.BuildingDataInputComplete += BuildingInputCompleted;
+                ctrBuildingDataInputControl.Content = buildingControl;
+                buildingControl.BuildingDataInputComplete += BuildingInputCompleted;
 
-                ctrlWindLoadInputControl.WindInputComplete += WindCalculated; // the listener event for the ASCE wind load calcs
+                var windControl = new WindLoadInputControl(buildingData, version, parameters); // pass the initial values to the ctrBuildingDataInputControl.
+                windControl.WindInputComplete += WindCalculated; // the listener event for the ASCE wind load calcs
+                ctrlWindLoadInputControl.Content = windControl;
             };
         }
 
+        /// <summary>
+        /// The task to do when the building data has been entered
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void BuildingInputCompleted(object sender, BuildingDataInputControl.OnBuildingDataInputCompleteEventArgs e)
+        {
+            _buildingData = e._bldg_data;
+
+            //MessageBox.Show("Building data has been changed.");
+            if(ctrlWindLoadInputControl.Content is WindLoadInputControl oldControl)
+            {
+                oldControl.WindInputComplete -= WindCalculated;  // clear the old event
+                ctrlWindLoadInputControl.Content = null;
+            }
+
+            // rebuild the wind control event
+            var windControl = new WindLoadInputControl(_buildingData, _version, _parameters); // pass the initial values to the ctrBuildingDataInputControl.
+            windControl.WindInputComplete += WindCalculated; // the listener event for the ASCE wind load calcs
+            ctrlWindLoadInputControl.Content = windControl;
+        }
+
+        /// <summary>
+        /// The tasks to do when the wind load data has been entered
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void WindCalculated(object sender, WindLoadInputControl.OnWindInputCompleteEventArgs e)
         {
-            //MagnitudeX = 100;
-            //MagnitudeY = 100;
+            var calculator_cc = e._windLoadCalculator_CC; ;
+            var calculator_mwfrs_length = e._windLoadCalculator_MWFRS_Length;
+            var calculator_mwfrs_width = e._windLoadCalculator_MWFRS_Width;
 
-            //gridASCEWind.Visibility = Visibility.Visible;
-            //WindLoadResultsControl_MWFRS wlrc_MWFRS = new WindLoadResultsControl_MWFRS(e._parameters, e._bldg_data);
-            //gridASCEWind.Children.Add(wlrc_MWFRS);
+            double magX = 0;
+            if (calculator_mwfrs_length != null)
+            {
+                foreach (var areaEntry in calculator_mwfrs_length.WallAreaCalculator_BldgLength.effWindAreas)
+                {
+                    // look for the ID to a "WW" windward wall and add this to the total
+                    if (areaEntry.Value.Label_Short == "WW")
+                    {
+                        int id = areaEntry.Key;
+                        var area = areaEntry.Value.Area;
+                        magX += calculator_mwfrs_length.windPressureWall_Pos_External_MWFRS[id].NetPressure * area;
+                    }
 
-            //DialogResult = true; // signal that the input is complete
-            //Close();
+                    // look for the ID to a "LW" windward wall and subtract this value
+                    if (areaEntry.Value.Label_Short == "LW")
+                    {
+                        int id = areaEntry.Key;
+                        var area = areaEntry.Value.Area;
+                        magX += (-1.0) * calculator_mwfrs_length.windPressureWall_Neg_External_MWFRS[id].NetPressure * area;
+
+                    }
+                }
+            }
+
+            double magY = 0;
+            if (calculator_mwfrs_width != null)
+            {
+                foreach (var areaEntry in calculator_mwfrs_width.WallAreaCalculator_BldgLength.effWindAreas)
+                {
+                    // look for the ID to a "WW" windward wall and add this to the total
+                    if (areaEntry.Value.Label_Short == "WW")
+                    {
+                        int id = areaEntry.Key;
+                        var area = areaEntry.Value.Area;
+                        magY += calculator_mwfrs_width.windPressureWall_Pos_External_MWFRS[id].NetPressure * area;
+                    }
+
+                    // look for the ID to a "LW" windward wall and subtract this value
+                    if (areaEntry.Value.Label_Short == "LW")
+                    {
+                        int id = areaEntry.Key;
+                        var area = areaEntry.Value.Area;
+                        magY += (-1.0) * calculator_mwfrs_width.windPressureWall_Neg_External_MWFRS[id].NetPressure * area;
+                    }
+                }
+            }
+
+            MagnitudeX = magX;
+            MagnitudeY = magY;
         }
 
         private void Update()
@@ -77,24 +175,39 @@ namespace ShearWallVisualizer.Dialogs
                     btnASCEWind.BorderThickness = new Thickness(3);
                     btnASCEWind.Background = new SolidColorBrush(Colors.SeaGreen);
                     break;
+                default:
+                    throw new NotImplementedException("ERROR: In LoadInputDialog.cs in Update() -- LoadInputModes: " + inputMode + " not implemented.");
             }
         }
 
         private void OkButton_Click(object sender, RoutedEventArgs e)
         {
-            if (!double.TryParse(MagnitudeXBox.Text, out double magX))
+            double magX = MagnitudeX;
+            double magY = MagnitudeY;
+            if(inputMode == LoadInputModes.MODE_MANUAL)
             {
-                MessageBox.Show("Invalid input for Load Magnitude X", "Input Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
+                if (!double.TryParse(MagnitudeXBox.Text, out magX))
+                {
+                    MessageBox.Show("Invalid input for Load Magnitude X", "Input Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+                if (!double.TryParse(MagnitudeYBox.Text, out magY))
+                {
+                    MessageBox.Show("Invalid input for Load Magnitude Y", "Input Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                MagnitudeX = magX;
+                MagnitudeY = magY;
             }
-            if (!double.TryParse(MagnitudeYBox.Text, out double magY))
+            
+            // parse the ASCE wind load calculations
+            else if (inputMode == LoadInputModes.MODE_ASCEWIND)
             {
-                MessageBox.Show("Invalid input for Load Magnitude Y", "Input Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
+
             }
 
-            MagnitudeX = magX;
-            MagnitudeY = magY;
+            OnLoadsComputed(MagnitudeX, MagnitudeY);
 
             DialogResult = true; // signal that the input is complete
             Close();
@@ -117,6 +230,11 @@ namespace ShearWallVisualizer.Dialogs
         {
             inputMode = LoadInputModes.MODE_MANUAL;
             Update();
+        }
+
+        public virtual void OnLoadsComputed(double x, double y)
+        {
+            LoadsComputedComplete?.Invoke(this, new OnLoadsComputedCompleteEventArgs(x, y));
         }
     }
 }

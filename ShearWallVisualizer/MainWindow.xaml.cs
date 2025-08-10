@@ -48,7 +48,7 @@ namespace ShearWallVisualizer
         public BuildingData buildingData { get; set; } = null;
 
         /// <summary>
-        /// The three calculators for this project
+        /// The three wind load calculators for this project
         /// </summary>
         public WindLoadCalculator_Base windLoadCalculator_MWFRS_Length { get; set; }
         public WindLoadCalculator_Base windLoadCalculator_MWFRS_Width { get; set; }
@@ -139,12 +139,8 @@ namespace ShearWallVisualizer
                 tabWindInputControlTabItem.Content = ctrol_wind_input;
 
                 // create the wind load results controls
-                WindLoadResultsControl_CC ccControl1;
-                WindLoadResultsControl_MWFRS mwfrsControl1, mwfrsControl2;
-                CreateAndAssignResultControls(out ccControl1, out mwfrsControl1, out mwfrsControl2);
-                tabWindResultsTabItem_MWFRS_BldgLength.Content = mwfrsControl1;
-                tabWindResultsTabItem_MWFRS_BldgWidth.Content = mwfrsControl1;
-                tabWindResultsTabItem_CC.Content = ccControl1;
+                CreateAndAssignResultControls();
+
 
                 ResetView(); // reset the view so that origin 0,0 is at lower left of the corner screen and the model is zoomed to fill the entire window
                 LoadRecentFilesMenu();  // recent files menu
@@ -459,10 +455,7 @@ namespace ShearWallVisualizer
                 windLoadCalculator_MWFRS_Width = e._windLoadCalculator_MWFRS_Width;
             }
 
-            WindLoadResultsControl_CC ccControl1;
-            WindLoadResultsControl_MWFRS mwfrsControl1, mwfrsControl2;
-
-            CreateAndAssignResultControls(out ccControl1, out mwfrsControl1, out mwfrsControl2);
+            CreateAndAssignResultControls();
 
             UpdateShearWallUI();
         }
@@ -474,17 +467,17 @@ namespace ShearWallVisualizer
         /// <param name="ccControl1"></param>
         /// <param name="mwfrsControl1"></param>
         /// <param name="mwfrsControl2"></param>
-        private void CreateAndAssignResultControls(out WindLoadResultsControl_CC ccControl1, out WindLoadResultsControl_MWFRS mwfrsControl1, out WindLoadResultsControl_MWFRS mwfrsControl2)
+        private void CreateAndAssignResultControls()
         {
-            ccControl1 = new WindLoadResultsControl_CC(windLoadCalculator_CC);
+            var ccControl1 = new WindLoadResultsControl_CC(windLoadCalculator_CC);
             tabWindResultsTabItem_CC.Content = ccControl1;
             TabControlManager.ReAddTab(MainTabControl, "tabWindResultsTabItem_CC");
 
-            mwfrsControl1 = new WindLoadResultsControl_MWFRS(windLoadCalculator_MWFRS_Length);
+            var mwfrsControl1 = new WindLoadResultsControl_MWFRS(windLoadCalculator_MWFRS_Length);
             tabWindResultsTabItem_MWFRS_BldgLength.Content = mwfrsControl1;
             TabControlManager.ReAddTab(MainTabControl, "tabWindResultsTabItem_MWFRS_BldgLength");
 
-            mwfrsControl2 = new WindLoadResultsControl_MWFRS(windLoadCalculator_MWFRS_Width);
+            var mwfrsControl2 = new WindLoadResultsControl_MWFRS(windLoadCalculator_MWFRS_Width);
             tabWindResultsTabItem_MWFRS_BldgWidth.Content = mwfrsControl2;
             TabControlManager.ReAddTab(MainTabControl, "tabWindResultsTabItem_MWFRS_BldgWidth");
         }
