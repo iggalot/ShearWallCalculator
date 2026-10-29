@@ -16,7 +16,8 @@ Check out a matching pair of commits when you build an older version.
 | `dev/wind-core-refactor` (fixes after first test drive) | `dev/wind-core-refactor @ 2e54420` | Crash fixes, ridge-correct zoning, tapered windward wall, pressure blocks, layout |
 | `dev/wind-core-refactor @ ea3703e` (M6) | `dev/wind-core-refactor @ 17d5075` | Lateral wind loads, Fig. 27.3-8 load cases into the shear walls |
 | `dev/wind-core-refactor @ ef727a9` (M5) | `dev/wind-core-refactor @ 2f7bcf4` | Guided Wind Setup tab (Site, Building, Results) |
-| `dev/wind-core-refactor` (M5 revisions) | `dev/wind-core-refactor @ c0fb7b2` | One-screen steps, prototype results layout, live shear-wall link |
+| `dev/wind-core-refactor @ 733a36c` (M5 revisions) | `dev/wind-core-refactor @ c0fb7b2` | One-screen steps, prototype results layout, live shear-wall link |
+| `dev/wind-core-refactor` (M5 polish) | `dev/wind-core-refactor @ e122a8c` | Wind workspace, default wind link, compact viewer |
 
 ## Building
 

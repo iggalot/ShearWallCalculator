@@ -166,7 +166,8 @@ namespace ShearWallVisualizer
                 TabControlManager.ReAddTab(MainTabControl, "tabWindSetupTabItem");
                 TabControlManager.ReAddTab(MainTabControl, "tabBuildingDataControlTabItem");
                 TabControlManager.ReAddTab(MainTabControl, "tabWindInputControlTabItem");
-                RecalculateWind(); // adds the results tabs for the starting inputs
+                RecalculateWind(); // adds the results tabs for the starting inputs (and links the wind loads)
+                UpdateShearWallUI();
                 MainTabControl.SelectedItem = tabWindSetupTabItem;
             };
         }
@@ -207,7 +208,8 @@ namespace ShearWallVisualizer
                 OnUpdated?.Invoke(this, EventArgs.Empty); // signal that the window has been updated -- so that subcontrols can refresh
 
                 // update the load info display
-                LoadInfoTextBlock.Text = $"X: {Calculator.V_x} | Y: {Calculator.V_y}";
+                LoadInfoTextBlock.Text = (windLoadsLinked ? "Loads: ASCE 7 wind (auto)" : "Loads: MANUAL") +
+                                         $"  X: {Calculator.V_x:0.0} k | Y: {Calculator.V_y:0.0} k";
             }
 
             // UpdateShearWallUI the button appearances
@@ -497,11 +499,12 @@ namespace ShearWallVisualizer
         }
 
         /// <summary>
-        /// True once the shear walls take their loads from the wind calculation. From then on every wind or
-        /// building change re-sends the load cases, so the walls never keep loads from an earlier building.
-        /// Entering a manual load (or opening a file) ends the link.
+        /// True while the shear walls take their loads from the wind calculation (the default). Every wind or
+        /// building change then re-sends the load cases, so the walls never keep loads from an earlier
+        /// building. Entering a manual load, or opening a file, ends the link; the Wind Setup screen then
+        /// shows a warning with a button to link again.
         /// </summary>
-        private bool windLoadsLinked;
+        private bool windLoadsLinked = true;
 
         /// <summary>When linked, replaces the shear-wall load cases with those for the current wind results.</summary>
         private void ApplyLinkedWindLoads()
@@ -512,7 +515,7 @@ namespace ShearWallVisualizer
             {
                 Calculator.SetLoadCases(new List<ShearWallCalculator.LateralLoadCase>()); // no stale loads
                 windSetup?.SetShearWallLink(true,
-                    "The wind inputs cannot be calculated, so the shear walls have no wind load right now. Fix the inputs and they update automatically.");
+                    "But the wind inputs cannot be calculated right now, so the walls have no wind load. Fix the inputs and the walls update automatically.");
                 return;
             }
 
@@ -522,15 +525,15 @@ namespace ShearWallVisualizer
             Calculator.SetLoadCases(lateral.LoadCases
                 .Select(c => new ShearWallCalculator.LateralLoadCase(c.Name, c.Vx, c.Vy, c.Mt, applyMinimumEccentricity: false)));
             windSetup?.SetShearWallLink(true,
-                $"Shear walls use these wind loads: {lateral.LoadCases.Count} load cases, from west {lateral.AlongLength.DesignKips:0.0} kips, " +
-                $"from south {lateral.AlongWidth.DesignKips:0.0} kips. They update automatically when anything changes. " +
-                "Each wall's governing case is on the Calculations tab.");
+                $"{lateral.LoadCases.Count} load cases (from W {lateral.AlongLength.DesignKips:0.0} k, from S {lateral.AlongWidth.DesignKips:0.0} k). " +
+                "Updated automatically on every change. Results per wall: Calculations tab.");
         }
 
-        private void UnlinkWindLoads()
+        /// <param name="reason">Shown in the warning on the Wind Setup screen.</param>
+        private void UnlinkWindLoads(string reason)
         {
             windLoadsLinked = false;
-            windSetup?.SetShearWallLink(false, null);
+            windSetup?.SetShearWallLink(false, reason);
         }
         /// <summary>
         /// Event listener for when input of the wind loads as been completed -- to save our wind calculators and update the UI
@@ -1987,8 +1990,10 @@ namespace ShearWallVisualizer
                 }
                 else
                 {
-                    UnlinkWindLoads(); // a manual load is the user's own number; never overwrite it
+                    // A manual load is the user's own number; never overwrite it, but say so on the wind screen.
                     Calculator.AddLoads(dialog.MagnitudeX, dialog.MagnitudeY);
+                    UnlinkWindLoads($"They use your manual load (X = {dialog.MagnitudeX:0.##} k, Y = {dialog.MagnitudeY:0.##} k). " +
+                                    "Click the button below to use the wind loads instead.");
                 }
                 UpdateShearWallUI();  // update the calculator
             }
@@ -2089,7 +2094,7 @@ namespace ShearWallVisualizer
             {
                 Calculator = null;  // delete any previous calculators we have
             }
-            UnlinkWindLoads(); // the opened file brings its own loads
+            UnlinkWindLoads("They use the loads saved in the opened file. Click the button below to use the wind loads instead.");
 
             UpdateShearWallUI();
 
@@ -2386,6 +2391,16 @@ namespace ShearWallVisualizer
 
         private void MainTabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            // The wind setup and 3D wind screens get the whole window: the shear-wall drawing and its toolbar
+            // are not used there. Every other tab shows them as before.
+            if (ReferenceEquals(e.OriginalSource, MainTabControl))
+            {
+                bool windWorkspace = tabWindSetupTabItem.IsSelected || tabWind3DTabItem.IsSelected;
+                var v = windWorkspace ? Visibility.Collapsed : Visibility.Visible;
+                dockpanel.Visibility = v;
+                spDrawingToolbar.Visibility = v;
+            }
+
             // Opening the 3D tab always shows the latest results (never a stale building).
             if (ReferenceEquals(e.OriginalSource, MainTabControl) && tabWind3DTabItem.IsSelected &&
                 tabWind3DTabItem.Content is Wind3DViewerControl viewer)

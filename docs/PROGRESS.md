@@ -2,6 +2,28 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-10-29 (later) — M5 polish after the second look
+
+- **Wind workspace:** on the Wind Setup and 3D Wind tabs the shear-wall drawing canvas and its toolbar are hidden, so the wind screens get the whole window. The canvas returns on every other tab.
+- **Shear walls use the wind loads by default.**
+  - The walls follow the wind automatically from startup; the Results step shows a green "Shear walls use these wind loads" box.
+  - A manual load (LOADS dialog) or opening a file ends the link. The box then turns amber ("Shear walls are NOT using these wind loads", with the reason) and shows a "Use these wind loads for the shear walls" button.
+  - The main toolbar shows "Loads: ASCE 7 wind (auto)" or "Loads: MANUAL".
+- **Site step:**
+  - The wind speed section is highlighted and says which risk-category map to use.
+  - "Kzt = 1.00" is always shown for flat ground; Yes makes it editable.
+- **Building step:**
+  - The inputs column is narrower (390 px) and the 3D view takes the rest.
+  - Typing a 0° pitch on a gable or hip switches to Flat when you leave the box.
+- **3D viewer:**
+  - The toolbar is one compact row (Cladding: Suction / Push-in; Shear walls: From W / From S; Roof Cp).
+  - The view buttons and the Blocks/Outlines toggles sit inside the picture.
+  - The legend is a slim bar, about a quarter of its old size.
+- **Results step:** the checkbox reads "Use load cases 1 and 3 only", with when it is allowed shown underneath.
+- **Text:** smaller fonts and shorter wording throughout.
+- **Sizing:** the fit test now uses the tab size measured in the running app beside the canvas (1134 × 754), the smallest case.
+- **Tests:** engine + UI 249 (+2 opt-in), shear wall 23.
+
 ## 2026-10-29 (late) — M5 revisions after the first look
 
 - **No scrolling:** every step fits the Wind Setup tab beside the drawing canvas (about 1130 × 790 on a maximized 1920 × 1080 screen). A UI test checks each step at that size, including a gable roof with Kzt shown and the longest checklist (h > 60 ft).

@@ -42,7 +42,7 @@
             </Grid.RowDefinitions>
 
             <!-- Top Toolbar with Buttons -->
-            <StackPanel Grid.Row="0" Orientation="Vertical" Margin="10">
+            <StackPanel x:Name="spDrawingToolbar" Grid.Row="0" Orientation="Vertical" Margin="10">
                 <StackPanel Orientation="Horizontal">
                     <Button Margin="3" Name="btnHideImage" Content="Hide Image" Click="btnHideImage_Click" Width="70" Height="25" HorizontalAlignment="Left"/>
                     <Button Margin="3" Name="btnHideGrid" Content="Hide Grid" Click="btnHideGrid_Click" Width="70" Height="25" HorizontalAlignment="Left"/>
