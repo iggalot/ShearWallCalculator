@@ -135,6 +135,23 @@ Each milestone ends with a buildable app, a commit in each touched repo, and gre
 
 ---
 
+## Parking lot (future features)
+
+### P1 — Automatic wind speed from the site address (blocked: needs an ASCE Hazard Tool API key)
+- **Source:** the ASCE Hazard Tool API is the official one. It covers the 50 states and territories, needs an API key, and pricing is to be confirmed with ASCE. Do **not** use ZIP or area codes: they are too coarse near coasts and in special wind regions, and the ASCE maps are copyrighted, so a bundled copy is not an option. ATC Hazards by Location was scheduled to shut down at the end of 2024 and never supported 7-22.
+- **Flow:**
+  1. The user enters the site address.
+  2. The app geocodes it to latitude/longitude. The free U.S. Census geocoder is a candidate; confirm before adding any outside service.
+  3. It calls the ASCE Hazard Tool API with the user's own key, stored locally only.
+  4. It fills in V for the chosen risk category and edition.
+- **Record keeping:**
+  - Save the value with the project, with its source and date ("ASCE Hazard Tool, 7-22, Risk Cat. II, retrieved YYYY-MM-DD").
+  - Keep manual entry as an override, and keep working offline from the saved value.
+  - Warn on special wind regions or missing data; the tool has been reported to return "NaN" for some locations.
+- **Fit:** this becomes the "Site" step of the M5 guided input. Risk category then selects which wind map V comes from, replacing the old importance-factor input.
+
+---
+
 ## Top 20 improvements (priority order)
 
 1. **Fix the 1000× unit error** in the wind → shear-wall handoff: lb versus kips (D1).

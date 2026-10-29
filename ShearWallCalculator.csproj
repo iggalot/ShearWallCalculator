@@ -94,6 +94,7 @@
     <Compile Include="ShearWallCalculatorBase.cs" />
     <Compile Include="ShearWallCalculator_FlexibleDiaphragm.cs" />
     <Compile Include="ShearWallCalculator_RigidDiaphragm.cs" />
+    <Compile Include="LateralLoadCase.cs" />
     <Compile Include="ShearWallSelector.cs" />
     <Compile Include="NDSProvisions\SimpsonCatalog\BaseConnectorManager.cs" />
     <Compile Include="NDSProvisions\SimpsonCatalog\BaseSimpsonConnectorData.cs" />

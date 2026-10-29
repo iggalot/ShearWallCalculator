@@ -2,6 +2,31 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-10-29 (evening) — M6: wind loads into the shear walls
+
+- **Directional force** (`WindLateralLoads`, ASCE7Wind.Core), for each wind direction:
+  - walls: windward integrated with qz up the height, plus leeward;
+  - **plus the horizontal roof component** (F = p·Zx·A_plan on each sloped plane), for both Fig. 27.3-1 roof Cp values, with the larger total governing;
+  - not less than the **27.1.5 minimum**: 16 psf on the projected wall area and 8 psf on the projected roof area.
+  - The roof component was previously **missing**. On a 30° gable with wind normal to the ridge it is about 46% of the total.
+- **Fig. 27.3-8 load cases** 1–4 (16 sub-cases including ± torsion, e = 0.15B):
+  - The exception (cases 1 and 3 only) is a checkbox in the load dialog: one story with h ≤ 30 ft, or two stories or less light-frame or with flexible diaphragms.
+- **Shear walls**:
+  - `ShearWallCalculatorBase.LoadCases`: the rigid and flexible calculators analyse every case, and each wall reports its governing case (shown as a tooltip on the results row).
+  - Wind cases carry their own torsion and do not add the manual 5% minimum eccentricity.
+  - Manual loads behave exactly as before.
+- **Load dialog**: the ASCE path sends all load cases and shows walls + roof, the minimum, and what governs.
+- **3D view**: the summary shows "Wind force on the building: total (walls + roof; 16/8 psf minimum)".
+- **Pre-existing bugs found and fixed**:
+  - **D23:** the flexible diaphragm's Y-direction distribution mixed plan axes (doubled the load in the test box).
+  - **D24:** the Calculations tab results rows never displayed (inverted guard).
+- **Tests:** engine 196 (+2 opt-in), UI 19, shear wall 23.
+
+**Needs your sign-off:**
+- The Fig. 27.3-8 exception wording.
+- Using DesignKips = max(calculated, 27.1.5 minimum) inside every load case. That is conservative; the code treats the minimum as a separate load case.
+- Applying wind loads at the diaphragm center of mass. That approximates the center of the projected area for regular plans.
+
 ## 2026-10-29 (later) — M3 and M4 complete
 
 ### M3 — One building model in 3D (`ASCE7Wind.Core`, no WPF)

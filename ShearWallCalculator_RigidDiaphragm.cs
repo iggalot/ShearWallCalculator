@@ -74,24 +74,71 @@ namespace calculator
             //Console.WriteLine("Center of Mass -- xr: " + _diaphragm_system.CtrMass.X + " ft.  yr: " + _diaphragm_system.CtrMass.Y + " ft.");
             //Console.WriteLine("Center of Rigidity -- xr: " + _wall_system.CtrRigidity.X + " ft.  yr: " + _wall_system.CtrRigidity.Y + " ft.");
 
+            // Each load case is analysed in turn; every wall keeps its largest shear (the envelope) and
+            // the components (direct, torsional) from that same case, so the columns still add up.
+            var cases = CasesToAnalyse();
+            double savedVx = V_x, savedVy = V_y;
+            var best = new Dictionary<int, (double total, string name, int caseIndex)>();
+            var perCase = new List<(Dictionary<int, double> dx, Dictionary<int, double> dy, Dictionary<int, double> ecc, double mt, double ex, double ey)>();
+
+            for (int i = 0; i < cases.Count; i++)
+            {
+                var c = cases[i];
+                V_x = c.Vx;
+                V_y = c.Vy;
+                AnalyseOneCase(c);
+                perCase.Add((new Dictionary<int, double>(DirectShear_X), new Dictionary<int, double>(DirectShear_Y),
+                             new Dictionary<int, double>(EccentricShear), Mt_comb, ecc_x, ecc_y));
+                KeepGoverning(TotalWallShear, c.Name, best, i);
+            }
+            V_x = savedVx;
+            V_y = savedVy;
+
+            DirectShear_X.Clear(); DirectShear_Y.Clear(); EccentricShear.Clear(); TotalWallShear.Clear(); GoverningLoadCase.Clear();
+            double governingMt = 0;
+            foreach (var kv in best)
+            {
+                int id = kv.Key;
+                var pc = perCase[kv.Value.caseIndex];
+                if (pc.dx.TryGetValue(id, out var dx)) DirectShear_X[id] = dx;
+                if (pc.dy.TryGetValue(id, out var dy)) DirectShear_Y[id] = dy;
+                if (pc.ecc.TryGetValue(id, out var e)) EccentricShear[id] = e;
+                TotalWallShear[id] = kv.Value.total;
+                GoverningLoadCase[id] = kv.Value.name;
+                if (Math.Abs(pc.mt) > Math.Abs(governingMt)) { governingMt = pc.mt; ecc_x = pc.ex; ecc_y = pc.ey; }
+            }
+            if (cases.Count == 1 && perCase.Count == 1) { governingMt = perCase[0].mt; ecc_x = perCase[0].ex; ecc_y = perCase[0].ey; }
+            Mt_comb = governingMt;
+        }
+
+        /// <summary>Direct and torsional shears for one load case (uses V_x, V_y set by the caller).</summary>
+        private void AnalyseOneCase(LateralLoadCase loadCase)
+        {
             // check that our CoM and CoR values are valid and computed -- if not, the calculations don't work
             if (IsValidForCalculation is true)
             {
-                // Set ASCE 7 minimum for building eccentricity.
-                // 5% of building width / Length or 10% of building height
-                double min_ecc_x = Math.Max(0.05 * BoundingBoxWorld.Width, 0.1 * BuildingHeight);
-                double min_ecc_y = Math.Max(0.05 * BoundingBoxWorld.Height, 0.1 * BuildingHeight);
+                double actual_x = _wall_system.CtrRigidity.X - _diaphragm_system.CtrMass.X;
+                double actual_y = _wall_system.CtrRigidity.Y - _diaphragm_system.CtrMass.Y;
 
-                // Eccentricity between center of rigidity and center of mass, keeping its sign (the side
-                // the torsion acts on) and raising its magnitude to the minimum.
-                ecc_x = ApplyMinimumEccentricity(_wall_system.CtrRigidity.X - _diaphragm_system.CtrMass.X, min_ecc_x);
-                ecc_y = ApplyMinimumEccentricity(_wall_system.CtrRigidity.Y - _diaphragm_system.CtrMass.Y, min_ecc_y);
+                if (loadCase.ApplyMinimumEccentricity)
+                {
+                    // Minimum eccentricity for manual loads: 5% of the plan dimension or 10% of the building
+                    // height, keeping the sign (the side the torsion acts on).
+                    double min_ecc_x = Math.Max(0.05 * BoundingBoxWorld.Width, 0.1 * BuildingHeight);
+                    double min_ecc_y = Math.Max(0.05 * BoundingBoxWorld.Height, 0.1 * BuildingHeight);
+                    ecc_x = ApplyMinimumEccentricity(actual_x, min_ecc_x);
+                    ecc_y = ApplyMinimumEccentricity(actual_y, min_ecc_y);
+                }
+                else
+                {
+                    // Wind load cases bring their own torsion (Fig. 27.3-8); only the real offset applies.
+                    ecc_x = actual_x;
+                    ecc_y = actual_y;
+                }
 
-                // torsional moment (kip-ft) from the load at the center of mass about the center of rigidity
-                Mt_comb = (V_x * ecc_y) - (V_y * ecc_x);
-
-                //// display results
-                //Console.WriteLine(DisplayResults());
+                // torsional moment (kip-ft) from the load at the center of mass about the center of rigidity,
+                // plus any torsion the load case itself carries
+                Mt_comb = (V_x * ecc_y) - (V_y * ecc_x) + loadCase.Mt;
             }
             ComputeDirectShear_X();  // horizontal walls
             ComputeDirectShear_Y();  // vertical walls

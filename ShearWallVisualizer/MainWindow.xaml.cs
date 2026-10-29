@@ -593,6 +593,7 @@ namespace ShearWallVisualizer
         private void CreateCalculationResultsControls_Rigid()
         {
             if (Calculator == null || Calculator._wall_system == null)
+                return; // nothing to show (this guard was inverted, so results never displayed)
             {
                 foreach (var wall in Calculator._wall_system._walls)
                 {
@@ -641,6 +642,8 @@ namespace ShearWallVisualizer
                         }
 
                         ShearWallResultsControl_Rigid control = new ShearWallResultsControl_Rigid(id, rigidity, xbar, ybar, vi_x, vi_y, v_ecc, v_tot);
+                        if (Calculator.GoverningLoadCase.TryGetValue(id, out var governing))
+                            control.ToolTip = "Governing load case: " + governing;
                         sp_RigidCalcPanel.Children.Add(control);
                     }
                 }
@@ -650,6 +653,7 @@ namespace ShearWallVisualizer
         private void CreateCalculationResultsControls_Flexible()
         {
             if (Calculator == null || Calculator._wall_system == null)
+                return; // nothing to show (this guard was inverted, so results never displayed)
             {
 
                 foreach (var wall in Calculator._wall_system._walls)
@@ -692,6 +696,8 @@ namespace ShearWallVisualizer
                         }
 
                         ShearWallResultsControl_Flexible control = new ShearWallResultsControl_Flexible(id, vi_x, vi_y);
+                        if (Calculator.GoverningLoadCase.TryGetValue(id, out var governing))
+                            control.ToolTip = "Governing load case: " + governing;
                         sp_FlexibleCalcPanel.Children.Add(control);
                     }
                 }
@@ -1867,7 +1873,11 @@ namespace ShearWallVisualizer
 
             if (dialog.ShowDialog() == true)
             {
-                Calculator.AddLoads(dialog.MagnitudeX, dialog.MagnitudeY);
+                // ASCE wind: all Fig. 27.3-8 load cases (each wall uses its governing case); manual: one load.
+                if (dialog.LoadCases != null && dialog.LoadCases.Count > 0)
+                    Calculator.SetLoadCases(dialog.LoadCases);
+                else
+                    Calculator.AddLoads(dialog.MagnitudeX, dialog.MagnitudeY);
                 UpdateShearWallUI();  // update the calculator
             }
         }

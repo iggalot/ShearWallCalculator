@@ -29,6 +29,10 @@ namespace ShearWallCalculator
 
         public new string CalculatorType { get => "Flexible Diaphragm"; }
 
+        public ShearWallCalculator_FlexibleDiaphragm() : base()
+        {
+        }
+
         /// <summary>
         /// copy constructor
         /// </summary>
@@ -58,15 +62,34 @@ namespace ShearWallCalculator
             // check that our CoM and CoR values are valid and computed -- if not, the calculations don't work
             if (IsValidForCalculation is true)
             {
-                // Perform component calculations to compute shear contributions
-                ComputeDirectShear_X();  // horizontal walls
-                ComputeDirectShear_Y();  // vertical walls
+                // A flexible diaphragm distributes by tributary width and cannot transmit torsion, so each
+                // load case contributes only its direct shears; walls keep their largest shear (envelope).
+                var cases = CasesToAnalyse();
+                double savedVx = V_x, savedVy = V_y;
+                var best = new Dictionary<int, (double total, string name, int caseIndex)>();
+                var perCase = new List<(Dictionary<int, double> dx, Dictionary<int, double> dy)>();
+                for (int i = 0; i < cases.Count; i++)
+                {
+                    V_x = cases[i].Vx;
+                    V_y = cases[i].Vy;
+                    ComputeDirectShear_X();  // horizontal walls
+                    ComputeDirectShear_Y();  // vertical walls
+                    ComputeTotalShear();
+                    perCase.Add((new Dictionary<int, double>(DirectShear_X), new Dictionary<int, double>(DirectShear_Y)));
+                    KeepGoverning(TotalWallShear, cases[i].Name, best, i);
+                }
+                V_x = savedVx;
+                V_y = savedVy;
 
-                // compute the total shear activing on the wall
-                ComputeTotalShear();
-
-                // display results
-                Console.WriteLine(DisplayResults());
+                DirectShear_X.Clear(); DirectShear_Y.Clear(); TotalWallShear.Clear(); GoverningLoadCase.Clear();
+                foreach (var kv in best)
+                {
+                    var pc = perCase[kv.Value.caseIndex];
+                    if (pc.dx.TryGetValue(kv.Key, out var dx)) DirectShear_X[kv.Key] = dx;
+                    if (pc.dy.TryGetValue(kv.Key, out var dy)) DirectShear_Y[kv.Key] = dy;
+                    TotalWallShear[kv.Key] = kv.Value.total;
+                    GoverningLoadCase[kv.Key] = kv.Value.name;
+                }
             }
         }
 
@@ -149,7 +172,6 @@ namespace ShearWallCalculator
             }
 
             // Debugging: Print the number of east-west braced wall lines found
-            Console.WriteLine($"Found {supports.Count} east-west braced wall lines.");
 
             // Step 2: Sort supports by Y-location
             supports.Sort((a, b) => a.Location.CompareTo(b.Location));
@@ -167,7 +189,6 @@ namespace ShearWallCalculator
             // Debugging: Print the total shear for each braced wall line
             foreach (var load in loads)
             {
-                Console.WriteLine($"Group {load.ID} has {load.Load:F2} kN of shear.");
             }
 
             // Step 6: Accumulate shear load to each wall based on rigidity
@@ -184,7 +205,6 @@ namespace ShearWallCalculator
                 DirectShear_X_BracedLine[bwl] = totalShear;
 
                 // Debugging: Log the total shear for the current BWL
-                Console.WriteLine($"Braced Wall Line {bwl.GroupNumber} has a total shear of {totalShear:F2} kN.");
 
                 // Calculate total rigidity of all walls in this BWL
                 double sum_rigid = bwl.WallReferences.Sum(w => w.WallRigidity);
@@ -197,7 +217,6 @@ namespace ShearWallCalculator
                     // Make sure wall ID is correctly populated
                     if (wall.ID == 0)
                     {
-                        Console.WriteLine($"Warning: Wall ID is 0 for Wall in BWL {bwl.GroupNumber}. Check initialization.");
                     }
 
                     double wallShear = totalShear * (wall.WallRigidity / sum_rigid);
@@ -213,14 +232,12 @@ namespace ShearWallCalculator
                     }
 
                     // Debugging: Print the shear assigned to this wall
-                    Console.WriteLine($"Wall ID {wall.ID} receives {wallShear:F2} kN of shear.");
                 }
             }
 
             // Debugging: Print the final shear for each wall
             foreach (var entry in DirectShear_X)
             {
-                Console.WriteLine($"Wall ID: {entry.Key}, Total Shear: {entry.Value:F2} kN");
             }
         }
 
@@ -230,9 +247,10 @@ namespace ShearWallCalculator
         /// </summary>
         private void ComputeDirectShear_Y()
         {
-            double shear_x_plf = V_y / BoundingBoxWorld.Height;
-            double beamStart = BoundingBoxWorld.Y;
-            double beamEnd = BoundingBoxWorld.Y + BoundingBoxWorld.Width;
+            // Y-direction load spreads along the plan X extent; north-south wall lines sit at x positions.
+            double shear_x_plf = V_y / BoundingBoxWorld.Width;
+            double beamStart = BoundingBoxWorld.X;
+            double beamEnd = BoundingBoxWorld.X + BoundingBoxWorld.Width;
 
             // Step 1: Collect supports from all East-West braced wall lines
             List<SupportLoadDistributor.Support> supports = new List<SupportLoadDistributor.Support>();
@@ -243,13 +261,12 @@ namespace ShearWallCalculator
                     supports.Add(new SupportLoadDistributor.Support
                     {
                         ID = bwl.GroupNumber,
-                        Location = bwl.Center.Y
+                        Location = bwl.Center.X
                     });
                 }
             }
 
             // Debugging: Print the number of east-west braced wall lines found
-            Console.WriteLine($"Found {supports.Count} east-west braced wall lines.");
 
             // Step 2: Sort supports by Y-location
             supports.Sort((a, b) => a.Location.CompareTo(b.Location));
@@ -267,7 +284,6 @@ namespace ShearWallCalculator
             // Debugging: Print the total shear for each braced wall line
             foreach (var load in loads)
             {
-                Console.WriteLine($"Group {load.ID} has {load.Load:F2} kN of shear.");
             }
 
             // Step 6: Accumulate shear load to each wall based on rigidity
@@ -284,7 +300,6 @@ namespace ShearWallCalculator
                 DirectShear_Y_BracedLine[bwl] = totalShear;
 
                 // Debugging: Log the total shear for the current BWL
-                Console.WriteLine($"Braced Wall Line {bwl.GroupNumber} has a total shear of {totalShear:F2} kN.");
 
                 // Calculate total rigidity of all walls in this BWL
                 double sum_rigid = bwl.WallReferences.Sum(w => w.WallRigidity);
@@ -297,7 +312,6 @@ namespace ShearWallCalculator
                     // Make sure wall ID is correctly populated
                     if (wall.ID == 0)
                     {
-                        Console.WriteLine($"Warning: Wall ID is 0 for Wall in BWL {bwl.GroupNumber}. Check initialization.");
                     }
 
                     double wallShear = totalShear * (wall.WallRigidity / sum_rigid);
@@ -313,14 +327,12 @@ namespace ShearWallCalculator
                     }
 
                     // Debugging: Print the shear assigned to this wall
-                    Console.WriteLine($"Wall ID {wall.ID} receives {wallShear:F2} kN of shear.");
                 }
             }
 
             // Debugging: Print the final shear for each wall
             foreach (var entry in DirectShear_Y)
             {
-                Console.WriteLine($"Wall ID: {entry.Key}, Total Shear: {entry.Value:F2} kN");
             }
         }
 

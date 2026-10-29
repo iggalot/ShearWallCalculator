@@ -38,9 +38,15 @@
 
             </Grid>
             <StackPanel Orientation="Horizontal">
-                <StackPanel Orientation="Horizontal" Name="gridASCEWind" Margin="10" Visibility="Collapsed">
-                    <ctrl:BuildingDataInputControl x:Name="ctrBuildingDataInputControl" Margin="5"/>
-                    <ctrl:WindLoadInputControl x:Name="ctrlWindLoadInputControl" Margin="5"  />
+                <StackPanel Orientation="Vertical" Name="gridASCEWind" Margin="10" Visibility="Collapsed">
+                    <StackPanel Orientation="Horizontal">
+                        <ctrl:BuildingDataInputControl x:Name="ctrBuildingDataInputControl" Margin="5"/>
+                        <ctrl:WindLoadInputControl x:Name="ctrlWindLoadInputControl" Margin="5"  />
+                    </StackPanel>
+                    <CheckBox x:Name="cbOnlyCases1And3" Margin="5" Checked="LoadCaseOption_Changed" Unchecked="LoadCaseOption_Changed"
+                              Content="Use only Load Cases 1 and 3 (ASCE 7 Fig. 27.3-8 exception)"
+                              ToolTip="Allowed for one-story buildings with h &lt;= 30 ft, and for buildings of two stories or less that are light-frame or have flexible diaphragms. Otherwise all four cases, including the torsional cases 2 and 4, are required."/>
+                    <TextBlock x:Name="tbWindLoadSummary" Margin="5" TextWrapping="Wrap" MaxWidth="900"/>
                 </StackPanel>
             </StackPanel>
             <!-- Buttons -->

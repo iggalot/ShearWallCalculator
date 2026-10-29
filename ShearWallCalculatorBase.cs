@@ -29,6 +29,43 @@ namespace ShearWallCalculator
         [JsonIgnore]
         public Dictionary<int, double> TotalWallShear { get; set; } = new Dictionary<int, double>();
 
+        /// <summary>
+        /// Design load cases (e.g. the ASCE 7 Fig. 27.3-8 wind cases). When empty, the single manual load
+        /// V_x / V_y is used. With several cases each wall reports its largest shear (the envelope).
+        /// </summary>
+        public List<LateralLoadCase> LoadCases { get; set; } = new List<LateralLoadCase>();
+
+        /// <summary>Name of the load case that produced each wall's reported shear.</summary>
+        [JsonIgnore]
+        public Dictionary<int, string> GoverningLoadCase { get; } = new Dictionary<int, string>();
+
+        /// <summary>Uses a set of design load cases; V_x / V_y show the largest force in each direction.</summary>
+        public void SetLoadCases(IEnumerable<LateralLoadCase> cases)
+        {
+            LoadCases = new List<LateralLoadCase>(cases);
+            V_x = 0; V_y = 0;
+            foreach (var c in LoadCases)
+            {
+                V_x = System.Math.Max(V_x, System.Math.Abs(c.Vx));
+                V_y = System.Math.Max(V_y, System.Math.Abs(c.Vy));
+            }
+        }
+
+        /// <summary>The load cases to analyse: the design cases, or the single manual load.</summary>
+        protected List<LateralLoadCase> CasesToAnalyse() =>
+            LoadCases != null && LoadCases.Count > 0
+                ? LoadCases
+                : new List<LateralLoadCase> { new LateralLoadCase("Manual load", V_x, V_y, 0, applyMinimumEccentricity: true) };
+
+        /// <summary>Keeps, per wall, the shear with the largest magnitude across load cases.</summary>
+        protected static void KeepGoverning(Dictionary<int, double> totals, string caseName,
+            Dictionary<int, (double total, string name, int caseIndex)> best, int caseIndex)
+        {
+            foreach (var kv in totals)
+                if (!best.TryGetValue(kv.Key, out var b) || System.Math.Abs(kv.Value) > System.Math.Abs(b.total) + 1e-12)
+                    best[kv.Key] = (kv.Value, caseName, caseIndex);
+        }
+
         // The primary function calculating the wall shear forces
         public abstract void PerformCalculations();
 
@@ -80,6 +117,7 @@ namespace ShearWallCalculator
             _wall_system = copy_calc._wall_system;
             V_x = copy_calc.V_x;
             V_y = copy_calc.V_y;
+            LoadCases = new List<LateralLoadCase>(copy_calc.LoadCases ?? new List<LateralLoadCase>());
 
             // Loaded image information
             selectedImageFilePath = copy_calc.selectedImageFilePath;
@@ -212,8 +250,10 @@ namespace ShearWallCalculator
             }
         }
 
+        /// <summary>A single manually entered load (replaces any design load cases).</summary>
         public void AddLoads(double load_x, double load_y)
         {
+            LoadCases?.Clear();
             V_x = load_x;
             V_y = load_y;
         }

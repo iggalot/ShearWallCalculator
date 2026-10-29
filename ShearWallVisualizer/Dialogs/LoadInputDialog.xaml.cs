@@ -1,5 +1,6 @@
 ﻿using ASCE7WindLoadCalculator;
 using System;
+using System.Linq;
 using System.Windows;
 using System.Windows.Media;
 
@@ -94,12 +95,55 @@ namespace ShearWallVisualizer.Dialogs
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
+        private WindAnalysisResult lastWind;
+
+        /// <summary>
+        /// Design load cases for the shear walls when ASCE wind is used (ASCE 7 Fig. 27.3-8), or null for a
+        /// manually entered load.
+        /// </summary>
+        public System.Collections.Generic.List<ShearWallCalculator.LateralLoadCase> LoadCases { get; private set; }
+
         private void WindCalculated(object sender, WindLoadInputControl.OnWindInputCompleteEventArgs e)
         {
-            // Base shear in kips from the MWFRS wall pressures. Internal pressure cancels on a closed
-            // building, so only external pressures are summed (see MwfrsLateralLoad).
-            MagnitudeX = e._windLoadCalculator_MWFRS_Length != null ? MwfrsLateralLoad.WallBaseShearKips(e._windLoadCalculator_MWFRS_Length) : 0;
-            MagnitudeY = e._windLoadCalculator_MWFRS_Width != null ? MwfrsLateralLoad.WallBaseShearKips(e._windLoadCalculator_MWFRS_Width) : 0;
+            lastWind = e._windLoadCalculator_MWFRS_Length != null && e._windLoadCalculator_MWFRS_Width != null
+                ? new WindAnalysisResult(e._windLoadCalculator_CC, e._windLoadCalculator_MWFRS_Length, e._windLoadCalculator_MWFRS_Width)
+                : null;
+            UpdateWindLoadCases();
+        }
+
+        private void LoadCaseOption_Changed(object sender, RoutedEventArgs e) => UpdateWindLoadCases();
+
+        /// <summary>
+        /// Turns the MWFRS results into the shear-wall load cases: each direction's force is walls + roof
+        /// (external pressures; internal pressure cancels), not less than the 27.1.5 minimum, then the
+        /// Fig. 27.3-8 load cases with their torsion.
+        /// </summary>
+        private void UpdateWindLoadCases()
+        {
+            if (lastWind == null)
+            {
+                MagnitudeX = MagnitudeY = 0;
+                LoadCases = null;
+                if (tbWindLoadSummary != null) tbWindLoadSummary.Text = "Enter the building and wind inputs to calculate the wind loads.";
+                return;
+            }
+
+            var lateral = WindLateralLoads.Compute(lastWind, cbOnlyCases1And3?.IsChecked == true);
+            MagnitudeX = lateral.AlongLength.DesignKips;
+            MagnitudeY = lateral.AlongWidth.DesignKips;
+            LoadCases = lateral.LoadCases
+                .Select(c => new ShearWallCalculator.LateralLoadCase(c.Name, c.Vx, c.Vy, c.Mt, applyMinimumEccentricity: false))
+                .ToList();
+
+            string Line(DirectionalWindForce f, string axis) =>
+                $"Wind {f.Direction} ({axis}): {f.DesignKips:0.0} kips" +
+                $"  [walls {f.WallsKips:0.0} + roof {f.RoofKips:0.0} = {f.TotalKips:0.0}; 16/8 psf minimum {f.MinimumKips:0.0}" +
+                (f.MinimumGoverns ? " governs" : "") + "]";
+            if (tbWindLoadSummary != null)
+                tbWindLoadSummary.Text =
+                    Line(lateral.AlongLength, "X") + "\n" + Line(lateral.AlongWidth, "Y") + "\n" +
+                    $"{LoadCases.Count} load cases (ASCE 7 Fig. 27.3-8 {(lateral.OnlyCases1And3 ? "cases 1 and 3" : "cases 1-4, with torsion")}) " +
+                    "will be sent to the shear-wall calculator; each wall uses its governing case.";
         }
 
         private void Update()
@@ -150,6 +194,7 @@ namespace ShearWallVisualizer.Dialogs
 
                 MagnitudeX = magX;
                 MagnitudeY = magY;
+                LoadCases = null; // a single manual load
             }
             
             // parse the ASCE wind load calculations
