@@ -1761,8 +1761,10 @@ namespace ShearWallVisualizer
         private void CreateGridVisual()
         {
             // Define the size of the render target bitmap (same size as your drawing area)
-            double width = dockpanel.ActualWidth;
-            double height = dockpanel.ActualHeight;
+            // While a wind tab hides the drawing area it has no actual size; use its fixed design size instead.
+            double width = dockpanel.ActualWidth > 0 ? dockpanel.ActualWidth : dockpanel.Width;
+            double height = dockpanel.ActualHeight > 0 ? dockpanel.ActualHeight : dockpanel.Height;
+            if (!(width >= 1 && height >= 1)) return;
 
             // Create a new RenderTargetBitmap with the same size as the drawing area
             gridBitmap = new RenderTargetBitmap((int)width, (int)height, 96, 96, PixelFormats.Pbgra32);
@@ -2395,10 +2397,13 @@ namespace ShearWallVisualizer
             // are not used there. Every other tab shows them as before.
             if (ReferenceEquals(e.OriginalSource, MainTabControl))
             {
+                // The canvas is Hidden (not Collapsed) so it keeps its size: its zoom/pan math reads
+                // ActualWidth/ActualHeight. The tab area simply stretches over it.
                 bool windWorkspace = tabWindSetupTabItem.IsSelected || tabWind3DTabItem.IsSelected;
-                var v = windWorkspace ? Visibility.Collapsed : Visibility.Visible;
-                dockpanel.Visibility = v;
-                spDrawingToolbar.Visibility = v;
+                dockpanel.Visibility = windWorkspace ? Visibility.Hidden : Visibility.Visible;
+                Grid.SetColumn(MainTabControl, windWorkspace ? 0 : 1);
+                Grid.SetColumnSpan(MainTabControl, windWorkspace ? 2 : 1);
+                spDrawingToolbar.Visibility = windWorkspace ? Visibility.Collapsed : Visibility.Visible;
             }
 
             // Opening the 3D tab always shows the latest results (never a stale building).
