@@ -426,8 +426,9 @@ namespace ShearWallVisualizer
             ctrol_wind_input.WindInputComplete += WindLoadInputControl_WindInputComplete;
             tabWindInputControlTabItem.Content = ctrol_wind_input;
             
-            // Auto launch the windload input.
-            ctrol_wind_input.OnWindInputComplete(windLoadCalculator_CC, windLoadCalculator_MWFRS_Length, windLoadCalculator_MWFRS_Width);
+            // Recalculate wind for the changed building. (Previously the old calculators were re-sent, so
+            // the results tabs and 3D view kept showing the previous building.)
+            RecalculateWind();
 
             UpdateShearWallUI();
         }
@@ -486,6 +487,27 @@ namespace ShearWallVisualizer
             viewer.SetResults(buildingData, windLoadCalculator_CC, windLoadCalculator_MWFRS_Length, windLoadCalculator_MWFRS_Width);
             tabWind3DTabItem.Content = viewer;
             TabControlManager.ReAddTab(MainTabControl, "tabWind3DTabItem");
+        }
+
+        /// <summary>
+        /// Runs all wind calculations for the current building and inputs and refreshes every results tab.
+        /// Invalid input (e.g. a zero dimension) clears the results instead of crashing.
+        /// </summary>
+        private void RecalculateWind()
+        {
+            if (buildingData == null) return;
+            try
+            {
+                var r = WindAnalysis.Run(windVersion, windLoadParams, buildingData);
+                windLoadCalculator_CC = r.Cladding;
+                windLoadCalculator_MWFRS_Length = r.MwfrsAlongLength;
+                windLoadCalculator_MWFRS_Width = r.MwfrsAlongWidth;
+            }
+            catch (ArgumentException)
+            {
+                windLoadCalculator_CC = windLoadCalculator_MWFRS_Length = windLoadCalculator_MWFRS_Width = null;
+            }
+            CreateAndAssignResultControls();
         }
 
         /// <summary>Opens the 3D wind view in its own resizable window.</summary>

@@ -12,7 +12,8 @@ Check out a matching pair of commits when you build an older version.
 |---|---|---|
 | `CC_windcalcs @ 0c64be5` | `main @ c67831c` (+ uncommitted edit) | Pre-audit baseline |
 | `dev/wind-core-refactor @ 0359acb` | `dev/wind-core-refactor @ 14b4bb2` | Core extracted, editions as data, code-checked tests, defect fixes |
-| `dev/wind-core-refactor` (M3/M4) | `dev/wind-core-refactor @ 801e93b` | 3D building model, wind scene, 3D viewer tab and window |
+| `dev/wind-core-refactor @ ed67539` (M3/M4) | `dev/wind-core-refactor @ 801e93b` | 3D building model, wind scene, 3D viewer tab and window |
+| `dev/wind-core-refactor` (fixes after first test drive) | `dev/wind-core-refactor @ 2e54420` | Crash fixes, ridge-correct zoning, tapered windward wall, pressure blocks, layout |
 
 ## Building
 

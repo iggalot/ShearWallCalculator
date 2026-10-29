@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:ShearWallVisualizer"
         xmlns:ctrl="clr-namespace:ShearWallVisualizer.Controls"
         mc:Ignorable="d"
-        Title="Rigid Diaphragm Shear Wall Calculator v0.1" Height="1100" Width="2000"
+        Title="Rigid Diaphragm Shear Wall Calculator v0.1" Height="900" Width="1600" MinHeight="600" MinWidth="1000" WindowState="Maximized" WindowStartupLocation="CenterScreen"
         Background="LightGray"
         >
 
@@ -33,10 +33,16 @@
         </Menu>
 
         <!-- Main Content Area -->
-        <StackPanel Orientation="Vertical">
+        <!-- Rows: toolbar, drawing + tabs (fills the window), status line -->
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
             <!-- Top Toolbar with Buttons -->
-            <StackPanel Orientation="Vertical" Margin="10">
+            <StackPanel Grid.Row="0" Orientation="Vertical" Margin="10">
                 <StackPanel Orientation="Horizontal">
                     <Button Margin="3" Name="btnHideImage" Content="Hide Image" Click="btnHideImage_Click" Width="70" Height="25" HorizontalAlignment="Left"/>
                     <Button Margin="3" Name="btnHideGrid" Content="Hide Grid" Click="btnHideGrid_Click" Width="70" Height="25" HorizontalAlignment="Left"/>
@@ -60,10 +66,14 @@
             </StackPanel>
 
             <!-- Main Drawing + Right-side Tabs -->
-            <StackPanel Orientation="Horizontal" Margin="10">
+            <Grid Grid.Row="1" Margin="10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
 
                 <!-- Drawing Area -->
-                <DockPanel x:Name="dockpanel" LastChildFill="True" Width="750" Height="600">
+                <DockPanel x:Name="dockpanel" Grid.Column="0" VerticalAlignment="Top" LastChildFill="True" Width="750" Height="600">
                     <local:LayerManager x:Name="m_layers" DockPanel.Dock="Left" 
                                 PreviewMouseDown="m_layers_PreviewMouseDown" 
                                 PreviewMouseMove="m_layers_PreviewMouseMove"
@@ -72,7 +82,7 @@
                 </DockPanel>
 
                 <!-- Dynamic Tabs -->
-                <TabControl x:Name="MainTabControl" Height="800" Width="900"
+                <TabControl x:Name="MainTabControl" Grid.Column="1"
                             TabStripPlacement="Top" Margin="10 0 0 0"
                             SelectionChanged="MainTabControl_SelectionChanged">
                     <!-- Building Data control -->
@@ -138,14 +148,14 @@
                 <!--
                 <TextBlock Name="m_log" Height="600" Width="150" Margin="10 0 0 0"/>
                 <ScrollBar Name="m_scroll" MaxHeight="600" Scroll="OnScroll" Orientation="Vertical"/>-->
-            </StackPanel>
+            </Grid>
             <!-- Info Labels -->
-            <StackPanel Orientation="Horizontal">
+            <StackPanel Grid.Row="2" Orientation="Horizontal">
                 <TextBlock Width="Auto" Height="20" Margin="5" Name="tbZoom" Text="Zoom"/>
                 <TextBlock Width="Auto" Height="20" Margin="5" Name="tbPan" Text="Pan"/>
                 <TextBlock Width="Auto" Height="20" Margin="5" Name="tbWorldCoords" Text="World Coords"/>
                 <TextBlock Width="Auto" Height="20" Margin="5" Name="tbScreenCoords" Text="Screen Coords"/>
             </StackPanel>
-        </StackPanel>
+        </Grid>
     </DockPanel>
 </Window>
