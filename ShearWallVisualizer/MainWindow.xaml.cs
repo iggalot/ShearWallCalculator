@@ -457,6 +457,8 @@ namespace ShearWallVisualizer
             {
                 windLoadCalculator_CC = windLoadCalculator_MWFRS_Length = windLoadCalculator_MWFRS_Width = null;
                 CreateAndAssignResultControls();
+                ApplyLinkedWindLoads();
+                UpdateShearWallUI();
                 return;
             }
 
@@ -489,14 +491,46 @@ namespace ShearWallVisualizer
         private void WindSetup_SendLoadsRequested(object sender, WindLateralResult lateral)
         {
             if (Calculator == null || lateral == null) return;
-            var cases = lateral.LoadCases
-                .Select(c => new ShearWallCalculator.LateralLoadCase(c.Name, c.Vx, c.Vy, c.Mt, applyMinimumEccentricity: false))
-                .ToList();
-            Calculator.SetLoadCases(cases);
+            windLoadsLinked = true;
+            ApplyLinkedWindLoads();
             UpdateShearWallUI();
-            windSetup.ShowSendStatus(
-                $"Sent {cases.Count} load cases (from west {lateral.AlongLength.DesignKips:0.0} kips, from south {lateral.AlongWidth.DesignKips:0.0} kips). " +
+        }
+
+        /// <summary>
+        /// True once the shear walls take their loads from the wind calculation. From then on every wind or
+        /// building change re-sends the load cases, so the walls never keep loads from an earlier building.
+        /// Entering a manual load (or opening a file) ends the link.
+        /// </summary>
+        private bool windLoadsLinked;
+
+        /// <summary>When linked, replaces the shear-wall load cases with those for the current wind results.</summary>
+        private void ApplyLinkedWindLoads()
+        {
+            if (!windLoadsLinked || Calculator == null) return;
+
+            if (windLoadCalculator_MWFRS_Length == null || windLoadCalculator_MWFRS_Width == null)
+            {
+                Calculator.SetLoadCases(new List<ShearWallCalculator.LateralLoadCase>()); // no stale loads
+                windSetup?.SetShearWallLink(true,
+                    "The wind inputs cannot be calculated, so the shear walls have no wind load right now. Fix the inputs and they update automatically.");
+                return;
+            }
+
+            var lateral = WindLateralLoads.Compute(
+                new WindAnalysisResult(windLoadCalculator_CC, windLoadCalculator_MWFRS_Length, windLoadCalculator_MWFRS_Width),
+                windSetup?.OnlyCases1And3 ?? false);
+            Calculator.SetLoadCases(lateral.LoadCases
+                .Select(c => new ShearWallCalculator.LateralLoadCase(c.Name, c.Vx, c.Vy, c.Mt, applyMinimumEccentricity: false)));
+            windSetup?.SetShearWallLink(true,
+                $"Shear walls use these wind loads: {lateral.LoadCases.Count} load cases, from west {lateral.AlongLength.DesignKips:0.0} kips, " +
+                $"from south {lateral.AlongWidth.DesignKips:0.0} kips. They update automatically when anything changes. " +
                 "Each wall's governing case is on the Calculations tab.");
+        }
+
+        private void UnlinkWindLoads()
+        {
+            windLoadsLinked = false;
+            windSetup?.SetShearWallLink(false, null);
         }
         /// <summary>
         /// Event listener for when input of the wind loads as been completed -- to save our wind calculators and update the UI
@@ -524,6 +558,7 @@ namespace ShearWallVisualizer
 
             CreateAndAssignResultControls();
             SyncWindSetup();
+            ApplyLinkedWindLoads();
 
             UpdateShearWallUI();
         }
@@ -575,6 +610,7 @@ namespace ShearWallVisualizer
                 windLoadCalculator_CC = windLoadCalculator_MWFRS_Length = windLoadCalculator_MWFRS_Width = null;
             }
             CreateAndAssignResultControls();
+            ApplyLinkedWindLoads();
         }
 
         /// <summary>Opens the 3D wind view in its own resizable window.</summary>
@@ -1942,9 +1978,18 @@ namespace ShearWallVisualizer
             {
                 // ASCE wind: all Fig. 27.3-8 load cases (each wall uses its governing case); manual: one load.
                 if (dialog.LoadCases != null && dialog.LoadCases.Count > 0)
+                {
+                    // ASCE wind: stays linked, so later wind changes update the walls automatically.
                     Calculator.SetLoadCases(dialog.LoadCases);
+                    windSetup?.SetOnlyCases1And3(dialog.OnlyCases1And3);
+                    windLoadsLinked = true;
+                    ApplyLinkedWindLoads();
+                }
                 else
+                {
+                    UnlinkWindLoads(); // a manual load is the user's own number; never overwrite it
                     Calculator.AddLoads(dialog.MagnitudeX, dialog.MagnitudeY);
+                }
                 UpdateShearWallUI();  // update the calculator
             }
         }
@@ -2044,6 +2089,7 @@ namespace ShearWallVisualizer
             {
                 Calculator = null;  // delete any previous calculators we have
             }
+            UnlinkWindLoads(); // the opened file brings its own loads
 
             UpdateShearWallUI();
 

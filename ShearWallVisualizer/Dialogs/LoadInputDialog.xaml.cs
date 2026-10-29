@@ -103,6 +103,9 @@ namespace ShearWallVisualizer.Dialogs
         /// </summary>
         public System.Collections.Generic.List<ShearWallCalculator.LateralLoadCase> LoadCases { get; private set; }
 
+        /// <summary>Fig. 27.3-8 exception chosen in this dialog (load cases 1 and 3 only).</summary>
+        public bool OnlyCases1And3 => cbOnlyCases1And3?.IsChecked == true;
+
         private void WindCalculated(object sender, WindLoadInputControl.OnWindInputCompleteEventArgs e)
         {
             lastWind = e._windLoadCalculator_MWFRS_Length != null && e._windLoadCalculator_MWFRS_Width != null

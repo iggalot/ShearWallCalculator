@@ -2,6 +2,17 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-10-29 (late) — M5 revisions after the first look
+
+- **No scrolling:** every step fits the Wind Setup tab beside the drawing canvas (about 1130 × 790 on a maximized 1920 × 1080 screen). A UI test checks each step at that size, including a gable roof with Kzt shown and the longest checklist (h > 60 ft).
+  - **Site:** compact rows: edition | wind speed | hill, then risk, exposure and enclosure as rows of cards.
+  - **Building:** inputs on the left half, the 3D view on the right half, smaller roof-shape buttons.
+  - **Results:** the prototype layout, with four headline cards across the top, the 3D view below on the left, and Checks plus Shear walls on the right.
+- **Shear walls stay linked to the wind** (fixes the walls keeping the loads from an earlier building):
+  - After "Send loads to shear walls" (or choosing ASCE loads in the LOADS dialog), every wind or building change re-sends the load cases automatically, and the Results step says so.
+  - If the inputs become uncalculable, the walls get no wind load rather than old loads.
+  - A manual load, or opening a file, ends the link.
+
 ## 2026-10-29 (night) — M5: guided wind input
 
 Built from the approved HTML mockup. The scope is the C&C and MWFRS methods only; parapets, overhangs
