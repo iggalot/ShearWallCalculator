@@ -91,10 +91,10 @@ namespace ShearWallCalculator
 
         public ShearWallCalculatorBase(WallSystem wall_system, DiaphragmSystem diaphragm_system, double currentMagX1, double currentMagX2)
         {
-            _diaphragm_system = _diaphragm_system;
+            _diaphragm_system = diaphragm_system;
             _wall_system = wall_system;
-            V_x = V_x;
-            V_y = V_y;
+            V_x = currentMagX1;
+            V_y = currentMagX2;
 
             Update();  // update necessary system parts
         }

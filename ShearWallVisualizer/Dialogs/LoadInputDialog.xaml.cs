@@ -96,59 +96,10 @@ namespace ShearWallVisualizer.Dialogs
         /// <param name="e"></param>
         private void WindCalculated(object sender, WindLoadInputControl.OnWindInputCompleteEventArgs e)
         {
-            var calculator_cc = e._windLoadCalculator_CC; ;
-            var calculator_mwfrs_length = e._windLoadCalculator_MWFRS_Length;
-            var calculator_mwfrs_width = e._windLoadCalculator_MWFRS_Width;
-
-            double magX = 0;
-            if (calculator_mwfrs_length != null)
-            {
-                foreach (var areaEntry in calculator_mwfrs_length.WallAreaCalculator_BldgLength.effWindAreas)
-                {
-                    // look for the ID to a "WW" windward wall and add this to the total
-                    if (areaEntry.Value.Label_Short == "WW")
-                    {
-                        int id = areaEntry.Key;
-                        var area = areaEntry.Value.Area;
-                        magX += calculator_mwfrs_length.windPressureWall_Pos_External_MWFRS[id].NetPressure * area;
-                    }
-
-                    // look for the ID to a "LW" windward wall and subtract this value
-                    if (areaEntry.Value.Label_Short == "LW")
-                    {
-                        int id = areaEntry.Key;
-                        var area = areaEntry.Value.Area;
-                        magX += (-1.0) * calculator_mwfrs_length.windPressureWall_Neg_External_MWFRS[id].NetPressure * area;
-
-                    }
-                }
-            }
-
-            double magY = 0;
-            if (calculator_mwfrs_width != null)
-            {
-                foreach (var areaEntry in calculator_mwfrs_width.WallAreaCalculator_BldgLength.effWindAreas)
-                {
-                    // look for the ID to a "WW" windward wall and add this to the total
-                    if (areaEntry.Value.Label_Short == "WW")
-                    {
-                        int id = areaEntry.Key;
-                        var area = areaEntry.Value.Area;
-                        magY += calculator_mwfrs_width.windPressureWall_Pos_External_MWFRS[id].NetPressure * area;
-                    }
-
-                    // look for the ID to a "LW" windward wall and subtract this value
-                    if (areaEntry.Value.Label_Short == "LW")
-                    {
-                        int id = areaEntry.Key;
-                        var area = areaEntry.Value.Area;
-                        magY += (-1.0) * calculator_mwfrs_width.windPressureWall_Neg_External_MWFRS[id].NetPressure * area;
-                    }
-                }
-            }
-
-            MagnitudeX = magX;
-            MagnitudeY = magY;
+            // Base shear in kips from the MWFRS wall pressures. Internal pressure cancels on a closed
+            // building, so only external pressures are summed (see MwfrsLateralLoad).
+            MagnitudeX = e._windLoadCalculator_MWFRS_Length != null ? MwfrsLateralLoad.WallBaseShearKips(e._windLoadCalculator_MWFRS_Length) : 0;
+            MagnitudeY = e._windLoadCalculator_MWFRS_Width != null ? MwfrsLateralLoad.WallBaseShearKips(e._windLoadCalculator_MWFRS_Width) : 0;
         }
 
         private void Update()

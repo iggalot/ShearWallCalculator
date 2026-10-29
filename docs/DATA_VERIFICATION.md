@@ -2,6 +2,8 @@
 
 _2026-10-29 · Scope: W7 `WindLoadCalculations/ASCE7/**` (every `ExternalGCpCurve` definition)_
 
+> **Status 2026-10-29:** V1–V5 have been corrected in the data, and every curve is checked automatically by `Chapter30_CladdingTests.AllCurves_AreSortedSingleSignedAndNonIncreasingInMagnitude`. Open review items are listed in `PROGRESS.md`.
+
 ## Method
 
 I used two independent checks.

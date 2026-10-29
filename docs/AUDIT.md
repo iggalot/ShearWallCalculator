@@ -2,7 +2,9 @@
 
 _Audit date: 2026-10-29 · Branch: `audit/roadmap-2026-10` · Baseline: `CC_windcalcs @ 0c64be5`_
 
-No code was changed for this audit. Paths are relative to each repository root:
+No code was changed for this audit.
+
+> **Status 2026-10-29:** most defects below are now fixed and covered by tests on branch `dev/wind-core-refactor`; see `PROGRESS.md` for what changed and which items still need confirmation. Paths are relative to each repository root:
 
 - **SWC** = `F:\Programming\ShearWallCalculator`
 - **W7** = `F:\Programming\ASCE7-Wind-Load-Calculator`
