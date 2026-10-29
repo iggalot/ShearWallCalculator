@@ -14,6 +14,8 @@ Check out a matching pair of commits when you build an older version.
 | `dev/wind-core-refactor @ 0359acb` | `dev/wind-core-refactor @ 14b4bb2` | Core extracted, editions as data, code-checked tests, defect fixes |
 | `dev/wind-core-refactor @ ed67539` (M3/M4) | `dev/wind-core-refactor @ 801e93b` | 3D building model, wind scene, 3D viewer tab and window |
 | `dev/wind-core-refactor` (fixes after first test drive) | `dev/wind-core-refactor @ 2e54420` | Crash fixes, ridge-correct zoning, tapered windward wall, pressure blocks, layout |
+| `dev/wind-core-refactor @ ea3703e` (M6) | `dev/wind-core-refactor @ 17d5075` | Lateral wind loads, Fig. 27.3-8 load cases into the shear walls |
+| `dev/wind-core-refactor` (M5) | `dev/wind-core-refactor @ 2f7bcf4` | Guided Wind Setup tab (Site, Building, Results) |
 
 ## Building
 

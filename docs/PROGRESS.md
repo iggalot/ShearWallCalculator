@@ -2,6 +2,39 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-10-29 (night) — M5: guided wind input
+
+Built from the approved HTML mockup. The scope is the C&C and MWFRS methods only; parapets, overhangs
+and multi-story input are deferred.
+
+- **New "Wind Setup" tab**, which is the first tab and opens on startup. It has three steps:
+  - **Site**:
+    - code edition (now defaults to 7-22);
+    - risk category as plain-language cards ("selects the map, does not multiply the loads");
+    - wind speed in mph, with a link to the ASCE Hazard Tool;
+    - exposure picture cards with the upwind-distance rules (B 2,600 ft or 1,500 ft for h ≤ 30 ft; D 5,000 ft plus 600 ft downwind; each or 20h if greater);
+    - hill yes/no, revealing Kzt;
+    - the four enclosure classes.
+  - **Building**:
+    - roof-shape cards;
+    - L, B and eave height with units;
+    - pitch with rise per 12;
+    - ridge direction for gable roofs only;
+    - the live 3D view, mean roof height, ridge height, and whether the cladding method applies.
+  - **Results**:
+    - highest roof uplift and wall suction, with the zone;
+    - force from the west and from the south (walls + roof, minimum, and which governs);
+    - a checklist;
+    - the Fig. 27.3-8 cases 1 and 3 exception;
+    - **Send loads to shear walls**.
+- **Live updates:** every keystroke recalculates the screen. The rest of the app follows after a 0.35 s pause.
+  - Invalid input shows its message at the field and clears the results everywhere; it never leaves old numbers showing.
+  - The classic BuildingData and WIND Input tabs remain and stay in sync both ways.
+- **Narrow window:** the columns stack when the tab is narrow (beside the drawing canvas).
+- **Engine (`ASCE7Wind.Core/Guidance`):** `WindInputValidator` (field-level checks tied to the code limits) and `WindSummary` (the headline numbers), both unit tested.
+- **Fixed:** the classic WIND Input tab reset risk category to II and exposure to C whenever it was opened, and it dropped G.
+- **Tests:** engine + UI 245 (+2 opt-in), shear wall 23.
+
 ## 2026-10-29 (evening) — M6: wind loads into the shear walls
 
 - **Directional force** (`WindLateralLoads`, ASCE7Wind.Core), for each wind direction:

@@ -86,6 +86,9 @@
                             TabStripPlacement="Top" Margin="10 0 0 0"
                             SelectionChanged="MainTabControl_SelectionChanged">
                     <!-- Building Data control -->
+                    <!-- Guided wind input (Site, Building, Results); the classic BuildingData and WIND Input tabs stay in sync with it -->
+                    <TabItem x:Name="tabWindSetupTabItem" Width="100" HorizontalAlignment="Center" Header="Wind Setup" Margin="5 0 5 0"/>
+
                     <TabItem x:Name="tabBuildingDataControlTabItem" Width="100" HorizontalAlignment="Center" Header="BuildingData" Margin="5 0 5 0"/>
                     
                     <!-- -->

@@ -43,8 +43,7 @@ namespace ShearWallVisualizer
     {
         public ShearWallCalculatorBase Calculator = new ShearWallCalculator_RigidDiaphragm();
         public WindParameters_Base windLoadParams { get; set; }
-        public ASCE7_Versions windVersion { get; set;
-        }
+        public ASCE7_Versions windVersion { get; set; } = ASCE7_Versions.ASCE_VER_7_22;
         public BuildingData buildingData { get; set; } = null;
 
         /// <summary>
@@ -128,6 +127,16 @@ namespace ShearWallVisualizer
             // the function to run once the app has loaded.
             this.Loaded += (s, e) =>
             {
+                // Guided wind input. It starts the shared building and wind state, so every tab shows results
+                // from the start instead of waiting for the BuildingData tab to be completed.
+                windSetup = new WindSetupControl(buildingData, windVersion, windLoadParams);
+                windSetup.InputsChanged += WindSetup_InputsChanged;
+                windSetup.SendLoadsRequested += WindSetup_SendLoadsRequested;
+                tabWindSetupTabItem.Content = windSetup;
+                buildingData = windSetup.Building.Clone();
+                windLoadParams = windSetup.Parameters.Clone();
+                windVersion = windSetup.Version;
+
                 var ctrol_bldg_input = new BuildingDataInputControl(buildingData);
                 ctrol_bldg_input.BuildingDataInputComplete += BuildingDataInputControl_BuildingDataInputComplete;
                 ctrol_bldg_input.PreviewKeyDown += RunBuildingDataInputCalculations;
@@ -154,8 +163,11 @@ namespace ShearWallVisualizer
 
                 // Now clean up and remove the tabs for the results
                 TabControlManager.RemoveAllTabs(MainTabControl);
+                TabControlManager.ReAddTab(MainTabControl, "tabWindSetupTabItem");
                 TabControlManager.ReAddTab(MainTabControl, "tabBuildingDataControlTabItem");
-                MainTabControl.SelectedIndex = 0;
+                TabControlManager.ReAddTab(MainTabControl, "tabWindInputControlTabItem");
+                RecalculateWind(); // adds the results tabs for the starting inputs
+                MainTabControl.SelectedItem = tabWindSetupTabItem;
             };
         }
 
@@ -429,8 +441,62 @@ namespace ShearWallVisualizer
             // Recalculate wind for the changed building. (Previously the old calculators were re-sent, so
             // the results tabs and 3D view kept showing the previous building.)
             RecalculateWind();
+            SyncWindSetup();
 
             UpdateShearWallUI();
+        }
+
+        private WindSetupControl windSetup;
+
+        /// <summary>The guided wind screen changed: it now holds the inputs for every other tab.</summary>
+        private void WindSetup_InputsChanged(object sender, EventArgs e)
+        {
+            // Unusable input (e.g. a blank width): clear the results everywhere rather than leave old numbers
+            // showing; the setup screen says what to fix. The last good inputs are kept.
+            if (WindInputValidator.HasErrors(windSetup.Issues) || windSetup.Analysis == null)
+            {
+                windLoadCalculator_CC = windLoadCalculator_MWFRS_Length = windLoadCalculator_MWFRS_Width = null;
+                CreateAndAssignResultControls();
+                return;
+            }
+
+            buildingData = windSetup.Building.Clone();
+            windLoadParams = windSetup.Parameters.Clone();
+            windVersion = windSetup.Version;
+
+            // Rebuild the classic input tabs so they show the same values.
+            var ctrol_bldg_input = new BuildingDataInputControl(buildingData);
+            ctrol_bldg_input.BuildingDataInputComplete += BuildingDataInputControl_BuildingDataInputComplete;
+            ctrol_bldg_input.PreviewKeyDown += RunBuildingDataInputCalculations;
+            tabBuildingDataControlTabItem.Content = ctrol_bldg_input;
+
+            var ctrol_wind_input = new WindLoadInputControl(buildingData, windVersion, windLoadParams);
+            ctrol_wind_input.WindInputComplete += WindLoadInputControl_WindInputComplete;
+            tabWindInputControlTabItem.Content = ctrol_wind_input;
+
+            RecalculateWind();
+            UpdateShearWallUI();
+        }
+
+        /// <summary>Puts edits made on the classic tabs back into the guided screen (without echoing an event).</summary>
+        private void SyncWindSetup()
+        {
+            if (windSetup == null || buildingData == null || windLoadParams == null) return;
+            windSetup.SetInputs(buildingData, windVersion, windLoadParams);
+        }
+
+        /// <summary>"Send loads to shear walls": every Fig. 27.3-8 load case goes to the calculator.</summary>
+        private void WindSetup_SendLoadsRequested(object sender, WindLateralResult lateral)
+        {
+            if (Calculator == null || lateral == null) return;
+            var cases = lateral.LoadCases
+                .Select(c => new ShearWallCalculator.LateralLoadCase(c.Name, c.Vx, c.Vy, c.Mt, applyMinimumEccentricity: false))
+                .ToList();
+            Calculator.SetLoadCases(cases);
+            UpdateShearWallUI();
+            windSetup.ShowSendStatus(
+                $"Sent {cases.Count} load cases (from west {lateral.AlongLength.DesignKips:0.0} kips, from south {lateral.AlongWidth.DesignKips:0.0} kips). " +
+                "Each wall's governing case is on the Calculations tab.");
         }
         /// <summary>
         /// Event listener for when input of the wind loads as been completed -- to save our wind calculators and update the UI
@@ -457,6 +523,7 @@ namespace ShearWallVisualizer
             }
 
             CreateAndAssignResultControls();
+            SyncWindSetup();
 
             UpdateShearWallUI();
         }
@@ -503,7 +570,7 @@ namespace ShearWallVisualizer
                 windLoadCalculator_MWFRS_Length = r.MwfrsAlongLength;
                 windLoadCalculator_MWFRS_Width = r.MwfrsAlongWidth;
             }
-            catch (ArgumentException)
+            catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException || ex is NotSupportedException || ex is NotImplementedException)
             {
                 windLoadCalculator_CC = windLoadCalculator_MWFRS_Length = windLoadCalculator_MWFRS_Width = null;
             }
