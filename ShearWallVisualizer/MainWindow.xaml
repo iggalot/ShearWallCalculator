@@ -24,6 +24,7 @@
             </MenuItem>
             <MenuItem Header="_View">
                 <MenuItem Header="_Refresh" Click="Refresh_Click"/>
+                <MenuItem Header="3D _Wind View (window)" Click="Open3DWindWindow_Click"/>
             </MenuItem>
             <MenuItem Header="_Edit">
                 <MenuItem Header="Open Image Tool" Click="OpenImageTool_Click"/>
@@ -96,6 +97,8 @@
                     <TabItem x:Name="tabWindResultsTabItem_MWFRS_BldgWidth" Header="MWFRS 2" Width="100" HorizontalAlignment="Center" Margin="5 0 5 0" />
 
                     <TabItem x:Name="tabWindResultsTabItem_CC"  Header="CC Wind Calcs" Width="100" HorizontalAlignment="Center" Margin="5 0 5 0" />
+
+                    <TabItem x:Name="tabWind3DTabItem" Header="3D Wind" Width="100" HorizontalAlignment="Center" Margin="5 0 5 0" />
 
                     <TabItem x:Name="tabCalculationsTabItem" Header="Calculations" Width="100" HorizontalAlignment="Center" Margin="5 0 5 0" >
                         <StackPanel Orientation="Vertical">

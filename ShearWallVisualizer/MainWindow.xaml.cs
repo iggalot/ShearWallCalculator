@@ -480,6 +480,28 @@ namespace ShearWallVisualizer
             var mwfrsControl2 = new WindLoadResultsControl_MWFRS(windLoadCalculator_MWFRS_Width);
             tabWindResultsTabItem_MWFRS_BldgWidth.Content = mwfrsControl2;
             TabControlManager.ReAddTab(MainTabControl, "tabWindResultsTabItem_MWFRS_BldgWidth");
+
+            // 3D view: keep one viewer so the camera and selected view survive input changes.
+            var viewer = tabWind3DTabItem.Content as Wind3DViewerControl ?? new Wind3DViewerControl();
+            viewer.SetResults(buildingData, windLoadCalculator_CC, windLoadCalculator_MWFRS_Length, windLoadCalculator_MWFRS_Width);
+            tabWind3DTabItem.Content = viewer;
+            TabControlManager.ReAddTab(MainTabControl, "tabWind3DTabItem");
+        }
+
+        /// <summary>Opens the 3D wind view in its own resizable window.</summary>
+        private void Open3DWindWindow_Click(object sender, RoutedEventArgs e)
+        {
+            var viewer = new Wind3DViewerControl();
+            viewer.SetResults(buildingData, windLoadCalculator_CC, windLoadCalculator_MWFRS_Length, windLoadCalculator_MWFRS_Width);
+            new Window
+            {
+                Title = "3D Wind View",
+                Owner = this,
+                Width = 1280,
+                Height = 800,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Content = viewer,
+            }.Show();
         }
 
         private void CreateWallDataControls()

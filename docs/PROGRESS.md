@@ -2,6 +2,60 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-10-29 (later) — M3 and M4 complete
+
+### M3 — One building model in 3D (`ASCE7Wind.Core`, no WPF)
+- `BuildingModel` builds the envelope from `BuildingData`:
+  - four walls, with gable triangles on the gable ends;
+  - the roof planes for flat, gable (either ridge direction) and hip roofs;
+  - outward normals, wall local frames, and the roof plan regions with their plane equations.
+- `WindSceneBuilder` places every C&C and MWFRS zone on the envelope:
+  - Roof zones are drawn in plan. They are triangulated, clipped to each roof plane and lifted onto
+    it, so a zone that crosses a ridge or hip folds correctly.
+  - Wall zones map through each wall's frame.
+  - The width-direction MWFRS results (which use the building turned 90°) are mapped back onto the
+    real faces.
+- `PolygonOps` provides triangulation that is robust to holes touching the edge (the flat-roof edge
+  zone has these), plus convex clipping.
+- `PressureColorScale` is a diverging red/blue scale with gray at zero. `OrbitCamera` handles orbit,
+  pan, zoom, framing and named views.
+- 29 tests:
+  - Envelope areas, gable and hip geometry, outward normals.
+  - Triangulation and clipping.
+  - Zones cover the true sloped roof area and lie on the roof planes, for every roof type, edition and
+    view.
+  - MWFRS windward/leeward placement.
+  - Color ordering and camera behavior.
+
+### M4 — Interactive 3D viewer (`Wind3DViewerControl`, WPF `Viewport3D`, no packages)
+- **Views:**
+  - cladding suction;
+  - cladding inward pressure;
+  - whole building with wind from the west, or from the south;
+  - both Fig. 27.3-1 roof cases.
+- **Mouse:** drag to orbit, right-drag to pan, wheel to zoom, double-click to reset. Preset views:
+  3D, Top, South, West.
+- **Hover:** shows the pressure, a plain-language zone name, the surface, the zone code and the
+  effective area, and highlights the zone.
+- **On-screen information:**
+  - legend in psf: blue pushes on the surface, red pulls away;
+  - summary card: highest uplift and wall suction, or windward/leeward walls plus base shear in kips;
+  - limit warnings;
+  - labeled wind and north arrows.
+- **In the host app:** a new **3D Wind** tab, refreshed whenever the wind inputs change, plus
+  **View → 3D Wind View (window)** for a full-size resizable window.
+- **Tests:** 12 offscreen rendering tests in `ASCE7Wind.UI.Tests` cover flat, gable (both ridge
+  directions) and hip roofs in every view, hover picking, warnings and invalid input.
+
+**Test totals:** W7 171 (+2 opt-in), UI 12, ShearWallCalculator 18. Both solutions build with 0 errors.
+
+### Not done yet (next candidates)
+- Two-way linking between the 3D view and the results tables. The viewer already raises
+  `ZoneHovered` and offers `ZoneAt()`; the tables need a matching selection hook.
+- Load cases 2–4 (torsion, Fig. 27.3-8), and roof horizontal components in the base shear (M6).
+- Typed zone identifiers in place of strings (M2 remainder).
+- The guided input wizard (M5).
+
 ## 2026-10-29 — M0 complete, M1 complete, M2 mostly complete
 
 ### M0 — Baseline

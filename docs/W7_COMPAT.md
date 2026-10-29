@@ -11,7 +11,8 @@ Check out a matching pair of commits when you build an older version.
 | ShearWallCalculator branch / commit | W7 branch / commit | Notes |
 |---|---|---|
 | `CC_windcalcs @ 0c64be5` | `main @ c67831c` (+ uncommitted edit) | Pre-audit baseline |
-| `dev/wind-core-refactor` (this branch) | `dev/wind-core-refactor @ 14b4bb2` | Core extracted, editions as data, code-checked tests, defect fixes |
+| `dev/wind-core-refactor @ 0359acb` | `dev/wind-core-refactor @ 14b4bb2` | Core extracted, editions as data, code-checked tests, defect fixes |
+| `dev/wind-core-refactor` (M3/M4) | `dev/wind-core-refactor @ 801e93b` | 3D building model, wind scene, 3D viewer tab and window |
 
 ## Building
 
@@ -28,5 +29,13 @@ MSBuild ShearWallCalculator.sln -restore
 vstest.console ShearWallCalculator.Tests\bin\Debug\net472\ShearWallCalculator.Tests.dll
 vstest.console ..\ASCE7-Wind-Load-Calculator\ASCE7Wind.Tests\bin\Debug\net472\ASCE7Wind.Tests.dll
 ```
+
+The 3D viewer's rendering tests live in the wind solution. Build `ASCE7WindLoadCalculator.sln`, then run:
+
+```
+vstest.console ASCE7Wind.UI.Tests\bin\Debug\net472\ASCE7Wind.UI.Tests.dll
+```
+
+Set `SNAPSHOT_DIR` to a folder to also save PNG renders of every view.
 
 You can also use Test Explorer in Visual Studio.
