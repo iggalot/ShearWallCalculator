@@ -2263,6 +2263,13 @@ namespace ShearWallVisualizer
 
         private void MainTabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            // Opening the 3D tab always shows the latest results (never a stale building).
+            if (ReferenceEquals(e.OriginalSource, MainTabControl) && tabWind3DTabItem.IsSelected &&
+                tabWind3DTabItem.Content is Wind3DViewerControl viewer)
+            {
+                viewer.SetResults(buildingData, windLoadCalculator_CC, windLoadCalculator_MWFRS_Length, windLoadCalculator_MWFRS_Width, keepCamera: true);
+            }
+
             if (tabWindInputControlTabItem.IsSelected &&
             tabWindInputControlTabItem.Content is UIElement content)
             {
