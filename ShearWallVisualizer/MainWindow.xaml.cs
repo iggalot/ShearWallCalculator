@@ -193,6 +193,8 @@ namespace ShearWallVisualizer
                     CreateCalculationResultsControls_Flexible();
                 }
 
+                ShowCalculationState();
+
                 // list the type of calculator
                 tbCalculatorType.Text = Calculator.GetType().Name;
 
@@ -224,6 +226,32 @@ namespace ShearWallVisualizer
 
             // redraw the scene
             Draw(ChangeType.Redraw);
+        }
+
+        /// <summary>
+        /// Calculations tab: only the table for this calculator type, and until there is something to
+        /// calculate, a note saying what to draw (the tables used to stay empty with no explanation).
+        /// </summary>
+        private void ShowCalculationState()
+        {
+            bool rigid = Calculator is ShearWallCalculator_RigidDiaphragm;
+            spRigidSection.Visibility = rigid ? Visibility.Visible : Visibility.Collapsed;
+            spFlexibleSection.Visibility = rigid ? Visibility.Collapsed : Visibility.Visible;
+
+            int walls = Calculator._wall_system?._walls?.Count ?? 0;
+            int diaphragms = Calculator._diaphragm_system?._diaphragms?.Count ?? 0;
+            int xWalls = Calculator._wall_system?._walls?.Values.Count(w => Math.Abs(w.End.Y - w.Start.Y) < 1e-9) ?? 0;
+            int yWalls = walls - xWalls;
+            string todo = null;
+            if (diaphragms == 0)
+                todo = "Draw the floor or roof (diaphragm): click Diaphragm, then click two opposite corners on the drawing.";
+            else if (xWalls == 0 || yWalls == 0)
+                todo = $"Draw the shear walls: click Wall, then click each wall's start and end. You need walls in both directions, usually two or more each way " +
+                       $"(now {xWalls} running W-E and {yWalls} running S-N).";
+            else if (Calculator.IsValidForCalculation != true)
+                todo = "The walls and diaphragm cannot be calculated yet. Check that the walls sit inside the diaphragm.";
+            tbCalcEmpty.Text = todo ?? string.Empty;
+            bdCalcEmpty.Visibility = todo == null ? Visibility.Collapsed : Visibility.Visible;
         }
 
         /// <summary>
@@ -1912,8 +1940,14 @@ namespace ShearWallVisualizer
             }
             else
             {
-                // test load data
-                Calculator.AddLoads(15, 15);
+                // Uses the current loads. (It used to call AddLoads(15, 15), which silently replaced the
+                // linked wind loads with a 15 k test load while the screen still said "ASCE 7 wind".)
+                Calculator.PerformCalculations();
+                if (!Calculator.TotalWallShear.ContainsKey(0))
+                {
+                    MessageBox.Show("Draw the walls and diaphragm first; wall 0 has no calculated shear yet.");
+                    return;
+                }
 
                 // test wall key
                 int wall_id = 0;

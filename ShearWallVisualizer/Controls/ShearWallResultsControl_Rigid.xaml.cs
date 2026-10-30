@@ -12,18 +12,21 @@ namespace ShearWallVisualizer.Controls
             InitializeComponent();
         }
 
+        /// <summary>A wall that takes no load in a direction has no value there: show a dash, not "NaN".</summary>
+        private static string Show(double v) => double.IsNaN(v) ? "-" : v.ToString("0.00");
+
         public ShearWallResultsControl_Rigid(int id, double rigidity, double xbar, double ybar, double vix, double viy, double v_ecc, double v_tot)
         {
             InitializeComponent();
 
             ID.Content = id;
-            Rgidity.Content = rigidity.ToString("0.00");
-            Xbar.Content = xbar.ToString("0.00");
-            Ybar.Content = ybar.ToString("0.00");
-            Vix.Content = vix.ToString("0.00");
-            Viy.Content = viy.ToString("0.00");
-            V_ecc.Content = v_ecc.ToString("0.00");
-            V_tot.Content = v_tot.ToString("0.00");
+            Rgidity.Content = Show(rigidity);
+            Xbar.Content = Show(xbar);
+            Ybar.Content = Show(ybar);
+            Vix.Content = Show(vix);
+            Viy.Content = Show(viy);
+            V_ecc.Content = Show(v_ecc);
+            V_tot.Content = Show(v_tot);
         }
     }
 }
