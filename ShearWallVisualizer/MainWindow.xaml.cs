@@ -132,6 +132,7 @@ namespace ShearWallVisualizer
                 windSetup = new WindSetupControl(buildingData, windVersion, windLoadParams);
                 windSetup.InputsChanged += WindSetup_InputsChanged;
                 windSetup.SendLoadsRequested += WindSetup_SendLoadsRequested;
+                windSetup.ShearWallsRequested += (s2, e2) => rbWorkspaceWalls.IsChecked = true;
                 tabWindSetupTabItem.Content = windSetup;
                 buildingData = windSetup.Building.Clone();
                 windLoadParams = windSetup.Parameters.Clone();
@@ -168,7 +169,9 @@ namespace ShearWallVisualizer
                 TabControlManager.ReAddTab(MainTabControl, "tabWindInputControlTabItem");
                 RecalculateWind(); // adds the results tabs for the starting inputs (and links the wind loads)
                 UpdateShearWallUI();
-                MainTabControl.SelectedItem = tabWindSetupTabItem;
+                TabControlManager.ReAddTab(MainTabControl, "tabDimensionsTabItem");
+                TabControlManager.ReAddTab(MainTabControl, "tabCalculationsTabItem");
+                ApplyWorkspace();
             };
         }
 
@@ -210,6 +213,10 @@ namespace ShearWallVisualizer
                 // update the load info display
                 LoadInfoTextBlock.Text = (windLoadsLinked ? "Loads: ASCE 7 wind (auto)" : "Loads: MANUAL") +
                                          $"  X: {Calculator.V_x:0.0} k | Y: {Calculator.V_y:0.0} k";
+                tbWorkspaceLoads.Text = windLoadsLinked
+                    ? $"Shear walls use the wind loads (X {Calculator.V_x:0.0} k, Y {Calculator.V_y:0.0} k), updated automatically."
+                    : $"Shear walls use MANUAL loads (X {Calculator.V_x:0.0} k, Y {Calculator.V_y:0.0} k), not the wind loads.";
+                tbWorkspaceLoads.Foreground = windLoadsLinked ? Brushes.DarkGreen : Brushes.DarkOrange;
             }
 
             // UpdateShearWallUI the button appearances
@@ -526,7 +533,7 @@ namespace ShearWallVisualizer
                 .Select(c => new ShearWallCalculator.LateralLoadCase(c.Name, c.Vx, c.Vy, c.Mt, applyMinimumEccentricity: false)));
             windSetup?.SetShearWallLink(true,
                 $"{lateral.LoadCases.Count} load cases (from W {lateral.AlongLength.DesignKips:0.0} k, from S {lateral.AlongWidth.DesignKips:0.0} k). " +
-                "Updated automatically on every change. Results per wall: Calculations tab.");
+                "Updated automatically. Per-wall results: 2 Shear walls, Calculations tab.");
         }
 
         /// <param name="reason">Shown in the warning on the Wind Setup screen.</param>
@@ -1974,12 +1981,21 @@ namespace ShearWallVisualizer
                 Console.WriteLine("No valid calculator found in btnOpenLoadDialog_Click.");
                 return;
             }
-            var dialog = new LoadInputDialog(buildingData, windLoadParams, windVersion, Calculator.V_x, Calculator.V_y)
+            windSetup?.FlushPendingChange();
+            var dialog = new LoadInputDialog(buildingData, windLoadParams, windVersion, Calculator.V_x, Calculator.V_y,
+                                             windSetup?.OnlyCases1And3 ?? false, manualNow: !windLoadsLinked)
             {
                 Owner = this
             };
 
-            if (dialog.ShowDialog() == true)
+            bool? ok = dialog.ShowDialog();
+            if (dialog.EditWindRequested)
+            {
+                rbWorkspaceWind.IsChecked = true;
+                MainTabControl.SelectedItem = tabWindSetupTabItem;
+                return;
+            }
+            if (ok == true)
             {
                 // ASCE wind: all Fig. 27.3-8 load cases (each wall uses its governing case); manual: one load.
                 if (dialog.LoadCases != null && dialog.LoadCases.Count > 0)
@@ -2391,21 +2407,46 @@ namespace ShearWallVisualizer
             }
         }
 
+        private bool InWindWorkspace => rbWorkspaceWind.IsChecked == true;
+
+        /// <summary>Tabs that belong to the Wind loads workspace; the rest belong to Shear walls.</summary>
+        private bool IsWindTab(TabItem tab) =>
+            tab == tabWindSetupTabItem || tab == tabWind3DTabItem || tab == tabBuildingDataControlTabItem ||
+            tab == tabWindInputControlTabItem || tab == tabWindResultsTabItem_CC ||
+            tab == tabWindResultsTabItem_MWFRS_BldgLength || tab == tabWindResultsTabItem_MWFRS_BldgWidth;
+
+        private void Workspace_Checked(object sender, RoutedEventArgs e)
+        {
+            if (windSetup == null) return; // still loading
+            ApplyWorkspace();
+        }
+
+        /// <summary>
+        /// Shows one workspace. Wind loads: the guided setup and the wind tabs use the whole window.
+        /// Shear walls: the drawing canvas, its toolbar, and the Dimensions / Calculations tabs.
+        /// </summary>
+        private void ApplyWorkspace()
+        {
+            bool wind = InWindWorkspace;
+            if (!wind) windSetup?.FlushPendingChange(); // the walls get the latest wind loads first
+
+            foreach (var tab in MainTabControl.Items.OfType<TabItem>())
+                tab.Visibility = IsWindTab(tab) == wind ? Visibility.Visible : Visibility.Collapsed;
+
+            // The canvas is Hidden (not Collapsed) so it keeps its size: its zoom/pan math reads
+            // ActualWidth/ActualHeight. The tab area simply stretches over it.
+            dockpanel.Visibility = wind ? Visibility.Hidden : Visibility.Visible;
+            Grid.SetColumn(MainTabControl, wind ? 0 : 1);
+            Grid.SetColumnSpan(MainTabControl, wind ? 2 : 1);
+            spDrawingToolbar.Visibility = wind ? Visibility.Collapsed : Visibility.Visible;
+
+            if (!(MainTabControl.SelectedItem is TabItem current) || current.Visibility != Visibility.Visible)
+                MainTabControl.SelectedItem = wind ? tabWindSetupTabItem : (TabItem)tabCalculationsTabItem;
+            if (!wind) Draw(ChangeType.Redraw);
+        }
+
         private void MainTabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            // The wind setup and 3D wind screens get the whole window: the shear-wall drawing and its toolbar
-            // are not used there. Every other tab shows them as before.
-            if (ReferenceEquals(e.OriginalSource, MainTabControl))
-            {
-                // The canvas is Hidden (not Collapsed) so it keeps its size: its zoom/pan math reads
-                // ActualWidth/ActualHeight. The tab area simply stretches over it.
-                bool windWorkspace = tabWindSetupTabItem.IsSelected || tabWind3DTabItem.IsSelected;
-                dockpanel.Visibility = windWorkspace ? Visibility.Hidden : Visibility.Visible;
-                Grid.SetColumn(MainTabControl, windWorkspace ? 0 : 1);
-                Grid.SetColumnSpan(MainTabControl, windWorkspace ? 2 : 1);
-                spDrawingToolbar.Visibility = windWorkspace ? Visibility.Collapsed : Visibility.Visible;
-            }
-
             // Opening the 3D tab always shows the latest results (never a stale building).
             if (ReferenceEquals(e.OriginalSource, MainTabControl) && tabWind3DTabItem.IsSelected &&
                 tabWind3DTabItem.Content is Wind3DViewerControl viewer)

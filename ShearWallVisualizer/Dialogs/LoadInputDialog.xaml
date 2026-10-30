@@ -3,58 +3,88 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:ShearWallVisualizer.Dialogs"
-        xmlns:ctrl="clr-namespace:ASCE7WindLoadCalculator;assembly=ASCE7WindLoadCalculator"
         mc:Ignorable="d"
-        Title="Enter Load Information" SizeToContent="WidthAndHeight">
-    <StackPanel Orientation="Horizontal">
-        <StackPanel Orientation="Vertical">
-            <Button x:Name="btnManual" Content="Manual" Width="75" Height="25" Margin="5" Click="btnManual_Click"/>
-            <Button x:Name="btnASCEWind" Content="ASCE Wind" Width="75" Height="25" Margin="5" Click="btnASCEWind_Click"/>
+        Title="Shear-wall loads" SizeToContent="Height" Width="640" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner" Background="#F9F9F7" FontFamily="Segoe UI" FontSize="13">
+    <Window.Resources>
+        <Style x:Key="Mode" TargetType="RadioButton">
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="bd" CornerRadius="6" BorderThickness="1" BorderBrush="#C3C2B7" Background="White" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#0B0B0B"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="#0B0B0B"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <StackPanel Margin="18">
+        <TextBlock Text="Which loads should the shear walls use?" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+            <RadioButton x:Name="rbASCEWind" GroupName="loadmode" Style="{StaticResource Mode}" Checked="Mode_Checked">
+                <StackPanel><TextBlock Text="ASCE 7 wind (recommended)" FontWeight="SemiBold"/><TextBlock Text="From the Wind loads screen; updates automatically" FontSize="11" Opacity="0.8"/></StackPanel>
+            </RadioButton>
+            <RadioButton x:Name="rbManual" GroupName="loadmode" Style="{StaticResource Mode}" Checked="Mode_Checked">
+                <StackPanel><TextBlock Text="Manual" FontWeight="SemiBold"/><TextBlock Text="Your own X and Y loads" FontSize="11" Opacity="0.8"/></StackPanel>
+            </RadioButton>
         </StackPanel>
-        <StackPanel Orientation="Vertical">
-            <Grid Name="gridManual" Margin="10" Visibility="Collapsed">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
 
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="2*"/>
-                </Grid.ColumnDefinitions>
-
-                <!-- Direction X -->
-                <TextBlock Text="Load Magnitude (kips) X:" Grid.Row="0" Grid.Column="0" Margin="5"/>
-                <TextBox x:Name="MagnitudeXBox" Grid.Row="0" Grid.Column="1" Margin="5"/>
-
-                <!-- Direction Y -->
-                <TextBlock Text="Load Magnitude (kips) Y:" Grid.Row="2" Grid.Column="0" Margin="5"/>
-                <TextBox x:Name="MagnitudeYBox" Grid.Row="2" Grid.Column="1" Margin="5"/>
-
-            </Grid>
-            <StackPanel Orientation="Horizontal">
-                <StackPanel Orientation="Vertical" Name="gridASCEWind" Margin="10" Visibility="Collapsed">
-                    <StackPanel Orientation="Horizontal">
-                        <ctrl:BuildingDataInputControl x:Name="ctrBuildingDataInputControl" Margin="5"/>
-                        <ctrl:WindLoadInputControl x:Name="ctrlWindLoadInputControl" Margin="5"  />
+        <!-- ASCE wind: the loads from the current wind inputs (edited on the Wind loads screen) -->
+        <Border x:Name="gridASCEWind" Background="#FCFCFB" BorderBrush="#E1E0D9" BorderThickness="1" CornerRadius="8" Padding="14,10">
+            <StackPanel>
+                <TextBlock x:Name="tbWindLoadSummary" TextWrapping="Wrap"/>
+                <CheckBox x:Name="cbOnlyCases1And3" Margin="0,10,0,0" VerticalContentAlignment="Top" Checked="LoadCaseOption_Changed" Unchecked="LoadCaseOption_Changed">
+                    <StackPanel>
+                        <TextBlock FontWeight="SemiBold" Text="Use load cases 1 and 3 only"/>
+                        <TextBlock Foreground="#52514E" FontSize="12" TextWrapping="Wrap"
+                                   Text="Allowed for 1 story with h ≤ 30 ft, or up to 2 stories light-frame or with flexible diaphragms (Fig. 27.3-8 exception)."/>
                     </StackPanel>
-                    <CheckBox x:Name="cbOnlyCases1And3" Margin="5" Checked="LoadCaseOption_Changed" Unchecked="LoadCaseOption_Changed"
-                              Content="Use only Load Cases 1 and 3 (ASCE 7 Fig. 27.3-8 exception)"
-                              ToolTip="Allowed for one-story buildings with h &lt;= 30 ft, and for buildings of two stories or less that are light-frame or have flexible diaphragms. Otherwise all four cases, including the torsional cases 2 and 4, are required."/>
-                    <TextBlock x:Name="tbWindLoadSummary" Margin="5" TextWrapping="Wrap" MaxWidth="900"/>
-                </StackPanel>
+                </CheckBox>
+                <Grid Margin="0,8,0,0" TextElement.FontSize="12" TextElement.Foreground="#52514E">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="56"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+                    <TextBlock FontWeight="SemiBold" Text="Case 1"/><TextBlock Grid.Column="1" Text="Full wind, each direction alone"/>
+                    <TextBlock Grid.Row="1" FontWeight="SemiBold" Text="Case 2"/><TextBlock Grid.Row="1" Grid.Column="1" Text="75%, applied 15% off-center (twists the building)"/>
+                    <TextBlock Grid.Row="2" FontWeight="SemiBold" Text="Case 3"/><TextBlock Grid.Row="2" Grid.Column="1" Text="75% from both directions at once"/>
+                    <TextBlock Grid.Row="3" FontWeight="SemiBold" Text="Case 4"/><TextBlock Grid.Row="3" Grid.Column="1" Text="56% from both directions at once, 15% off-center"/>
+                </Grid>
+                <Button x:Name="btnEditWind" HorizontalAlignment="Left" Margin="0,10,0,0" Padding="12,4" Content="Change the wind inputs…" Click="EditWind_Click"
+                        ToolTip="Closes this window and opens the Wind loads screen"/>
             </StackPanel>
-            <!-- Buttons -->
-            <StackPanel Name="stackPanelButtons" Visibility="Collapsed" Grid.Row="4" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="5">
-                <Button Content="OK" Width="75" Margin="5" Click="OkButton_Click"/>
-                <Button Content="Cancel" Width="75" Margin="5" Click="CancelButton_Click"/>
-            </StackPanel>
-        </StackPanel>
+        </Border>
 
+        <!-- Manual: one load per direction -->
+        <Border x:Name="gridManual" Visibility="Collapsed" Background="#FFF4E5" BorderBrush="#E8A33D" BorderThickness="1" CornerRadius="8" Padding="14,10">
+            <StackPanel>
+                <TextBlock TextWrapping="Wrap" Foreground="#7A4B00" Margin="0,0,0,8"
+                           Text="Manual loads replace the ASCE 7 wind loads. The shear walls will NOT update when the wind inputs change."/>
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="200"/><ColumnDefinition Width="140"/></Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+                    <TextBlock Text="Load in X (kips):" VerticalAlignment="Center" Margin="0,4"/>
+                    <TextBox x:Name="MagnitudeXBox" Grid.Column="1" Margin="0,4" Padding="4,2"/>
+                    <TextBlock Grid.Row="1" Text="Load in Y (kips):" VerticalAlignment="Center" Margin="0,4"/>
+                    <TextBox x:Name="MagnitudeYBox" Grid.Row="1" Grid.Column="1" Margin="0,4" Padding="4,2"/>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <StackPanel x:Name="stackPanelButtons" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+            <Button Content="OK" Width="90" Margin="0,0,8,0" Padding="0,4" IsDefault="True" Click="OkButton_Click"/>
+            <Button Content="Cancel" Width="90" Padding="0,4" IsCancel="True" Click="CancelButton_Click"/>
+        </StackPanel>
     </StackPanel>
 </Window>

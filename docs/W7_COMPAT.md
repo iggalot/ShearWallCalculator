@@ -18,6 +18,7 @@ Check out a matching pair of commits when you build an older version.
 | `dev/wind-core-refactor @ ef727a9` (M5) | `dev/wind-core-refactor @ 2f7bcf4` | Guided Wind Setup tab (Site, Building, Results) |
 | `dev/wind-core-refactor @ 733a36c` (M5 revisions) | `dev/wind-core-refactor @ c0fb7b2` | One-screen steps, prototype results layout, live shear-wall link |
 | `dev/wind-core-refactor` (M5 polish) | `dev/wind-core-refactor @ e122a8c` | Wind workspace, default wind link, compact viewer |
+| `dev/wind-core-refactor` (third look) | `dev/wind-core-refactor @ 0f35b75` | Workspace switch, stepped site page, detailed calculations window, LOADS dialog |
 
 ## Building
 

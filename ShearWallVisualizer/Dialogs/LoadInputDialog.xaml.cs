@@ -1,13 +1,16 @@
 ﻿using ASCE7WindLoadCalculator;
 using System;
+using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Windows;
-using System.Windows.Media;
 
 namespace ShearWallVisualizer.Dialogs
 {
     /// <summary>
-    /// This class comptues the ASCE7 wind loads on our shear wall building, or allows manual override of the loads to be used in the shear wall calculator
+    /// Chooses the shear-wall loads: the ASCE 7 wind loads from the current wind inputs (the default, kept up
+    /// to date automatically by the main window), or a manual load per direction. The wind inputs themselves
+    /// are edited on the Wind loads screen ("Change the wind inputs" closes this dialog and goes there).
     /// </summary>
     public partial class LoadInputDialog : Window
     {
@@ -18,10 +21,10 @@ namespace ShearWallVisualizer.Dialogs
         }
 
         /// the event that signals that the loads have been computed -- controls will listen for this at the time they are created.
-        public event EventHandler<OnLoadsComputedCompleteEventArgs> LoadsComputedComplete;  
+        public event EventHandler<OnLoadsComputedCompleteEventArgs> LoadsComputedComplete;
         public class OnLoadsComputedCompleteEventArgs : EventArgs
         {
-            public double _magnitude_x { get; set;  }
+            public double _magnitude_x { get; set; }
             public double _magnitude_y { get; set; }
 
             public OnLoadsComputedCompleteEventArgs(double x, double y)
@@ -31,86 +34,57 @@ namespace ShearWallVisualizer.Dialogs
             }
         }
 
-        private LoadInputModes inputMode;
-        private BuildingData _buildingData;
-        private WindParameters_Base _parameters;
-        private ASCE7_Versions _version;
+        private LoadInputModes inputMode = LoadInputModes.MODE_ASCEWIND;
+        private readonly WindAnalysisResult wind;
+        private bool settingMode;
 
         public double MagnitudeX { get; private set; }
         public double MagnitudeY { get; private set; }
-
-        public LoadInputDialog(
-            BuildingData buildingData,
-            WindParameters_Base parameters = null,
-            ASCE7_Versions version = ASCE7_Versions.ASCE_VER_7_16,
-            double initialMagX = 0, double initialLocX = 0,
-                               double initialMagY = 0, double initialLocY = 0)
-        {
-            InitializeComponent();
-
-            _buildingData = buildingData;
-            _parameters = parameters;
-            _version = version;
-
-            MagnitudeXBox.Text = initialMagX.ToString();
-            MagnitudeYBox.Text = initialMagY.ToString();
-
-            this.Loaded += (s, e) =>
-            {
-                var buildingControl = new BuildingDataInputControl(buildingData);
-                //buildingControl.BuildingDataInputComplete += BuildingInputCompleted;
-                ctrBuildingDataInputControl.Content = buildingControl;
-                buildingControl.BuildingDataInputComplete += BuildingInputCompleted;
-
-                var windControl = new WindLoadInputControl(buildingData, version, parameters); // pass the initial values to the ctrBuildingDataInputControl.
-                windControl.WindInputComplete += WindCalculated; // the listener event for the ASCE wind load calcs
-                ctrlWindLoadInputControl.Content = windControl;
-            };
-        }
-
-        /// <summary>
-        /// The task to do when the building data has been entered
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void BuildingInputCompleted(object sender, BuildingDataInputControl.OnBuildingDataInputCompleteEventArgs e)
-        {
-            _buildingData = e._bldg_data;
-
-            //MessageBox.Show("Building data has been changed.");
-            if(ctrlWindLoadInputControl.Content is WindLoadInputControl oldControl)
-            {
-                oldControl.WindInputComplete -= WindCalculated;  // clear the old event
-                ctrlWindLoadInputControl.Content = null;
-            }
-
-            // rebuild the wind control event
-            var windControl = new WindLoadInputControl(_buildingData, _version, _parameters); // pass the initial values to the ctrBuildingDataInputControl.
-            windControl.WindInputComplete += WindCalculated; // the listener event for the ASCE wind load calcs
-            ctrlWindLoadInputControl.Content = windControl;
-        }
-
-        /// <summary>
-        /// The tasks to do when the wind load data has been entered
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private WindAnalysisResult lastWind;
 
         /// <summary>
         /// Design load cases for the shear walls when ASCE wind is used (ASCE 7 Fig. 27.3-8), or null for a
         /// manually entered load.
         /// </summary>
-        public System.Collections.Generic.List<ShearWallCalculator.LateralLoadCase> LoadCases { get; private set; }
+        public List<ShearWallCalculator.LateralLoadCase> LoadCases { get; private set; }
 
         /// <summary>Fig. 27.3-8 exception chosen in this dialog (load cases 1 and 3 only).</summary>
         public bool OnlyCases1And3 => cbOnlyCases1And3?.IsChecked == true;
 
-        private void WindCalculated(object sender, WindLoadInputControl.OnWindInputCompleteEventArgs e)
+        /// <summary>True when the user closed the dialog to change the wind inputs.</summary>
+        public bool EditWindRequested { get; private set; }
+
+        /// <param name="manualNow">Open on Manual (the walls currently use a manual load).</param>
+        public LoadInputDialog(
+            BuildingData buildingData,
+            WindParameters_Base parameters = null,
+            ASCE7_Versions version = ASCE7_Versions.ASCE_VER_7_16,
+            double initialMagX = 0, double initialMagY = 0,
+            bool onlyCases1And3 = false, bool manualNow = false)
         {
-            lastWind = e._windLoadCalculator_MWFRS_Length != null && e._windLoadCalculator_MWFRS_Width != null
-                ? new WindAnalysisResult(e._windLoadCalculator_CC, e._windLoadCalculator_MWFRS_Length, e._windLoadCalculator_MWFRS_Width)
-                : null;
+            InitializeComponent();
+
+            MagnitudeXBox.Text = initialMagX.ToString("0.##", CultureInfo.CurrentCulture);
+            MagnitudeYBox.Text = initialMagY.ToString("0.##", CultureInfo.CurrentCulture);
+
+            try
+            {
+                if (buildingData != null && parameters != null)
+                {
+                    var r = WindAnalysis.Run(version, parameters, buildingData);
+                    if (r.MwfrsAlongLength != null && r.MwfrsAlongWidth != null) wind = r;
+                }
+            }
+            catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException || ex is NotSupportedException || ex is NotImplementedException)
+            {
+                wind = null;
+            }
+
+            settingMode = true;
+            cbOnlyCases1And3.IsChecked = onlyCases1And3;
+            inputMode = manualNow ? LoadInputModes.MODE_MANUAL : LoadInputModes.MODE_ASCEWIND;
+            (manualNow ? rbManual : rbASCEWind).IsChecked = true;
+            settingMode = false;
+            Update();
             UpdateWindLoadCases();
         }
 
@@ -123,73 +97,86 @@ namespace ShearWallVisualizer.Dialogs
         /// </summary>
         private void UpdateWindLoadCases()
         {
-            if (lastWind == null)
+            if (wind == null)
             {
-                MagnitudeX = MagnitudeY = 0;
+                if (inputMode == LoadInputModes.MODE_ASCEWIND) MagnitudeX = MagnitudeY = 0;
                 LoadCases = null;
-                if (tbWindLoadSummary != null) tbWindLoadSummary.Text = "Enter the building and wind inputs to calculate the wind loads.";
+                tbWindLoadSummary.Text = "The wind inputs cannot be calculated right now. Use \"Change the wind inputs\" to fix them.";
                 return;
             }
 
-            var lateral = WindLateralLoads.Compute(lastWind, cbOnlyCases1And3?.IsChecked == true);
-            MagnitudeX = lateral.AlongLength.DesignKips;
-            MagnitudeY = lateral.AlongWidth.DesignKips;
+            var lateral = WindLateralLoads.Compute(wind, cbOnlyCases1And3.IsChecked == true);
+            if (inputMode == LoadInputModes.MODE_ASCEWIND)
+            {
+                MagnitudeX = lateral.AlongLength.DesignKips;
+                MagnitudeY = lateral.AlongWidth.DesignKips;
+            }
             LoadCases = lateral.LoadCases
                 .Select(c => new ShearWallCalculator.LateralLoadCase(c.Name, c.Vx, c.Vy, c.Mt, applyMinimumEccentricity: false))
                 .ToList();
 
             string Line(DirectionalWindForce f, string axis) =>
-                $"Wind {f.Direction} ({axis}): {f.DesignKips:0.0} kips" +
-                $"  [walls {f.WallsKips:0.0} + roof {f.RoofKips:0.0} = {f.TotalKips:0.0}; 16/8 psf minimum {f.MinimumKips:0.0}" +
-                (f.MinimumGoverns ? " governs" : "") + "]";
-            if (tbWindLoadSummary != null)
-                tbWindLoadSummary.Text =
-                    Line(lateral.AlongLength, "X") + "\n" + Line(lateral.AlongWidth, "Y") + "\n" +
-                    $"{LoadCases.Count} load cases (ASCE 7 Fig. 27.3-8 {(lateral.OnlyCases1And3 ? "cases 1 and 3" : "cases 1-4, with torsion")}) " +
-                    "will be sent to the shear-wall calculator; each wall uses its governing case.";
+                $"Wind from the {f.Direction} ({axis}): {f.DesignKips:0.0} kips" +
+                $"  (walls {f.WallsKips:0.0} + roof {f.RoofKips:0.0} = {f.TotalKips:0.0}; minimum {f.MinimumKips:0.0}" +
+                (f.MinimumGoverns ? " governs" : "") + ")";
+            tbWindLoadSummary.Text =
+                Line(lateral.AlongLength, "X") + "\n" + Line(lateral.AlongWidth, "Y") + "\n" +
+                $"{LoadCases.Count} load cases (Fig. 27.3-8); each wall uses its worst case.";
         }
 
         private void Update()
         {
-            switch (inputMode)
+            bool manual = inputMode == LoadInputModes.MODE_MANUAL;
+            gridManual.Visibility = manual ? Visibility.Visible : Visibility.Collapsed;
+            gridASCEWind.Visibility = manual ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        private void Mode_Checked(object sender, RoutedEventArgs e)
+        {
+            if (settingMode || !IsInitialized) return;
+            if (sender == rbManual)
             {
-                case LoadInputModes.MODE_MANUAL:
-                    gridManual.Visibility = Visibility.Visible;
-                    gridASCEWind.Visibility = Visibility.Collapsed;
-                    stackPanelButtons.Visibility = Visibility.Visible;
-
-                    btnManual.BorderThickness = new Thickness(3);
-                    btnManual.Background = new SolidColorBrush(Colors.SeaGreen);
-                    btnASCEWind.BorderThickness = new Thickness(0);
-                    btnASCEWind.Background = new SolidColorBrush(Colors.Transparent);
-                    break;
-                case LoadInputModes.MODE_ASCEWIND:
-                    gridManual.Visibility = Visibility.Collapsed;
-                    gridASCEWind.Visibility = Visibility.Visible;
-                    stackPanelButtons.Visibility = Visibility.Visible;
-
-                    btnManual.BorderThickness = new Thickness(0);
-                    btnManual.Background = new SolidColorBrush(Colors.Transparent);
-                    btnASCEWind.BorderThickness = new Thickness(3);
-                    btnASCEWind.Background = new SolidColorBrush(Colors.SeaGreen);
-                    break;
-                default:
-                    throw new NotImplementedException("ERROR: In LoadInputDialog.cs in Update() -- LoadInputModes: " + inputMode + " not implemented.");
+                // Manual loads stop the walls following the wind; make sure that is intended.
+                var answer = MessageBox.Show(this,
+                    "Manual loads replace the ASCE 7 wind loads.\n\n" +
+                    "The shear walls will no longer update when you change the wind inputs, and the Wind loads " +
+                    "screen will show a warning until you switch back.\n\nUse manual loads?",
+                    "Use manual loads?", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+                if (answer != MessageBoxResult.Yes)
+                {
+                    settingMode = true;
+                    rbASCEWind.IsChecked = true;
+                    settingMode = false;
+                    return;
+                }
+                inputMode = LoadInputModes.MODE_MANUAL;
+                MagnitudeXBox.Focus();
             }
+            else
+            {
+                inputMode = LoadInputModes.MODE_ASCEWIND;
+            }
+            Update();
+            UpdateWindLoadCases();
+        }
+
+        private void EditWind_Click(object sender, RoutedEventArgs e)
+        {
+            EditWindRequested = true;
+            DialogResult = false;
+            Close();
         }
 
         private void OkButton_Click(object sender, RoutedEventArgs e)
         {
-            double magX = MagnitudeX;
-            double magY = MagnitudeY;
-            if(inputMode == LoadInputModes.MODE_MANUAL)
+            if (inputMode == LoadInputModes.MODE_MANUAL)
             {
-                if (!double.TryParse(MagnitudeXBox.Text, out magX))
+                if (!double.TryParse(MagnitudeXBox.Text, out double magX))
                 {
                     MessageBox.Show("Invalid input for Load Magnitude X", "Input Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
-                if (!double.TryParse(MagnitudeYBox.Text, out magY))
+                if (!double.TryParse(MagnitudeYBox.Text, out double magY))
                 {
                     MessageBox.Show("Invalid input for Load Magnitude Y", "Input Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
@@ -199,11 +186,11 @@ namespace ShearWallVisualizer.Dialogs
                 MagnitudeY = magY;
                 LoadCases = null; // a single manual load
             }
-            
-            // parse the ASCE wind load calculations
-            else if (inputMode == LoadInputModes.MODE_ASCEWIND)
+            else if (LoadCases == null)
             {
-
+                MessageBox.Show(this, "The wind loads cannot be calculated for the current wind inputs. Use \"Change the wind inputs\" to fix them.",
+                    "No wind loads", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
             }
 
             OnLoadsComputed(MagnitudeX, MagnitudeY);
@@ -216,19 +203,6 @@ namespace ShearWallVisualizer.Dialogs
         {
             DialogResult = false;
             Close();
-        }
-
-        private void btnASCEWind_Click(object sender, RoutedEventArgs e)
-        {
-            inputMode = LoadInputModes.MODE_ASCEWIND;
-
-            Update();
-        }
-
-        private void btnManual_Click(object sender, RoutedEventArgs e)
-        {
-            inputMode = LoadInputModes.MODE_MANUAL;
-            Update();
         }
 
         public virtual void OnLoadsComputed(double x, double y)

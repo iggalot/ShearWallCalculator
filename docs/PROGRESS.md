@@ -2,6 +2,52 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-10-30 — Third look: workspaces, stepped site page, detailed calculations
+
+**Shear-wall app**
+- A **Wind loads | Shear walls** switch at the top of the window. Wind loads shows the guided setup and
+  the wind tabs across the full width. Shear walls shows the drawing canvas, its toolbar, and the
+  Dimensions and Calculations tabs. The Dimensions and Calculations tabs had been left out at startup
+  since the "UI Improvements / TabControlManager" commit (033f02a); they are back. Next to the switch, a
+  line always says which loads the walls use (wind, linked, or MANUAL).
+- On the Wind Setup Results page, "Next: Shear walls" opens the Shear walls workspace.
+- **LOADS dialog:**
+  - Opens on ASCE 7 wind. Choosing Manual asks for confirmation, because it ends the wind link.
+  - The old embedded building and wind input forms are replaced by a summary of the current wind loads,
+    the cases 1 and 3 option, the load-case descriptions, and "Change the wind inputs…", which goes to
+    the Wind loads screen.
+  - Fixed: the dialog's old constructor took (magX, locX, magY, locY), so V_y was passed as an X
+    location and the manual Y box always opened at 0.
+
+**Wind setup (W7)**
+- The Site page has one labelled row per step: Risk Category, Wind speed (highlighted), Exposure,
+  Building type (enclosure), Terrain (hill / Kzt). Choosing "On a hill" puts the cursor in the Kzt box.
+- Results:
+  - The four stat cards share one layout (label / number + unit / two detail lines), so the numbers
+    line up.
+  - Load cases 1–4 are described in plain words; cases 2 and 4 fade when the exception is chosen.
+  - Matching west/south checks are shown once.
+- **Detailed calculations window** (button on Results). This is the replacement for the CC Wind Calcs,
+  MWFRS 1 and MWFRS 2 tabs, which stay until it is accepted. Its pages:
+  - Inputs and factors (α, zg, Kh, Kzt, Ke, Kd, qh with Eq. 26.10-1, GCpi, G, a).
+  - Cladding: roof and wall zone drawings; GCp graphs drawn from this building's curves, with every zone
+    marked at its effective area; tables grouped by zone and size.
+  - Wind from W and wind from S: the force breakdown and minimum, zone drawings, plan and elevations,
+    and the roof and wall tables.
+  - The Fig. 27.3-8 load cases.
+- **Fixed radio groups:**
+  - WPF groups radio buttons by name across a window. The two 3D views (setup and 3D tab) unchecked
+    each other's mode buttons, so nothing looked selected.
+  - The roof-shape and roof-Cp buttons also shared the group "roof".
+  - Each control instance now has its own groups.
+- The 3D view hides the roof Cp choice when it does not apply.
+- **0° slope:**
+  - Choosing Gable or Hip with a 0 slope starts at 15°.
+  - Typing 0 switches to Flat after a short pause or on leaving the box. Before, the switch needed the
+    box to lose keyboard focus, which clicking the 3D view does not do.
+
+Tests: W7 engine 217 passed (2 skipped), W7 UI 42 passed, SWC 23 passed.
+
 ## 2026-10-29 (later) — M5 polish after the second look
 
 - **Wind workspace:** on the Wind Setup and 3D Wind tabs the shear-wall drawing canvas and its toolbar are hidden, so the wind screens get the whole window. The canvas returns on every other tab.
