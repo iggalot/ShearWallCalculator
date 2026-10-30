@@ -153,6 +153,7 @@
     </Compile>
     <Compile Include="Helpers\DrawingHelpers.cs" />
     <Compile Include="Helpers\MathHelpers.cs" />
+    <Compile Include="Helpers\ShearWallReport.cs" />
     <Compile Include="Helpers\TabControlManager.cs" />
     <Compile Include="ImageLayer.cs" />
     <Compile Include="LayerData.cs" />

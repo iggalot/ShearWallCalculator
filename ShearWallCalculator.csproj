@@ -83,6 +83,7 @@
     <Compile Include="Interfaces\DrawableObjectConverter.cs" />
     <Compile Include="Interfaces\IDrawingSerializer.cs" />
     <Compile Include="Interfaces\JsonDrawingSerializer.cs" />
+    <Compile Include="Interfaces\ProjectFile.cs" />
     <Compile Include="NDSProvisions\SDPWS_Table4_3_4.cs" />
     <Compile Include="NDSProvisions\SdpwsSource.cs" />
     <Compile Include="NDSProvisions\Table4_3C.cs" />
@@ -115,6 +116,12 @@
   <ItemGroup>
     <None Include="app.config" />
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Project files hold the wind inputs (Interfaces\ProjectFile.cs). -->
+    <ProjectReference Include="..\ASCE7-Wind-Load-Calculator\ASCE7Wind.Core\ASCE7Wind.Core.csproj">
+      <Name>ASCE7Wind.Core</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

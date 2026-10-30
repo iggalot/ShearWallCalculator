@@ -119,6 +119,8 @@ namespace ShearWallVisualizer
             LoadRecentFilesMenu();
 
             this.KeyDown += MainWindow_KeyDown;
+            this.PreviewKeyDown += FileShortcuts; // Ctrl+N, O, S, P
+            this.Closing += MainWindow_Closing; // asks to save unsaved changes
 
             // Set focus and canvas background
             this.Focusable = true;
@@ -172,6 +174,7 @@ namespace ShearWallVisualizer
                 TabControlManager.ReAddTab(MainTabControl, "tabDimensionsTabItem");
                 TabControlManager.ReAddTab(MainTabControl, "tabCalculationsTabItem");
                 ApplyWorkspace();
+                MarkSaved(); // a new, untitled project
             };
         }
 
@@ -226,6 +229,7 @@ namespace ShearWallVisualizer
 
             // redraw the scene
             Draw(ChangeType.Redraw);
+            UpdateTitle();
         }
 
         /// <summary>
@@ -2104,7 +2108,7 @@ namespace ShearWallVisualizer
         }
         private void Exit_Click(object sender, RoutedEventArgs e)
         {
-            Application.Current.Shutdown();
+            Close(); // through Closing, so unsaved changes are offered for saving
         }
 
         private void Refresh_Click(object sender, RoutedEventArgs e)
@@ -2113,77 +2117,213 @@ namespace ShearWallVisualizer
             MessageBox.Show("Refresh triggered!", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
-        private void MenuItem_Save_Click(object sender, RoutedEventArgs e)
-        {
-            var saveFileDialog = new SaveFileDialog
-            {
-                Filter = "JSON Drawing (*.json)|*.json",
-                FileName = "drawing.json"
-            };
+        // ------------------------------------------------------------------ project files
 
-            if (saveFileDialog.ShowDialog() == true)
+        private const string ProjectFilter = "Shear wall project (*.swc.json)|*.swc.json|Older drawing (*.json)|*.json|All files (*.*)|*.*";
+
+        /// <summary>The open project file, or null for a new project that has not been saved.</summary>
+        private string currentProjectPath;
+
+        /// <summary>The project text when last opened or saved; any difference means unsaved changes.</summary>
+        private string savedProjectJson;
+
+        private WindInputs CurrentWindInputs() => windSetup == null ? null
+            : WindInputs.From(windSetup.Version, windSetup.Parameters, windSetup.Building, windSetup.OnlyCases1And3,
+                              windSetup.RoofComponent, windSetup.WallComponent);
+
+        private string CurrentProjectJson() => ProjectSerializer.ToJson(Calculator, CurrentWindInputs(), windLoadsLinked);
+
+        private bool HasUnsavedChanges => savedProjectJson != null && Calculator != null && CurrentProjectJson() != savedProjectJson;
+
+        private string ProjectName => currentProjectPath == null
+            ? "Untitled"
+            : System.IO.Path.GetFileName(currentProjectPath).Replace(".swc.json", "");
+
+        /// <summary>Title bar: the project name, with * when there are unsaved changes.</summary>
+        private void UpdateTitle()
+        {
+            if (windSetup == null) return;
+            Title = $"{ProjectName}{(HasUnsavedChanges ? " *" : "")} - Shear Wall Calculator";
+        }
+
+        /// <summary>Remembers the current state as saved (after New, Open and Save).</summary>
+        private void MarkSaved()
+        {
+            savedProjectJson = CurrentProjectJson();
+            UpdateTitle();
+        }
+
+        /// <summary>Asks to save unsaved changes. False means the user cancelled.</summary>
+        private bool ConfirmDiscardOrSave()
+        {
+            if (!HasUnsavedChanges) return true;
+            var answer = MessageBox.Show(this, $"Save the changes to {ProjectName}?", "Shear Wall Calculator",
+                                         MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+            if (answer == MessageBoxResult.Cancel) return false;
+            if (answer == MessageBoxResult.Yes) return SaveProject(saveAs: false);
+            return true;
+        }
+
+        private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            if (!ConfirmDiscardOrSave()) e.Cancel = true;
+        }
+
+        private void FileShortcuts(object sender, KeyEventArgs e)
+        {
+            if (Keyboard.Modifiers != ModifierKeys.Control) return;
+            switch (e.Key)
             {
-                _serializer.Save(saveFileDialog.FileName, Calculator);
-                MessageBox.Show("Drawing saved!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                case Key.N: MenuItem_New_Click(this, null); break;
+                case Key.O: MenuItem_Load_Click(this, null); break;
+                case Key.S: MenuItem_Save_Click(this, null); break;
+                case Key.P: MenuItem_PrintReport_Click(this, null); break;
+                default: return;
             }
+            e.Handled = true;
+        }
+
+        private void MenuItem_New_Click(object sender, RoutedEventArgs e)
+        {
+            if (!ConfirmDiscardOrSave()) return;
+            Calculator = new ShearWallCalculator_RigidDiaphragm();
+            currentProjectPath = null;
+            windSetup.SetInputs(null, ASCE7_Versions.ASCE_VER_7_22, null);
+            windSetup.SetOnlyCases1And3(false);
+            buildingData = windSetup.Building.Clone();
+            windLoadParams = windSetup.Parameters.Clone();
+            windVersion = windSetup.Version;
+            windLoadsLinked = true;
+            RecalculateWind();
+            UpdateShearWallUI();
+            MarkSaved();
+        }
+
+        private void MenuItem_Save_Click(object sender, RoutedEventArgs e) => SaveProject(saveAs: false);
+
+        private void MenuItem_SaveAs_Click(object sender, RoutedEventArgs e) => SaveProject(saveAs: true);
+
+        /// <summary>Saves the wind inputs, the drawing and the loads in one file. False if cancelled or failed.</summary>
+        private bool SaveProject(bool saveAs)
+        {
+            windSetup?.FlushPendingChange(); // a value still being typed counts
+            string path = currentProjectPath;
+            // An older drawing file is saved as a new project file rather than overwritten in the new format.
+            if (saveAs || path == null || !path.EndsWith(".swc.json", StringComparison.OrdinalIgnoreCase))
+            {
+                var dialog = new SaveFileDialog
+                {
+                    Filter = ProjectFilter,
+                    FileName = (currentProjectPath == null ? "project" : System.IO.Path.GetFileNameWithoutExtension(ProjectName)) + ".swc.json",
+                    AddExtension = false,
+                };
+                if (dialog.ShowDialog(this) != true) return false;
+                path = dialog.FileName;
+                if (!path.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) path += ".swc.json";
+            }
+
+            try
+            {
+                ProjectSerializer.Save(path, Calculator, CurrentWindInputs(), windLoadsLinked);
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                MessageBox.Show(this, "The project could not be saved:\n" + ex.Message, "Save", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return false;
+            }
+            currentProjectPath = path;
+            AddToRecentFiles(path);
+            MarkSaved();
+            return true;
         }
 
         private void MenuItem_Load_Click(object sender, RoutedEventArgs e)
         {
-            if (Calculator != null)
-            {
-                Calculator = null;  // delete any previous calculators we have
-            }
-            UnlinkWindLoads("They use the loads saved in the opened file. Click the button below to use the wind loads instead.");
+            if (!ConfirmDiscardOrSave()) return;
+            var dialog = new OpenFileDialog { Filter = "Shear wall files (*.json)|*.json|All files (*.*)|*.*" };
+            if (dialog.ShowDialog(this) == true)
+                OpenProject(dialog.FileName);
+        }
 
+        /// <summary>
+        /// Opens a project file (wind inputs, drawing, loads) or an older drawing-only file. A project whose walls
+        /// followed the wind loads is re-linked; if the wind calculation now gives different loads (for example
+        /// after a program correction), the user is told.
+        /// </summary>
+        private void OpenProject(string path)
+        {
+            ProjectContents contents;
+            try
+            {
+                contents = ProjectSerializer.Load(path);
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is InvalidDataException || ex is JsonException)
+            {
+                MessageBox.Show(this, "The file could not be opened:\n" + ex.Message, "Open", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            Calculator = contents.Calculator;
+            currentProjectPath = path;
+            string note = null;
+
+            if (contents.IsOlderDrawingFile)
+            {
+                // Older files have no wind inputs: keep the walls on the loads saved in the file.
+                UnlinkWindLoads("They use the loads saved in this older drawing file, which has no wind inputs. " +
+                                "Enter the wind inputs here and click the button below to use the wind loads instead.");
+                note = "This is an older drawing file: it has the walls and loads but no wind inputs. " +
+                       "Saving it creates a project file that keeps both.";
+            }
+            else
+            {
+                var wind = contents.Wind;
+                windSetup.SetInputs(wind.ToBuilding(), wind.Edition, wind.ToParameters());
+                windSetup.SetComponents(wind.RoofComponent, wind.WallComponent);
+                windSetup.SetOnlyCases1And3(wind.OnlyCases1And3);
+                buildingData = windSetup.Building.Clone();
+                windLoadParams = windSetup.Parameters.Clone();
+                windVersion = windSetup.Version;
+
+                var saved = contents.Loads ?? new LoadsInfo();
+                windLoadsLinked = saved.LinkedToWind;
+                if (!windLoadsLinked)
+                    UnlinkWindLoads($"They use the manual load saved in this project (X = {Calculator.V_x:0.##} k, Y = {Calculator.V_y:0.##} k). " +
+                                    "Click the button below to use the wind loads instead.");
+                RecalculateWind(); // when linked, this re-sends the wind load cases
+
+                if (windLoadsLinked && (Changed(saved.Vx, Calculator.V_x) || Changed(saved.Vy, Calculator.V_y)))
+                    note = $"The wind loads differ from when this project was saved: X {saved.Vx:0.00} → {Calculator.V_x:0.00} k, " +
+                           $"Y {saved.Vy:0.00} → {Calculator.V_y:0.00} k. The walls now use the new loads " +
+                           "(usually a correction in the wind calculation since then). Save to keep them.";
+            }
+
+            AddToRecentFiles(path);
             UpdateShearWallUI();
+            // An older file, or loads that changed, count as unsaved so the user is asked before closing.
+            savedProjectJson = note == null ? CurrentProjectJson() : string.Empty;
+            UpdateTitle();
+            if (note != null)
+                MessageBox.Show(this, note, "Open", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
 
-            var openFileDialog = new OpenFileDialog
-            {
-                Filter = "JSON Drawing (*.json)|*.json"
-            };
+        /// <summary>More than 0.5% (or 0.01 k) apart.</summary>
+        private static bool Changed(double before, double now) =>
+            Math.Abs(before - now) > Math.Max(0.01, 0.005 * Math.Abs(before));
 
-            if (openFileDialog.ShowDialog() == true)
-            {
-                JsonSerializerSettings _settings = new JsonSerializerSettings();
-
-                var json = _serializer.Load(openFileDialog.FileName);
-
-                // Parse just enough to extact a fieldJObject obj = JObject.Parse(json);
-                JObject obj = JObject.Parse(json);
-
-                // Get the calculator type value
-                string calculatorType = (string)obj["CalculatorType"];
-
-                // Load the appropriate calculator
-                if (calculatorType == "Rigid Diaphragm")
-                {
-                    var rigid_calc = JsonConvert.DeserializeObject<ShearWallCalculator_RigidDiaphragm>(json, _settings);
-                    Calculator = new ShearWallCalculator_RigidDiaphragm(rigid_calc);
-                }
-                else if (calculatorType == "Flexible Diaphragm")
-                {
-                    var flex_calc = JsonConvert.DeserializeObject<ShearWallCalculator_FlexibleDiaphragm>(json, _settings);
-                    Calculator = new ShearWallCalculator_FlexibleDiaphragm(flex_calc);
-                }
-                else
-                {
-                    throw new Exception("Invalid calculator type in MenuItem_Load_Click()");
-                }
-
-                UpdateShearWallUI();
-                MessageBox.Show("Drawing loaded!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
+        private void MenuItem_PrintReport_Click(object sender, RoutedEventArgs e)
+        {
+            windSetup?.FlushPendingChange();
+            var analysis = windLoadCalculator_MWFRS_Length != null && windLoadCalculator_MWFRS_Width != null
+                ? new WindAnalysisResult(windLoadCalculator_CC, windLoadCalculator_MWFRS_Length, windLoadCalculator_MWFRS_Width)
+                : null;
+            var info = new ReportInfo { Project = ProjectName, Program = "Shear Wall Calculator" };
+            var report = WindReport.Build(info, windVersion, windLoadParams, buildingData, analysis, ShearWallReport.Sections(Calculator, windLoadsLinked));
+            new ReportPreviewWindow(report, ProjectName) { Owner = this }.Show();
         }
         #endregion
 
         #region File Handling
-        private void OpenFile(string path)
-        {
-            // TODO: Replace with your file loading logic
-            MessageBox.Show($"Opening file:\n{path}", "Open File", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-
         private void AddToRecentFiles(string path)
         {
             var recent = Properties.Settings.Default.RecentFiles ?? new StringCollection();
@@ -2230,41 +2370,11 @@ namespace ShearWallVisualizer
                     Tag = file
                 };
 
-                // try to show a small tooltip of the image
-                try
-                {
-                    // Create image preview (larger size for tooltip)
-                    var image = new System.Windows.Controls.Image
-                    {
-                        Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(file)),
-                        Width = 150,  // Larger size
-                        Height = 150,
-                        Margin = new Thickness(0)
-                    };
-
-                    // Assign image preview as tooltip content
-                    var tooltip = new ToolTip
-                    {
-                        Content = image
-                    };
-
-                    menu_item.ToolTip = tooltip;
-                }
-                catch
-                {
-                    // Skip preview if image load fails
-                }
-
+                // Recent project files (they used to be image files, opened by a placeholder).
                 menu_item.Click += (s, e) =>
                 {
-                    string filePath = (string)((MenuItem)s).Tag;
-                    OpenFile(filePath);
-                    AddToRecentFiles(filePath); // Move to top again
-
-                    if (Calculator != null)
-                    {
-                        Calculator.selectedImageFilePath = filePath;
-                    }
+                    if (ConfirmDiscardOrSave())
+                        OpenProject((string)((MenuItem)s).Tag);
                 };
 
                 RecentFilesMenu.Items.Add(menu_item);

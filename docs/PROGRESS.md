@@ -2,6 +2,26 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-10-30 (late) — Item 1: project files and the printable report (M7)
+
+- **One project file (`*.swc.json`, format 2)** holds the wind inputs (edition, site, building, the cladding
+  component choices as typed, the cases-1-and-3 option), the shear-wall drawing and load cases, and whether
+  the walls follow the wind loads. `Interfaces/ProjectFile.cs`.
+- **File menu:** New project (Ctrl+N), Open (Ctrl+O), Save (Ctrl+S), Save As, Open Recent (project files now;
+  it used to open nothing), Print report (Ctrl+P). The title bar shows the project name, with `*` for unsaved
+  changes. Closing or opening another project asks to save.
+- **Opening** restores Wind Setup exactly and re-links the loads. If the wind calculation now gives different
+  loads than when saved (more than 0.5%), a message says so with the before/after values. **Older drawing
+  files** (no wind inputs) still open with their saved loads, and a note says so. Saving one makes a project file.
+- **Printable report:** a cover, every Detailed calculations page, then the shear walls (load cases, wall
+  shears and unit shears, governing case). Landscape Letter, with a header and "Page N of M" on every page.
+  It is built by the same code as the screen, so the two cannot differ. The preview window prints, and
+  "Microsoft Print to PDF" saves a PDF.
+- **SDPWS edition:** see `docs/SDPWS_EDITION.md` (tables from 2015; the wind column equals the 2021 v_n).
+- Tests: SWC 34 (6 project file, 5 SDPWS); W7 UI 52 (7 report, 1 component restore). Smoke-tested in the app:
+  set V = 142, the title shows `*`, Ctrl+S saves, the app closes without a prompt, reopening and Ctrl+O
+  brings back V = 142, and Ctrl+P opens the report preview.
+
 ## 2026-10-30 (night) — Live results on the Building page; legacy input tabs retired
 
 - The Building page shows the four result cards under the 3D view and updates them on every edit (roof

@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ShearWallCalculator.csproj" />
+    <ProjectReference Include="..\..\ASCE7-Wind-Load-Calculator\ASCE7Wind.Core\ASCE7Wind.Core.csproj" />
     <!-- The shear-wall library still uses System.Windows.Point (WindowsBase). -->
     <Reference Include="WindowsBase" />
   </ItemGroup>
