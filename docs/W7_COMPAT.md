@@ -22,6 +22,7 @@ Check out a matching pair of commits when you build an older version.
 | `dev/wind-core-refactor` (fourth look) | `dev/wind-core-refactor @ daa404c` | Edition as Step 1, tinted cards; shear-wall guidance and NaN fix; equation audit |
 | `dev/wind-core-refactor` (audit fixes) | `dev/wind-core-refactor @ 9e82c7a` | C&C at component area, 16 psf minimum, Detailed calculations tab |
 | `dev/wind-core-refactor` (legacy input tabs retired) | `dev/wind-core-refactor @ 16161f8` | Live result cards on Building page; BuildingData and WIND Input tabs retired |
+| `dev/wind-core-refactor` (ratios on Building page) | `dev/wind-core-refactor @ 57fc5cc` | h, ridge, a, L/B, h/L, h/B live on the Building page; per-direction ratios in details |
 
 ## Building
 
