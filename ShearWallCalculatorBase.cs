@@ -35,6 +35,9 @@ namespace ShearWallCalculator
         /// </summary>
         public List<LateralLoadCase> LoadCases { get; set; } = new List<LateralLoadCase>();
 
+        /// <summary>Design method (ASD or LRFD) and SDPWS edition for the wall checks.</summary>
+        public ShearWallCalculator.Design.DesignSettings DesignSettings { get; set; } = new ShearWallCalculator.Design.DesignSettings();
+
         /// <summary>Name of the load case that produced each wall's reported shear.</summary>
         [JsonIgnore]
         public Dictionary<int, string> GoverningLoadCase { get; } = new Dictionary<int, string>();
@@ -118,6 +121,7 @@ namespace ShearWallCalculator
             V_x = copy_calc.V_x;
             V_y = copy_calc.V_y;
             LoadCases = new List<LateralLoadCase>(copy_calc.LoadCases ?? new List<LateralLoadCase>());
+            DesignSettings = copy_calc.DesignSettings ?? new ShearWallCalculator.Design.DesignSettings();
 
             // Loaded image information
             selectedImageFilePath = copy_calc.selectedImageFilePath;

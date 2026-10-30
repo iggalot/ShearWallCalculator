@@ -46,6 +46,10 @@ namespace calculator
         public WallTypes WallType { get; set; } = WallTypes.Type_01;
         [JsonProperty]
         public WallDirs WallDir { get; set; }
+
+        /// <summary>Sheathing, nailing and hold-down choices for this wall (saved with it).</summary>
+        [JsonProperty]
+        public ShearWallCalculator.Design.WallDesignInputs Design { get; set; } = new ShearWallCalculator.Design.WallDesignInputs();
         public Vector2 Dir { get => GetUnitDirection(); }
 
         public double Rxr { get => ComputeFirstMomentOfRigidity_X(); }  // first moment of rigidity for horizontal walls

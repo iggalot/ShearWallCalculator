@@ -5,7 +5,7 @@ namespace ShearWallCalculator
 {
     public class StrapTies_Manager : BaseSimpsonConnectorManager<StrapTies_Data>
     {
-        Dictionary<string, StrapTies_Data> StrapTies_Dict = new Dictionary<string, StrapTies_Data>();
+        public Dictionary<string, StrapTies_Data> StrapTies_Dict = new Dictionary<string, StrapTies_Data>();
 
         public StrapTies_Manager()
         {

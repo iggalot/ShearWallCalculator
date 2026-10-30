@@ -38,16 +38,20 @@ namespace ShearWallCalculator
             this.connectorType = connector_type;
             this.Catalog = catalog;
 
+            // Connectors resist the hold-down tension T = V h / L (in lb), not the shear V. (It used to pass V.)
+            // See Design/ShearWallDesign.cs (ShearWallDesigner) for the full checks used by the app.
+            double tensionLb = 1000.0 * ComputeHolddownForces();
+
             switch (connector_type)
             {
                 case ConnectorTypes.CONNECTOR_HDU:
-                    this.selectedConnectors = GetValidConnectors(SimpsonCatalogs.SIMPSON_CATALOG_HDU, horiz_shear_force, woodType);
+                    this.selectedConnectors = GetValidConnectors(SimpsonCatalogs.SIMPSON_CATALOG_HDU, tensionLb, woodType);
                     break;
                 case ConnectorTypes.CONNECTOR_HTT:
-                    this.selectedConnectors = GetValidConnectors(SimpsonCatalogs.SIMPSON_CATALOG_HTT, horiz_shear_force, woodType);
+                    this.selectedConnectors = GetValidConnectors(SimpsonCatalogs.SIMPSON_CATALOG_HTT, tensionLb, woodType);
                     break;
                 case ConnectorTypes.CONNECTOR_STRAP_TIES:
-                    this.selectedConnectors = GetValidConnectors(SimpsonCatalogs.SIMPSON_CATALOG_STRAP, horiz_shear_force, woodType);
+                    this.selectedConnectors = GetValidConnectors(SimpsonCatalogs.SIMPSON_CATALOG_STRAP, tensionLb, woodType);
                     break;
             }
         }
