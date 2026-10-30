@@ -25,6 +25,7 @@ Check out a matching pair of commits when you build an older version.
 | `dev/wind-core-refactor` (ratios on Building page) | `dev/wind-core-refactor @ 57fc5cc` | h, ridge, a, L/B, h/L, h/B live on the Building page; per-direction ratios in details |
 | `dev/wind-core-refactor` (project files, report) | `dev/wind-core-refactor @ f506679` | one project file with the wind inputs; printable report; SWC library now references ASCE7Wind.Core |
 | `dev/wind-core-refactor` (roof overhangs) | `dev/wind-core-refactor @ b9dd065` | BuildingData.OverhangWidth (saved in project files); overhang pressures (27.3.3 and C&C) |
+| `dev/wind-core-refactor` (parapets) | `dev/wind-core-refactor @ 47f2bf8` | BuildingData.ParapetHeight (saved in project files); DirectionalWindForce.ParapetKips in the lateral totals |
 
 ## Building
 

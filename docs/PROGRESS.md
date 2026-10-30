@@ -2,6 +2,28 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-10-30 (late) — Item 3d: parapets; scope line
+
+- **Parapets (§27.3.4, your wording):** p_p = q_p·K_d·(GC_pn). GC_pn = +1.5 for the windward parapet and −1.0 for the leeward one, with q_p taken at the top of the parapet. Both push downwind, so the force is (1.5 + 1.0)·q_p·K_d·h_p·B.
+  - It is added to each directional total, so it reaches the shear walls automatically.
+  - The parapet area counts as wall area for the §27.1.5 16 psf minimum.
+  - Flat roofs only: a sloped roof shows a message and ignores the parapet.
+  - A Parapet section on the Building page appears for flat roofs, and a parapet row on each shear-wall page.
+  - The parapet height is saved in project files.
+- **Hand check:** ASCE 7-16, 115 mph, Exp C, 60×40×15 flat roof, 3 ft parapet → q_p = 25.39 psf, 7.62 k with the wind along the length.
+- **In the app (7-22):** X goes 15.0 → 22.6 k and Y goes 24.4 → 35.8 k, the same as by hand.
+- **Not included:**
+  - C&C parapet pressures (§30.8).
+  - Parapets on sloped roofs.
+  - The extra overturning from the parapet force acting above the wall top. The walls use V·h with h = wall height, which slightly understates T when there is a parapet. This is noted for the reviewer.
+- **Scope line (agreed in discussion):**
+  - The shear-wall app takes lateral load cases → wall forces → wall design.
+  - Wind-only detail (cladding, overhangs, framing spacing) stays in W7.
+  - Roof ties stay parked (ROADMAP P2).
+  - Roof uplift at hold-downs: enter net dead load (D − MWFRS uplift) in the Design tab's Dead (plf) box. Not automatic.
+- **Commits:** W7 47f2bf8.
+- **Tests:** W7 engine 238 (2 skipped), W7 UI 52, SWC 45.
+
 ## 2026-10-30 (late) — Item 3b: roof overhangs
 
 - **Eave overhang** field (ft) on the Building page, in the Size row. It is saved in project files; older files read it as 0.
