@@ -132,6 +132,6 @@ _2026-10-30. Branch `dev/wind-core-refactor` in both repos. Items 1 and 2 are ap
 ## Order of work
 1. Item 1 (project file and report). **Done** (920db06).
 2. Item 2 (shear-wall design), rigid diaphragm first, then flexible. **Done** for rigid and flexible.
-3. Item 3b (overhangs) together with a new roof-tie milestone, then 3c, then 3a and 3d, if you approve them.
+3. Item 3b (overhangs) together with a new roof-tie milestone (**3b done**, b9dd065; roof ties = ROADMAP P2), then 3c, then 3a and 3d.
 
 Each step ends the same way: a clean commit in each repo, both solutions building, all tests passing, and an entry in `PROGRESS.md`.

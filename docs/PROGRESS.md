@@ -2,6 +2,26 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-10-30 (late) — Item 3b: roof overhangs
+
+- **Eave overhang** field (ft) on the Building page, in the Size row. It is saved in project files; older files read it as 0.
+- **MWFRS (§27.3.3, wording confirmed by you):**
+  - The soffit gets Cp = 0.8 upward (qh·G·Cp, no internal pressure), combined with the top-surface Cp at the windward eave.
+  - Each whole-building page shows the soffit pressure, the top-surface pressure, the net pressure and the uplift per foot of eave.
+  - Example: 7-22, 115 mph, Exp C, flat 60×40×15, 2 ft overhang → +16.7 psf soffit, −18.7 psf top, −35.4 psf net, 71 lb/ft.
+  - This is roof uplift only; the shear-wall forces are unchanged.
+- **C&C:**
+  - The Cladding page has an overhang table: zone, GCp, source, design pressure, and uplift per foot of eave.
+  - 7-16 uses the figure overhang curves. 7-22 uses the 2A curves for slopes up to 7°, otherwise roof + wall GCp (to verify; see `DATA_VERIFICATION.md`).
+  - No internal pressure; 16 psf minimum.
+- **Roof ties:** added as roadmap item P2.
+- **Commit:** W7 b9dd065.
+- **Tests:**
+  - W7 engine 233 (9 new overhang hand calculations; 2 skipped)
+  - W7 UI 52
+  - SWC 45 (the project-file round trip includes the overhang)
+- **Checked in the app:** the field, the Cladding overhang table, and the §27.3.3 block.
+
 ## 2026-10-30 (late) — Item 2: shear-wall design, rigid then flexible diaphragms
 
 - **Flexible diaphragms (second commit):** the same checks use the flexible calculator's wall shears: each wall line takes its tributary load, and the line's walls share it by rigidity. Test: a 40 × 20 ft box, hand-calculated (45 tests). Smoke test: the same 80 × 60 project. With half the N-S wind on one 12 ft wall, that wall fails even with 2" nails on both sides, which is the correct answer.

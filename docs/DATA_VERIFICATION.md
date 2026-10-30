@@ -41,6 +41,19 @@ I used two independent checks.
 
 The overhang sets in `Figure30_3_2A_*` (Zones 1 and 1') read `-1.7, -1.65, -1.62, -1.60, (+)1.32, -1.0`. That is not a log-linear shape. It looks partly hand-edited, or copied from another zone. Please recheck these two curves against the figure as a whole, not just the sign.
 
+
+## Roof overhangs (item 3b): rules used, and items to check
+
+- **MWFRS, §27.3.3 (ASCE 7-22 text, confirmed by the user):** "the positive external pressures on the bottom surface of windward roof overhangs shall be determined using Cp = 0.8 and combined with the top surface pressures determined using Figure 27.3-1."
+  - Implemented as soffit = qh·G·0.8·Kd, with no internal pressure (the soffit is outside the building).
+  - The top surface uses the windward roof at the eave: the windward roof plane (wind normal to the ridge), otherwise the 0 to h/2 distance zone. The most negative Cp is used.
+  - This is roof uplift only. It does not change the shear-wall forces.
+- **C&C, ASCE 7-16:** the Fig. 30.3-2A–I overhang curves include both surfaces, so no internal pressure is applied.
+- **C&C, ASCE 7-22:** the overhang graphs were removed for gable roofs over 7° and for all hip roofs (STRUCTURE magazine, Oct 2022, "ASCE 7-22 changes to C&C provisions"). Overhang GCp = roof-zone GCp + positive wall GCp.
+  - Example from that source, Zone 2: −2.0 + 1.0 = −3.0.
+  - **To verify:** the article doesn't say which wall zone or tributary area applies to the wall term. The app uses Zone 5 under the corner roof zones (3, 3e, 3r) and Zone 4 elsewhere, read at the roof component's area. Please check this against the printed Chapter 30 text and correct it if needed.
+- **To verify:** in the 7-22 Fig. 30.3-2A data, overhang Zone 3 reads −3.2 at 10 sq ft, the same as roof Zone 3. Confirm against the printed figure.
+
 ## Minor drift (no action strictly needed)
 
 These are 0.04–0.06 deviations at single interior samples:

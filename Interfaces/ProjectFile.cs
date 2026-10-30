@@ -57,6 +57,7 @@ namespace ShearWallCalculator.Interfaces
                 Length = b.BuildingLength,
                 Width = b.BuildingWidth,
                 EaveHeight = b.BuildingHeight,
+                OverhangWidth = b.OverhangWidth,
                 RoofPitch = b.RoofPitch,
                 RoofType = b.RoofType,
                 Ridge = b.RidgeDirection,
@@ -83,6 +84,7 @@ namespace ShearWallCalculator.Interfaces
             BuildingLength = Building.Length,
             BuildingWidth = Building.Width,
             BuildingHeight = Building.EaveHeight,
+            OverhangWidth = Building.OverhangWidth,
             RoofPitch = Building.RoofPitch,
             RoofType = Building.RoofType,
             RidgeDirection = Building.Ridge,
@@ -106,6 +108,8 @@ namespace ShearWallCalculator.Interfaces
         public double Length { get; set; } = 60;
         public double Width { get; set; } = 40;
         public double EaveHeight { get; set; } = 15;
+        /// <summary>Roof overhang beyond the wall face (ft); 0 for none (absent in older files).</summary>
+        public double OverhangWidth { get; set; }
         public double RoofPitch { get; set; } = 15;
         public RoofTypes RoofType { get; set; } = RoofTypes.ROOF_TYPE_FLAT;
         public RidgeDirections Ridge { get; set; } = RidgeDirections.RIDGE_DIR_NONE;

@@ -33,7 +33,7 @@ namespace ShearWallCalculator.Tests
             };
             var b = new BuildingData
             {
-                BuildingLength = 72, BuildingWidth = 36, BuildingHeight = 18, RoofPitch = 22.6,
+                BuildingLength = 72, BuildingWidth = 36, BuildingHeight = 18, RoofPitch = 22.6, OverhangWidth = 2.5,
                 RoofType = RoofTypes.ROOF_TYPE_GABLE, RidgeDirection = RidgeDirections.RIDGE_DIR_PERP_TO_BLDGLENGTH,
                 EnclosureType = BuildingEnclosures.BLDG_PARTIALLY_ENCLOSED,
             };
@@ -63,6 +63,7 @@ namespace ShearWallCalculator.Tests
             Assert.AreEqual(36, b.BuildingWidth);
             Assert.AreEqual(18, b.BuildingHeight);
             Assert.AreEqual(22.6, b.RoofPitch);
+            Assert.AreEqual(2.5, b.OverhangWidth);
             Assert.AreEqual(RoofTypes.ROOF_TYPE_GABLE, b.RoofType);
             Assert.AreEqual(RidgeDirections.RIDGE_DIR_PERP_TO_BLDGLENGTH, b.RidgeDirection);
             Assert.AreEqual(BuildingEnclosures.BLDG_PARTIALLY_ENCLOSED, b.EnclosureType);

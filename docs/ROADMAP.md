@@ -150,6 +150,12 @@ Each milestone ends with a buildable app, a commit in each touched repo, and gre
   - Warn on special wind regions or missing data; the tool has been reported to return "NaN" for some locations.
 - **Fit:** this becomes the "Site" step of the M5 guided input. Risk category then selects which wind map V comes from, replacing the old importance-factor input.
 
+### P2 — Roof-to-wall ties (hurricane ties / H-clips)
+- **Why:** the eave and overhang uplift is now calculated (item 3b): MWFRS §27.3.3 and the C&C overhang zones. The last step is to size the tie at each rafter or truss. That connection fails often in real storms.
+- **Needs:** roof-tie allowable loads (uplift and lateral, by species), similar to the hold-down data. Simpson H-series or the equivalent. Not in the repository yet.
+- **Calculation:** uplift per tie = (net roof uplift over the tributary width + overhang uplift) × spacing, less 0.6 D. Check at ASD against the tie allowable, the same way as hold-downs.
+- **App:** a roof-tie line on the Design tab, and a row in the report.
+
 ---
 
 ## Top 20 improvements (priority order)
