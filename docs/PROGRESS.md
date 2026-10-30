@@ -2,6 +2,27 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-10-30 (late) — Parapet diagrams; C&C parapets (Section 30.6)
+
+- **Shear-wall pages (MWFRS):** a parapet diagram (§27.3.4). It shows +1.5 push on the windward parapet and −1.0 suction on the leeward parapet, with pressures in psf, the parapet height, and q_p at the parapet top. Commit W7 d4501f8.
+- **Cladding page (C&C, §30.6, Fig. 30.6-1):** load cases A and B at corners and edges.
+  - Each face: p = q_p·K_d·[(GC_p) − (±GC_pi)], with GC_pi applied to each face separately as you confirmed, and the 16 psf minimum.
+  - Net on the parapet = q_p·K_d·(GC_p,front − GC_p,back); the internal pressure cancels.
+  - Zones confirmed by you: wall Zone 5 / roof Zone 3 at corners, Zone 4 / roof Zone 2 elsewhere.
+  - A Fig. 30.6-1-style diagram of the corner cases, plus a table of all four.
+  - Wind app only; the shear walls use the §27.3.4 force.
+  - Commit W7 1d845dd.
+- **Hand check (7-22, 115 mph, Exp C, 3 ft parapet, enclosed, 10 sq ft):**
+  - q_p = 29.91 psf.
+  - Case A corner: front +30.0, back −85.9, net 106.8 psf.
+  - Case B corner: front −40.2, back +30.0, net 61.0 psf.
+  - Edge nets: 83.9 and 53.4 psf.
+  - All match the app.
+- **To verify:**
+  - GC_pi is the building's enclosure value. §30.6 bases it on the porosity of the parapet envelope; confirm which applies for typical solid parapets.
+  - Fig. 30.3-2A note: with a parapet of 3 ft or more around a roof with θ ≤ 10°, roof Zone 3 may be treated as Zone 2. Not applied yet; confirm before adding it.
+- **Tests:** W7 engine 241 (2 skipped), W7 UI 52, SWC 45.
+
 ## 2026-10-30 (late) — Item 3d: parapets; scope line
 
 - **Parapets (§27.3.4, your wording):** p_p = q_p·K_d·(GC_pn). GC_pn = +1.5 for the windward parapet and −1.0 for the leeward one, with q_p taken at the top of the parapet. Both push downwind, so the force is (1.5 + 1.0)·q_p·K_d·h_p·B.
