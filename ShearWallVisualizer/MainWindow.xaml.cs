@@ -610,17 +610,15 @@ namespace ShearWallVisualizer
         /// <param name="mwfrsControl2"></param>
         private void CreateAndAssignResultControls()
         {
-            var ccControl1 = new WindLoadResultsControl_CC(windLoadCalculator_CC);
-            tabWindResultsTabItem_CC.Content = ccControl1;
-            TabControlManager.ReAddTab(MainTabControl, "tabWindResultsTabItem_CC");
-
-            var mwfrsControl1 = new WindLoadResultsControl_MWFRS(windLoadCalculator_MWFRS_Length);
-            tabWindResultsTabItem_MWFRS_BldgLength.Content = mwfrsControl1;
-            TabControlManager.ReAddTab(MainTabControl, "tabWindResultsTabItem_MWFRS_BldgLength");
-
-            var mwfrsControl2 = new WindLoadResultsControl_MWFRS(windLoadCalculator_MWFRS_Width);
-            tabWindResultsTabItem_MWFRS_BldgWidth.Content = mwfrsControl2;
-            TabControlManager.ReAddTab(MainTabControl, "tabWindResultsTabItem_MWFRS_BldgWidth");
+            // The CC Wind Calcs / MWFRS 1 / MWFRS 2 tabs are retired: the Detailed calculations tab shows the
+            // same tables and graphs. (Their TabItems remain in MainWindow.xaml; re-adding the old
+            // WindLoadResultsControl_CC / _MWFRS controls here would bring them back.)
+            var details = tabWindDetailsTabItem.Content as WindDetailsView ?? new WindDetailsView();
+            bool calculated = windLoadCalculator_MWFRS_Length != null && windLoadCalculator_MWFRS_Width != null;
+            details.SetResults(windVersion, windLoadParams?.Clone(), buildingData?.Clone(),
+                calculated ? new WindAnalysisResult(windLoadCalculator_CC, windLoadCalculator_MWFRS_Length, windLoadCalculator_MWFRS_Width) : null);
+            tabWindDetailsTabItem.Content = details;
+            TabControlManager.ReAddTab(MainTabControl, "tabWindDetailsTabItem");
 
             // 3D view: keep one viewer so the camera and selected view survive input changes.
             var viewer = tabWind3DTabItem.Content as Wind3DViewerControl ?? new Wind3DViewerControl();
@@ -2445,7 +2443,7 @@ namespace ShearWallVisualizer
 
         /// <summary>Tabs that belong to the Wind loads workspace; the rest belong to Shear walls.</summary>
         private bool IsWindTab(TabItem tab) =>
-            tab == tabWindSetupTabItem || tab == tabWind3DTabItem || tab == tabBuildingDataControlTabItem ||
+            tab == tabWindSetupTabItem || tab == tabWindDetailsTabItem || tab == tabWind3DTabItem || tab == tabBuildingDataControlTabItem ||
             tab == tabWindInputControlTabItem || tab == tabWindResultsTabItem_CC ||
             tab == tabWindResultsTabItem_MWFRS_BldgLength || tab == tabWindResultsTabItem_MWFRS_BldgWidth;
 

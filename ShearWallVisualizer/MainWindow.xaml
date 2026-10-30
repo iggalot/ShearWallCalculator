@@ -133,6 +133,9 @@
                     <!-- Guided wind input (Site, Building, Results); the classic BuildingData and WIND Input tabs stay in sync with it -->
                     <TabItem x:Name="tabWindSetupTabItem" Width="100" HorizontalAlignment="Center" Header="Wind Setup" Margin="5 0 5 0"/>
 
+                    <!-- Every coefficient, table and graph behind the wind results; replaces CC Wind Calcs / MWFRS 1 / MWFRS 2 -->
+                    <TabItem x:Name="tabWindDetailsTabItem" Width="150" HorizontalAlignment="Center" Header="Detailed calculations" Margin="5 0 5 0"/>
+
                     <TabItem x:Name="tabBuildingDataControlTabItem" Width="100" HorizontalAlignment="Center" Header="BuildingData" Margin="5 0 5 0"/>
                     
                     <!-- -->

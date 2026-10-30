@@ -2,6 +2,24 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-10-30 (evening) — Audit fixes and the Detailed calculations tab
+
+- **C&C effective wind area (audit F1):**
+  - GCp is now read at the component's effective wind area in every zone.
+  - The Building page has a "Cladding component" choice for the roof and for the walls.
+  - The Results cards say which component and area they are for.
+  - The default, 10 sq ft, gives the highest values. Example building: roof Zone 1 suction went from −25 to
+    −43 psf, and the headline roof uplift from −73 to −82 psf.
+- **16 psf C&C minimum (audit F2):** applied in both directions, and noted in the tables.
+- **Exposure B Kz (audit F3):** closed; the code matches the engineer's reading.
+- **Detailed calculations tab:**
+  - A new tab in the Wind loads workspace that updates on every change; the Results button still opens it in
+    a window.
+  - The CC Wind Calcs, MWFRS 1 and MWFRS 2 tabs are off the tab strip. Their TabItems and the old controls are
+    still in the code, in case they are wanted back.
+- **Next:** shear-wall design milestone, waiting on the engineer's Simpson and NDS projects.
+- Tests: W7 engine 226 passed (2 skipped), W7 UI 44 passed, SWC 23 passed.
+
 ## 2026-10-30 (later) — Fourth look, and the wind equation audit
 
 - **Wind setup:**

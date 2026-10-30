@@ -13,7 +13,7 @@ That gives qh = 30.25 psf and Kd = 0.85.
 
 ## Findings that change results
 
-### F1. HIGH: C&C GCp is read at the *whole zone's* area, not the component's effective wind area
+### F1. HIGH — FIXED (W7 73adc56): C&C GCp is read at the *whole zone's* area, not the component's effective wind area
 
 `WindLoadCalculator_CC.CalculateExternalPressures` evaluates each GCp curve at `a => a.Area`. That is the area
 of the zone polygon (for example, all of roof Zone 1 = 832 sq ft).
@@ -38,7 +38,7 @@ as *roof sheathing / fasteners 10 sq ft*, *rafters/trusses span × span/3*, *stu
 Then evaluate GCp at that area in every zone. The zone polygons stay as they are; they only decide *where* each
 GCp applies. Until this is fixed, the safe reading is the value at the left (small-area) end of each curve.
 
-### F2. HIGH: the 16 psf C&C minimum (30.2.2) is not applied
+### F2. HIGH — FIXED (W7 73adc56): the 16 psf C&C minimum (30.2.2) is not applied
 
 The 16 psf minimum is applied to the MWFRS (27.1.5, 16 psf walls / 8 psf roof), but not to cladding. Section
 30.2.2 requires a C&C net design pressure of at least 16 psf **acting in either direction**. Example: roof
@@ -48,7 +48,7 @@ this is 16 psf ultimate, or 9.6 psf at ASD.)
 **Proposed fix:** clamp each C&C net pressure to at least +16 / −16 psf, and show "minimum governs" the same
 way the MWFRS cards do. It is a small engine change plus tests; it can go in with F1 or on its own.
 
-### F3. MEDIUM, confirm: the Kz floor for low buildings in Exposure B
+### F3. CLOSED: the Kz floor for low buildings in Exposure B
 
 The code takes Kz at z ≥ 15 ft in all exposures (Kz = 0.57 at 15 ft in Exposure B, 7-22). Some 7-22 references
 list a minimum height of 30 ft for Exposure B (and 15 ft for C, 7 ft for D) and hold Kz there.
@@ -116,3 +116,17 @@ The ASCE 7 standards themselves (not available online). Secondary sources used f
 - Effective wind area definition (the fastener tributary limit):
   [Structure Magazine, ASCE 7-22 changes to C&C provisions](https://www.structuremag.org/article/asce-7-22-changes-to-component-and-cladding-wind-provisions/);
   [calcs.com, Wind load analysis to ASCE 7](https://calcs.com/blog/wind-load-analysis-to-asce-7-a-guide-for-structural-engineers)
+
+## Resolution (2026-10-30)
+
+- **F1 fixed.** `WindParameters_Base.RoofComponentArea` / `WallComponentArea` (default 10 sq ft) set the
+  effective wind area. Every C&C zone reads its GCp curve at that area. The Building page has a "Cladding
+  component" choice for roof and walls: sheathing and fasteners (10 sq ft), framing (span × span/3), or an area
+  you enter.
+- **F2 fixed.** C&C net pressures are not less than 16 psf in either direction. `PressureData.MinimumGoverns`
+  says when the minimum applied, and the Detailed calculations tables note it.
+- **F3 closed.** Confirmed by the engineer: Kz is constant from 0–15 ft and follows the power law above that,
+  with constants for each exposure. That is what the code does. The "30 ft for Exposure B" in a secondary source
+  is the gust-factor z_min, not a Kz floor.
+- Tests (`ComponentAreaTests`) include a hand calculation: 7-22 flat roof Zone 3 at 10 sq ft,
+  Kh = 0.851, qh = 28.8 psf, p = 28.8 × 0.85 × (−3.2 − 0.18) = −82.8 psf.

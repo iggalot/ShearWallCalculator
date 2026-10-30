@@ -20,6 +20,7 @@ Check out a matching pair of commits when you build an older version.
 | `dev/wind-core-refactor` (M5 polish) | `dev/wind-core-refactor @ e122a8c` | Wind workspace, default wind link, compact viewer |
 | `dev/wind-core-refactor` (third look) | `dev/wind-core-refactor @ 0f35b75` | Workspace switch, stepped site page, detailed calculations window, LOADS dialog |
 | `dev/wind-core-refactor` (fourth look) | `dev/wind-core-refactor @ daa404c` | Edition as Step 1, tinted cards; shear-wall guidance and NaN fix; equation audit |
+| `dev/wind-core-refactor` (audit fixes) | `dev/wind-core-refactor @ 9e82c7a` | C&C at component area, 16 psf minimum, Detailed calculations tab |
 
 ## Building
 
