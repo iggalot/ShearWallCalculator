@@ -82,8 +82,8 @@ _2026-10-30. Branch `dev/wind-core-refactor` in both repos. Items 1 and 2 are ap
    | Unit shear | v = V / ΣL (segmented walls) | SDPWS 4.3.2 |
    | Aspect ratio | h/b ≤ 3.5 (blocked wood panels); × (1.25 − 0.125 h/b) above 2:1 | SDPWS 4.3.4 / 4.3.3.4 |
    | Capacity, **ASD or LRFD (your choice per project)** | ASD: v_w / 2.0; LRFD: 0.80 × v_w (the tables hold nominal values) | SDPWS 2015 4.3.3 / 2021 4.1.4 |
-   | Holdown tension | T = M / L = V·h / L: the moment from the shear at the top of the wall over the wall length. ASD uses 0.6W, LRFD 1.0W. Dead-load relief (0.6D) is an optional input that defaults to 0 | your rule; ASCE 7 2.3/2.4 combinations |
-   | Holdown pick | the lightest HDU / HTT / strap model with allowable tension ≥ T (ASD), for the chosen species and use (wall to foundation, or wall to wall below) | Simpson catalog values (C_D = 1.6 already included). For LRFD, T is compared with the allowable × 1.6/1.0 conversion only if you approve; otherwise holdowns are always checked at ASD |
+   | Holdown tension | T = M / L = V·h / L: the moment from the shear at the top of the wall over the wall length. Dead-load relief is an optional input that defaults to 0 | your rule |
+   | Holdown pick | **Always checked at ASD**, whichever method the walls use. T_ASD is computed directly from the ASD combination 0.6D + 0.6W (ASCE 7 §2.4), not converted from the LRFD number. Choose the lightest HDU / HTT / strap with Simpson allowable tension ≥ T_ASD, for the species and use (wall to foundation, or wall to wall below). The report also shows T_LRFD (0.9D + 1.0W) for reference | Simpson allowable loads (C_D = 1.6 already included). In ASCE 7-16/22 wind is strength-level, so LRFD uses 1.0W and ASD 0.6W: T_ASD = 0.6 T_LRFD with no dead load (the old 1.6W factor was ASCE 7-05) |
    | Sill anchorage | V / bolt capacity → bolt spacing (later, if you want it) | NDS 12 |
 3. **Results**:
    - A pass/fail strip on each wall in the drawing (green / amber / red).
