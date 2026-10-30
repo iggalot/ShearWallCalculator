@@ -2,6 +2,29 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-10-30 (later) — Fourth look, and the wind equation audit
+
+- **Wind setup:**
+  - The ASCE 7 edition is Step 1, with a note on which IBC references which edition.
+  - The steps are renumbered 1–6.
+  - The tinted page background makes the white cards stand out, and selected cards are light blue.
+  - The 0° slope switch waits 0.8 s, down from 1.2 s, so a typo can still be fixed before it flips.
+- **Shear walls:**
+  - The Calculations tab says what to draw until there is something to calculate.
+  - Walls with no load in a direction show "-" instead of NaN, and only the results table for this
+    calculator type is shown.
+  - Test Design no longer calls `AddLoads(15, 15)`, which had replaced the linked wind loads with a test load
+    while the screen still said "ASCE 7 wind".
+  - Checked in the app: an 80 × 60 ft box gives 7.50 k per W-E wall (15.0 / 2) and 12.18 k per S-N wall
+    (24.4 / 2).
+- **`WIND_EQUATION_AUDIT.md`:**
+  - The equations check out against ASCE 7 and the published 7-22 change summaries.
+  - **F1 (high):** C&C GCp is read at the zone's total area instead of the component's effective wind area,
+    which is unconservative.
+  - **F2 (high):** the 16 psf C&C minimum (30.2.2) is not applied.
+  - **F3:** the Exposure B Kz floor needs to be confirmed.
+  - F1 and F2 need your decision before the engine changes.
+
 ## 2026-10-30 — Third look: workspaces, stepped site page, detailed calculations
 
 **Shear-wall app**

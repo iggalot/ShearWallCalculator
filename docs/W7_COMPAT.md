@@ -19,6 +19,7 @@ Check out a matching pair of commits when you build an older version.
 | `dev/wind-core-refactor @ 733a36c` (M5 revisions) | `dev/wind-core-refactor @ c0fb7b2` | One-screen steps, prototype results layout, live shear-wall link |
 | `dev/wind-core-refactor` (M5 polish) | `dev/wind-core-refactor @ e122a8c` | Wind workspace, default wind link, compact viewer |
 | `dev/wind-core-refactor` (third look) | `dev/wind-core-refactor @ 0f35b75` | Workspace switch, stepped site page, detailed calculations window, LOADS dialog |
+| `dev/wind-core-refactor` (fourth look) | `dev/wind-core-refactor @ daa404c` | Edition as Step 1, tinted cards; shear-wall guidance and NaN fix; equation audit |
 
 ## Building
 
