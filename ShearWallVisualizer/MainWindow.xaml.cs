@@ -4,6 +4,7 @@ using Microsoft.Win32;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using ShearWallCalculator;
+using ShearWallCalculator.Design;
 using ShearWallCalculator.Interfaces;
 using ShearWallVisualizer.Controls;
 using ShearWallVisualizer.Dialogs;
@@ -161,6 +162,7 @@ namespace ShearWallVisualizer
 
                 // load the Simpson catalog
                 simpsonCatalog = new SimpsonCatalog();
+                CreateDesignPanel();
 
                 UpdateShearWallUI();
 
@@ -173,6 +175,7 @@ namespace ShearWallVisualizer
                 UpdateShearWallUI();
                 TabControlManager.ReAddTab(MainTabControl, "tabDimensionsTabItem");
                 TabControlManager.ReAddTab(MainTabControl, "tabCalculationsTabItem");
+                TabControlManager.ReAddTab(MainTabControl, "tabDesignTabItem");
                 ApplyWorkspace();
                 MarkSaved(); // a new, untitled project
             };
@@ -197,6 +200,7 @@ namespace ShearWallVisualizer
                 }
 
                 ShowCalculationState();
+                UpdateDesign();
 
                 // list the type of calculator
                 tbCalculatorType.Text = Calculator.GetType().Name;
@@ -230,6 +234,57 @@ namespace ShearWallVisualizer
             // redraw the scene
             Draw(ChangeType.Redraw);
             UpdateTitle();
+        }
+
+        // ------------------------------------------------------------------ shear-wall design (Design tab)
+
+        private WallDesignPanel designPanel;
+        private ShearWallDesigner designer;
+
+        /// <summary>The latest check of each wall (rigid diaphragm), keyed by wall id. Empty when there is nothing to check.</summary>
+        private Dictionary<int, WallDesignResult> designResults = new Dictionary<int, WallDesignResult>();
+
+        private void CreateDesignPanel()
+        {
+            designer = new ShearWallDesigner(null, simpsonCatalog);
+            designPanel = new WallDesignPanel();
+            designPanel.DesignChanged += (s, e) => UpdateShearWallUI();
+            designPanel.AutoSelectRequested += (s, e) => AutoSelectAllWalls();
+            tabDesignTabItem.Content = designPanel;
+        }
+
+        /// <summary>Checks every wall for its governing shear (called after the wall calculations).</summary>
+        private void UpdateDesign()
+        {
+            designResults = new Dictionary<int, WallDesignResult>();
+            if (designPanel == null) return;
+
+            string message = null;
+            if (!(Calculator is ShearWallCalculator_RigidDiaphragm))
+                message = "Design checks are for rigid diaphragms for now; flexible diaphragms come next.";
+            else if (!Calculator.IsValidForCalculation)
+                message = "Draw a diaphragm and walls in both directions first (see the Calculations tab).";
+            else
+            {
+                foreach (var kv in Calculator._wall_system._walls)
+                {
+                    if (!Calculator.TotalWallShear.TryGetValue(kv.Key, out double v)) continue;
+                    Calculator.GoverningLoadCase.TryGetValue(kv.Key, out string governing);
+                    designResults[kv.Key] = designer.Check(kv.Key, kv.Value, v, governing, Calculator.DesignSettings);
+                }
+                if (designResults.Count == 0) message = "No wall shears yet: add loads (LOADS button) or link the wind loads.";
+            }
+            designPanel.Show(Calculator, designResults, designer, windLoadsLinked, message);
+        }
+
+        /// <summary>The lightest passing edge nailing (then both sides) for every wall, keeping its panel and hold-down type.</summary>
+        private void AutoSelectAllWalls()
+        {
+            if (Calculator == null) return;
+            foreach (var kv in Calculator._wall_system._walls)
+                if (Calculator.TotalWallShear.TryGetValue(kv.Key, out double v))
+                    kv.Value.Design = designer.AutoSelect(kv.Value, v, Calculator.DesignSettings);
+            UpdateShearWallUI();
         }
 
         /// <summary>
@@ -1144,7 +1199,9 @@ namespace ShearWallVisualizer
                         continue;
 
                     // Draw the line object
-                    SolidColorBrush lineStrokeBrush = new SolidColorBrush(Colors.Blue);
+                    // Blue; on the Shear walls side, green or red once the wall has been checked (Design tab).
+                    SolidColorBrush lineStrokeBrush = new SolidColorBrush(
+                        designResults.TryGetValue(wall.Key, out var check) ? (check.Pass ? Color.FromRgb(0x1E, 0x8E, 0x3E) : Color.FromRgb(0xC6, 0x28, 0x28)) : Colors.Blue);
                     Pen pen = new Pen(lineStrokeBrush, 4);
                     ctx.DrawLine(pen, p1_screen, p2_screen);
 
@@ -2318,7 +2375,7 @@ namespace ShearWallVisualizer
                 ? new WindAnalysisResult(windLoadCalculator_CC, windLoadCalculator_MWFRS_Length, windLoadCalculator_MWFRS_Width)
                 : null;
             var info = new ReportInfo { Project = ProjectName, Program = "Shear Wall Calculator" };
-            var report = WindReport.Build(info, windVersion, windLoadParams, buildingData, analysis, ShearWallReport.Sections(Calculator, windLoadsLinked));
+            var report = WindReport.Build(info, windVersion, windLoadParams, buildingData, analysis, ShearWallReport.Sections(Calculator, windLoadsLinked, designResults));
             new ReportPreviewWindow(report, ProjectName) { Owner = this }.Show();
         }
         #endregion

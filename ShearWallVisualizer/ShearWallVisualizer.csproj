@@ -64,6 +64,7 @@
     <Compile Include="Controls\ShearWallResultsControl_Flexible.xaml.cs">
       <DependentUpon>ShearWallResultsControl_Flexible.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Controls\WallDesignPanel.cs" />
     <Compile Include="Controls\WallDesignControl.xaml.cs">
       <DependentUpon>WallDesignControl.xaml</DependentUpon>
     </Compile>

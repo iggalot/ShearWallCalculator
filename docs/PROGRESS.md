@@ -2,6 +2,43 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-10-30 (late) — Item 2: shear-wall design, rigid diaphragm
+
+- **Design tab** (Shear walls mode, after Calculations). Each wall in the list has these inputs:
+  - sheathing (SDPWS Table 4.3A, blocked wood structural panels)
+  - edge nail spacing
+  - sides
+  - framing species
+  - dead load
+  - hold-down type (HDU or HTT to the foundation; a strap to the wall below)
+- **Results for each wall:**
+  - unit shear v
+  - allowed shear
+  - ratio
+  - hold-down tension
+  - the lightest Simpson hold-down that works
+  - pass or fail
+- Clicking a wall shows every step, with the code reference, in the card below the table.
+- In the drawing, walls are green when they pass and red when they fail.
+- **Method:**
+  - ASD (0.6W, nominal / 2.0) or LRFD (1.0W, 0.80 × nominal).
+  - Wood code: SDPWS 2021 or 2015 (see `docs/SDPWS_EDITION.md`).
+  - Aspect ratio: h/b ≤ 3.5, with 1.25 − 0.125 h/b above 2:1.
+  - Species factor; footnote 10 (×0.92) for 10d nails with the hold-down on the inside face.
+  - Hold-downs are always checked at ASD: T = 0.6·V·h/L − 0.6·D·L/2, against the Simpson allowable loads.
+    LRFD T is shown for reference.
+- **Auto-select nailing (all walls):** picks the lightest passing edge spacing (6", 4", 3", 2"), on one side and then on two sides. The panel and hold-down type stay as they are.
+- The design choices are saved with the project.
+- The printed report gets a "Shear wall design" section: a summary table and every step for each wall.
+- Fixed the hold-down sizing in `ShearWallSelector`: it used to compare the shear V with the hold-down capacity. It now uses the tension T.
+- Flexible diaphragms say "design checks are for rigid diaphragms for now"; they are next.
+- **Tests:** SWC 44 (10 design hand calculations).
+- **Smoke test in the app:** an 80 × 60 project linked to wind (140 mph, Exp C).
+  - Before auto-select, 0 of 5 walls pass.
+  - After auto-select, 4 of 5 pass.
+  - The remaining 2.5 ft wall fails correctly: h/b 3.60 > 3.5.
+  - The table fits the side panel with no horizontal scroll.
+
 ## 2026-10-30 (late) — Item 1: project files and the printable report (M7)
 
 - **One project file (`*.swc.json`, format 2)** holds the wind inputs (edition, site, building, the cladding

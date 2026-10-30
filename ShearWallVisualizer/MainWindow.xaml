@@ -204,6 +204,9 @@
                         </StackPanel>
                     </TabItem>
 
+                    <!-- Sheathing, nailing and hold-down checks for each wall (SDPWS; Simpson hold-downs) -->
+                    <TabItem x:Name="tabDesignTabItem" Header="Design" Width="100" HorizontalAlignment="Center" Margin="5 0 5 0"/>
+
                 </TabControl>
 
                 <!-- Optional Logging + Scroll -->

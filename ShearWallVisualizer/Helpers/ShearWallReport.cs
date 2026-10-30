@@ -1,6 +1,9 @@
 using ASCE7WindLoadCalculator;
 using calculator;
 using ShearWallCalculator;
+using ShearWallCalculator.Design;
+using ShearWallCalculator.NDSProvisions;
+using ShearWallVisualizer.Controls;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,7 +14,8 @@ namespace ShearWallVisualizer.Helpers
     /// <summary>The shear-wall part of the printed report (added after the wind pages).</summary>
     public static class ShearWallReport
     {
-        public static IEnumerable<ReportSection> Sections(ShearWallCalculatorBase calc, bool linkedToWind)
+        public static IEnumerable<ReportSection> Sections(ShearWallCalculatorBase calc, bool linkedToWind,
+            IReadOnlyDictionary<int, WallDesignResult> design = null)
         {
             var blocks = new List<FrameworkElement> { WindReport.Heading("Shear walls") };
             if (calc == null || !calc.IsValidForCalculation)
@@ -61,7 +65,33 @@ namespace ShearWallVisualizer.Helpers
             blocks.Add(WindReport.Para("V is the largest shear over all load cases (strength level); v = V / L is the unit shear along the wall."));
             blocks.AddRange(WindReport.Tables(new[] { "Wall", "Direction", "L (ft)", "h (ft)", "V (k)", "v (plf)", "Governing case" }, rows));
 
-            return new[] { new ReportSection("Shear walls", blocks) };
+            var sections = new List<ReportSection> { new ReportSection("Shear walls", blocks) };
+            if (design != null && design.Count > 0) sections.Add(DesignSection(calc, design));
+            return sections;
+        }
+
+        /// <summary>The design checks: settings, a summary table, then every step for each wall.</summary>
+        private static ReportSection DesignSection(ShearWallCalculatorBase calc, IReadOnlyDictionary<int, WallDesignResult> design)
+        {
+            var s = calc.DesignSettings ?? new DesignSettings();
+            var blocks = new List<FrameworkElement>
+            {
+                WindReport.Heading("Shear wall design"),
+                WindReport.Para($"{(s.Method == DesignMethods.ASD ? "ASD: walls 0.6W, capacity = nominal / 2.0" : "LRFD: walls 1.0W, capacity = 0.80 x nominal")} " +
+                                $"({SdpwsSource.EditionName(s.Edition)}). Hold-downs are checked at ASD (0.6W) against Simpson allowable loads. " +
+                                "Blocked wood structural panels, Table 4.3A; each drawn wall is one full-height segment. " + SdpwsSource.TableSource),
+            };
+            var rows = design.Keys.OrderBy(k => k).Select(k => design[k]).Select(r => new[]
+            {
+                r.WallId.ToString(), r.Panel, $"{r.Inputs.EdgeSpacing}\" / {(r.Inputs.Sides == 2 ? 2 : 1)}",
+                double.IsInfinity(r.Demand) ? "-" : r.Demand.ToString("0"), double.IsNaN(r.Capacity) ? "-" : r.Capacity.ToString("0"),
+                double.IsNaN(r.Capacity) ? "-" : r.ShearRatio.ToString("0.00"), r.TensionAsd.ToString("0"),
+                !r.HoldownNeeded ? "none" : r.Holdown?.ToString() ?? "none strong enough", r.Pass ? "OK" : r.Status,
+            }).ToList();
+            blocks.AddRange(WindReport.Tables(new[] { "Wall", "Sheathing", "Nails / sides", "v (plf)", "Allowed", "Ratio", "T (lb)", "Hold-down", "Result" }, rows));
+            foreach (var r in design.Keys.OrderBy(k => k).Select(k => design[k]))
+                blocks.Add(WindReport.Para(string.Join(Environment.NewLine, WallDesignPanel.Explain(r))));
+            return new ReportSection("Shear wall design", blocks);
         }
     }
 }
