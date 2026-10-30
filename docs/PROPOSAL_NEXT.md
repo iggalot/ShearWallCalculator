@@ -44,6 +44,7 @@ _2026-10-30. Branch `dev/wind-core-refactor` in both repos. Items 1 and 2 are ap
    - the "loads changed since saved" message appears;
    - every report page builds.
 
+
 ### Effect on the app
 - New menu items: Save As and Print report…. File > Save and File > Open keep their places.
 - There are no changes to the wind screens.
@@ -79,10 +80,10 @@ _2026-10-30. Branch `dev/wind-core-refactor` in both repos. Items 1 and 2 are ap
    | Check | Equation | Reference |
    |---|---|---|
    | Unit shear | v = V / ΣL (segmented walls) | SDPWS 4.3.2 |
-   | Aspect ratio | h/w ≤ 3.5 (blocked wood panels); 2w/h reduction above 2:1 | SDPWS 4.3.4 |
-   | Capacity | ASD: v_w / 2.0; LRFD: 0.5 × v_w (the tables hold nominal values) | SDPWS 4.3.3 |
-   | Holdown tension | T = v·h − resisting moment from 0.6D | ASCE 7 2.4 (0.6D + 0.6W) |
-   | Holdown pick | the lightest catalog model with allowable tension ≥ T, for the chosen species, with its fastener schedule | Simpson catalog values (C_D = 1.6 already included) |
+   | Aspect ratio | h/b ≤ 3.5 (blocked wood panels); × (1.25 − 0.125 h/b) above 2:1 | SDPWS 4.3.4 / 4.3.3.4 |
+   | Capacity, **ASD or LRFD (your choice per project)** | ASD: v_w / 2.0; LRFD: 0.80 × v_w (the tables hold nominal values) | SDPWS 2015 4.3.3 / 2021 4.1.4 |
+   | Holdown tension | T = M / L = V·h / L: the moment from the shear at the top of the wall over the wall length. ASD uses 0.6W, LRFD 1.0W. Dead-load relief (0.6D) is an optional input that defaults to 0 | your rule; ASCE 7 2.3/2.4 combinations |
+   | Holdown pick | the lightest HDU / HTT / strap model with allowable tension ≥ T (ASD), for the chosen species and use (wall to foundation, or wall to wall below) | Simpson catalog values (C_D = 1.6 already included). For LRFD, T is compared with the allowable × 1.6/1.0 conversion only if you approve; otherwise holdowns are always checked at ASD |
    | Sill anchorage | V / bolt capacity → bolt spacing (later, if you want it) | NDS 12 |
 3. **Results**:
    - A pass/fail strip on each wall in the drawing (green / amber / red).
@@ -95,11 +96,12 @@ _2026-10-30. Branch `dev/wind-core-refactor` in both repos. Items 1 and 2 are ap
    - holdown selection boundaries (just under / just over a catalog value);
    - the selector bug fix.
 
-### Questions I need you to answer before I start item 2
-- **Q1 – ASD or LRFD?** I recommend **ASD**: wind is 0.6W, and Simpson publishes allowable loads. LRFD could be a later toggle.
-- **Q2 – Is this the Simpson data you meant?** The catalog has HDU, HTT and strap ties. If you also have SSTB/Titen HD anchors, HDQ8, or the H-series roof ties anywhere, point me to them. I will **not** write into any other project folder.
-- **Q3 – Which SDPWS edition** did you type the tables from (2015 or 2021)? The 2021 edition changed the aspect-ratio factor slightly. I'll label the report with it.
-- **Q4 – Rigid diaphragm only for the first pass?** The flexible calculator gives tributary forces the same way, so both would work, but I'd test rigid first.
+### Your answers (2026-10-30)
+- **Q1:** offer **both ASD and LRFD** as a per-project choice.
+- **Q2:** the HDU / HTT / strap-tie data is for **holdowns at the base of walls**, to the foundation or to the wall below. There is no roof-tie data yet, so **roof ties (H-clips / hurricane ties) are a future milestone** (goes with item 3b).
+- **Q3:** not sure. Researched: the tables are **SDPWS 2015**, and their wind column equals the 2021 v_n, so both editions are supported for wind. The evidence is in `docs/SDPWS_EDITION.md`, the code is `NDSProvisions/SdpwsSource.cs`, and every table file has a source header.
+- **Q4:** **rigid diaphragms first**, then flexible.
+- **Holdown rule (yours):** T = M / L, where M is the moment from the shear at the top of the wall. The existing `ShearWallSelector.ComputeHolddownForces` already computes V·h/L. The bug is only that the selection used V instead of T.
 
 ### Effect on the app
 - In 2 Shear walls → Calculations, every wall row gains demand / capacity / ratio and holdown columns.
@@ -107,7 +109,7 @@ _2026-10-30. Branch `dev/wind-core-refactor` in both repos. Items 1 and 2 are ap
 - The drawing shows pass/fail colours.
 - The Test Design button goes away, replaced by Check design / Auto-select.
 
-**Estimate:** about 4–6 days, after your answers.
+**Estimate:** about 4–6 days (rigid), plus 1–2 days to extend to flexible.
 
 ---
 
@@ -129,7 +131,7 @@ _2026-10-30. Branch `dev/wind-core-refactor` in both repos. Items 1 and 2 are ap
 
 ## Order of work
 1. Item 1 (project file and report). It needs no decisions; I start on your go.
-2. Item 2 (shear-wall design). It needs your answers to Q1–Q4.
-3. Item 3b, then 3c, then 3a and 3d, if you approve them.
+2. Item 2 (shear-wall design), rigid diaphragm first, then flexible.
+3. Item 3b (overhangs) together with a new roof-tie milestone, then 3c, then 3a and 3d, if you approve them.
 
 Each step ends the same way: a clean commit in each repo, both solutions building, all tests passing, and an entry in `PROGRESS.md`.

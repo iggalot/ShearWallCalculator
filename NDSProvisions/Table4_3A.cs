@@ -1,5 +1,8 @@
 ﻿using System.Collections.Generic;
 
+// SOURCE: AWC SDPWS-2015 (separate seismic v_s / G_a and wind v_w columns, v_w = 1.4 v_s). The wind column
+// equals the SDPWS-2021 nominal value v_n, so it is used for wind design under either edition.
+// Edition evidence and the factors applied to these values: SdpwsSource.cs and docs/SDPWS_EDITION.md.
 namespace ShearWallCalculator.NDSProvisions
 {
     /// Design parameters for seismic cases
