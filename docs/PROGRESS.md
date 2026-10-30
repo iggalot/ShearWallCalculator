@@ -2,7 +2,9 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
-## 2026-10-30 (late) — Item 2: shear-wall design, rigid diaphragm
+## 2026-10-30 (late) — Item 2: shear-wall design, rigid then flexible diaphragms
+
+- **Flexible diaphragms (second commit):** the same checks use the flexible calculator's wall shears: each wall line takes its tributary load, and the line's walls share it by rigidity. Test: a 40 × 20 ft box, hand-calculated (45 tests). Smoke test: the same 80 × 60 project. With half the N-S wind on one 12 ft wall, that wall fails even with 2" nails on both sides, which is the correct answer.
 
 - **Design tab** (Shear walls mode, after Calculations). Each wall in the list has these inputs:
   - sheathing (SDPWS Table 4.3A, blocked wood structural panels)
@@ -31,7 +33,6 @@ _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`
 - The design choices are saved with the project.
 - The printed report gets a "Shear wall design" section: a summary table and every step for each wall.
 - Fixed the hold-down sizing in `ShearWallSelector`: it used to compare the shear V with the hold-down capacity. It now uses the tension T.
-- Flexible diaphragms say "design checks are for rigid diaphragms for now"; they are next.
 - **Tests:** SWC 44 (10 design hand calculations).
 - **Smoke test in the app:** an 80 × 60 project linked to wind (140 mph, Exp C).
   - Before auto-select, 0 of 5 walls pass.

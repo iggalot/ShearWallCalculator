@@ -167,5 +167,40 @@ namespace ShearWallCalculator.Tests
             }
             Assert.AreEqual(DesignMethods.LRFD, read.DesignSettings.Method);
         }
+
+        [TestMethod]
+        public void FlexibleDiaphragm_TributaryShearsDesignLikeRigid()
+        {
+            // 40 x 20 ft flexible diaphragm, 10 ft walls on all four sides, Vx = 10 k, Vy = 6 k.
+            // Tributary: each E-W wall line takes 10 / 2 = 5 k, each N-S line 6 / 2 = 3 k (one wall per line).
+            // E-W wall: v = 0.6 x 5000 / 10 = 300 plf vs 392.5 plf; T = 0.6 x 5000 x 9 / 10 = 2700 lb -> HDU2-SDS2.5.
+            // N-S wall: v = 0.6 x 3000 / 10 = 180 plf; T = 0.6 x 3000 x 9 / 10 = 1620 lb.
+            var calc = new ShearWallCalculator_FlexibleDiaphragm();
+            calc._wall_system.AddWall(new WallData(9, 0, 5, 0, 15));
+            calc._wall_system.AddWall(new WallData(9, 40, 5, 40, 15));
+            calc._wall_system.AddWall(new WallData(9, 15, 0, 25, 0));
+            calc._wall_system.AddWall(new WallData(9, 15, 20, 25, 20));
+            calc._diaphragm_system.AddDiaphragm(new DiaphragmData_Rectangular(new System.Windows.Point(0, 0), new System.Windows.Point(40, 20)));
+            calc.AddLoads(10, 6);
+            calc.PerformCalculations();
+
+            foreach (var id in calc._wall_system.EW_Walls.Keys)
+            {
+                var r = Designer.Check(id, calc._wall_system._walls[id], calc.TotalWallShear[id], null, Asd);
+                Assert.AreEqual(300.0, r.Demand, 1e-6);
+                Assert.AreEqual(392.5, r.Capacity, 1e-9);
+                Assert.AreEqual(2700.0, r.TensionAsd, 1e-6);
+                Assert.AreEqual("HDU2-SDS2.5", r.Holdown.Model);
+                Assert.IsTrue(r.Pass);
+            }
+            foreach (var id in calc._wall_system.NS_Walls.Keys)
+            {
+                var r = Designer.Check(id, calc._wall_system._walls[id], calc.TotalWallShear[id], null, Asd);
+                Assert.AreEqual(180.0, r.Demand, 1e-6);
+                Assert.AreEqual(1620.0, r.TensionAsd, 1e-6);
+                Assert.IsTrue(r.Holdown.Allowable >= 1620.0);
+                Assert.IsTrue(r.Pass);
+            }
+        }
     }
 }

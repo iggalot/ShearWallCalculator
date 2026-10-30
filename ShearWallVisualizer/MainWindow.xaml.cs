@@ -260,9 +260,7 @@ namespace ShearWallVisualizer
             if (designPanel == null) return;
 
             string message = null;
-            if (!(Calculator is ShearWallCalculator_RigidDiaphragm))
-                message = "Design checks are for rigid diaphragms for now; flexible diaphragms come next.";
-            else if (!Calculator.IsValidForCalculation)
+            if (Calculator == null || !Calculator.IsValidForCalculation)
                 message = "Draw a diaphragm and walls in both directions first (see the Calculations tab).";
             else
             {

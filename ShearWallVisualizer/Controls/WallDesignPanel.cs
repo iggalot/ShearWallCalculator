@@ -108,7 +108,10 @@ namespace ShearWallVisualizer.Controls
             tbNote.Text = (loadsFromWind ? "Wall shears from the ASCE 7 wind load cases (strength level). " : "Wall shears from MANUAL loads, taken as strength-level wind. ") +
                           (settings.Method == DesignMethods.ASD ? "ASD: walls get 0.6W, capacity = nominal / 2.0. " : "LRFD: walls get 1.0W, capacity = 0.80 × nominal. ") +
                           "Hold-downs are always checked at ASD (0.6W) against Simpson allowable loads. Blocked wood structural panels, " +
-                          "SDPWS Table 4.3A; each drawn wall is one full-height segment. Rigid diaphragm. " + SdpwsSource.TableSource;
+                          "SDPWS Table 4.3A; each drawn wall is one full-height segment. " +
+                          (calculator is ShearWallCalculator_FlexibleDiaphragm
+                              ? "Flexible diaphragm: each wall line takes its tributary load, split among its walls by rigidity. "
+                              : "Rigid diaphragm: load shared by wall rigidity, plus torsion. ") + SdpwsSource.TableSource;
 
             table.Children.Clear();
             table.RowDefinitions.Clear();
@@ -213,7 +216,7 @@ namespace ShearWallVisualizer.Controls
                 Cell(row, col++, double.IsNaN(r.Capacity) ? "-" : r.Capacity.ToString("0"), id);
                 Cell(row, col++, double.IsNaN(r.Capacity) || double.IsInfinity(r.ShearRatio) ? "-" : r.ShearRatio.ToString("0.00"), id, r.ShearOk ? Ink : FailInk, bold: !r.ShearOk);
                 Cell(row, col++, r.TensionAsd.ToString("0"), id);
-                Cell(row, col++, !r.HoldownNeeded ? "none (no uplift)" : r.Holdown?.Model ?? "none strong enough", id, r.HoldownOk ? Ink : FailInk);
+                Cell(row, col++, !r.HoldownNeeded ? "no uplift" : r.Holdown?.Model ?? "none fits", id, r.HoldownOk ? Ink : FailInk);
                 var status = new Border
                 {
                     Background = r.Pass ? PassFill : FailFill, CornerRadius = new CornerRadius(4), Margin = new Thickness(3, 3, 3, 3), Padding = new Thickness(6, 2, 6, 2),
