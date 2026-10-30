@@ -2,6 +2,14 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-10-30 (night) — Live results on the Building page; legacy input tabs retired
+
+- The Building page shows the four result cards under the 3D view and updates them on every edit (roof
+  component, sizes, slope), so you no longer have to go to Results to see the effect.
+- The BuildingData and WIND Input tabs are retired. Wind Setup has every input they had. Their L/B, h/L and h/B
+  ratios now appear on the Detailed calculations Inputs page. Their TabItems and controls remain in the code.
+- The Wind loads workspace now shows Wind Setup, Detailed calculations and 3D Wind.
+
 ## 2026-10-30 (evening) — Audit fixes and the Detailed calculations tab
 
 - **C&C effective wind area (audit F1):**

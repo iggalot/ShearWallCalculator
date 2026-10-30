@@ -165,8 +165,8 @@ namespace ShearWallVisualizer
                 // Now clean up and remove the tabs for the results
                 TabControlManager.RemoveAllTabs(MainTabControl);
                 TabControlManager.ReAddTab(MainTabControl, "tabWindSetupTabItem");
-                TabControlManager.ReAddTab(MainTabControl, "tabBuildingDataControlTabItem");
-                TabControlManager.ReAddTab(MainTabControl, "tabWindInputControlTabItem");
+                // The BuildingData and WIND Input tabs are retired: Wind Setup holds the same inputs. Their
+                // TabItems and controls remain (re-adding them here would bring them back).
                 RecalculateWind(); // adds the results tabs for the starting inputs (and links the wind loads)
                 UpdateShearWallUI();
                 TabControlManager.ReAddTab(MainTabControl, "tabDimensionsTabItem");
@@ -502,16 +502,6 @@ namespace ShearWallVisualizer
             buildingData = windSetup.Building.Clone();
             windLoadParams = windSetup.Parameters.Clone();
             windVersion = windSetup.Version;
-
-            // Rebuild the classic input tabs so they show the same values.
-            var ctrol_bldg_input = new BuildingDataInputControl(buildingData);
-            ctrol_bldg_input.BuildingDataInputComplete += BuildingDataInputControl_BuildingDataInputComplete;
-            ctrol_bldg_input.PreviewKeyDown += RunBuildingDataInputCalculations;
-            tabBuildingDataControlTabItem.Content = ctrol_bldg_input;
-
-            var ctrol_wind_input = new WindLoadInputControl(buildingData, windVersion, windLoadParams);
-            ctrol_wind_input.WindInputComplete += WindLoadInputControl_WindInputComplete;
-            tabWindInputControlTabItem.Content = ctrol_wind_input;
 
             RecalculateWind();
             UpdateShearWallUI();
