@@ -10,6 +10,7 @@ using ShearWallVisualizer.Controls;
 using ShearWallVisualizer.Dialogs;
 using ShearWallVisualizer.Helpers;
 using ShearWallCalculator.Diagnostics;
+using ShearWallCalculator.Drawing;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -95,8 +96,11 @@ namespace ShearWallVisualizer
 
         private enum DrawMode { None, Line, Rectangle }
         private DrawMode currentMode = DrawMode.Line;
-        private bool snapMode = false;
-        private double snapThreshold = 50; // Pixels
+        private bool snapMode = true;                     // object snaps on (F3 / S)
+        private SnapModes snapModes = SnapModes.Default;   // which snaps (the ▾ menu)
+        private SnapResult currentSnap;                    // the snap under the cursor; Point is the cursor when none
+        private const double SnapPixels = 10;              // snap reach on screen
+        private bool selectionCardOpen;                    // the card shows the picked wall or diaphragm
         private bool debugMode = false;
 
         private Point? startPoint_world = null;  // the first click in world coordinates
@@ -123,6 +127,12 @@ namespace ShearWallVisualizer
             this.PreviewKeyDown += FileShortcuts; // Ctrl+N, O, S, P
             this.Closing += MainWindow_Closing; // asks to save unsaved changes
             Log.Written += OnLogWritten;      // warnings and errors show on the status line
+            this.TextInput += RouteTypingToCommand;  // typing a number while drawing goes to the Point box
+            m_layers.MouseLeave += (s, e) => RedrawDrawing(); // drop the crosshair and snap marker
+            selectionCard.OpenDesign += SelectionCard_OpenDesign;
+            selectionCard.EditGeometry += SelectionCard_EditGeometry;
+            selectionCard.DeleteRequested += SelectionCard_Delete;
+            selectionCard.Closed += (s, e) => CloseSelectionCard();
             this.Closed += (s, e) => Log.Written -= OnLogWritten;
 
             // Set focus and canvas background
@@ -196,6 +206,7 @@ namespace ShearWallVisualizer
 
                 geometryPanel?.Show(Calculator, selectedKind, selectedId);
                 resultsPanel?.Show(Calculator, CalculationTodo(), selectedKind == "Wall" ? selectedId : -1);
+                selectionCard.Show(Calculator, selectionCardOpen ? selectedKind : null, selectedId, designResults);
 
                 // notify controls that we have updated
                 OnUpdated?.Invoke(this, EventArgs.Empty); // signal that the window has been updated -- so that subcontrols can refresh
@@ -373,31 +384,14 @@ namespace ShearWallVisualizer
         }
 
 
-        private Point GetSnappedPoint(Point worldPoint)
-        {
-            foreach (var wall in Calculator._wall_system._walls)
-            {
-                if (IsWithinSnapThreshold(worldPoint, wall.Value.Start)) return wall.Value.Start;
-                if (IsWithinSnapThreshold(worldPoint, wall.Value.End)) return wall.Value.End;
-            }
+        /// <summary>World length of a distance on screen (the drawing is square: one zoom factor).</summary>
+        private double PixelsToWorld(double pixels) => pixels / Math.Max(zoomFactorX, 1e-9);
 
-            foreach (var dia in Calculator._diaphragm_system._diaphragms)
-            {
-                if (IsWithinSnapThreshold(worldPoint, dia.Value.P1)) return dia.Value.P1;
-                if (IsWithinSnapThreshold(worldPoint, dia.Value.P2)) return dia.Value.P2;
-                if (IsWithinSnapThreshold(worldPoint, dia.Value.P3)) return dia.Value.P3;
-                if (IsWithinSnapThreshold(worldPoint, dia.Value.P4)) return dia.Value.P4;
-            }
-
-            return worldPoint;
-        }
-
-        private bool IsWithinSnapThreshold(Point p1, Point p2)
-        {
-            double dx = p1.X - p2.X;
-            double dy = p1.Y - p2.Y;
-            return Math.Sqrt(dx * dx + dy * dy) <= snapThreshold * (worldWidth / m_layers.ActualWidth);
-        }
+        /// <summary>The object snap at a world point, or the point itself when snaps are off or nothing is in reach.</summary>
+        private SnapResult FindSnap(Point world) =>
+            snapMode && Calculator != null && currentMode != DrawMode.None
+                ? Snapper.Find(world, PixelsToWorld(SnapPixels), Snapper.SegmentsOf(Calculator), snapModes, startPoint_world)
+                : new SnapResult { Kind = SnapModes.None, Point = world };
 
         private Point WorldToScreen(Point p, FrameworkElement element)
         {
@@ -935,27 +929,17 @@ namespace ShearWallVisualizer
             return;
         }
 
+        private static readonly Pen CrosshairPen = FrozenPen(Color.FromArgb(0x90, 0x52, 0x51, 0x4E), 1);
+        private static readonly Pen SnapGlyphPen = FrozenPen(Color.FromRgb(0xE0, 0x8A, 0x00), 2);
+
         private void DrawCursor(DrawingContext ctx)
         {
-            Point cross_pt = currentMouseScreenPosition;
-
-            if ((snapMode is true))
-            {
-                // draw markers and coordinate data at end points
-                ctx.DrawEllipse(Brushes.DarkRed, new Pen(Brushes.Black, 1), currentMouseScreenPosition, 5, 5);
-
-                ctx.DrawLine(new Pen(Brushes.Red, 1), cross_pt, new Point(0, cross_pt.Y));
-                ctx.DrawLine(new Pen(Brushes.Red, 1), cross_pt, new Point(dockpanel.Width, cross_pt.Y));
-                ctx.DrawLine(new Pen(Brushes.Red, 1), cross_pt, new Point(cross_pt.X, 0));
-                ctx.DrawLine(new Pen(Brushes.Red, 1), cross_pt, new Point(cross_pt.X, dockpanel.Height));
-            }
-            else
-            {
-                ctx.DrawLine(new Pen(Brushes.Black, 1), cross_pt, new Point(0, cross_pt.Y));
-                ctx.DrawLine(new Pen(Brushes.Black, 1), cross_pt, new Point(dockpanel.Width, cross_pt.Y));
-                ctx.DrawLine(new Pen(Brushes.Black, 1), cross_pt, new Point(cross_pt.X, 0));
-                ctx.DrawLine(new Pen(Brushes.Black, 1), cross_pt, new Point(cross_pt.X, dockpanel.Height));
-            }
+            if (!m_layers.IsMouseOver) return;
+            Point c = currentMouseScreenPosition;
+            ctx.DrawLine(CrosshairPen, new Point(0, c.Y), new Point(dockpanel.ActualWidth, c.Y));
+            ctx.DrawLine(CrosshairPen, new Point(c.X, 0), new Point(c.X, dockpanel.ActualHeight));
+            if (currentMode == DrawMode.None)
+                ctx.DrawRectangle(null, CrosshairPen, new Rect(c.X - 5, c.Y - 5, 10, 10)); // pick box
         }
 
         private void DrawLoads(DrawingContext ctx)
@@ -995,7 +979,7 @@ namespace ShearWallVisualizer
             Point preview_endPoint_world;
             if (endPoint_world == null)  // true if second point hasnt been selected
             {
-                preview_endPoint_world = ScreenToWorld(currentMouseScreenPosition, m_layers);
+                preview_endPoint_world = currentSnap.Point; // the cursor, or the snap under it
             }
             else
             {
@@ -1366,49 +1350,51 @@ namespace ShearWallVisualizer
                 }
             }
         }
+        /// <summary>The active object snap: an AutoCAD-style glyph at the snapped point and its name.</summary>
         private void DrawSnapMarkers(DrawingContext ctx)
         {
-            if (snapMode == false)
+            if (!currentSnap.Found || !m_layers.IsMouseOver) return;
+            Point p = WorldToScreen(currentSnap.Point, m_layers);
+            const double h = 6;
+            switch (currentSnap.Kind)
             {
-                return;
+                case SnapModes.Endpoint:
+                    ctx.DrawRectangle(null, SnapGlyphPen, new Rect(p.X - h, p.Y - h, 2 * h, 2 * h));
+                    break;
+                case SnapModes.Midpoint:
+                    var tri = new StreamGeometry();
+                    using (var g = tri.Open())
+                    {
+                        g.BeginFigure(new Point(p.X, p.Y - h - 1), false, true);
+                        g.LineTo(new Point(p.X + h + 1, p.Y + h), true, false);
+                        g.LineTo(new Point(p.X - h - 1, p.Y + h), true, false);
+                    }
+                    ctx.DrawGeometry(null, SnapGlyphPen, tri);
+                    break;
+                case SnapModes.Intersection:
+                    ctx.DrawLine(SnapGlyphPen, new Point(p.X - h, p.Y - h), new Point(p.X + h, p.Y + h));
+                    ctx.DrawLine(SnapGlyphPen, new Point(p.X - h, p.Y + h), new Point(p.X + h, p.Y - h));
+                    break;
+                case SnapModes.Perpendicular:
+                    ctx.DrawLine(SnapGlyphPen, new Point(p.X - h, p.Y + h), new Point(p.X + h, p.Y + h));
+                    ctx.DrawLine(SnapGlyphPen, new Point(p.X - h, p.Y + h), new Point(p.X - h, p.Y - h));
+                    ctx.DrawLine(SnapGlyphPen, new Point(p.X - h, p.Y), new Point(p.X, p.Y));
+                    ctx.DrawLine(SnapGlyphPen, new Point(p.X, p.Y), new Point(p.X, p.Y + h));
+                    break;
+                case SnapModes.Nearest:
+                    ctx.DrawLine(SnapGlyphPen, new Point(p.X - h, p.Y - h), new Point(p.X + h, p.Y - h));
+                    ctx.DrawLine(SnapGlyphPen, new Point(p.X - h, p.Y + h), new Point(p.X + h, p.Y + h));
+                    ctx.DrawLine(SnapGlyphPen, new Point(p.X - h, p.Y - h), new Point(p.X + h, p.Y + h));
+                    ctx.DrawLine(SnapGlyphPen, new Point(p.X + h, p.Y - h), new Point(p.X - h, p.Y + h));
+                    break;
             }
-
-            if (Calculator == null) return;
-
-            if (Calculator._wall_system != null)
-            {
-                foreach (var wall in Calculator._wall_system._walls)
-                {
-                    Point p1_world = wall.Value.Start;
-                    Point p2_world = wall.Value.End;
-                    Point p1_screen = WorldToScreen(p1_world, m_layers);
-                    Point p2_screen = WorldToScreen(p2_world, m_layers);
-
-                    ctx.DrawEllipse(Brushes.MediumBlue, new Pen(Brushes.MediumBlue, 1), p1_screen, 3, 3);
-                    ctx.DrawEllipse(Brushes.MediumBlue, new Pen(Brushes.MediumBlue, 1), p2_screen, 3, 3);
-                }
-            }
-
-            if (Calculator._diaphragm_system != null)
-            {
-                foreach (var dia in Calculator._diaphragm_system._diaphragms)
-                {
-                    Point p1_world = dia.Value.P1;
-                    Point p2_world = dia.Value.P2;
-                    Point p3_world = dia.Value.P3;
-                    Point p4_world = dia.Value.P4;
-                    Point p1_screen = WorldToScreen(p1_world, m_layers);
-                    Point p2_screen = WorldToScreen(p2_world, m_layers);
-                    Point p3_screen = WorldToScreen(p3_world, m_layers);
-                    Point p4_screen = WorldToScreen(p4_world, m_layers);
-
-                    ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Red, 1), p1_screen, 3, 3);
-                    ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Red, 1), p2_screen, 3, 3);
-                    ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Red, 1), p3_screen, 3, 3);
-                    ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Red, 1), p4_screen, 3, 3);
-                }
-            }
+            var label = new FormattedText(SnapResult.Describe(currentSnap.Kind), CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+                new Typeface("Segoe UI"), 11, Brushes.White, VisualTreeHelper.GetDpi(this).PixelsPerDip);
+            var box = new Rect(p.X + 10, p.Y + 8, label.Width + 8, label.Height + 2);
+            ctx.DrawRoundedRectangle(new SolidColorBrush(Color.FromArgb(0xE6, 0x30, 0x30, 0x30)), null, box, 3, 3);
+            ctx.DrawText(label, new Point(box.X + 4, box.Y + 1));
         }
+
         private void DrawCOMandCOR(DrawingContext ctx)
         {
             if (Calculator is null) return;
@@ -1757,51 +1743,149 @@ namespace ShearWallVisualizer
 
         private void m_layers_PreviewMouseDown(object sender, MouseButtonEventArgs e)
         {
-            //MessageBox.Show("Drawing Visual Clicked at " + e.GetPosition(m_layers).ToString());
-
             if (e.RightButton == MouseButtonState.Pressed)
             {
-                ResetInputMode();
-                UpdateShearWallUI();
+                ResetInputMode(); // right-click cancels the shape in progress
+                RedrawDrawing();
+                return;
+            }
+            if (e.ChangedButton != MouseButton.Left || Calculator == null) return;
+
+            Point world = ScreenToWorld(e.GetPosition(m_layers), m_layers);
+            if (currentMode == DrawMode.None)
+            {
+                PickAt(world);
+                return;
+            }
+            ApplyPoint(FindSnap(world).Point);
+        }
+
+        /// <summary>A clicked or typed point for the Wall or Diaphragm tool: the first point starts the shape, the second finishes it.</summary>
+        private void ApplyPoint(Point p)
+        {
+            if (startPoint_world == null)
+            {
+                startPoint_world = p;
+                CreatePreviewShape();
+                currentSnap = FindSnap(currentSnap.Point); // perpendicular now has a start point
+                RedrawDrawing();
                 return;
             }
 
-
-            if (currentMode == DrawMode.None)
+            Point start = startPoint_world.Value;
+            if (currentMode == DrawMode.Line)
             {
-                MessageBox.Show("No drawing mode selected.  Try selecting L (line mode) or R (rectangle) mode first.");
-                return;  // Ignore if not in drawing mode
+                Point squared = GetConstrainedPoint(p, start);
+                if ((squared - start).Length < 1e-6)
+                {
+                    ShowStatusMessage(LogLevel.Warning, "A wall needs two different ends.");
+                    return;
+                }
+                if ((squared - p).Length > 1e-6)
+                    ShowStatusMessage(LogLevel.Info, $"Walls run E-W or N-S: the end was squared to ({squared.X:0.##}, {squared.Y:0.##}).");
+            }
+            else if (Math.Abs(p.X - start.X) < 1e-6 || Math.Abs(p.Y - start.Y) < 1e-6)
+            {
+                ShowStatusMessage(LogLevel.Warning, "A diaphragm needs two opposite corners (different x and y).");
+                return;
             }
 
-            Point screenPoint = e.GetPosition(m_layers);
-            Point worldPoint = ScreenToWorld(screenPoint, m_layers);
-
-            if (snapMode)
+            endPoint_world = p;
+            try
             {
-                worldPoint = GetSnappedPoint(worldPoint);
+                FinalizeShape(p);
             }
-
-            if (startPoint_world == null)
+            catch (Exception ex) when (!(ex is OutOfMemoryException))
             {
-                startPoint_world = worldPoint;
-                CreatePreviewShape();
+                Log.Warning("The shape could not be added", ex);
+                ResetInputMode();
             }
-            else
-            {
-                endPoint_world = worldPoint;
-                FinalizeShape(endPoint_world.Value);
-            }
-
             UpdateShearWallUI();
         }
 
+        /// <summary>Select tool: picks the wall or diaphragm under the point and shows its card.</summary>
+        private void PickAt(Point world)
+        {
+            var (kind, id) = Snapper.Pick(Calculator, world, PixelsToWorld(6));
+            selectedKind = kind;
+            selectedId = id;
+            selectionCardOpen = kind != null;
+            UpdateShearWallUI(); // the tables follow the selection
+        }
+
+        private void CloseSelectionCard()
+        {
+            selectionCardOpen = false;
+            selectedKind = null;
+            selectedId = -1;
+            UpdateShearWallUI();
+        }
+
+        private void SelectionCard_OpenDesign(string kind, int id)
+        {
+            MainTabControl.SelectedItem = tabDesignTabItem;
+            designPanel?.SelectWall(id);
+        }
+
+        private void SelectionCard_EditGeometry(string kind, int id) => MainTabControl.SelectedItem = tabDimensionsTabItem;
+
+        private void SelectionCard_Delete(string kind, int id)
+        {
+            string name = kind == "Wall" ? $"wall {id}" : $"diaphragm {id}";
+            if (MessageBox.Show(this, $"Delete {name}?", "Delete", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes)
+                return;
+            if (kind == "Wall") Calculator._wall_system.DeleteWall(id);
+            else Calculator._diaphragm_system.DeleteDiaphragm(id);
+            CloseSelectionCard();
+        }
+
+        // ------------------------------------------------------------------ typed points
+
+        /// <summary>Typing a number, @, - or . while drawing (and not in a box) goes to the Point box.</summary>
+        private void RouteTypingToCommand(object sender, TextCompositionEventArgs e)
+        {
+            if (InWindWorkspace || currentMode == DrawMode.None || string.IsNullOrEmpty(e.Text)) return;
+            if (e.OriginalSource is System.Windows.Controls.Primitives.TextBoxBase) return;
+            if ("0123456789.-@".IndexOf(e.Text[0]) < 0) return;
+            tbCommand.Focus();
+            tbCommand.Text += e.Text;
+            tbCommand.CaretIndex = tbCommand.Text.Length;
+            e.Handled = true;
+        }
+
+        private void Command_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Escape)
+            {
+                tbCommand.Clear();
+                ResetInputMode();
+                RedrawDrawing();
+                Keyboard.ClearFocus();
+                e.Handled = true;
+                return;
+            }
+            if (e.Key != Key.Enter) return;
+            e.Handled = true;
+            if (currentMode == DrawMode.None)
+            {
+                ShowStatusMessage(LogLevel.Warning, "Pick Wall (L) or Diaphragm (R) first, then type its points.");
+                return;
+            }
+            if (!CoordinateInput.TryParse(tbCommand.Text, startPoint_world, currentSnap.Point, out Point p, out string error))
+            {
+                ShowStatusMessage(LogLevel.Warning, error);
+                tbCommand.SelectAll();
+                return;
+            }
+            tbCommand.Clear();
+            ApplyPoint(p);
+        }
 
         private void m_layers_PreviewMouseMove(object sender, MouseEventArgs e)
         {
             currentMouseScreenPosition = e.GetPosition(m_layers);
-            Point currentMouseWorldPosition = ScreenToWorld(currentMouseScreenPosition, m_layers);
-
-            ShowCursor(currentMouseWorldPosition);
+            currentSnap = FindSnap(ScreenToWorld(currentMouseScreenPosition, m_layers));
+            ShowCursor(currentSnap.Point);
             RedrawDrawing();
         }
 
@@ -1888,6 +1972,39 @@ namespace ShearWallVisualizer
             SetSnapMode();
         }
 
+        private void btnSelectMode_Click(object sender, RoutedEventArgs e)
+        {
+            currentMode = DrawMode.None;
+            ResetInputMode();
+            SetButtonModes();
+            RedrawDrawing();
+        }
+
+        /// <summary>The ▾ next to Snap: tick the object snaps to use.</summary>
+        private void btnSnapOptions_Click(object sender, RoutedEventArgs e)
+        {
+            var menu = new ContextMenu { PlacementTarget = btnSnapOptions, Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom };
+            var on = new MenuItem { Header = "Snaps on  (F3)", IsCheckable = true, IsChecked = snapMode, StaysOpenOnClick = true };
+            on.Click += (s, a) => SetSnapMode();
+            menu.Items.Add(on);
+            menu.Items.Add(new Separator());
+            foreach (var kind in new[] { SnapModes.Endpoint, SnapModes.Midpoint, SnapModes.Intersection, SnapModes.Perpendicular, SnapModes.Nearest })
+            {
+                var k = kind;
+                var item = new MenuItem { Header = SnapResult.Describe(k) + "   " + SnapGlyphHint(k), IsCheckable = true, IsChecked = (snapModes & k) != 0, StaysOpenOnClick = true };
+                item.Click += (s, a) =>
+                {
+                    snapModes = item.IsChecked ? snapModes | k : snapModes & ~k;
+                    if (snapModes != SnapModes.None && !snapMode) { snapMode = true; on.IsChecked = true; SetButtonModes(); }
+                };
+                menu.Items.Add(item);
+            }
+            menu.IsOpen = true;
+        }
+
+        private static string SnapGlyphHint(SnapModes k) =>
+            k == SnapModes.Endpoint ? "□" : k == SnapModes.Midpoint ? "△" : k == SnapModes.Intersection ? "×" : k == SnapModes.Perpendicular ? "⊥" : "⧗";
+
         private void btnOpenLoadDialog_Click(object sender, RoutedEventArgs e)
         {
             if (Calculator == null)
@@ -1940,12 +2057,20 @@ namespace ShearWallVisualizer
             // (typing "d" in a wind input used to toggle debug mode with a message box).
             if (e.Handled || InWindWorkspace || Keyboard.Modifiers != ModifierKeys.None) return;
             if (e.OriginalSource is System.Windows.Controls.Primitives.TextBoxBase || e.OriginalSource is PasswordBox || (e.OriginalSource is ComboBox cb && cb.IsEditable)) return;
-            if (e.Key != Key.L && e.Key != Key.R && e.Key != Key.S && e.Key != Key.D && e.Key != Key.Z && e.Key != Key.Escape) return;
+            if (e.Key != Key.L && e.Key != Key.R && e.Key != Key.S && e.Key != Key.D && e.Key != Key.Z && e.Key != Key.Escape && e.Key != Key.F3) return;
             Log.Debug($"Key pressed: {e.Key}");
 
+            // Esc: cancel the shape in progress; then close the card; then the Select tool
             if (e.Key == Key.Escape)
             {
-                ResetInputMode();
+                if (startPoint_world != null) { ResetInputMode(); RedrawDrawing(); }
+                else if (selectionCardOpen) CloseSelectionCard();
+                else { currentMode = DrawMode.None; currentSnap = FindSnap(currentSnap.Point); SetButtonModes(); RedrawDrawing(); }
+                return;
+            }
+            if (e.Key == Key.F3)
+            {
+                SetSnapMode();
                 RedrawDrawing();
                 return;
             }
@@ -2398,6 +2523,7 @@ namespace ShearWallVisualizer
         #region MODE setters
         public void SetButtonModes()
         {
+            btnSelectMode.Tag = currentMode == DrawMode.None ? "on" : null;
             btnRigidityMode.Tag = currentMode == DrawMode.Line ? "on" : null;
             btnMassMode.Tag = currentMode == DrawMode.Rectangle ? "on" : null;
             btnSnapToNearest.Tag = snapMode ? "on" : null;
@@ -2453,24 +2579,29 @@ namespace ShearWallVisualizer
 
         private void ShowCursor(Point world)
         {
-            tbWorldCoords.Text = $"x {world.X:0.00} ft,  y {world.Y:0.00} ft";
+            string snap = currentSnap.Found ? "   " + SnapResult.Describe(currentSnap.Kind).ToLowerInvariant() : "";
+            string len = startPoint_world.HasValue && currentMode == DrawMode.Line
+                ? $"   L = {(GetConstrainedPoint(world, startPoint_world.Value) - startPoint_world.Value).Length:0.00} ft"
+                : startPoint_world.HasValue && currentMode == DrawMode.Rectangle
+                    ? $"   {Math.Abs(world.X - startPoint_world.Value.X):0.##} × {Math.Abs(world.Y - startPoint_world.Value.Y):0.##} ft" : "";
+            tbWorldCoords.Text = $"x {world.X:0.00},  y {world.Y:0.00} ft{snap}{len}";
             tbZoom.Text = $"Zoom {zoomFactorX:0.##}×";
         }
 
         /// <summary>What the drawing tool expects next.</summary>
         private void ShowStatusMode()
         {
-            string snap = snapMode ? "   ·   snap on" : "";
+            string snap = snapMode ? "" : "   (snaps off)";
             switch (currentMode)
             {
                 case DrawMode.Line:
-                    tbStatusMode.Text = (startPoint_world == null ? "Wall: click the first end" : "Wall: click the second end  (right-click cancels)") + snap;
+                    tbStatusMode.Text = (startPoint_world == null ? "Wall: click or type the first end" : "Wall: click or type the second end  (Esc cancels)") + snap;
                     break;
                 case DrawMode.Rectangle:
-                    tbStatusMode.Text = (startPoint_world == null ? "Diaphragm: click a corner" : "Diaphragm: click the opposite corner  (right-click cancels)") + snap;
+                    tbStatusMode.Text = (startPoint_world == null ? "Diaphragm: click or type a corner" : "Diaphragm: click or type the opposite corner  (Esc cancels)") + snap;
                     break;
                 default:
-                    tbStatusMode.Text = "Pick a tool: Wall (L) or Diaphragm (R)" + snap;
+                    tbStatusMode.Text = "Select: click a wall or diaphragm to see it.  Draw with Wall (L) or Diaphragm (R).";
                     break;
             }
         }

@@ -2,6 +2,14 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-10-31 (night) — Drawing tools: typed points, object snaps, select and details card (SWC)
+
+- **Typed points** (`Drawing/CoordinateInput.cs`): the Point box on the status line, or just start typing a number while drawing. `12,30` absolute; `@5,0` relative; `@20<90` length and angle (degrees from +x); `20` a length toward the cursor. Feet-inches everywhere: `12'6"`, `12'-6"`, `6"`. A wall end that is not E-W or N-S is squared, and the status line says so; a bad entry says why.
+- **Object snaps** (`Drawing/Snapping.cs`, like OSNAP): endpoint □, midpoint △, intersection ×, perpendicular ⊥ (from the first point), nearest ⧗, on walls and diaphragm edges. Ranked in that order within 10 px; the glyph and its name show at the snapped point, the preview line follows it. On by default; F3 or S toggles; ▾ next to Snap picks which. The old snap reach ignored the zoom; it is now in screen pixels.
+- **Select tool** (Esc, or the toolbar): click a wall (within 6 px) or the smallest diaphragm under the cursor. A card over the drawing shows the size and position; for a wall also the design shear and its case, sheathing, nailing, unit shear / capacity, hold-down and T, pass/fail, with Design (opens the Design tab on that wall), Edit (Walls & diaphragms tab) and Delete (asks first). The tables follow the selection. Esc: cancels a shape, then closes the card, then switches to Select.
+- Status line: length of the wall being drawn, or the rectangle size; the active snap.
+- **Tests:** SWC 92 (15 new: each snap kind and its rank, perpendicular needs a start, parallel/non-crossing segments, typed absolute/relative/polar/length, feet-inches, error messages, picking wall over diaphragm and the inner diaphragm).
+
 ## 2026-10-31 (evening) — Logging, error handling, legacy pages restyled (SWC)
 
 - **Log:** `%AppData%\ShearWallCalculator\logs\swc-yyyy-MM-dd.log`, kept 14 days; Help > Open log folder. An unexpected error is logged with its detail and reported in a message; the action is cancelled and the work stays open. Warnings and errors also appear on the right of the status line (click opens the folder). Tests write their log to the temp folder.

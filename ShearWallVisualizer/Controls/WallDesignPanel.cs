@@ -238,6 +238,12 @@ namespace ShearWallVisualizer.Controls
             }
         }
 
+        /// <summary>Selects a wall from outside (the drawing's card); ignored if the wall has no result.</summary>
+        public void SelectWall(int id)
+        {
+            if (results.ContainsKey(id)) Select(id);
+        }
+
         private void Select(int id)
         {
             if (selectedWall == id) return;
