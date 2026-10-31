@@ -66,6 +66,7 @@
     <Compile Include="Controls\GeometryPanel.cs" />
     <Compile Include="Controls\ShearResultsPanel.cs" />
     <Compile Include="Controls\SelectionCard.cs" />
+    <Compile Include="Controls\DesignOverlay.cs" />
     <Compile Include="Controls\WallDesignControl.xaml.cs">
       <DependentUpon>WallDesignControl.xaml</DependentUpon>
     </Compile>

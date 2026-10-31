@@ -156,6 +156,8 @@
                         <Button x:Name="btnHideImage" Style="{StaticResource Tool}" Content="Image" Tag="on" Click="btnHideImage_Click"
                                 ToolTip="The reference image under the drawing (Edit &gt; Open Image Tool)"/>
                         <Button x:Name="btnHideShapes" Style="{StaticResource Tool}" Content="Walls &amp; diaphragms" Tag="on" Click="btnHideShapes_Click"/>
+                        <Button x:Name="btnShowDesign" Style="{StaticResource Tool}" Content="Design" Tag="on" Click="btnShowDesign_Click"
+                                ToolTip="Shear wall marks (SW1, SW2, ...) with each wall's hold-down, the hold-downs at the wall ends, and the shear wall schedule"/>
                         <Rectangle Style="{StaticResource ToolDivider}"/>
                         <Button x:Name="btnLoadEntry" Style="{StaticResource Tool}" Content="Loads..." Click="btnOpenLoadDialog_Click"
                                 ToolTip="Use the wind loads (automatic) or enter loads by hand"/>

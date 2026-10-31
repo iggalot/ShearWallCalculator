@@ -2,6 +2,14 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-10-31 (late night) — The design on the drawing: schedule marks, hold-downs, schedule (SWC)
+
+- **Schedule marks:** each different sheathing construction gets a mark, SW1, SW2, ... from the weakest (lowest design capacity) up, as on a drawing set. Each wall shows its mark and hold-down model in a small tag ("SW2 | DTT2Z"), outlined green (passes) or red; "no HD" in red when no hold-down is strong enough. The tag sits above an E-W wall or left of a N-S wall, on the other side if that would leave the canvas.
+- **Hold-downs** at both wall ends (wind reverses), on the post centerline: inset from the wall end by half the post dimension along the wall (the first of Simpson's minimum member sizes; two 2x studs, 3", when none is given). Filled square; open red square when none fits.
+- **Schedule** on the canvas: mark, sheathing, capacity, walls, and the hold-down symbol; placed in the corner that covers the least of the drawing.
+- SHOW **Design** on the toolbar turns it on and off (on by default). Walls stay green/red by pass/fail.
+- **Tests:** SWC 111 (4 new: marks per construction weakest first, empty design, hold-down points on both ends of E-W and N-S walls, post size along the wall).
+
 ## 2026-10-31 (late night) — Sheathing on one or two faces, any SDPWS table (SWC)
 
 - **Each wall face picks its own sheathing** from SDPWS Table 4.3A (wood structural panels), 4.3B (wood over gypsum) or 4.3C (gypsum wallboard, lath, plaster, fiberboard), wind columns. Design tab columns: Face 1 / Nails / Face 2 / Nails. Face 2 is None, "Same as face 1", or any other row. Table 4.3A/B faces pick an edge spacing (only the spacings the row has); Table 4.3C rows carry their own fastener spacing. The species factor applies to the wood tables only.

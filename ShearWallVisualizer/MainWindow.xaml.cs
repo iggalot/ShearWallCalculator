@@ -90,6 +90,7 @@ namespace ShearWallVisualizer
         bool hideImage = false;
         bool hideGrid = false;
         bool hideShapes = false;
+        bool showDesign = true; // schedule marks, hold-downs and the schedule on the plan
         bool imageDrawWarned = false;   // log a reference-image drawing failure once, not every frame
 
         private double defaultWallHeight = 9.0;
@@ -486,6 +487,7 @@ namespace ShearWallVisualizer
             m_layers.AddLayer(4, DrawLoads);
 
             m_layers.AddLayer(41, DrawShapes);
+            m_layers.AddLayer(42, DrawWallDesign);
             m_layers.AddLayer(52, DrawCursor);
             m_layers.AddLayer(51, DrawPreview);
             m_layers.AddLayer(43, DrawSnapMarkers);
@@ -1022,7 +1024,15 @@ namespace ShearWallVisualizer
         /// <summary>
         /// The primary routine to draw all the world shapes
         /// </summary>
-        private static readonly Pen SelectionHalo = FrozenPen(Color.FromArgb(0x70, 0x2A, 0x78, 0xD6), 12);
+        /// <summary>Schedule marks, hold-downs and the schedule over the plan (SHOW Design).</summary>
+        private void DrawWallDesign(DrawingContext ctx)
+        {
+            if (!showDesign || hideShapes || Calculator?._wall_system == null) return;
+            DesignOverlay.Draw(ctx, Calculator._wall_system._walls, designResults, p => WorldToScreen(p, m_layers),
+                               new Size(m_layers.ActualWidth, m_layers.ActualHeight), VisualTreeHelper.GetDpi(this).PixelsPerDip);
+        }
+
+        private static readonly Pen SelectionHalo =FrozenPen(Color.FromArgb(0x70, 0x2A, 0x78, 0xD6), 12);
         private static readonly Pen SelectionOutline = FrozenPen(Color.FromRgb(0x2A, 0x78, 0xD6), 3);
 
         private static Pen FrozenPen(Color c, double thickness)
@@ -1940,6 +1950,13 @@ namespace ShearWallVisualizer
             UpdateShearWallUI();
             btnHideShapes.Tag = hideShapes ? null : "on";
 
+        }
+
+        private void btnShowDesign_Click(object sender, RoutedEventArgs e)
+        {
+            showDesign = !showDesign;
+            btnShowDesign.Tag = showDesign ? "on" : null;
+            RedrawDrawing();
         }
 
         private void btnHideImage_Click(object sender, RoutedEventArgs e)
