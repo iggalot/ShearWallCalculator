@@ -34,11 +34,11 @@ namespace ShearWallVisualizer.Controls
         private readonly ComboBox cbEdition = new ComboBox { Width = 130, Margin = new Thickness(0, 0, 20, 0) };
         private readonly Button btnAuto = new Button { Content = "Auto-select nailing (all walls)", Padding = new Thickness(10, 3, 10, 3) };
         private readonly ComboBox cbPool = new ComboBox { Width = 150, Margin = new Thickness(0, 0, 20, 0), ToolTip = "Standard list: only the hold-downs checked as company standard in View > Hold-down catalog. Full catalog: every option." };
-        private readonly CheckBox cbSumFaces = new CheckBox
+        private readonly TextBlock tbTwoFaces = new TextBlock
         {
-            Content = "Add wood + gypsum faces (wind)", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 16, 0),
-            ToolTip = "SDPWS 4.3.5.4.2 exception, wind only: a wood structural panel or structural fiberboard face plus a gypsum wallboard face may be added.\n" +
-                      "Off: the larger of the stronger face and twice the weaker. Same material on both faces is always 2 × one face.",
+            Text = "Two faces: max(stronger, 2 × weaker) ⓘ", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 16, 0),
+            Cursor = System.Windows.Input.Cursors.Help,
+            ToolTip = new ToolTip { Content = new TextBlock { Text = SheathingRules.TwoFaceRuleNote, TextWrapping = TextWrapping.Wrap, MaxWidth = 420 } },
         };
         private readonly TextBlock tbSummary = new TextBlock { FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(16, 0, 0, 0) };
         private readonly TextBlock tbNote = new TextBlock { TextWrapping = TextWrapping.Wrap, Foreground = InkSecondary, Margin = new Thickness(0, 6, 0, 8) };
@@ -68,8 +68,6 @@ namespace ShearWallVisualizer.Controls
             cbPool.Items.Add("Full catalog");
             cbPool.Items.Add("Standard list");
             cbPool.SelectionChanged += (s, e) => SettingsChanged();
-            cbSumFaces.Checked += (s, e) => SettingsChanged();
-            cbSumFaces.Unchecked += (s, e) => SettingsChanged();
             btnAuto.Click += (s, e) => AutoSelectRequested?.Invoke(this, EventArgs.Empty);
 
             var bar = new WrapPanel { Margin = new Thickness(0, 0, 0, 2) };
@@ -80,7 +78,7 @@ namespace ShearWallVisualizer.Controls
             bar.Children.Add(cbEdition);
             bar.Children.Add(Label("Hold-downs:"));
             bar.Children.Add(cbPool);
-            bar.Children.Add(cbSumFaces);
+            bar.Children.Add(tbTwoFaces);
             bar.Children.Add(btnAuto);
             bar.Children.Add(tbSummary);
 
@@ -121,13 +119,12 @@ namespace ShearWallVisualizer.Controls
             int listed = designer?.StandardList.Count ?? 0;
             cbPool.Items[1] = $"Standard list ({listed})";
             cbPool.SelectedIndex = settings.HoldownsFromStandardList ? 1 : 0;
-            cbSumFaces.IsChecked = settings.SumWindFaces;
             loading = false;
 
             tbNote.Text = (loadsFromWind ? "Wall shears from the ASCE 7 wind load cases (strength level). " : "Wall shears from MANUAL loads, taken as strength-level wind. ") +
                           (settings.Method == DesignMethods.ASD ? "ASD: walls get 0.6W, capacity = nominal / 2.0. " : "LRFD: walls get 1.0W, capacity = 0.80 × nominal. ") +
                           "Hold-downs are always checked at ASD (0.6W) against Simpson allowable loads. Sheathing from SDPWS Tables 4.3A, 4.3B and 4.3C, " +
-                          "one or two faces; each drawn wall is one full-height segment. " +
+                          "one or two faces (different materials: the larger of the stronger face and 2 × the weaker, never added); each drawn wall is one full-height segment. " +
                           (calculator is ShearWallCalculator_FlexibleDiaphragm
                               ? "Flexible diaphragm: each wall line takes its tributary load, plus the case torsion by equivalent tributary weights, split among its walls by rigidity. "
                               : "Rigid diaphragm: load shared by wall rigidity, plus torsion. ") + SdpwsSource.TableSource;
@@ -377,7 +374,6 @@ namespace ShearWallVisualizer.Controls
             calc.DesignSettings.Method = rbLrfd.IsChecked == true ? DesignMethods.LRFD : DesignMethods.ASD;
             if (cbEdition.SelectedItem is ComboBoxItem item) calc.DesignSettings.Edition = (SdpwsEditions)item.Tag;
             calc.DesignSettings.HoldownsFromStandardList = cbPool.SelectedIndex == 1;
-            calc.DesignSettings.SumWindFaces = cbSumFaces.IsChecked == true;
             DesignChanged?.Invoke(this, EventArgs.Empty);
         }
 

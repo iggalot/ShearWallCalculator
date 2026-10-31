@@ -2357,6 +2357,9 @@ namespace ShearWallVisualizer
             }
         }
 
+        private void TwoFaceRule_Click(object sender, RoutedEventArgs e) =>
+            MessageBox.Show(this, SheathingRules.TwoFaceRuleNote, "Two-face sheathing rule", MessageBoxButton.OK, MessageBoxImage.Information);
+
         private void About_Click(object sender, RoutedEventArgs e)
         {
             MessageBox.Show(

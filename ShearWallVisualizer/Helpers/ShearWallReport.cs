@@ -234,10 +234,7 @@ namespace ShearWallVisualizer.Helpers
                                 $"({SdpwsSource.EditionName(s.Edition)}). Hold-downs are checked at ASD (0.6W) against Simpson allowable loads. " +
                                 "Sheathing from SDPWS Tables 4.3A (wood structural panels), 4.3B (wood over gypsum) and 4.3C (gypsum, plaster), wind columns; " +
                                 "each drawn wall is one full-height segment. " + SdpwsSource.TableSource),
-                WindReport.Para("Two faces: the same material on both faces is 2 × one face; different materials take the larger of the stronger face and 2 × the weaker. " +
-                                (s.SumWindFaces
-                                    ? "This project adds a wood structural panel or structural fiberboard face to a gypsum wallboard face for wind (SDPWS 4.3.5.4.2 exception)."
-                                    : "This project does not add a wood face to a gypsum wallboard face (the SDPWS 4.3.5.4.2 exception is off).")),
+                WindReport.Para(SheathingRules.TwoFaceRuleNote),
             };
             if (s.HoldownsFromStandardList)
             {
@@ -268,7 +265,6 @@ namespace ShearWallVisualizer.Helpers
             if (string.IsNullOrEmpty(rule)) return "-";
             if (rule.StartsWith("one face")) return "1";
             if (rule.StartsWith("same material")) return "2 × one";
-            if (rule.Contains("added for wind")) return "sum";
             if (rule.EndsWith("stronger face")) return "stronger";
             if (rule.EndsWith("2 × weaker face")) return "2 × weaker";
             return rule;

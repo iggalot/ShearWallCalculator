@@ -87,14 +87,12 @@ namespace ShearWallCalculator.Tests
             {
                 c._diaphragm_system._diaphragms[did].P3 = new Point(50, 30);
                 c.DesignSettings.Method = DesignMethods.LRFD;
-                c.DesignSettings.SumWindFaces = false;
                 c.SetLoadCases(new[] { new LateralLoadCase("Case 1", 12.5, 0) });
                 c.Image = ReferenceImage.Imported(@"C:\plans\a.png", 1000, 800, 0.05);
             });
             string all = string.Join("\n", lines);
             Assert.IsTrue(lines.Any(l => l.StartsWith($"Diaphragm {did}:") && l.Contains("40 × 30") && l.Contains("50 × 30")), all);
             Assert.IsTrue(lines.Contains("Design setting design method: ASD → LRFD"), all);
-            Assert.IsTrue(lines.Contains("Design setting wood + gypsum faces for wind: added → not added"), all);
             Assert.IsTrue(lines.Any(l => l.StartsWith("Loads changed: Case 1: Vx = 12.5 k")), all);
             Assert.IsTrue(lines.Any(l => l.StartsWith(@"Plan image added: C:\plans\a.png")), all);
 

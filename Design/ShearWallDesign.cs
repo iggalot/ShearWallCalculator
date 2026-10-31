@@ -26,12 +26,6 @@ namespace ShearWallCalculator.Design
         /// <summary>The hold-downs and list version when the project was last saved (null in older projects).</summary>
         public HoldownListRecord HoldownList { get; set; }
 
-        /// <summary>
-        /// For wind, add a wood structural panel or structural fiberboard face to a gypsum wallboard face (SDPWS 4.3.5.4.2
-        /// exception). Off: the larger of the stronger face and twice the weaker. On by default for new projects.
-        /// </summary>
-        public bool SumWindFaces { get; set; } = true;
-
         /// <summary>The sheathing, nailing and hold-down type given to a newly drawn wall (null: the program default).</summary>
         public WallDesignInputs NewWallDesign { get; set; }
     }
@@ -533,7 +527,7 @@ namespace ShearWallCalculator.Design
             r.InsideFaceFactor = fr1.InsideFaceFactor;
             r.AspectFactor = fr1.AspectFactor;
             r.MaxAspectRatio = r.Faces.Max(f => f.MaxAspectRatio); // the wall counts while any face is within its limit
-            var (nominal, rule) = SheathingRules.Combine(fr1, fr2, face2 != null && face1.SameConstructionAs(face2), settings.SumWindFaces);
+            var (nominal, rule) = SheathingRules.Combine(fr1, fr2, face2 != null && face1.SameConstructionAs(face2));
             r.CombinedNominal = nominal;
             r.CombineRule = rule;
             r.Capacity = SdpwsSource.DesignUnitShearWind(nominal, settings.Method);

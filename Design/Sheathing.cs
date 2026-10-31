@@ -112,8 +112,8 @@ namespace ShearWallCalculator.Design
     /// The sheathing rows offered for design and the rules for one or two faces (SDPWS 2015/2021):
     /// each face's nominal value from its table with its factors; a face whose material is over its Table 4.3.4 aspect
     /// ratio does not count; two faces of the same construction give twice one face (2021 4.3.5.4.1); two different
-    /// materials give the larger of the stronger face and twice the weaker (2021 4.3.5.4.2), except that for wind a wood
-    /// structural panel or structural fiberboard face may be added to a gypsum wallboard face when the project allows it.
+    /// materials give the larger of the stronger face and twice the weaker (2021 4.3.5.4.2). The faces are never added
+    /// (the SDPWS wind exception for wood panel + gypsum is not used; see TwoFaceRuleNote).
     /// </summary>
     public static class SheathingRules
     {
@@ -233,24 +233,31 @@ namespace ShearWallCalculator.Design
             return 1.0;
         }
 
-        /// <summary>Wind exception: WSP or structural fiberboard on one face, gypsum wallboard on the other.</summary>
-        public static bool MaySum(SheathingOption a, SheathingOption b) =>
-            (a.IsWoodStructuralPanel || a.IsStructuralFiberboard) && b.IsGypsumWallboard ||
-            (b.IsWoodStructuralPanel || b.IsStructuralFiberboard) && a.IsGypsumWallboard;
+        /// <summary>
+        /// The two-face rule in words, with its sources, for the app and the report. User decision: the wind exception that
+        /// adds a wood panel face to a gypsum face is not used, because the two materials reach their peak strength at
+        /// different drifts, so their capacities do not add.
+        /// </summary>
+        public const string TwoFaceRuleNote =
+            "Two faces. Same material and construction on both faces: 2 × one face (SDPWS 2021 4.3.5.4.1). " +
+            "Different materials: the larger of the stronger face and 2 × the weaker face (SDPWS 2021 4.3.5.4.2; SDPWS 2015 4.3.3.3.2). " +
+            "The faces are never added: SDPWS allows adding a wood structural panel face to a gypsum wallboard face for wind, " +
+            "but this program does not use that exception, because the two materials reach their peak strength at different drifts, " +
+            "so a simple sum can be unconservative. max(stronger, 2 × weaker) is never more than stronger + weaker. " +
+            "Sources: AWC FAQ \"Is summation of capacities allowed for shear walls sheathed on both sides with different materials?\" (2021); " +
+            "WoodWorks \"Shear walls with multiple layers of shear resistance\" (SDPWS 2021).";
 
         /// <summary>
         /// The wall's nominal unit shear from one or two faces, and the rule used. <paramref name="sameConstruction"/>:
-        /// both faces are the same row and nailing.
+        /// both faces are the same row and nailing. Different materials are never added (see <see cref="TwoFaceRuleNote"/>).
         /// </summary>
-        public static (double nominal, string rule) Combine(FaceResult f1, FaceResult f2, bool sameConstruction, bool sumForWind)
+        public static (double nominal, string rule) Combine(FaceResult f1, FaceResult f2, bool sameConstruction)
         {
             if (f2 == null) return (f1?.Nominal ?? double.NaN, "one face");
             if (f1 == null) return (f2.Nominal, "one face");
             double a = f1.Nominal, b = f2.Nominal;
             if (double.IsNaN(a) || double.IsNaN(b)) return (double.NaN, "no table value");
             if (sameConstruction) return (a + b, "same material both faces: 2 × one face (SDPWS 2021 4.3.5.4.1)");
-            if (sumForWind && MaySum(f1.Option, f2.Option) && f1.Nominal > 0 && f2.Nominal > 0)
-                return (a + b, "wood panel + gypsum wallboard, added for wind (SDPWS 4.3.5.4.2 exception; project setting)");
             double strong = Math.Max(a, b), weak = Math.Min(a, b);
             return strong >= 2 * weak
                 ? (strong, "different materials: larger of the stronger face and 2 × the weaker (SDPWS 2021 4.3.5.4.2) → stronger face")

@@ -51,7 +51,6 @@ namespace ShearWallCalculator.Diagnostics
             s.Settings["design method"] = ds.Method.ToString();
             s.Settings["SDPWS edition"] = SdpwsSource.EditionName(ds.Edition);
             s.Settings["hold-down pool"] = ds.HoldownsFromStandardList ? "company standard list" : "full catalog";
-            s.Settings["wood + gypsum faces for wind"] = ds.SumWindFaces ? "added" : "not added";
             s.Settings["sheathing for new walls"] = ds.NewWallDesign == null ? "default" : string.Join("; ", Describe(ds.NewWallDesign, designer).Select(kv => kv.Key + " " + kv.Value));
 
             if (calc.LoadCases != null && calc.LoadCases.Count > 0)

@@ -2,6 +2,13 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-01 — Two-face sheathing: faces are never added (SWC)
+
+- **User decision (after their own research):** two different materials on opposite faces take the larger of the stronger face and 2 × the weaker face (SDPWS 2021 4.3.5.4.2; 2015 4.3.3.3.2); the same construction on both faces is 2 × one face (4.3.5.4.1). The wind exception that adds a wood structural panel face to a gypsum wallboard face is **no longer used**, because a simple sum can be unconservative. max(S, 2W) ≤ S + W always.
+- **Removed:** the "Add wood + gypsum faces (wind)" setting (`DesignSettings.SumWindFaces`) and `SheathingRules.MaySum`. Older project files that hold the setting open; it is ignored.
+- **In the app:** the settings bar shows "Two faces: max(stronger, 2 × weaker) ⓘ" with the rule, the reason and the sources as a tooltip; Help > Two-face sheathing rule... shows the same text; the report's design section prints it (`SheathingRules.TwoFaceRuleNote`). Each wall's steps already name the rule used.
+- **Tests:** summing tests replaced: wood + gypsum gives max(785, 2 × 200) = 785; the combined value is never more than the sum; an older project with the setting on still gives 785.
+
 ## 2026-11-01 — Plan image importer replaced; the log records every model change (SWC)
 
 - **Plan image (replaces Edit > Open Image Tool and its separate measuring window).** File: Edit > Import plan image..., or Image ▾ on the toolbar.
@@ -9,7 +16,7 @@ _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`
   - **On the drawing** (Image ▾), with prompts on the status line, Esc to cancel: *Set scale* — click the two ends of a known dimension, type the real length in the Point box (24'-6", 24.5); the image rescales about the first point. *Straighten* — two points on a wall line; the image turns so it runs exactly E-W or N-S. *Move* — base point, then destination (snaps to the walls). *Rotate 90°*, *Opacity* (25–100 %), *Lock*, *Zoom to image*, *Remove*.
   - The image is drawn with its scale, rotation and position (any angle), saved with the project (path, scale, rotation, position, opacity, lock, shown). A project moved with its image finds the image next to the project file. Older projects (path + one scale) open as before.
   - Core: `Drawing/ReferenceImage.cs` (pixel ↔ world, calibrate, straighten, rotate, move, drawing scale). App: `Controls/ImageTool.cs`, `Dialogs/ImportImageDialog.cs`.
-- **Log:** every change to the model is logged with before → after, whichever panel made it: walls and diaphragms added, deleted, moved or resized; each wall's face 1 and face 2 sheathing and edge nailing, framing, dead load, hold-down type and face; design settings (method, edition, hold-down pool, wood + gypsum summing, sheathing for new walls); the loads; the plan image (added, scale, rotation, position, opacity, lock, shown, removed). Also New, Open and Save. (`Diagnostics/ModelChangeLog.cs`: a snapshot of the model in words, compared after each change.)
+- **Log:** every change to the model is logged with before → after, whichever panel made it: walls and diaphragms added, deleted, moved or resized; each wall's face 1 and face 2 sheathing and edge nailing, framing, dead load, hold-down type and face; design settings (method, edition, hold-down pool, sheathing for new walls); the loads; the plan image (added, scale, rotation, position, opacity, lock, shown, removed). Also New, Open and Save. (`Diagnostics/ModelChangeLog.cs`: a snapshot of the model in words, compared after each change.)
 - **Tests:** SWC 124 (9 image: import placement, drawing scale, two-point scale, straighten, rotated round trip and drawing matrix, move, older projects, project file, moved project; 4 log: nothing logged without a change, walls, sheathing/nailing/framing/dead load/hold-down, diaphragm/settings/loads/image).
 
 ## 2026-11-01 — Hold-down lever arm d = L − post (SWC)

@@ -24,7 +24,7 @@ _Branch `dev/wind-core-refactor`. Written 2026-10-31 in answer to the user's lis
 - **Two faces — decided by the user, 2026-10-31,** from AWC and WoodWorks sources (below):
   - **Same material and construction on both faces:** 2 × one face (SDPWS 2021 4.3.5.4.1, Eqs. 4.3-3/4.3-4).
   - **Different materials (default):** the larger of the stronger face and 2 × the weaker face (SDPWS 2021 4.3.5.4.2). The same rule applies to stiffness.
-  - **Wind exception, a project setting (on by default for new projects; the user's usual practice is to add the two faces):** wood structural panels, hardboard panel siding or structural fiberboard on one face with gypsum wallboard on the other may be summed for wind. WoodWorks lists all three; the AWC FAQ names only wood panels with gypsum, so check this against the printed SDPWS. The report says which rule was used.
+  - **Wind exception (wood panel + gypsum summed): not used** (user, revised 2026-11-01): a simple sum can be unconservative. The report and the app state the rule.
   - **No presets by wall type** (user: exterior walls can be anything). Each face is chosen freely, with a "same on both faces" shortcut and a project default material.
   - **Two layers on the same face:** only the Table 4.3B assemblies (wood panels over gypsum) and the two-layer rows of Table 4.3C.
   - Sources:

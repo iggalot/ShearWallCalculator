@@ -30,12 +30,12 @@ namespace ShearWallCalculator.Tests
             return o.ToFace();
         }
 
-        private static WallDesignResult Check(double h, double L, FaceSheathing f1, FaceSheathing f2, bool sum = true, WoodTypes species = WoodTypes.WOODTYPE_DF_SP)
+        private static WallDesignResult Check(double h, double L, FaceSheathing f1, FaceSheathing f2, WoodTypes species = WoodTypes.WOODTYPE_DF_SP)
         {
             var d = new WallDesignInputs { Species = species, HoldownOnInsideFace = false };
             d.SetFaces(f1, f2);
             var wall = new WallData(h, 0, 0, L, 0);
-            var settings = new DesignSettings { Method = DesignMethods.ASD, Edition = SdpwsEditions.SDPWS_2021, SumWindFaces = sum };
+            var settings = new DesignSettings { Method = DesignMethods.ASD, Edition = SdpwsEditions.SDPWS_2021 };
             return Designer.Check(0, wall, 1.0, "test", settings, d);
         }
 
@@ -65,39 +65,43 @@ namespace ShearWallCalculator.Tests
         }
 
         [TestMethod]
-        public void WoodPanelPlusGypsum_AddedForWind_WhenAllowed()
+        public void WoodPanelPlusGypsum_NeverAdded_LargerOfStrongerAndTwiceWeaker()
         {
-            var r = Check(8, 8, SI_15_32_8d_6, Gyp(4), sum: true);
-            Assert.AreEqual(785 + 200, r.CombinedNominal, Tol);
-            Assert.AreEqual(492.5, r.Capacity, Tol);
-            StringAssert.Contains(r.CombineRule, "added for wind");
-        }
-
-        [TestMethod]
-        public void WoodPanelPlusGypsum_LargerOfStrongerAndTwiceWeaker_WhenNotAllowed()
-        {
-            var r = Check(8, 8, SI_15_32_8d_6, Gyp(4), sum: false);
+            // SDPWS 2021 4.3.5.4.2: max(785, 2 × 200) = 785, not 785 + 200 (the wind summing exception is not used)
+            var r = Check(8, 8, SI_15_32_8d_6, Gyp(4));
             Assert.AreEqual(785, r.CombinedNominal, Tol, "max(785, 2 × 200)");
+            Assert.AreEqual(392.5, r.Capacity, Tol, "ASD 785 / 2.0");
             StringAssert.Contains(r.CombineRule, "stronger face");
+            Assert.IsFalse(r.CombineRule.Contains("added"));
 
-            var r2 = Check(8, 8, Sht_7_16_8d_6, Gyp(16), sum: false);
+            var r2 = Check(8, 8, Sht_7_16_8d_6, Gyp(16));
             Assert.AreEqual(700, r2.CombinedNominal, Tol, "max(670, 2 × 350)");
             StringAssert.Contains(r2.CombineRule, "2 × weaker");
         }
 
         [TestMethod]
+        public void Combine_NeverMoreThanTheSimpleSum()
+        {
+            foreach (var (a, b) in new[] { (785.0, 200.0), (670.0, 350.0), (500.0, 500.0), (100.0, 900.0) })
+            {
+                var (nominal, _) = SheathingRules.Combine(new FaceResult { Nominal = a }, new FaceResult { Nominal = b }, sameConstruction: false);
+                Assert.AreEqual(System.Math.Max(System.Math.Max(a, b), 2 * System.Math.Min(a, b)), nominal, Tol);
+                Assert.IsTrue(nominal <= a + b + Tol);
+            }
+        }
+
+        [TestMethod]
         public void GypsumPlusCementPlaster_IsNotASummingPair()
         {
-            var r = Check(8, 8, Gyp(1), Gyp(26), sum: true);
+            var r = Check(8, 8, Gyp(1), Gyp(26));
             Assert.AreEqual(360, r.CombinedNominal, Tol, "max(360, 2 × 150)");
-            Assert.IsFalse(SheathingRules.MaySum(Designer.FindOption(Gyp(1)), Designer.FindOption(Gyp(26))));
         }
 
         [TestMethod]
         public void TallNarrowWall_GypsumFaceDoesNotCount_WoodFaceTakesTheAspectFactor()
         {
             // h = 9, L = 3.5: h/b = 2.571 > 2.0 for gypsum; wood panels 1.25 − 0.125 × 2.571 = 0.92857
-            var r = Check(9, 3.5, SI_15_32_8d_6, Gyp(4), sum: true);
+            var r = Check(9, 3.5, SI_15_32_8d_6, Gyp(4));
             double af = 1.25 - 0.125 * 9 / 3.5;
             Assert.AreEqual(af, r.Faces[0].AspectFactor, Tol);
             Assert.AreEqual(0, r.Faces[1].Nominal, Tol);
@@ -113,10 +117,10 @@ namespace ShearWallCalculator.Tests
         [TestMethod]
         public void SpeciesFactor_WoodTablesOnly()
         {
-            var r = Check(8, 8, SI_15_32_8d_6, Gyp(4), sum: true, species: WoodTypes.WOODTYPE_SPF_HF);
+            var r = Check(8, 8, SI_15_32_8d_6, Gyp(4), species: WoodTypes.WOODTYPE_SPF_HF);
             Assert.AreEqual(0.92, r.Faces[0].SpeciesFactor, Tol);
             Assert.AreEqual(1.0, r.Faces[1].SpeciesFactor, Tol);
-            Assert.AreEqual(785 * 0.92 + 200, r.CombinedNominal, Tol);
+            Assert.AreEqual(785 * 0.92, r.CombinedNominal, Tol, "max(722, 2 × 200)");
         }
 
         [TestMethod]
@@ -171,13 +175,12 @@ namespace ShearWallCalculator.Tests
         }
 
         [TestMethod]
-        public void ProjectFile_KeepsBothFaces_TheSummingSetting_AndTheNewWallDefault()
+        public void ProjectFile_KeepsBothFaces_AndTheNewWallDefault()
         {
             var calc = new ShearWallCalculator_RigidDiaphragm();
             var wall = new WallData(8, 0, 0, 8, 0) { Design = new WallDesignInputs() };
             wall.Design.SetFaces(SI_15_32_8d_6, Gyp(16));
             calc._wall_system.AddWall(wall);
-            calc.DesignSettings.SumWindFaces = false;
             calc.DesignSettings.NewWallDesign = new WallDesignInputs();
             calc.DesignSettings.NewWallDesign.SetFaces(Gyp(4), Gyp(4));
 
@@ -186,25 +189,32 @@ namespace ShearWallCalculator.Tests
             var d = read._wall_system._walls.Values.Single().Design;
             Assert.IsTrue(d.EffectiveFace1().SameConstructionAs(SI_15_32_8d_6));
             Assert.IsTrue(d.EffectiveFace2().SameConstructionAs(Gyp(16)));
-            Assert.IsFalse(read.DesignSettings.SumWindFaces);
             Assert.IsTrue(read.DesignSettings.NewWallDesign.EffectiveFace2().SameConstructionAs(Gyp(4)));
         }
 
         [TestMethod]
-        public void NewProject_AddsWoodAndGypsumForWind_ByDefault()
+        public void OlderProject_WithTheSummingSetting_StillUsesTheLargerOfStrongerAndTwiceWeaker()
         {
-            Assert.IsTrue(new DesignSettings().SumWindFaces);
-            Assert.IsTrue(new ShearWallCalculator_RigidDiaphragm().DesignSettings.SumWindFaces);
+            var calc = new ShearWallCalculator_RigidDiaphragm();
+            var wall = new WallData(8, 0, 0, 8, 0) { Design = new WallDesignInputs { HoldownOnInsideFace = false } };
+            wall.Design.SetFaces(SI_15_32_8d_6, Gyp(4));
+            calc._wall_system.AddWall(wall);
+            string json = ShearWallCalculator.Interfaces.ProjectSerializer.ToJson(calc, null, linkedToWind: false);
+            Assert.IsTrue(json.Contains("\"HoldownsFromStandardList\":"));
+            json = json.Replace("\"HoldownsFromStandardList\":", "\"SumWindFaces\": true, \"HoldownsFromStandardList\":");
+            var read = ShearWallCalculator.Interfaces.ProjectSerializer.Read(json).Calculator;
+            var r = Designer.Check(0, read._wall_system._walls.Values.Single(), 1.0, "t", read.DesignSettings, read._wall_system._walls.Values.Single().Design);
+            Assert.AreEqual(785, r.CombinedNominal, Tol);
         }
 
         [TestMethod]
         public void AutoSelect_TightensTheWoodFaceNailing_KeepsTheGypsumFace()
         {
-            // V = 4 k on 8 ft, ASD: v = 0.6 × 4000 / 8 = 300 plf; needs nominal ≥ 600. 785 + 200 at 6" passes already;
-            // with V = 8 k (600 plf, nominal ≥ 1200): 1205 + 200 = 1405 at 4" passes.
+            // V = 4 k on 8 ft, ASD: v = 0.6 × 4000 / 8 = 300 plf; needs nominal ≥ 600. max(785, 2 × 200) at 6" passes already;
+            // with V = 8 k (600 plf, nominal ≥ 1200): max(1205, 2 × 200) = 1205 at 4" passes (faces not added).
             var wall = new WallData(8, 0, 0, 8, 0) { Design = new WallDesignInputs { HoldownOnInsideFace = false } };
             wall.Design.SetFaces(SI_15_32_8d_6, Gyp(4));
-            var settings = new DesignSettings { SumWindFaces = true };
+            var settings = new DesignSettings();
             var pick = Designer.AutoSelect(wall, 8.0, settings);
             Assert.AreEqual(4, pick.Face1.EdgeSpacing);
             Assert.AreEqual(SheathingTable.GypsumAndPlaster, pick.Face2.Table);
