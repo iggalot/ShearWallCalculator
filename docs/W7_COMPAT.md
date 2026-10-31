@@ -27,6 +27,7 @@ Check out a matching pair of commits when you build an older version.
 | `dev/wind-core-refactor` (roof overhangs) | `dev/wind-core-refactor @ b9dd065` | BuildingData.OverhangWidth (saved in project files); overhang pressures (27.3.3 and C&C) |
 | `dev/wind-core-refactor` (parapets) | `dev/wind-core-refactor @ 47f2bf8` | BuildingData.ParapetHeight (saved in project files); DirectionalWindForce.ParapetKips in the lateral totals |
 | `dev/wind-core-refactor` (parapet diagrams, C&C parapets) | `dev/wind-core-refactor @ 1d845dd` | WindLoadCalculator_CC.ParapetCases (ParapetCladdingCase); ParapetDiagram |
+| `dev/wind-core-refactor` (Fig. 30.3-2A note 5) | `dev/wind-core-refactor @ 3e2df53` | WindLoadCalculator_CC.ParapetRoofZoneNoteApplied, ParapetZoneNoteMinHeight |
 
 ## Building
 

@@ -14,14 +14,14 @@ _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`
   - Commit W7 1d845dd.
 - **Hand check (7-22, 115 mph, Exp C, 3 ft parapet, enclosed, 10 sq ft):**
   - q_p = 29.91 psf.
-  - Case A corner: front +30.0, back −85.9, net 106.8 psf.
+  - Case A corner: front +30.0, back −63.0, net 83.9 psf (with note 5 below; −85.9 / 106.8 before it).
   - Case B corner: front −40.2, back +30.0, net 61.0 psf.
   - Edge nets: 83.9 and 53.4 psf.
   - All match the app.
 - **To verify:**
   - GC_pi is the building's enclosure value. §30.6 bases it on the porosity of the parapet envelope; confirm which applies for typical solid parapets.
-  - Fig. 30.3-2A note: with a parapet of 3 ft or more around a roof with θ ≤ 10°, roof Zone 3 may be treated as Zone 2. Not applied yet; confirm before adding it.
-- **Tests:** W7 engine 241 (2 skipped), W7 UI 52, SWC 45.
+- **Fig. 30.3-2A note 5 (applied, wording confirmed by the user):** parapet ≥ 3 ft (0.9 m) around a roof with θ ≤ 7° → negative GCp in roof Zone 3 = Zone 2; positive GCp in roof Zones 2 and 3 = wall Zones 4 and 5. Applies to the roof table and to parapet case A. Below 3 ft nothing changes. Same note in 7-16 and 7-22.
+- **Tests:** W7 engine 244 (2 skipped), W7 UI 52, SWC 45.
 
 ## 2026-10-30 (late) — Item 3d: parapets; scope line
 
