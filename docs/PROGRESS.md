@@ -2,6 +2,13 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-01 — Hold-down lever arm d = L − post (SWC)
+
+- **Hold-down tension** is now T = 0.6 M / d − 0.6 D L / 2 with d = L − post: the hold-downs sit on the post centerlines, half a post in from each end (user). The dead load acts at L/2, which is d/2 from the compression post, so its share stays D/2. The post is the hold-down's first minimum member size (e.g. HDU2 3 × 3.5 → 3 in; DTT2Z with 1.5 × 3.5 → a single 2x). The post depends on the hold-down chosen, so the check starts with two 2x studs (3 in) and repeats until the choice settles. The details show "d = L − post = ...".
+- Hand check (test): L = 10 ft, h = 9 ft, V = 5 k: d = 10 − 3/12 = 9.75 ft, T = 27000 / 9.75 = 2769 lb (was 2700), HDU2-SDS2.5 (3075 lb).
+- **Two-face rule, sources** (user asked): different materials on opposite faces take the larger of the stronger face and 2 × the weaker; wind exception: WSP, hardboard siding or structural fiberboard + gypsum wallboard are summed. SDPWS 2021 §4.3.5.4.2 and its exception (SDPWS 2015 §4.3.3.3.2); same construction both faces 2 × one face, SDPWS 2021 §4.3.5.4.1. Secondary sources checked: AWC FAQ "Is summation of capacities allowed for shear walls sheathed on both sides with different materials?" (2021-09-27) and WoodWorks "Shear walls with multiple layers of shear resistance" (SDPWS 2021). max(S, 2W) ≤ S + W always (W ≤ S), so the rule is never larger than a simple sum: the sum is the less conservative value and is allowed only by the wind exception. The printed text still needs checking: the AWC FAQ names only WSP + gypsum for the exception, WoodWorks also hardboard and fiberboard.
+- **Tests:** SWC 111 (tension tests now at d = L − post).
+
 ## 2026-10-31 (late night) — The design on the drawing: schedule marks, hold-downs, schedule (SWC)
 
 - **Schedule marks:** each different sheathing construction gets a mark, SW1, SW2, ... from the weakest (lowest design capacity) up, as on a drawing set. Each wall shows its mark and hold-down model in a small tag ("SW2 | DTT2Z"), outlined green (passes) or red; "no HD" in red when no hold-down is strong enough. The tag sits above an E-W wall or left of a N-S wall, on the other side if that would leave the canvas.

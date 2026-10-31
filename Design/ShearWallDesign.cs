@@ -394,8 +394,12 @@ namespace ShearWallCalculator.Design
         public string CombineRule { get; set; }
         public double ShearRatio => Capacity > 0 ? Demand / Capacity : double.PositiveInfinity;
 
-        public double TensionAsd { get; set; }      // lb: 0.6 V h / L - 0.6 D L / 2
-        public double TensionLrfd { get; set; }     // lb: 1.0 V h / L - 0.9 D L / 2 (for reference)
+        /// <summary>Post dimension along the wall at each hold-down (in.), from the hold-down's minimum member.</summary>
+        public double PostAlongWall { get; set; }
+        /// <summary>Hold-down lever arm d = L - post (ft): between the hold-down centerlines.</summary>
+        public double HoldownArm { get; set; }
+        public double TensionAsd { get; set; }      // lb: 0.6 V h / d - 0.6 D L / 2, d = L - post
+        public double TensionLrfd { get; set; }     // lb: 1.0 V h / d - 0.9 D L / 2 (for reference)
         public HoldownChoice Holdown { get; set; }  // null if none in the pool is strong enough
 
         /// <summary>True when the hold-down was drawn from the company standard list only.</summary>
@@ -420,7 +424,7 @@ namespace ShearWallCalculator.Design
     /// Wood structural panel shear-wall checks for wind (SDPWS), per wall segment (each drawn wall is one
     /// full-height segment):
     /// v = factor V / L; capacity = v_w x species x footnote-10 x aspect factor x sides / Omega (ASD) or x phi (LRFD);
-    /// hold-down tension T = M / L = V h / L (less dead load), always at ASD (0.6W) against Simpson allowables.
+    /// hold-down tension T = M / d, d = L - post (less dead load), always at ASD (0.6W) against Simpson allowables.
     /// </summary>
     public class ShearWallDesigner
     {
@@ -534,13 +538,25 @@ namespace ShearWallCalculator.Design
             r.CombineRule = rule;
             r.Capacity = SdpwsSource.DesignUnitShearWind(nominal, settings.Method);
 
-            // Hold-down: the moment of the shear at the top of the wall over the wall length (M / L), less dead load.
+            // Hold-down: overturning moment about the compression post over the lever arm d = L - post (hold-down
+            // centerlines at half a post in from each end), less dead load. Dead load acts at L/2, d/2 from the post
+            // centerline, so its share is D d/2 / d = D/2 whatever the post. The post comes from the hold-down chosen,
+            // which depends on T: start with two 2x studs and repeat until the choice settles.
             double M = V * 1000.0 * h;                      // lb-ft
             double D = Math.Max(0, d.DeadLoad) * L;         // lb on the wall
-            r.TensionAsd = L > 0 ? Math.Max(0, 0.6 * M / L - 0.6 * D / 2) : double.PositiveInfinity;
-            r.TensionLrfd = L > 0 ? Math.Max(0, 1.0 * M / L - 0.9 * D / 2) : double.PositiveInfinity;
             r.HoldownFromStandardList = settings.HoldownsFromStandardList;
-            r.Holdown = r.HoldownNeeded ? SelectHoldown(d.Holdown, d.Species, r.TensionAsd, settings.HoldownsFromStandardList) : null;
+            double post = WallSchedule.DefaultPostAlongWall;
+            for (int pass = 0; pass < 5; pass++)
+            {
+                r.PostAlongWall = post;
+                r.HoldownArm = L - post / 12.0;
+                r.TensionAsd = r.HoldownArm > 0 ? Math.Max(0, 0.6 * M / r.HoldownArm - 0.6 * D / 2) : double.PositiveInfinity;
+                r.TensionLrfd = r.HoldownArm > 0 ? Math.Max(0, 1.0 * M / r.HoldownArm - 0.9 * D / 2) : double.PositiveInfinity;
+                r.Holdown = r.HoldownNeeded ? SelectHoldown(d.Holdown, d.Species, r.TensionAsd, settings.HoldownsFromStandardList) : null;
+                double next = WallSchedule.PostAlongWall(r.Holdown);
+                if (r.Holdown == null || Math.Abs(next - post) < 1e-9) break;
+                post = next;
+            }
             return r;
         }
 

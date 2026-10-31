@@ -458,7 +458,8 @@ namespace ShearWallVisualizer.Controls
                 yield return $"Two faces: {r.CombineRule} = {(double.IsNaN(r.CombinedNominal) ? "-" : r.CombinedNominal.ToString("0"))} plf";
             yield return $"Capacity ({method}, {SdpwsSource.EditionName(r.Edition)}): {(double.IsNaN(r.CombinedNominal) ? "-" : r.CombinedNominal.ToString("0"))} {divisor} = " +
                          $"{(double.IsNaN(r.Capacity) ? "-" : r.Capacity.ToString("0"))} plf → ratio {(double.IsNaN(r.Capacity) ? "-" : r.ShearRatio.ToString("0.00"))} {mark(r.ShearOk)}";
-            yield return $"Hold-down (always ASD): T = M / L = 0.6 × {r.V:0.00} k × 1000 × {r.Height:0.0} ft / {r.Length:0.00} ft" +
+            yield return $"Hold-down arm: d = L − post = {r.Length:0.00} ft − {r.PostAlongWall:0.##} in = {r.HoldownArm:0.000} ft (hold-downs on the post centerlines)";
+            yield return $"Hold-down (always ASD): T = M / d = 0.6 × {r.V:0.00} k × 1000 × {r.Height:0.0} ft / {r.HoldownArm:0.000} ft" +
                          (d.DeadLoad > 0 ? $" − 0.6 × {d.DeadLoad:0} plf × {r.Length:0.00} ft / 2" : "") + $" = {r.TensionAsd:0} lb" +
                          $"  (LRFD 1.0W" + (d.DeadLoad > 0 ? " − 0.9D" : "") + $": {r.TensionLrfd:0} lb, for reference)";
             yield return !r.HoldownNeeded ? "No uplift: no hold-down needed for overturning."
