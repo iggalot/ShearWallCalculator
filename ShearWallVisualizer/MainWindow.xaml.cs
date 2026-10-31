@@ -72,15 +72,13 @@ namespace ShearWallVisualizer
 
         // grid stuff
         bool gridNeedsUpdate = true;
-        bool imageNeedsUpdate = true;
         DrawingVisual gridVisual = null;
-        DrawingVisual imageVisual = null;
         private RenderTargetBitmap gridBitmap;
-        private RenderTargetBitmap imageBitmap;
-        private BitmapImage cachedReferenceImageBitmap;
-        private string cachedImagePath;
-        private Rect cachedReferenceImageScreenRect;
-        private bool hasCachedReferenceImageScreenRect = false;
+
+        // plan image: the decoded file (kept while the path is the same) and the two-point commands
+        private BitmapSource planBitmap;
+        private string planBitmapPath;
+        private readonly ImageTool imageTool = new ImageTool();
 
         double majorGridSpacing = 5.0;  // Major grid lines in world units
         double minorGridSpacing = 1.0;  // Minor grid lines in world units
@@ -200,10 +198,9 @@ namespace ShearWallVisualizer
             {
                 Calculator.PerformCalculations();
                 UpdateDesign();
+                LogModelChanges();
 
-                string img = Calculator.selectedImageFilePath;
-                tbImageFileName.Text = string.IsNullOrEmpty(img) ? "" : "Image: " + System.IO.Path.GetFileName(img);
-                tbImageFileName.ToolTip = string.IsNullOrEmpty(img) ? null : img;
+                ShowImageName();
 
                 geometryPanel?.Show(Calculator, selectedKind, selectedId);
                 resultsPanel?.Show(Calculator, CalculationTodo(), selectedKind == "Wall" ? selectedId : -1);
@@ -390,7 +387,7 @@ namespace ShearWallVisualizer
 
         /// <summary>The object snap at a world point, or the point itself when snaps are off or nothing is in reach.</summary>
         private SnapResult FindSnap(Point world) =>
-            snapMode && Calculator != null && currentMode != DrawMode.None
+            snapMode && Calculator != null && (currentMode != DrawMode.None || imageTool.WantsSnaps)
                 ? Snapper.Find(world, PixelsToWorld(SnapPixels), Snapper.SegmentsOf(Calculator), snapModes, startPoint_world)
                 : new SnapResult { Kind = SnapModes.None, Point = world };
 
@@ -490,6 +487,7 @@ namespace ShearWallVisualizer
             m_layers.AddLayer(42, DrawWallDesign);
             m_layers.AddLayer(52, DrawCursor);
             m_layers.AddLayer(51, DrawPreview);
+            m_layers.AddLayer(53, DrawImageTool);
             m_layers.AddLayer(43, DrawSnapMarkers);
             m_layers.AddLayer(50, DrawBracedWallLines);
             m_layers.AddLayer(80, DrawCOMandCOR);
@@ -1570,131 +1568,314 @@ namespace ShearWallVisualizer
                 }
             }
         }
+        // ------------------------------------------------------------------ plan image
+
+        /// <summary>The plan image under the drawing: image pixels → world (scale, rotation, position) → screen.</summary>
         private void DrawReferenceImage(DrawingContext ctx)
         {
-
-            if (hideImage)
-                return;
-
-            // If no calculator, clear the cached image and return
-            if (Calculator == null)
+            var img = Calculator?.Image;
+            if (hideImage || img == null || !img.Visible) return;
+            var bmp = PlanBitmap(img);
+            if (bmp == null) return;
+            try
             {
-                cachedReferenceImageBitmap = null;
-                imageNeedsUpdate = true;
-                return;
+                Point o = WorldToScreen(new Point(0, 0), m_layers), ex = WorldToScreen(new Point(1, 0), m_layers), ey = WorldToScreen(new Point(0, 1), m_layers);
+                var m = img.PixelToWorldMatrix();
+                m.Append(new Matrix(ex.X - o.X, ex.Y - o.Y, ey.X - o.X, ey.Y - o.Y, o.X, o.Y));
+                ctx.PushTransform(new MatrixTransform(m));
+                ctx.PushOpacity(Math.Max(0.05, Math.Min(1, img.Opacity)));
+                ctx.DrawImage(bmp, new Rect(0, 0, img.PixelWidth, img.PixelHeight));
+                ctx.Pop();
+                ctx.Pop();
             }
-
-
-            if (cachedReferenceImageBitmap == null || imageNeedsUpdate is true)
+            catch (Exception ex)
             {
-                CreateReferenceImageVisual();
-                imageNeedsUpdate = false;
+                if (!imageDrawWarned) Log.Warning("Could not draw the plan image", ex);
+                imageDrawWarned = true;
             }
-
-            // Check again in case image loading failed or no file selected
-            if (cachedReferenceImageBitmap == null)
-                return;
-
-
-
-            ctx.DrawImage(cachedReferenceImageBitmap, CalculateImageScreenRect());
-
         }
 
-        private Rect CalculateImageScreenRect()
+        /// <summary>The decoded image file, loaded once per path; null (with one warning) when it cannot be found or read.</summary>
+        private BitmapSource PlanBitmap(ReferenceImage img)
         {
-            // Draw image scaled to fit canvas
-            double scale_x = Calculator.pixelScaleX;
-            double scale_y = Calculator.pixelScaleY;
-
-            Point p1_world = new Point(0, 0);
-            Point p2_world = new Point(cachedReferenceImageBitmap.PixelWidth * scale_x, 0);
-            Point p3_world = new Point(cachedReferenceImageBitmap.PixelWidth * scale_x, cachedReferenceImageBitmap.PixelHeight * scale_y);
-            Point p4_world = new Point(0, cachedReferenceImageBitmap.PixelHeight * scale_y);
-
-            Point p1_screen = WorldToScreen(p1_world, m_layers);
-            Point p2_screen = WorldToScreen(p2_world, m_layers);
-            Point p3_screen = WorldToScreen(p3_world, m_layers);
-            Point p4_screen = WorldToScreen(p4_world, m_layers);
-
-            double width_screen = Math.Abs(p3_screen.X - p1_screen.X);
-            double height_screen = Math.Abs(p3_screen.Y - p1_screen.Y);
-
-            return new Rect(p4_screen.X, p4_screen.Y, width_screen, height_screen);
-        }
-
-        private void InvalidateCachedImageIfChanged()
-        {
-            if (cachedImagePath != Calculator.selectedImageFilePath)
+            string path = img.Resolve(currentProjectPath);
+            if (path == null)
             {
-                cachedReferenceImageBitmap = null;
-                cachedImagePath = Calculator.selectedImageFilePath;
-                hasCachedReferenceImageScreenRect = false;
+                if (planBitmapPath != img.Path)
+                {
+                    planBitmapPath = img.Path;
+                    planBitmap = null;
+                    Log.Warning("The plan image was not found: " + img.Path + " (put it next to the project file, or import it again).");
+                }
+                return null;
             }
+            if (planBitmap != null && planBitmapPath == path) return planBitmap;
+            planBitmapPath = path;
+            planBitmap = null;
+            try
+            {
+                var b = new BitmapImage();
+                b.BeginInit();
+                b.UriSource = new Uri(path, UriKind.Absolute);
+                b.CacheOption = BitmapCacheOption.OnLoad;
+                b.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
+                b.EndInit();
+                b.Freeze();
+                planBitmap = b;
+                img.PixelWidth = b.PixelWidth;
+                img.PixelHeight = b.PixelHeight;
+            }
+            catch (Exception ex)
+            {
+                Log.Warning("Could not read the plan image " + path, ex);
+            }
+            return planBitmap;
         }
 
-        private void CreateReferenceImageVisual()
+        /// <summary>The image ▾ menu: import, the two-point commands, opacity, lock, remove.</summary>
+        private void btnImageOptions_Click(object sender, RoutedEventArgs e)
+        {
+            var img = Calculator?.Image;
+            bool movable = img != null && !img.Locked;
+            var menu = new ContextMenu { PlacementTarget = (UIElement)sender, Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom };
+            void Item(string header, Action act, bool enabled = true, string tip = null)
+            {
+                var mi = new MenuItem { Header = header, IsEnabled = enabled, ToolTip = tip };
+                mi.Click += (s, a) => act();
+                menu.Items.Add(mi);
+            }
+
+            Item(img == null ? "Import plan image..." : "Replace plan image...", ImportPlanImage);
+            menu.Items.Add(new Separator());
+            Item("Set scale: click two points, type the distance", () => StartImageCommand(ImageCommand.Calibrate), movable,
+                 "Pick the two ends of a long dimension on the image; the image is rescaled about the first point.");
+            Item("Straighten: click two points on a wall line", () => StartImageCommand(ImageCommand.Straighten), movable,
+                 "Turns the image so that line runs exactly E-W or N-S.");
+            Item("Move: base point, then destination", () => StartImageCommand(ImageCommand.Move), movable,
+                 "The destination snaps to the walls, e.g. to line up a building corner with a wall end.");
+            Item("Rotate 90°", () => { img.RotateAbout(Center(img.WorldBounds()), 90); ImageChanged(); }, movable);
+            menu.Items.Add(new Separator());
+            var opacity = new MenuItem { Header = "Opacity", IsEnabled = img != null };
+            foreach (double v in new[] { 0.25, 0.4, 0.6, 0.8, 1.0 })
+            {
+                var mi = new MenuItem { Header = $"{v * 100:0} %", IsCheckable = true, IsChecked = img != null && Math.Abs(img.Opacity - v) < 0.01 };
+                mi.Click += (s, a) => { img.Opacity = v; ImageChanged(); };
+                opacity.Items.Add(mi);
+            }
+            menu.Items.Add(opacity);
+            Item(img?.Locked == true ? "Unlock" : "Lock (no moving or rescaling)", () => { img.Locked = !img.Locked; ImageChanged(); }, img != null);
+            Item("Zoom to image", ZoomToImage, img != null);
+            menu.Items.Add(new Separator());
+            Item("Remove image", RemovePlanImage, img != null);
+            menu.IsOpen = true;
+        }
+
+        private void ImportPlanImage_Click(object sender, RoutedEventArgs e) => ImportPlanImage();
+
+        private void ImportPlanImage()
         {
             if (Calculator == null) return;
-
-            if (hideImage || string.IsNullOrEmpty(Calculator.selectedImageFilePath) || !File.Exists(Calculator.selectedImageFilePath))
-                return;
-
-            InvalidateCachedImageIfChanged();
-
-            double width = dockpanel.ActualWidth;
-            double height = dockpanel.ActualHeight;
-
-            imageBitmap = new RenderTargetBitmap((int)Math.Ceiling(width), (int)Math.Ceiling(height), 96, 96, PixelFormats.Pbgra32);
-            imageVisual = new DrawingVisual();
-
-            using (DrawingContext ctx = imageVisual.RenderOpen())
+            var open = new Microsoft.Win32.OpenFileDialog
             {
-                try
-                {
-                    // Always load image if not yet loaded
-                    if (cachedReferenceImageBitmap == null)
-                    {
-                        cachedReferenceImageBitmap = new BitmapImage();
-                        cachedReferenceImageBitmap.BeginInit();
-                        cachedReferenceImageBitmap.UriSource = new Uri(Calculator.selectedImageFilePath, UriKind.Absolute);
-                        cachedReferenceImageBitmap.CacheOption = BitmapCacheOption.OnLoad;
-                        cachedReferenceImageBitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
-                        cachedReferenceImageBitmap.EndInit();
-                        cachedReferenceImageBitmap.Freeze();
-                    }
+                Title = "Import plan image",
+                Filter = "Images (*.png;*.jpg;*.jpeg;*.bmp;*.tif;*.tiff;*.gif)|*.png;*.jpg;*.jpeg;*.bmp;*.tif;*.tiff;*.gif|All files (*.*)|*.*",
+            };
+            if (open.ShowDialog(this) != true) return;
 
-                    if (!hasCachedReferenceImageScreenRect)
-                    {
-
-                        // Always draw the image to the new bitmap
-                        double scale_x = Calculator.pixelScaleX;
-                        double scale_y = Calculator.pixelScaleY;
-
-                        Point p1_world = new Point(0, 0);
-                        Point p3_world = new Point(cachedReferenceImageBitmap.PixelWidth * scale_x, cachedReferenceImageBitmap.PixelHeight * scale_y);
-                        Point p4_world = new Point(0, cachedReferenceImageBitmap.PixelHeight * scale_y);
-
-                        Point p1_screen = WorldToScreen(p1_world, m_layers);
-                        Point p3_screen = WorldToScreen(p3_world, m_layers);
-                        Point p4_screen = WorldToScreen(p4_world, m_layers);
-
-                        double width_screen = Math.Abs(p3_screen.X - p1_screen.X);
-                        double height_screen = Math.Abs(p3_screen.Y - p1_screen.Y);
-
-                        cachedReferenceImageScreenRect = new Rect(p4_screen.X, p4_screen.Y, width_screen, height_screen);
-                        hasCachedReferenceImageScreenRect = true;
-                    }
-
-                    ctx.DrawImage(cachedReferenceImageBitmap, cachedReferenceImageScreenRect);
-                }
-                catch (Exception ex)
-                {
-                    if (!imageDrawWarned) Log.Warning("Could not draw the reference image", ex); imageDrawWarned = true;
-                }
+            ImportImageDialog dialog;
+            try
+            {
+                dialog = new ImportImageDialog(open.FileName, DrawingWidthFeet()) { Owner = this };
             }
+            catch (Exception ex)
+            {
+                Log.Warning("Could not read the image " + open.FileName, ex);
+                MessageBox.Show(this, "This file could not be read as an image.\n\n" + ex.Message, "Import plan image", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            if (dialog.ShowDialog() != true) return;
 
-            imageBitmap.Render(imageVisual);
+            Calculator.Image = dialog.Result;
+            planBitmap = null;
+            imageDrawWarned = false;
+            hideImage = false;
+            btnHideImage.Tag = "on";
+            Log.Info("Plan image imported: " + open.FileName);
+            ZoomToImage();
+            if (dialog.CalibrateOnDrawing) StartImageCommand(ImageCommand.Calibrate);
+            ImageChanged();
+        }
+
+        private void RemovePlanImage()
+        {
+            if (Calculator?.Image == null) return;
+            if (MessageBox.Show(this, "Remove the plan image from this project? (The image file is not deleted.)", "Remove image",
+                                MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+            Calculator.Image = null;
+            planBitmap = null;
+            imageTool.Cancel();
+            ImageChanged();
+        }
+
+        private void StartImageCommand(ImageCommand command)
+        {
+            if (Calculator?.Image == null) return;
+            if (Calculator.Image.Locked)
+            {
+                ShowStatusMessage(LogLevel.Warning, "The image is locked: Image ▾ > Unlock first.");
+                return;
+            }
+            ResetInputMode();
+            currentMode = DrawMode.None;
+            if (selectionCardOpen) CloseSelectionCard();
+            SetButtonModes();
+            imageTool.Begin(command);
+            hideImage = false;
+            Calculator.Image.Visible = true;
+            btnHideImage.Tag = "on";
+            RedrawDrawing();
+        }
+
+        /// <summary>A click while an image command is active.</summary>
+        private void ImageToolClick(Point world)
+        {
+            Point p = imageTool.WantsSnaps ? FindSnap(world).Point : world;
+            string message = imageTool.Click(Calculator.Image, p, out bool warning);
+            if (message != null) ShowStatusMessage(warning ? LogLevel.Warning : LogLevel.Info, message);
+            if (imageTool.WaitingForDistance)
+            {
+                tbCommand.Clear();
+                tbCommand.Focus();
+            }
+            ImageChanged();
+        }
+
+        /// <summary>Picked points and the rubber band of an image command.</summary>
+        private void DrawImageTool(DrawingContext ctx)
+        {
+            if (!imageTool.Active) return;
+            var pen = new Pen(new SolidColorBrush(Color.FromRgb(0xD9, 0x5F, 0x00)), 1.5) { DashStyle = DashStyles.Dash };
+            var dot = new SolidColorBrush(Color.FromRgb(0xD9, 0x5F, 0x00));
+            Point? last = null;
+            foreach (var p in imageTool.Points)
+            {
+                Point s = WorldToScreen(p, m_layers);
+                ctx.DrawEllipse(dot, null, s, 4, 4);
+                if (last != null) ctx.DrawLine(pen, last.Value, s);
+                last = s;
+            }
+            if (last != null && !imageTool.WaitingForDistance)
+                ctx.DrawLine(pen, last.Value, WorldToScreen(currentSnap.Point, m_layers));
+        }
+
+        private void ImageChanged()
+        {
+            LogModelChanges();
+            ShowImageName();
+            RedrawDrawing();
+        }
+
+        private void ShowImageName()
+        {
+            var img = Calculator?.Image;
+            if (img == null)
+            {
+                tbImageFileName.Text = "";
+                tbImageFileName.ToolTip = null;
+                return;
+            }
+            tbImageFileName.Text = "Image: " + System.IO.Path.GetFileName(img.Path) + (img.Calibrated ? "" : "  (scale not set)") + (img.Locked ? "  (locked)" : "");
+            tbImageFileName.ToolTip = img.Path + Environment.NewLine +
+                                      $"{img.FeetPerPixel * 12:0.###} in per pixel, turned {img.RotationDegrees:0.##}°, opacity {img.Opacity * 100:0} %";
+        }
+
+        /// <summary>Width of what is drawn (ft), for the first size of an uncalibrated image; 60 ft when nothing is drawn.</summary>
+        private double DrawingWidthFeet()
+        {
+            var r = Rect.Empty;
+            if (Calculator?._diaphragm_system != null)
+                foreach (var d in Calculator._diaphragm_system._diaphragms.Values) { r.Union(d.P1); r.Union(d.P3); }
+            if (Calculator?._wall_system != null)
+                foreach (var w in Calculator._wall_system._walls.Values) { r.Union(w.Start); r.Union(w.End); }
+            return r.IsEmpty || r.Width < 1 ? 60 : r.Width;
+        }
+
+        private static Point Center(Rect r) => new Point(r.X + r.Width / 2, r.Y + r.Height / 2);
+
+        /// <summary>Zooms and pans so the whole image shows, with a margin.</summary>
+        private void ZoomToImage()
+        {
+            var img = Calculator?.Image;
+            if (img == null || img.PixelWidth <= 0 || m_layers.ActualWidth <= 0) return;
+            Rect b = img.WorldBounds();
+            if (b.Width <= 0 || b.Height <= 0) return;
+            double W = m_layers.ActualWidth, H = m_layers.ActualHeight;
+            double z = 0.92 * Math.Min(W / b.Width, H / b.Height);
+            zoomFactorX = zoomFactorY = z;
+            Point c = Center(b);
+            panOffsetX = c.X - W / (2 * z);
+            panOffsetY = H / (2 * z) - H + c.Y;
+            InvalidateGrid();
+            RedrawDrawing();
+        }
+
+        /// <summary>After New or Open: the project's image (older projects moved over), shown as it was saved.</summary>
+        /// <summary>The model as last logged; each change is logged as its differences from it.</summary>
+        private ModelSnapshot loggedModel;
+
+        /// <summary>
+        /// Logs what changed in the model since the last call (walls and diaphragms added, deleted or resized; sheathing,
+        /// nailing, framing, dead load, hold-down type; design settings; loads; the plan image), whichever panel changed it.
+        /// </summary>
+        private void LogModelChanges()
+        {
+            try
+            {
+                var now = ModelSnapshot.Take(Calculator, designer);
+                if (loggedModel == null)
+                    Log.Info($"Model: {now.WallGeometry.Count} walls, {now.Diaphragms.Count} diaphragms" + (now.Image.Count > 0 ? ", plan image " + now.Image["file"] : ""));
+                else
+                    foreach (string line in ModelChangeLog.Differences(loggedModel, now))
+                        Log.Info(line);
+                loggedModel = now;
+            }
+            catch (Exception ex)
+            {
+                Log.Warning("Could not log the model changes", ex);
+            }
+        }
+
+        private void ImageForNewProject()
+        {
+            MigrateOlderImage();
+            planBitmap = null;
+            planBitmapPath = null;
+            imageDrawWarned = false;
+            loggedModel = null; // a different project: start the change log afresh
+            imageTool.Cancel();
+            hideImage = Calculator?.Image != null && !Calculator.Image.Visible;
+            btnHideImage.Tag = hideImage ? null : "on";
+        }
+
+        /// <summary>Older projects kept the image as a path and one scale; move them into the plan image.</summary>
+        private void MigrateOlderImage()
+        {
+            if (Calculator == null || Calculator.Image != null || string.IsNullOrEmpty(Calculator.selectedImageFilePath)) return;
+            string path = Calculator.selectedImageFilePath;
+            int w = 0, h = 0;
+            try
+            {
+                var f = BitmapFrame.Create(new Uri(path, UriKind.Absolute), BitmapCreateOptions.DelayCreation, BitmapCacheOption.None);
+                w = f.PixelWidth;
+                h = f.PixelHeight;
+            }
+            catch (Exception ex)
+            {
+                Log.Warning("The plan image of this older project could not be read: " + path, ex);
+            }
+            Calculator.Image = ReferenceImage.FromOlderProject(path, Calculator.pixelScaleX, h);
+            Calculator.Image.PixelWidth = w;
+            Calculator.selectedImageFilePath = null;
         }
 
         private void DrawGridInformation(DrawingContext ctx)
@@ -1766,6 +1947,11 @@ namespace ShearWallVisualizer
             if (e.ChangedButton != MouseButton.Left || Calculator == null) return;
 
             Point world = ScreenToWorld(e.GetPosition(m_layers), m_layers);
+            if (imageTool.Active)
+            {
+                ImageToolClick(world);
+                return;
+            }
             if (currentMode == DrawMode.None)
             {
                 PickAt(world);
@@ -1880,6 +2066,22 @@ namespace ShearWallVisualizer
             }
             if (e.Key != Key.Enter) return;
             e.Handled = true;
+            if (imageTool.WaitingForDistance)
+            {
+                if (imageTool.EnterDistance(Calculator?.Image, tbCommand.Text, out string done))
+                {
+                    tbCommand.Clear();
+                    Keyboard.ClearFocus();
+                    ShowStatusMessage(LogLevel.Info, done);
+                    ImageChanged();
+                }
+                else
+                {
+                    ShowStatusMessage(LogLevel.Warning, done);
+                    tbCommand.SelectAll();
+                }
+                return;
+            }
             if (currentMode == DrawMode.None)
             {
                 ShowStatusMessage(LogLevel.Warning, "Pick Wall (L) or Diaphragm (R) first, then type its points.");
@@ -1962,9 +2164,9 @@ namespace ShearWallVisualizer
         private void btnHideImage_Click(object sender, RoutedEventArgs e)
         {
             hideImage = !hideImage;
-            UpdateShearWallUI();
-
+            if (Calculator?.Image != null) Calculator.Image.Visible = !hideImage; // saved with the project
             btnHideImage.Tag = hideImage ? null : "on";
+            RedrawDrawing();
         }
 
         private void btnHideGrid_Click(object sender, RoutedEventArgs e)
@@ -2084,7 +2286,8 @@ namespace ShearWallVisualizer
             // Esc: cancel the shape in progress; then close the card; then the Select tool
             if (e.Key == Key.Escape)
             {
-                if (startPoint_world != null) { ResetInputMode(); RedrawDrawing(); }
+                if (imageTool.Active) { imageTool.Cancel(); RedrawDrawing(); }
+                else                 if (startPoint_world != null) { ResetInputMode(); RedrawDrawing(); }
                 else if (selectionCardOpen) CloseSelectionCard();
                 else { currentMode = DrawMode.None; currentSnap = FindSnap(currentSnap.Point); SetButtonModes(); RedrawDrawing(); }
                 return;
@@ -2130,28 +2333,6 @@ namespace ShearWallVisualizer
             UpdateShearWallUI();
         }
 
-        private void OpenImageTool_Click(object sender, RoutedEventArgs e)
-        {
-            var dialog = new ImageMeasurementWindow
-            {
-                Owner = this
-            };
-
-            dialog.MeasurementCompleted += OnMeasurementCompleted;
-            dialog.ShowDialog();
-
-            //if (dialog.ShowDialog() == true && dialog.Result != null)
-            //{
-            //    var result = dialog.Result;
-
-            //    MessageBox.Show(
-            //        $"Image: {result.FilePath}\n" +
-            //        $"Pixel Distance: {result.PixelDistance:F2}\n" +
-            //        $"Real Distance: {result.RealWorldDistance:F2}\n" +
-            //        $"Scale Factor: {result.ScaleFactor:F4} units/pixel",
-            //        "Measurement Result");
-            //}
-        }
         private void Exit_Click(object sender, RoutedEventArgs e)
         {
             Close(); // through Closing, so unsaved changes are offered for saving
@@ -2257,6 +2438,8 @@ namespace ShearWallVisualizer
             Calculator = new ShearWallCalculator_RigidDiaphragm();
             Calculator.DesignSettings.HoldownsFromStandardList = designer != null && designer.StandardList.Count > 0;
             currentProjectPath = null;
+            ImageForNewProject();
+            Log.Info("New project");
             windSetup.SetInputs(null, ASCE7_Versions.ASCE_VER_7_22, null);
             windSetup.SetOnlyCases1And3(false);
             buildingData = windSetup.Building.Clone();
@@ -2303,6 +2486,7 @@ namespace ShearWallVisualizer
             }
             currentProjectPath = path;
             AddToRecentFiles(path);
+            Log.Info("Project saved: " + path);
             MarkSaved();
             return true;
         }
@@ -2335,6 +2519,8 @@ namespace ShearWallVisualizer
 
             Calculator = contents.Calculator;
             currentProjectPath = path;
+            ImageForNewProject();
+            Log.Info("Project opened: " + path);
             string note = null;
 
             if (contents.IsOlderDrawingFile)
@@ -2519,25 +2705,6 @@ namespace ShearWallVisualizer
         }
 
 
-        private void OnMeasurementCompleted(object sender, ImageMeasurementEventArgs e)
-        {
-            if (Calculator != null)
-            {
-                // set the image parameters so that the DrawRerenceImage function has the items it needs to draw the true image.
-                Calculator.selectedImageFilePath = e.FilePath;
-                Calculator.pixelScaleX = e.ScaleFactor;
-                Calculator.pixelScaleY = e.ScaleFactor;
-
-                // Handle the measurement data here
-                MessageBox.Show($"Measurement completed!\n" +
-                                $"File: {e.FilePath}\n" +
-                                $"Pixel Distance: {e.PixelDistance:F2}\n" +
-                                $"Real-World Distance: {e.RealWorldDistance:F2}\n" +
-                                $"Scale Factor: {e.ScaleFactor:F6}");
-
-                UpdateShearWallUI();
-            }
-        }
 
         #endregion
 
@@ -2586,6 +2753,7 @@ namespace ShearWallVisualizer
             startPoint_world = null;
             endPoint_world = null;
             previewShape = null;
+            imageTool.Cancel();
         }
         #endregion
 
@@ -2612,6 +2780,11 @@ namespace ShearWallVisualizer
         /// <summary>What the drawing tool expects next.</summary>
         private void ShowStatusMode()
         {
+            if (imageTool.Active)
+            {
+                tbStatusMode.Text = imageTool.Prompt;
+                return;
+            }
             string snap = snapMode ? "" : "   (snaps off)";
             switch (currentMode)
             {

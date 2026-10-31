@@ -2,6 +2,16 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-01 — Plan image importer replaced; the log records every model change (SWC)
+
+- **Plan image (replaces Edit > Open Image Tool and its separate measuring window).** File: Edit > Import plan image..., or Image ▾ on the toolbar.
+  - **Import:** pick the file. The scale comes from the printed drawing scale (1/16" … 1/2" = 1'-0", 1" = 10' … 40') and the resolution, read from the file when it has one; the dialog shows the building size that gives, so a wrong dpi shows at once. Without a resolution (screenshots, photos) the default is to set the scale on the drawing. The image goes in with its lower-left corner at (0, 0) and the view zooms to it.
+  - **On the drawing** (Image ▾), with prompts on the status line, Esc to cancel: *Set scale* — click the two ends of a known dimension, type the real length in the Point box (24'-6", 24.5); the image rescales about the first point. *Straighten* — two points on a wall line; the image turns so it runs exactly E-W or N-S. *Move* — base point, then destination (snaps to the walls). *Rotate 90°*, *Opacity* (25–100 %), *Lock*, *Zoom to image*, *Remove*.
+  - The image is drawn with its scale, rotation and position (any angle), saved with the project (path, scale, rotation, position, opacity, lock, shown). A project moved with its image finds the image next to the project file. Older projects (path + one scale) open as before.
+  - Core: `Drawing/ReferenceImage.cs` (pixel ↔ world, calibrate, straighten, rotate, move, drawing scale). App: `Controls/ImageTool.cs`, `Dialogs/ImportImageDialog.cs`.
+- **Log:** every change to the model is logged with before → after, whichever panel made it: walls and diaphragms added, deleted, moved or resized; each wall's face 1 and face 2 sheathing and edge nailing, framing, dead load, hold-down type and face; design settings (method, edition, hold-down pool, wood + gypsum summing, sheathing for new walls); the loads; the plan image (added, scale, rotation, position, opacity, lock, shown, removed). Also New, Open and Save. (`Diagnostics/ModelChangeLog.cs`: a snapshot of the model in words, compared after each change.)
+- **Tests:** SWC 124 (9 image: import placement, drawing scale, two-point scale, straighten, rotated round trip and drawing matrix, move, older projects, project file, moved project; 4 log: nothing logged without a change, walls, sheathing/nailing/framing/dead load/hold-down, diaphragm/settings/loads/image).
+
 ## 2026-11-01 — Hold-down lever arm d = L − post (SWC)
 
 - **Hold-down tension** is now T = 0.6 M / d − 0.6 D L / 2 with d = L − post: the hold-downs sit on the post centerlines, half a post in from each end (user). The dead load acts at L/2, which is d/2 from the compression post, so its share stays D/2. The post is the hold-down's first minimum member size (e.g. HDU2 3 × 3.5 → 3 in; DTT2Z with 1.5 × 3.5 → a single 2x). The post depends on the hold-down chosen, so the check starts with two 2x studs (3 in) and repeats until the choice settles. The details show "d = L − post = ...".

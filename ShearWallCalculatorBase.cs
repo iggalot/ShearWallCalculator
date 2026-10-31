@@ -9,7 +9,10 @@ namespace ShearWallCalculator
     {
         private const double DEFAULT_BUILDING_HEIGHT = 10.0;
 
-        // data for the image overlay
+        /// <summary>The plan image under the drawing (null: none).</summary>
+        public ShearWallCalculator.Drawing.ReferenceImage Image { get; set; }
+
+        // Older projects: the image path and one scale, bottom-left corner at the origin (read, then moved into Image).
         public string selectedImageFilePath = null;
         public double pixelScaleX = 1.0;  // the scale factor for pixels to real-world coords
         public double pixelScaleY = 1.0;  // the scale factor for pixels to real-world coords
@@ -143,6 +146,7 @@ namespace ShearWallCalculator
             DesignSettings = copy_calc.DesignSettings ?? new ShearWallCalculator.Design.DesignSettings();
 
             // Loaded image information
+            Image = copy_calc.Image?.Clone();
             selectedImageFilePath = copy_calc.selectedImageFilePath;
             pixelScaleX = copy_calc.pixelScaleX;
             pixelScaleY = copy_calc.pixelScaleY;

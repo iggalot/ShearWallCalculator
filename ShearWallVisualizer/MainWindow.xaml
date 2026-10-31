@@ -32,7 +32,7 @@
                 <MenuItem Header="_Hold-down catalog (values used by the design)" Click="OpenHoldownCatalog_Click"/>
             </MenuItem>
             <MenuItem Header="_Edit">
-                <MenuItem Header="Open Image Tool" Click="OpenImageTool_Click"/>
+                <MenuItem Header="Import plan image..." Click="ImportPlanImage_Click"/>
             </MenuItem>
             <MenuItem Header="_Help">
                 <MenuItem Header="Open _log folder" Click="OpenLogFolder_Click"/>
@@ -154,7 +154,9 @@
                         <TextBlock Style="{StaticResource ToolGroup}" Text="SHOW"/>
                         <Button x:Name="btnHideGrid" Style="{StaticResource Tool}" Content="Grid" Tag="on" Click="btnHideGrid_Click"/>
                         <Button x:Name="btnHideImage" Style="{StaticResource Tool}" Content="Image" Tag="on" Click="btnHideImage_Click"
-                                ToolTip="The reference image under the drawing (Edit &gt; Open Image Tool)"/>
+                                ToolTip="Show or hide the plan image under the drawing"/>
+                        <Button x:Name="btnImageOptions" Style="{StaticResource Tool}" Content="▾" Padding="6,4" Click="btnImageOptions_Click"
+                                ToolTip="Plan image: import, set the scale with two points, straighten, move, opacity, lock"/>
                         <Button x:Name="btnHideShapes" Style="{StaticResource Tool}" Content="Walls &amp; diaphragms" Tag="on" Click="btnHideShapes_Click"/>
                         <Button x:Name="btnShowDesign" Style="{StaticResource Tool}" Content="Design" Tag="on" Click="btnShowDesign_Click"
                                 ToolTip="Shear wall marks (SW1, SW2, ...) with each wall's hold-down, the hold-downs at the wall ends, and the shear wall schedule"/>
