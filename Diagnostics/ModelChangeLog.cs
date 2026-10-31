@@ -63,6 +63,7 @@ namespace ShearWallCalculator.Diagnostics
             if (img != null)
             {
                 s.Image["file"] = img.Path ?? "";
+                s.Image["stored in project"] = img.Data == null ? "no" : $"yes, {img.Data.Length / 1024.0:0} kB";
                 s.Image["scale"] = $"{(img.FeetPerPixel * 12).ToString("0.####", CultureInfo.InvariantCulture)} in per pixel" + (img.Calibrated ? "" : " (not set)");
                 s.Image["rotation"] = F(img.RotationDegrees) + "°";
                 s.Image["position"] = "top-left at " + P(img.Origin);

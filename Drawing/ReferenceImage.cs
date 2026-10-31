@@ -36,6 +36,13 @@ namespace ShearWallCalculator.Drawing
         public int PixelWidth { get; set; }
         public int PixelHeight { get; set; }
 
+        /// <summary>
+        /// The image file itself, stored in the project file (base64 in the JSON) so the image comes back at its scale
+        /// when the project is opened on another computer or after the original file is moved. Null in older projects
+        /// until the image is found and loaded once.
+        /// </summary>
+        public byte[] Data { get; set; }
+
         /// <summary>True once the scale has been set by calibration or a drawing scale (not just the import guess).</summary>
         public bool Calibrated { get; set; }
 
@@ -159,6 +166,18 @@ namespace ShearWallCalculator.Drawing
             if (string.IsNullOrEmpty(Path) || string.IsNullOrEmpty(projectPath)) return null;
             string beside = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(projectPath) ?? "", System.IO.Path.GetFileName(Path));
             return File.Exists(beside) ? beside : null;
+        }
+
+        /// <summary>Stores the image file in the project (see <see cref="Data"/>). False when the file cannot be read.</summary>
+        public bool Embed(string file)
+        {
+            try
+            {
+                Data = File.ReadAllBytes(file);
+                return true;
+            }
+            catch (IOException) { return false; }
+            catch (UnauthorizedAccessException) { return false; }
         }
 
         /// <summary>World extents of the image (for zoom to fit).</summary>

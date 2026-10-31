@@ -143,5 +143,38 @@ namespace ShearWallCalculator.Tests
             }
             finally { System.IO.Directory.Delete(dir, true); }
         }
+
+        [TestMethod]
+        public void ProjectFile_StoresTheImageItself_ReopensAtItsScaleWithoutTheOriginalFile()
+        {
+            string dir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "swc-img-" + Guid.NewGuid().ToString("N"));
+            System.IO.Directory.CreateDirectory(dir);
+            try
+            {
+                string file = System.IO.Path.Combine(dir, "plan.png");
+                var bytes = new byte[] { 0x89, 0x50, 0x4E, 0x47, 1, 2, 3, 4, 5 };
+                System.IO.File.WriteAllBytes(file, bytes);
+                var img = ReferenceImage.Imported(file, 1000, 800, 0.05);
+                img.Calibrate(new Point(0, 0), new Point(10, 0), 20);
+                img.RotateAbout(new Point(0, 0), 3);
+                img.Visible = false;
+                Assert.IsTrue(img.Embed(file));
+
+                var calc = new ShearWallCalculator_RigidDiaphragm { Image = img };
+                string json = ProjectSerializer.ToJson(calc, null, false);
+                System.IO.File.Delete(file); // the original is gone: the project still has the image
+                var read = ProjectSerializer.Read(json).Calculator.Image;
+
+                CollectionAssert.AreEqual(bytes, read.Data);
+                Assert.AreEqual(0.1, read.FeetPerPixel, Tol, "the final (calibrated) scale");
+                Assert.AreEqual(3, read.RotationDegrees, Tol);
+                Assert.AreEqual(img.Origin.X, read.Origin.X, 1e-9);
+                Assert.AreEqual(img.Origin.Y, read.Origin.Y, 1e-9);
+                Assert.IsTrue(read.Calibrated);
+                Assert.IsFalse(read.Visible, "the layer's on/off state is saved too");
+                Assert.IsFalse(new ReferenceImage().Embed(file), "a missing file is reported, not thrown");
+            }
+            finally { System.IO.Directory.Delete(dir, true); }
+        }
     }
 }

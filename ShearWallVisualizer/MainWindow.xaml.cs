@@ -78,6 +78,7 @@ namespace ShearWallVisualizer
         // plan image: the decoded file (kept while the path is the same) and the two-point commands
         private BitmapSource planBitmap;
         private string planBitmapPath;
+        private byte[] planBitmapData;   // the stored image the bitmap was decoded from
         private readonly ImageTool imageTool = new ImageTool();
 
         double majorGridSpacing = 5.0;  // Major grid lines in world units
@@ -1595,28 +1596,36 @@ namespace ShearWallVisualizer
             }
         }
 
-        /// <summary>The decoded image file, loaded once per path; null (with one warning) when it cannot be found or read.</summary>
+        /// <summary>
+        /// The decoded plan image: from the copy stored in the project when there is one, otherwise from the file
+        /// (which is then stored, so the next save carries it). Loaded once; null (with one warning) when it cannot be read.
+        /// </summary>
         private BitmapSource PlanBitmap(ReferenceImage img)
         {
-            string path = img.Resolve(currentProjectPath);
-            if (path == null)
+            if (img.Data == null)
             {
-                if (planBitmapPath != img.Path)
+                string path = img.Resolve(currentProjectPath);
+                if (path == null || !img.Embed(path))
                 {
-                    planBitmapPath = img.Path;
-                    planBitmap = null;
-                    Log.Warning("The plan image was not found: " + img.Path + " (put it next to the project file, or import it again).");
+                    if (planBitmapPath != img.Path)
+                    {
+                        planBitmapPath = img.Path;
+                        planBitmap = null;
+                        Log.Warning("The plan image was not found: " + img.Path + " (import it again; it is then stored in the project file).");
+                    }
+                    return null;
                 }
-                return null;
+                Log.Info($"Plan image stored in the project: {path} ({img.Data.Length / 1024.0:0} kB; saved with the next save)");
             }
-            if (planBitmap != null && planBitmapPath == path) return planBitmap;
-            planBitmapPath = path;
+            if (planBitmap != null && planBitmapData == img.Data) return planBitmap;
+            planBitmapData = img.Data;
+            planBitmapPath = img.Path;
             planBitmap = null;
             try
             {
                 var b = new BitmapImage();
                 b.BeginInit();
-                b.UriSource = new Uri(path, UriKind.Absolute);
+                b.StreamSource = new System.IO.MemoryStream(img.Data);
                 b.CacheOption = BitmapCacheOption.OnLoad;
                 b.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
                 b.EndInit();
@@ -1627,7 +1636,7 @@ namespace ShearWallVisualizer
             }
             catch (Exception ex)
             {
-                Log.Warning("Could not read the plan image " + path, ex);
+                Log.Warning("Could not read the plan image " + img.Path, ex);
             }
             return planBitmap;
         }
@@ -1646,6 +1655,8 @@ namespace ShearWallVisualizer
             }
 
             Item(img == null ? "Import plan image..." : "Replace plan image...", ImportPlanImage);
+            Item(hideImage ? "Show image layer" : "Hide image layer", () => btnHideImage_Click(btnHideImage, null), img != null,
+                 "The image is a layer under the drawing: it is never selected by clicks, and it is saved inside the project file.");
             menu.Items.Add(new Separator());
             Item("Set scale: click two points, type the distance", () => StartImageCommand(ImageCommand.Calibrate), movable,
                  "Pick the two ends of a long dimension on the image; the image is rescaled about the first point.");
@@ -1696,6 +1707,7 @@ namespace ShearWallVisualizer
             if (dialog.ShowDialog() != true) return;
 
             Calculator.Image = dialog.Result;
+            if (!Calculator.Image.Embed(open.FileName)) Log.Warning("The plan image could not be stored in the project: " + open.FileName);
             planBitmap = null;
             imageDrawWarned = false;
             hideImage = false;
@@ -1850,6 +1862,7 @@ namespace ShearWallVisualizer
             MigrateOlderImage();
             planBitmap = null;
             planBitmapPath = null;
+            planBitmapData = null;
             imageDrawWarned = false;
             loggedModel = null; // a different project: start the change log afresh
             imageTool.Cancel();

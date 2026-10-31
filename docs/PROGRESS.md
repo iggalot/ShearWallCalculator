@@ -2,6 +2,13 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-01 — Plan image stored in the project file (SWC)
+
+- **The image file itself is saved inside the project** (`ReferenceImage.Data`, base64 in the JSON), with its final scale, rotation, position, opacity, lock and on/off state. Reopening the project brings the image back at its scale even if the original file was moved or deleted, or the project is opened on another computer. The project file grows by about 1.3 × the image file size.
+- Older projects that saved only the path: the image is loaded from the path (or next to the project file) once and stored, so the next save carries it.
+- **Layer:** the image is drawn under everything and is never selected by clicks; only the Image ▾ commands change it. Toggle with the toolbar **Image** button or Image ▾ > Hide/Show image layer; the on/off state is saved with the project.
+- Log: "stored in project: yes, N kB" is part of the image record. Test: save → delete the original file → reopen keeps the bytes, the calibrated scale, rotation, origin and the hidden state.
+
 ## 2026-11-01 — Two-face sheathing: faces are never added (SWC)
 
 - **User decision (after their own research):** two different materials on opposite faces take the larger of the stronger face and 2 × the weaker face (SDPWS 2021 4.3.5.4.2; 2015 4.3.3.3.2); the same construction on both faces is 2 × one face (4.3.5.4.1). The wind exception that adds a wood structural panel face to a gypsum wallboard face is **no longer used**, because a simple sum can be unconservative. max(S, 2W) ≤ S + W always.

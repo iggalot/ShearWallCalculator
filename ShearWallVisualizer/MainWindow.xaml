@@ -155,7 +155,7 @@
                         <TextBlock Style="{StaticResource ToolGroup}" Text="SHOW"/>
                         <Button x:Name="btnHideGrid" Style="{StaticResource Tool}" Content="Grid" Tag="on" Click="btnHideGrid_Click"/>
                         <Button x:Name="btnHideImage" Style="{StaticResource Tool}" Content="Image" Tag="on" Click="btnHideImage_Click"
-                                ToolTip="Show or hide the plan image under the drawing"/>
+                                ToolTip="Show or hide the plan image layer (under the drawing, never selectable; the image is stored in the project file)"/>
                         <Button x:Name="btnImageOptions" Style="{StaticResource Tool}" Content="▾" Padding="6,4" Click="btnImageOptions_Click"
                                 ToolTip="Plan image: import, set the scale with two points, straighten, move, opacity, lock"/>
                         <Button x:Name="btnHideShapes" Style="{StaticResource Tool}" Content="Walls &amp; diaphragms" Tag="on" Click="btnHideShapes_Click"/>
