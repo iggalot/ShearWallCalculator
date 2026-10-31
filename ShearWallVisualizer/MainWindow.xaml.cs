@@ -9,6 +9,7 @@ using ShearWallCalculator.Interfaces;
 using ShearWallVisualizer.Controls;
 using ShearWallVisualizer.Dialogs;
 using ShearWallVisualizer.Helpers;
+using ShearWallCalculator.Diagnostics;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -90,6 +91,7 @@ namespace ShearWallVisualizer
         bool hideImage = false;
         bool hideGrid = false;
         bool hideShapes = false;
+        bool imageDrawWarned = false;   // log a reference-image drawing failure once, not every frame
 
         private double defaultWallHeight = 9.0;
 
@@ -122,6 +124,8 @@ namespace ShearWallVisualizer
             this.KeyDown += MainWindow_KeyDown;
             this.PreviewKeyDown += FileShortcuts; // Ctrl+N, O, S, P
             this.Closing += MainWindow_Closing; // asks to save unsaved changes
+            Log.Written += OnLogWritten;      // warnings and errors show on the status line
+            this.Closed += (s, e) => Log.Written -= OnLogWritten;
 
             // Set focus and canvas background
             this.Focusable = true;
@@ -202,15 +206,9 @@ namespace ShearWallVisualizer
                 ShowCalculationState();
                 UpdateDesign();
 
-                // list the type of calculator
-                tbCalculatorType.Text = Calculator.GetType().Name;
-
-                string img_str = Calculator.selectedImageFilePath;
-                if (Calculator.selectedImageFilePath == null || Calculator.selectedImageFilePath == String.Empty)
-                {
-                    img_str = "Image File: <No file selected>";
-                }
-                tbImageFileName.Text = img_str;
+                string img = Calculator.selectedImageFilePath;
+                tbImageFileName.Text = string.IsNullOrEmpty(img) ? "" : "Image: " + System.IO.Path.GetFileName(img);
+                tbImageFileName.ToolTip = string.IsNullOrEmpty(img) ? null : img;
 
                 // recreate the data controls
                 CreateWallDataControls();
@@ -220,8 +218,7 @@ namespace ShearWallVisualizer
                 OnUpdated?.Invoke(this, EventArgs.Empty); // signal that the window has been updated -- so that subcontrols can refresh
 
                 // update the load info display
-                LoadInfoTextBlock.Text = (windLoadsLinked ? "Loads: ASCE 7 wind (auto)" : "Loads: MANUAL") +
-                                         $"  X: {Calculator.V_x:0.0} k | Y: {Calculator.V_y:0.0} k";
+                LoadInfoTextBlock.Text = (windLoadsLinked ? "Wind loads (auto)" : "Manual loads") + $"   X {Calculator.V_x:0.0} k,  Y {Calculator.V_y:0.0} k";
                 tbWorkspaceLoads.Text = windLoadsLinked
                     ? $"Shear walls use the wind loads (X {Calculator.V_x:0.0} k, Y {Calculator.V_y:0.0} k), updated automatically."
                     : $"Shear walls use MANUAL loads (X {Calculator.V_x:0.0} k, Y {Calculator.V_y:0.0} k), not the wind loads.";
@@ -556,7 +553,7 @@ namespace ShearWallVisualizer
 
             foreach (var item in lst)
             {
-                Console.WriteLine(item.ToString());
+                Log.Debug(item.ToString());
             }
         }
 
@@ -1864,7 +1861,7 @@ namespace ShearWallVisualizer
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("Failed to load image: " + ex.Message);
+                    if (!imageDrawWarned) Log.Warning("Could not draw the reference image", ex); imageDrawWarned = true;
                 }
             }
 
@@ -1975,10 +1972,8 @@ namespace ShearWallVisualizer
             currentMouseScreenPosition = e.GetPosition(m_layers);
             Point currentMouseWorldPosition = ScreenToWorld(currentMouseScreenPosition, m_layers);
 
-            tbScreenCoords.Text = e.GetPosition(m_layers).ToString();
-            tbWorldCoords.Text = "World Coords: (" + currentMouseWorldPosition.X.ToString("F2") + ", " + currentMouseWorldPosition.Y.ToString("F2") + ")";  // changed this one too
-
-            UpdateShearWallUI();
+            ShowCursor(currentMouseWorldPosition);
+            RedrawDrawing();
         }
 
         private void m_layers_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
@@ -2003,15 +1998,9 @@ namespace ShearWallVisualizer
             panOffsetX -= (afterZoom.X - beforeZoom.X);
             panOffsetY -= (afterZoom.Y - beforeZoom.Y);
 
-            // Display current parameters on screen
-            tbPan.Text = "Pan: (" + panOffsetX.ToString("F2") + ", " + panOffsetY.ToString("F2") + ")";
-            tbZoom.Text = "Zoom: (" + zoomFactorX.ToString("F2") + ", " + zoomFactorY.ToString("F2") + ")";
-            tbWorldCoords.Text = "World Coords: (" + afterZoom.X.ToString("F2") + ", " + afterZoom.Y.ToString("F2") + ")";  // changed this one too
-            tbScreenCoords.Text = "Screen Coords: (" + mousePosition_screen.X.ToString("F2") + ", " + mousePosition_screen.Y.ToString("F2") + ")"; // changed this one too
-
+            ShowCursor(afterZoom);
             InvalidateGrid();               // signal that the grid needs updating
-
-            UpdateShearWallUI();
+            RedrawDrawing();
         }
 
         private void m_layers_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
@@ -2028,50 +2017,11 @@ namespace ShearWallVisualizer
         #endregion
 
         #region UI Events
-        private void btnTestDesign_Click(object sender, RoutedEventArgs e)
-        {
-            if (Calculator == null || Calculator._wall_system == null || Calculator._diaphragm_system == null)
-            {
-                MessageBox.Show("No valid calculator found in btnTEstDesign_Click.");
-                return;
-            }
-            else
-            {
-                // Uses the current loads. (It used to call AddLoads(15, 15), which silently replaced the
-                // linked wind loads with a 15 k test load while the screen still said "ASCE 7 wind".)
-                Calculator.PerformCalculations();
-                if (!Calculator.TotalWallShear.ContainsKey(0))
-                {
-                    MessageBox.Show("Draw the walls and diaphragm first; wall 0 has no calculated shear yet.");
-                    return;
-                }
-
-                // test wall key
-                int wall_id = 0;
-
-                if (Calculator._wall_system._walls.ContainsKey(wall_id) is true)
-                {
-                    WallData test_wall = Calculator._wall_system._walls[wall_id];
-                    ShearWallSelector selector = new ShearWallSelector(Calculator.TotalWallShear[wall_id], test_wall, simpsonCatalog, ConnectorTypes.CONNECTOR_STRAP_TIES, WoodTypes.WOODTYPE_DF_SP);
-                    Console.WriteLine("--------------------------");
-                    Console.WriteLine("Shear: " + Calculator.TotalWallShear[wall_id]);
-                    foreach (var key in selector.selectedConnectors)
-                    {
-
-                        Console.WriteLine(key.Model);
-                    }
-                    Console.WriteLine("--------------------------");
-                }
-
-                UpdateShearWallUI();
-            }
-        }
-
         private void btnHideShapes_Click(object sender, RoutedEventArgs e)
         {
             hideShapes = !hideShapes;
             UpdateShearWallUI();
-            btnHideShapes.Content = hideShapes ? "Show Shapes" : "Hide Shapes";
+            btnHideShapes.Tag = hideShapes ? null : "on";
 
         }
 
@@ -2080,24 +2030,28 @@ namespace ShearWallVisualizer
             hideImage = !hideImage;
             UpdateShearWallUI();
 
-            btnHideImage.Content = hideImage ? "Show Image" : "Hide Image";
+            btnHideImage.Tag = hideImage ? null : "on";
         }
 
         private void btnHideGrid_Click(object sender, RoutedEventArgs e)
         {
             hideGrid = !hideGrid;
             UpdateShearWallUI();
-            btnHideGrid.Content = hideGrid ? "Show Grid" : "Hide Grid";
+            btnHideGrid.Tag = hideGrid ? null : "on";
         }
 
         private void btnLineMode_Click(object sender, RoutedEventArgs e)
         {
             currentMode = DrawMode.Line;
+            ResetInputMode();
+            SetButtonModes();
         }
 
         private void btnRectangleMode_Click(object sender, RoutedEventArgs e)
         {
             currentMode = DrawMode.Rectangle;
+            ResetInputMode();
+            SetButtonModes();
         }
 
         private void btnSnapMode_Click(object sender, RoutedEventArgs e)
@@ -2109,7 +2063,7 @@ namespace ShearWallVisualizer
         {
             if (Calculator == null)
             {
-                Console.WriteLine("No valid calculator found in btnOpenLoadDialog_Click.");
+                Log.Warning("Loads dialog: no calculator is open.");
                 return;
             }
             windSetup?.FlushPendingChange();
@@ -2153,7 +2107,19 @@ namespace ShearWallVisualizer
         #region Menu and Key Events
         private void MainWindow_KeyDown(object sender, KeyEventArgs e)
         {
-            Console.WriteLine($"Key Pressed: {e.Key}");
+            // The drawing shortcuts belong to the Shear walls workspace, and never to a key typed into a box
+            // (typing "d" in a wind input used to toggle debug mode with a message box).
+            if (e.Handled || InWindWorkspace || Keyboard.Modifiers != ModifierKeys.None) return;
+            if (e.OriginalSource is System.Windows.Controls.Primitives.TextBoxBase || e.OriginalSource is PasswordBox || (e.OriginalSource is ComboBox cb && cb.IsEditable)) return;
+            if (e.Key != Key.L && e.Key != Key.R && e.Key != Key.S && e.Key != Key.D && e.Key != Key.Z && e.Key != Key.Escape) return;
+            Log.Debug($"Key pressed: {e.Key}");
+
+            if (e.Key == Key.Escape)
+            {
+                ResetInputMode();
+                RedrawDrawing();
+                return;
+            }
 
             // line (wall) mode
             if (e.Key == Key.L)
@@ -2218,8 +2184,30 @@ namespace ShearWallVisualizer
 
         private void Refresh_Click(object sender, RoutedEventArgs e)
         {
-            // You can refresh your data-bound controls here.
-            MessageBox.Show("Refresh triggered!", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
+            UpdateShearWallUI();
+        }
+
+        private void OpenLogFolder_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                Directory.CreateDirectory(Log.Folder);
+                System.Diagnostics.Process.Start("explorer.exe", "\"" + Log.Folder + "\"");
+            }
+            catch (Exception ex)
+            {
+                Log.Warning("Could not open the log folder", ex);
+                MessageBox.Show("The log folder is:\n" + Log.Folder, "Log folder", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+
+        private void About_Click(object sender, RoutedEventArgs e)
+        {
+            MessageBox.Show(
+                $"Shear Wall Calculator {typeof(App).Assembly.GetName().Version}\n\n" +
+                "Wind: ASCE 7 (linked Wind Load Calculator)\nWood shear walls: AWC SDPWS (tables 2015 edition)\nHold-downs: Simpson Strong-Tie catalog values\n\n" +
+                "Log: " + Log.Folder,
+                "About", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         // ------------------------------------------------------------------ project files
@@ -2581,55 +2569,36 @@ namespace ShearWallVisualizer
         #region MODE setters
         public void SetButtonModes()
         {
-            switch (currentMode)
-            {
-                case DrawMode.Line:
-                    SetLineMode();
-                    break;
-                case DrawMode.Rectangle:
-                    SetRectangleMode();
-                    break;
-                default:
-                    return;
-            }
+            btnRigidityMode.Tag = currentMode == DrawMode.Line ? "on" : null;
+            btnMassMode.Tag = currentMode == DrawMode.Rectangle ? "on" : null;
+            btnSnapToNearest.Tag = snapMode ? "on" : null;
+            ShowStatusMode();
         }
 
         private void SetLineMode()
         {
-            ResetUIButtons();
-            btnRigidityMode.BorderThickness = new Thickness(3);
-            btnRigidityMode.BorderBrush = new SolidColorBrush(Colors.White);
-            btnRigidityMode.Background = new SolidColorBrush(Colors.YellowGreen);
-
-            currentMode = DrawMode.Line;  // Set to Line drawing mode
+            currentMode = DrawMode.Line;
+            SetButtonModes();
         }
 
         private void SetRectangleMode()
         {
-            ResetUIButtons();
-            btnMassMode.BorderThickness = new Thickness(3);
-            btnMassMode.BorderBrush = new SolidColorBrush(Colors.White);
-            btnMassMode.Background = new SolidColorBrush(Colors.YellowGreen);
-
-            currentMode = DrawMode.Rectangle;  // Set to Rectangle drawing mode
+            currentMode = DrawMode.Rectangle;
+            SetButtonModes();
         }
 
         private void SetDebugMode()
         {
-            ResetUIButtons();
-
             debugMode = !debugMode;
-            MessageBox.Show($"Debug Mode {(debugMode ? "Enabled" : "Disabled")}");
-            Console.WriteLine($"Debug Mode: {(debugMode ? "Enabled" : "Disabled")}");
+            ShowStatusMessage(LogLevel.Info, $"Debug drawing {(debugMode ? "on" : "off")} (D)");
+            Log.Info($"Debug mode: {(debugMode ? "Enabled" : "Disabled")}");
         }
+
         private void SetSnapMode()
         {
-            btnSnapToNearest.BorderThickness = new Thickness(3);
-            btnSnapToNearest.BorderBrush = new SolidColorBrush(Colors.White);
-
             snapMode = !snapMode;
-            MessageBox.Show($"Snap Mode {(snapMode ? "Enabled" : "Disabled")}");
-            Console.WriteLine($"Snap Mode: {(snapMode ? "Enabled" : "Disabled")}");
+            SetButtonModes();
+            Log.Info($"Snap mode: {(snapMode ? "Enabled" : "Disabled")}");
         }
 
         /// <summary>
@@ -2642,26 +2611,63 @@ namespace ShearWallVisualizer
             endPoint_world = null;
             previewShape = null;
         }
+        #endregion
 
-        private void ResetUIButtons()
+        // ------------------------------------------------------------------ status line
+
+        /// <summary>Redraws the drawing only (cursor moves, zoom, preview); the calculations and panels are not rebuilt.</summary>
+        private void RedrawDrawing()
         {
-            btnRigidityMode.BorderThickness = new Thickness(0);
-            btnRigidityMode.Background = new SolidColorBrush(Colors.MediumBlue);
-            btnMassMode.Background = new SolidColorBrush(Colors.Red);
-            btnMassMode.BorderThickness = new Thickness(0);
-            btnSnapToNearest.BorderThickness = new Thickness(0);
+            ShowStatusMode();
+            Draw(ChangeType.Redraw);
+        }
 
-            if (snapMode is true)
-            {
-                btnSnapToNearest.BorderThickness = new Thickness(3);
-            }
+        private void ShowCursor(Point world)
+        {
+            tbWorldCoords.Text = $"x {world.X:0.00} ft,  y {world.Y:0.00} ft";
+            tbZoom.Text = $"Zoom {zoomFactorX:0.##}×";
+        }
 
-            if (debugMode is true)
+        /// <summary>What the drawing tool expects next.</summary>
+        private void ShowStatusMode()
+        {
+            string snap = snapMode ? "   ·   snap on" : "";
+            switch (currentMode)
             {
-                // TODO:: how should the UI be set in debug mode?
+                case DrawMode.Line:
+                    tbStatusMode.Text = (startPoint_world == null ? "Wall: click the first end" : "Wall: click the second end  (right-click cancels)") + snap;
+                    break;
+                case DrawMode.Rectangle:
+                    tbStatusMode.Text = (startPoint_world == null ? "Diaphragm: click a corner" : "Diaphragm: click the opposite corner  (right-click cancels)") + snap;
+                    break;
+                default:
+                    tbStatusMode.Text = "Pick a tool: Wall (L) or Diaphragm (R)" + snap;
+                    break;
             }
         }
-        #endregion
+
+        private static readonly Brush StatusWarnInk = new SolidColorBrush(Color.FromRgb(0x9A, 0x5B, 0x00));
+        private static readonly Brush StatusErrorInk = new SolidColorBrush(Color.FromRgb(0xB4, 0x23, 0x18));
+
+        /// <summary>Shows a message on the right of the status line; warnings and errors from the log arrive here too.</summary>
+        private void ShowStatusMessage(LogLevel level, string message)
+        {
+            if (!Dispatcher.CheckAccess())
+            {
+                Dispatcher.BeginInvoke(new Action(() => ShowStatusMessage(level, message)));
+                return;
+            }
+            string mark = level == LogLevel.Error ? "✗ " : level == LogLevel.Warning ? "⚠ " : "";
+            tbStatusMessage.Text = $"{mark}{message}   {DateTime.Now:HH:mm}";
+            tbStatusMessage.Foreground = level == LogLevel.Error ? StatusErrorInk : level == LogLevel.Warning ? StatusWarnInk : (Brush)new SolidColorBrush(Color.FromRgb(0x52, 0x51, 0x4E));
+        }
+
+        private void OnLogWritten(LogLevel level, string message)
+        {
+            if (level >= LogLevel.Warning) ShowStatusMessage(level, message);
+        }
+
+        private void StatusMessage_Click(object sender, MouseButtonEventArgs e) => OpenLogFolder_Click(sender, e);
 
         // Add an effect where you can press enter or spacebar to commit the building data
         private void RunBuildingDataInputCalculations(object sender, KeyEventArgs e)
