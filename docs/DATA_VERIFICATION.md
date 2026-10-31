@@ -76,3 +76,11 @@ See `AUDIT.md` for details:
 - **D9** — leeward Cp
 - **D10** — G and I inputs
 - **(60, 0.01·θ)** in `NormToRidge_*` windward-positive: for 45° < θ < 60° this interpolates toward 0.01·θ, not toward 0.6. That is a small error, but encoding the table as "θ ≥ 60° ⇒ 0.01θ" would be cleaner.
+
+## Chapter 28 envelope procedure (W7 bc95ffd) — to verify against the printed Fig. 28.3-1
+
+1. **GC_pf table, Case A** (θ: 1, 2, 3, 4, 1E, 2E, 3E, 4E): 0–5°: 0.40, −0.69, −0.37, −0.29, 0.61, −1.07, −0.53, −0.43; 20°: 0.53, −0.69, −0.48, −0.43, 0.80, −1.07, −0.69, −0.64; 30–45°: 0.56, 0.21, −0.43, −0.37, 0.69, 0.27, −0.53, −0.48; 90°: 0.56, 0.56, −0.37, −0.37, 0.69, 0.69, −0.48, −0.48. **Case B:** 5 = 0.40, 6 = −0.29, 5E = 0.61, 6E = −0.43. Same in 7-16 and 7-22?
+2. **Torsional load cases:** the T zones taken as everything beyond the building center on the side away from the reference corner, at 25%. Confirm the T-zone extent in the figure.
+3. **Zone 2 limit note:** negative Zone 2/2E applied up to min(0.5 × building dimension parallel to the wind, 2.5 × eave height); the rest to the ridge uses Zone 3/3E.
+4. **Exemption from torsional cases** taken as the same list as Fig. 27.3-8.
+5. **Hip roofs** not offered (fall back to Ch. 27) until the hip-roof treatment in Fig. 28.3-1 is confirmed.

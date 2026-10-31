@@ -29,6 +29,7 @@ Check out a matching pair of commits when you build an older version.
 | `dev/wind-core-refactor` (parapet diagrams, C&C parapets) | `dev/wind-core-refactor @ 1d845dd` | WindLoadCalculator_CC.ParapetCases (ParapetCladdingCase); ParapetDiagram |
 | `dev/wind-core-refactor` (Fig. 30.3-2A note 5) | `dev/wind-core-refactor @ 3e2df53` | WindLoadCalculator_CC.ParapetRoofZoneNoteApplied, ParapetZoneNoteMinHeight |
 | `dev/wind-core-refactor` (parapet envelope GCpi) | `dev/wind-core-refactor @ 4f1e1e7` | BuildingData.ParapetEnclosure (saved in project files); ParapetCladdingCase Front/BackPressurePosGCpi/NegGCpi |
+| `dev/wind-core-refactor` (Chapter 28 envelope) | `dev/wind-core-refactor @ bc95ffd` | WindParameters_Base.LateralProcedure (saved in project files); WindLateralLoads.Compute dispatches on it; EnvelopeLateralLoads; WindLateralResult.Procedure / EnvelopeAlongLength / EnvelopeAlongWidth / ProcedureNote |
 
 ## Building
 

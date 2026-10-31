@@ -30,6 +30,7 @@ namespace ShearWallCalculator.Tests
             {
                 RiskCategory = "III", WindSpeed = 142, ExposureCategory = WindExposureCategories.WIND_EXP_CAT_D, Kzt = 1.23,
                 RoofComponentArea = 14 * 14 / 3.0, WallComponentArea = 21,
+                LateralProcedure = LateralProcedure.Envelope,
             };
             var b = new BuildingData
             {
@@ -53,6 +54,7 @@ namespace ShearWallCalculator.Tests
             var p = w.ToParameters();
             Assert.AreEqual("III", p.RiskCategory);
             Assert.AreEqual(142, p.WindSpeed);
+            Assert.AreEqual(LateralProcedure.Envelope, p.LateralProcedure);
             Assert.AreEqual(WindExposureCategories.WIND_EXP_CAT_D, p.ExposureCategory);
             Assert.AreEqual(1.23, p.Kzt);
             Assert.AreEqual(14 * 14 / 3.0, p.RoofComponentArea, 1e-12);

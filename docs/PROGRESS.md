@@ -2,6 +2,23 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-10-30 (night) — Item 3c: Chapter 28 envelope procedure (W7 bc95ffd)
+
+- **Choice:** Results step, Shear walls section: "Ch. 27" (default) or "Ch. 28 low-rise". Stored in `WindParameters_Base.LateralProcedure` and in project files. The shear-wall link, summary, details and report all follow it.
+- **Method (Fig. 28.3-1, 7-16 and 7-22):** p = q_h·K_d·(GC_pf); internal pressure cancels horizontally.
+  - Wind normal to a gable ridge: Case A at the roof angle (interpolated 5–20–30/45–90°), walls 1/4 and roof 2/3 horizontal components.
+  - Along the ridge or flat roof: Case B walls 5/6 (same values as Case A at 0° for the walls), gable triangle included.
+  - End zones 2a at the reference corner; a = min(0.1·least, 0.4h) ≥ max(0.04·least, 3 ft).
+  - Negative Zone 2 only up to min(0.5·depth, 2.5·h_e), rest of the windward slope Zone 3.
+  - Roof neglected if it lowers the shear ("not less than with the roof neglected").
+  - Parapets per §28.3.2 (same as §27.3.4).
+- **Load cases sent to the walls (per direction):** basic (±torsion: end zones at either corner), torsional (zones beyond the center at 25%, ±), and the §28.3.4 minimum (16/8 psf) as its own case. The torsional cases are skipped with the existing exemption checkbox (one story h ≤ 30 ft, or ≤ 2 stories light-frame or flexible diaphragms).
+- **Not covered → falls back to Ch. 27 with a note:** h > 60 ft, h > least plan dimension, hip roofs, open buildings.
+- **Hand check (7-22, 115 mph, C, 60×40×15 flat):** q_h·K_d = 24.5 psf; from W: walls 456·q = 11.17 k, torsion ±16.5 kip-ft, torsional case 7.37 k / ±54.5 kip-ft, minimum 9.6 k; from S 16.24 k. Chapter 27 gives 15.0 / 24.4 k. App matches.
+- **Details:** new "Shear walls: Chapter 28" page (zone plan, zone table, totals, Ch. 27 comparison); load-cases page follows the procedure.
+- **To verify against the printed standard:** see DATA_VERIFICATION.md, Chapter 28.
+- **Tests:** W7 engine 258 (2 skipped), W7 UI 54, SWC 45.
+
 ## 2026-10-30 (late) — Parapet diagrams; C&C parapets (Section 30.6)
 
 - **Shear-wall pages (MWFRS):** a parapet diagram (§27.3.4). It shows +1.5 push on the windward parapet and −1.0 suction on the leeward parapet, with pressures in psf, the parapet height, and q_p at the parapet top. Commit W7 d4501f8.

@@ -35,6 +35,8 @@ namespace ShearWallCalculator.Interfaces
         public WindSiteInputs Site { get; set; } = new WindSiteInputs();
         public WindBuildingInputs Building { get; set; } = new WindBuildingInputs();
         public bool OnlyCases1And3 { get; set; }
+        /// <summary>MWFRS procedure for the shear-wall loads; Chapter 27 when absent in older files.</summary>
+        public LateralProcedure LateralProcedure { get; set; } = LateralProcedure.Directional;
         public ComponentChoice RoofComponent { get; set; }
         public ComponentChoice WallComponent { get; set; }
 
@@ -66,6 +68,7 @@ namespace ShearWallCalculator.Interfaces
                 Enclosure = b.EnclosureType,
             },
             OnlyCases1And3 = onlyCases1And3,
+            LateralProcedure = p.LateralProcedure,
             RoofComponent = roof,
             WallComponent = wall,
         };
@@ -79,6 +82,7 @@ namespace ShearWallCalculator.Interfaces
             GustFactor = Site.GustFactor,
             RoofComponentArea = Site.RoofComponentArea,
             WallComponentArea = Site.WallComponentArea,
+            LateralProcedure = LateralProcedure,
         };
 
         public BuildingData ToBuilding() => new BuildingData
