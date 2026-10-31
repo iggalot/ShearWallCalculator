@@ -29,6 +29,7 @@
             <MenuItem Header="_View">
                 <MenuItem Header="_Refresh" Click="Refresh_Click"/>
                 <MenuItem Header="3D _Wind View (window)" Click="Open3DWindWindow_Click"/>
+                <MenuItem Header="_Hold-down catalog (values used by the design)" Click="OpenHoldownCatalog_Click"/>
             </MenuItem>
             <MenuItem Header="_Edit">
                 <MenuItem Header="Open Image Tool" Click="OpenImageTool_Click"/>

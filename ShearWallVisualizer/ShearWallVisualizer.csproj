@@ -143,6 +143,7 @@
     <Compile Include="Controls\ShearWallResultsControl_Rigid.xaml.cs">
       <DependentUpon>ShearWallResultsControl_Rigid.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Dialogs\HoldownCatalogWindow.cs" />
     <Compile Include="Dialogs\EnterMeasurementDialog.xaml.cs">
       <DependentUpon>EnterMeasurementDialog.xaml</DependentUpon>
     </Compile>

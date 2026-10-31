@@ -2,6 +2,17 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-10-30 (late) — Statics review, calculation sheets, all wind directions, hold-down catalog (SWC f0a85d5, a4aa4fb; W7 47bd5de)
+
+- **Sign convention (both apps):** building axes x right, y up; moments CCW positive, M = (r × F)z = rx·Fy − ry·Fx. Wall shears are the force each wall exerts on the diaphragm (opposite to the load).
+- **Rigid diaphragm:** Mt_comb = Vx·ecc_y − Vy·ecc_x + Mt (ecc = CR − CM) confirmed. The torsional shear had the opposite sense to the direct shear (its moment about the CR came out +Mt_comb instead of −Mt_comb; diaphragm not in equilibrium, residual 2·Mt_comb). Now +k·Mt_comb·ȳ/J (E-W) and −k·Mt_comb·x̄/J (N-S). Hand example (40 × 20 ft, stiff west wall, Vy = 10 k): walls −7.505 / −2.495 k, E-W couple ±5.009 k; moments about the west wall close to zero.
+- **Flexible diaphragm (reviewed from scratch):** tributary method confirmed for uniform load (simple spans; outer lines take the overhang as a force only). Fixed: wall shears now carry the same sign convention as the rigid calculation; fewer than two wall lines in a direction warns instead of throwing. **Open:** load cases with a torsional moment Mt are flagged but Mt is not applied (how Mt becomes a non-uniform diaphragm load is undecided; the 27.3-8 and 28.3.2.1 exceptions exempt one- and two-story flexible-diaphragm buildings from the torsional cases).
+- **Wind from every side:** Chapter 27 cases now include the 180° directions (Case 1 ±, Case 2 ± wind × ± torsion, Cases 3 and 4 in all four diagonals): 32 cases (8 with the 1-and-3 exception). Chapter 28: each building corner as the reference corner for both wind axes — (Vx, Vy, M), (Vx, −Vy, −M), (−Vx, −Vy, M), (−Vx, Vy, −M) — basic and torsional, plus the minimum ±: 20 cases (12 exempt).
+- **Chapter 28 per-zone vector model:** each zone (split at the plan center where it becomes a T zone) has signed p, true area, outward normal, centroid, r from the CM, F = −p·A·n and Mz. Case B side walls 1/4 reported (they cancel in ΣFy); unequal roof halves 2/3 give a cross-wind Vy on gables. Details page: sign convention, zone tally, totals, cases in calculation and building axes.
+- **Per-wall range:** most positive and most negative shear with their cases; design V = larger magnitude; hold-downs in pairs.
+- **Report:** rigid and flexible calculation sheets (formulas, wall properties, every case with its subcalculations and statics checks).
+- **Hold-down catalog (View menu):** every model and fastener option from `NDSProvisions/SimpsonCatalog`, read through `ShearWallDesigner.CatalogRows()` (the same managers the selection uses; a test checks they match), with the walls using each option. To check: HDU14-SDS2.5 lists 36 ¼ SDS on 3.5 × 5.5 twice (10770 and 14445 lb; likely 5.5 × 5.5 for the second).
+
 ## 2026-10-30 (night) — Item 3c: Chapter 28 envelope procedure (W7 bc95ffd)
 
 - **Choice:** Results step, Shear walls section: "Ch. 27" (default) or "Ch. 28 low-rise". Stored in `WindParameters_Base.LateralProcedure` and in project files. The shear-wall link, summary, details and report all follow it.

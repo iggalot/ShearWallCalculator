@@ -202,5 +202,41 @@ namespace ShearWallCalculator.Tests
                 Assert.IsTrue(r.Pass);
             }
         }
+
+        /// <summary>
+        /// The hold-down catalog screen lists exactly what the design selects from: every option the selector can choose
+        /// (each family, each species) appears with the same model, fasteners and allowable tension, and nothing extra.
+        /// </summary>
+        [TestMethod]
+        public void HoldownCatalogRows_AreTheValuesTheDesignUses()
+        {
+            var d = new ShearWallDesigner();
+            var rows = d.CatalogRows();
+            Assert.IsTrue(rows.Count > 0);
+            foreach (HoldownFamilies family in Enum.GetValues(typeof(HoldownFamilies)))
+                foreach (var species in new[] { WoodTypes.WOODTYPE_DF_SP, WoodTypes.WOODTYPE_SPF_HF })
+                {
+                    var options = System.Linq.Enumerable.ToList(d.Options(family, species));
+                    var shown = System.Linq.Enumerable.ToList(System.Linq.Enumerable.Where(rows, r => r.Family == family &&
+                        (species == WoodTypes.WOODTYPE_SPF_HF ? r.AllowableSPF_HF : r.AllowableDF_SP).HasValue));
+                    Assert.AreEqual(options.Count, shown.Count, $"{family} {species}");
+                    for (int i = 0; i < options.Count; i++)
+                    {
+                        Assert.AreEqual(options[i].Model, shown[i].Model);
+                        Assert.AreEqual(options[i].Fasteners, shown[i].Fasteners);
+                        Assert.AreEqual(options[i].Allowable, (species == WoodTypes.WOODTYPE_SPF_HF ? shown[i].AllowableSPF_HF : shown[i].AllowableDF_SP).Value, 0.0);
+                    }
+                }
+
+            // stored values come through verbatim: DTT1Z, 6 #9 SD screws, 840 lb DF/SP and SPF/HF, 0.17 in.
+            var dtt = System.Linq.Enumerable.First(rows, r => r.Model == "DTT1Z");
+            Assert.IsTrue(dtt.FirstOfModel);
+            Assert.AreEqual(14, dtt.Gauge);
+            Assert.AreEqual(7.125, dtt.HeightOrLength, 0.0);
+            Assert.AreEqual("6 #9 SD", dtt.Fasteners);
+            Assert.AreEqual(840, dtt.AllowableDF_SP.Value, 0.0);
+            Assert.AreEqual(840, dtt.AllowableSPF_HF.Value, 0.0);
+            Assert.AreEqual(0.17, dtt.DeflectionAtAllowable.Value, 0.0);
+        }
     }
 }

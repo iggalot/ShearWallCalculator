@@ -78,6 +78,30 @@ namespace ShearWallCalculator.Design
     }
 
     /// <summary>The selected hold-down: model, fastener schedule and allowable tension (lb, ASD).</summary>
+    /// <summary>One hold-down model with one fastener option, as stored in the catalog (inches, pounds; ASD allowable tension).</summary>
+    public sealed class HoldownSpecRow
+    {
+        public HoldownFamilies Family { get; set; }
+        public string Model { get; set; }
+        public bool FirstOfModel { get; set; }
+        public int Gauge { get; set; }
+        public double W { get; set; }
+        /// <summary>H for HDU/DTT, L for HTT and straps.</summary>
+        public double HeightOrLength { get; set; }
+        public double? B { get; set; }
+        public double? CL { get; set; }
+        public double? SO { get; set; }
+        public double? AnchorBoltDia { get; set; }
+        public string CodeRef { get; set; }
+        public string Fasteners { get; set; }
+        public double FastenerLength { get; set; }
+        public double? WoodMinHeight { get; set; }
+        public double? WoodMinWidth { get; set; }
+        public double? AllowableDF_SP { get; set; }
+        public double? AllowableSPF_HF { get; set; }
+        public double? DeflectionAtAllowable { get; set; }
+    }
+
     public sealed class HoldownChoice
     {
         public string Model { get; set; }
@@ -215,6 +239,53 @@ namespace ShearWallCalculator.Design
                 .OrderBy(o => o.Allowable)
                 .FirstOrDefault();
         }
+
+        /// <summary>
+        /// Every hold-down in the catalog this designer selects from, one row per model and fastener option, with all the
+        /// stored data. It reads the same managers as <see cref="SelectHoldown"/>, so the values shown are the values used.
+        /// </summary>
+        public List<HoldownSpecRow> CatalogRows()
+        {
+            var rows = new List<HoldownSpecRow>();
+            void Add(HoldownFamilies family, string model, int gauge, double w, double hl, double? b, double? cl, double? so, double? bolt, string code,
+                     int qty, string type, string size, double length, double? minH, double? minW, IDictionary<string, double> loads, double? defl, bool first)
+            {
+                rows.Add(new HoldownSpecRow
+                {
+                    Family = family, Model = model, FirstOfModel = first, Gauge = gauge, W = w, HeightOrLength = hl, B = b, CL = cl, SO = so,
+                    AnchorBoltDia = bolt, CodeRef = code, Fasteners = Fasteners(qty, type, size), FastenerLength = length,
+                    WoodMinHeight = minH, WoodMinWidth = minW, DeflectionAtAllowable = defl,
+                    AllowableDF_SP = loads.TryGetValue("DF_SP", out var df) ? df : (double?)null,
+                    AllowableSPF_HF = loads.TryGetValue("SPF_HF", out var spf) ? spf : (double?)null,
+                });
+            }
+            foreach (var m in catalog.HDUManager.HDU_Dict.Values)
+                for (int i = 0; i < m.FastenerOptions.Count; i++)
+                {
+                    var f = m.FastenerOptions[i];
+                    Add(HoldownFamilies.HDU_ToFoundation, m.Model, m.Gauge, m.W, m.H, m.B, m.CL, m.SO, m.AnchorBoltDia, m.CodeRef,
+                        f.Screws_Quantity, f.Screws_Type, f.ScrewSize, f.Length, f.WoodMinHeight, f.WoodMinWidth, f.AllowableTensionLoads, f.DeflectionAtAllowableLoad, i == 0);
+                }
+            foreach (var m in catalog.HTTManager.HTT_Dict.Values)
+                for (int i = 0; i < m.FastenerOptions.Count; i++)
+                {
+                    var f = m.FastenerOptions[i];
+                    Add(HoldownFamilies.HTT_ToFoundation, m.Model, m.Gauge, m.W, m.L, m.B, m.CL, m.SO, m.AnchorBoltDia, m.CodeRef,
+                        f.Screws_Quantity, f.Screws_Type, f.ScrewSize, f.Length, f.WoodMinHeight, f.WoodMinWidth, f.AllowableTensionLoads, f.DeflectionAtAllowableLoad, i == 0);
+                }
+            foreach (var m in catalog.StrapTiesManager.StrapTies_Dict.Values)
+                for (int i = 0; i < m.FastenerOptions.Count; i++)
+                {
+                    var f = m.FastenerOptions[i];
+                    Add(HoldownFamilies.Strap_ToWallBelow, m.Model, m.Gauge, m.W, m.L, null, null, null, null, m.CodeRef,
+                        f.Screws_Quantity, f.Screws_Type, f.ScrewSize, f.Length, null, null, f.AllowableTensionLoads, null, i == 0);
+                }
+            return rows;
+        }
+
+        /// <summary>The options <see cref="SelectHoldown"/> chooses from (for checks against <see cref="CatalogRows"/>).</summary>
+        public IEnumerable<HoldownChoice> Options(HoldownFamilies family, WoodTypes species) =>
+            HoldownOptions(family, species == WoodTypes.WOODTYPE_SPF_HF ? "SPF_HF" : "DF_SP");
 
         private IEnumerable<HoldownChoice> HoldownOptions(HoldownFamilies family, string species)
         {

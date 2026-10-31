@@ -273,6 +273,23 @@ namespace ShearWallVisualizer
                 if (designResults.Count == 0) message = "No wall shears yet: add loads (LOADS button) or link the wind loads.";
             }
             designPanel.Show(Calculator, designResults, designer, windLoadsLinked, message);
+            holdownCatalog?.SetDesign(designResults);
+        }
+
+        private Dialogs.HoldownCatalogWindow holdownCatalog;
+
+        /// <summary>The hold-down catalog the design selects from, with the walls using each option (kept current).</summary>
+        private void OpenHoldownCatalog_Click(object sender, RoutedEventArgs e)
+        {
+            if (designer == null) return;
+            if (holdownCatalog == null)
+            {
+                holdownCatalog = new Dialogs.HoldownCatalogWindow(designer) { Owner = this };
+                holdownCatalog.Closed += (s, a) => holdownCatalog = null;
+            }
+            holdownCatalog.SetDesign(designResults);
+            holdownCatalog.Show();
+            holdownCatalog.Activate();
         }
 
         /// <summary>The lightest passing edge nailing (then both sides) for every wall, keeping its panel and hold-down type.</summary>
