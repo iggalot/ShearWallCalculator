@@ -97,15 +97,6 @@ namespace ShearWallCalculator.Tests
         }
 
         [TestMethod]
-        public void OlderProject_SameAsBefore()
-        {
-            // before: bottom-left at the origin, no rotation, one scale
-            var img = ReferenceImage.FromOlderProject("old.png", 0.25, 200);
-            Near(new Point(0, 0), img.PixelToWorld(new Point(0, 200)));
-            Near(new Point(10, 50), img.PixelToWorld(new Point(40, 0)));
-        }
-
-        [TestMethod]
         public void ProjectFile_KeepsTheImagePlacement()
         {
             var calc = new ShearWallCalculator_RigidDiaphragm

@@ -32,7 +32,7 @@
                 <MenuItem Header="_Hold-down catalog (values used by the design)" Click="OpenHoldownCatalog_Click"/>
             </MenuItem>
             <MenuItem Header="_Edit">
-                <MenuItem Header="Import plan image..." Click="ImportPlanImage_Click"/>
+                <MenuItem Header="Import plan (DXF, PDF, image)..." Click="ImportPlanImage_Click"/>
             </MenuItem>
             <MenuItem Header="_Help">
                 <MenuItem Header="Open _log folder" Click="OpenLogFolder_Click"/>

@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Media;
 
@@ -42,6 +44,17 @@ namespace ShearWallCalculator.Drawing
         /// until the image is found and loaded once.
         /// </summary>
         public byte[] Data { get; set; }
+
+        /// <summary>
+        /// CAD linework (from a DXF), in the image's own coordinates (u right, v down, one unit = <see cref="VectorUnitFeet"/>
+        /// at import). Null for a picture (PNG, JPG, a PDF page...).
+        /// </summary>
+        public List<VectorPath> Paths { get; set; }
+
+        /// <summary>What the image came from, for the status line and the log (e.g. "DXF, inches", "PDF page 2 of 5").</summary>
+        public string Source { get; set; }
+
+        public bool IsVector => Paths != null && Paths.Count > 0;
 
         /// <summary>True once the scale has been set by calibration or a drawing scale (not just the import guess).</summary>
         public bool Calibrated { get; set; }
@@ -197,13 +210,68 @@ namespace ShearWallCalculator.Drawing
             return d;
         }
 
+        /// <summary>Size of one image unit of CAD linework at import, ft (fine enough that rounding to 0.01 unit is invisible).</summary>
+        public const double VectorUnitFeet = 0.01;
+
         /// <summary>
-        /// Older projects kept only a path and one scale, with the image's bottom-left corner at the origin.
+        /// CAD linework placed like an imported picture: at true size (<paramref name="feetPerUnit"/> ft per drawing unit),
+        /// its lower-left corner at (0, 0), only the paths on <paramref name="layers"/>.
         /// </summary>
-        public static ReferenceImage FromOlderProject(string path, double feetPerPixel, int pixelHeight) => new ReferenceImage
+        /// <exception cref="ArgumentException">Nothing to import on those layers, or the units are not positive.</exception>
+        public static ReferenceImage FromDxf(string path, DxfDrawing drawing, ICollection<string> layers, double feetPerUnit, string source)
         {
-            Path = path, FeetPerPixel = feetPerPixel > 0 ? feetPerPixel : 1.0, PixelHeight = pixelHeight,
-            Origin = new Point(0, pixelHeight * (feetPerPixel > 0 ? feetPerPixel : 1.0)), Calibrated = true,
-        };
+            if (!(feetPerUnit > 0)) throw new ArgumentException("Choose the drawing units.");
+            var kept = drawing.Paths.Where(p => layers == null || layers.Contains(p.Layer)).ToList();
+            var box = drawing.Bounds(layers);
+            if (kept.Count == 0 || box.IsEmpty) throw new ArgumentException("There is no linework on the chosen layers.");
+            double k = feetPerUnit / VectorUnitFeet; // image units per drawing unit
+            var paths = kept.Select(p => new VectorPath
+            {
+                Layer = p.Layer, Closed = p.Closed,
+                Xy = p.Points.SelectMany(q => new[] { Math.Round((q.X - box.Left) * k, 2), Math.Round((box.Bottom - q.Y) * k, 2) }).ToArray(),
+            }).ToList();
+            int w = Math.Max(1, (int)Math.Ceiling(box.Width * k)), h = Math.Max(1, (int)Math.Ceiling(box.Height * k));
+            var img = Imported(path, w, h, VectorUnitFeet);
+            img.Origin = new Point(0, box.Height * feetPerUnit); // exact, not the rounded-up height
+            img.Paths = paths;
+            img.Source = source;
+            img.Calibrated = true;
+            img.Opacity = 0.8;
+            return img;
+        }
+
+        /// <summary>
+        /// The CAD segments within <paramref name="tolerance"/> ft of a world point, in world ft (for object snaps).
+        /// Empty for a picture.
+        /// </summary>
+        public List<SnapSegment> SegmentsNear(Point world, double tolerance)
+        {
+            var list = new List<SnapSegment>();
+            if (!IsVector || !(FeetPerPixel > 0)) return list;
+            Point c = WorldToPixel(world);
+            double t = tolerance / FeetPerPixel;
+            foreach (var p in Paths)
+            {
+                var xy = p.Xy;
+                if (xy == null) continue;
+                int n = xy.Length / 2;
+                for (int i = 0; i < (p.Closed ? n : n - 1); i++)
+                {
+                    int j = (i + 1) % n;
+                    double x1 = xy[2 * i], y1 = xy[2 * i + 1], x2 = xy[2 * j], y2 = xy[2 * j + 1];
+                    if (c.X < Math.Min(x1, x2) - t || c.X > Math.Max(x1, x2) + t || c.Y < Math.Min(y1, y2) - t || c.Y > Math.Max(y1, y2) + t) continue;
+                    list.Add(new SnapSegment(PixelToWorld(new Point(x1, y1)), PixelToWorld(new Point(x2, y2))));
+                }
+            }
+            return list;
+        }
+    }
+
+    /// <summary>One polyline of CAD linework in a <see cref="ReferenceImage"/>: x, y pairs in image units.</summary>
+    public sealed class VectorPath
+    {
+        public string Layer { get; set; }
+        public bool Closed { get; set; }
+        public double[] Xy { get; set; }
     }
 }

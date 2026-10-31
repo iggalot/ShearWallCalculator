@@ -12,11 +12,6 @@ namespace ShearWallCalculator
         /// <summary>The plan image under the drawing (null: none).</summary>
         public ShearWallCalculator.Drawing.ReferenceImage Image { get; set; }
 
-        // Older projects: the image path and one scale, bottom-left corner at the origin (read, then moved into Image).
-        public string selectedImageFilePath = null;
-        public double pixelScaleX = 1.0;  // the scale factor for pixels to real-world coords
-        public double pixelScaleY = 1.0;  // the scale factor for pixels to real-world coords
-
         public string CalculatorType { get; }
         public WallSystem _wall_system { get; set;  } = new WallSystem();
         public DiaphragmSystem _diaphragm_system { get; set; } = new DiaphragmSystem();
@@ -147,9 +142,6 @@ namespace ShearWallCalculator
 
             // Loaded image information
             Image = copy_calc.Image?.Clone();
-            selectedImageFilePath = copy_calc.selectedImageFilePath;
-            pixelScaleX = copy_calc.pixelScaleX;
-            pixelScaleY = copy_calc.pixelScaleY;
 
             Update();  // update necessary system parts
         }

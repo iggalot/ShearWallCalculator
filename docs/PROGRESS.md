@@ -2,6 +2,15 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-01 — Plan import: DXF (true size) and PDF sheets; old image code removed (SWC)
+
+- **One command for every plan:** Edit > Import plan (DXF, PDF, image)..., or Image ▾. The file type picks the dialog. A DWG gets a message: save it as DXF in AutoCAD.
+- **DXF** (`Drawing/DxfReader.cs`, written here, no library: DXF is Autodesk's published text format). Reads LINE, LWPOLYLINE and POLYLINE (with arc bulges), ARC, CIRCLE, ELLIPSE, SPLINE (through its fit or control points) and block INSERTs (nested, scaled, rotated, arrays; layer-0 entities take the insert's layer); mirrored entities (extrusion −Z) are flipped. Model space only; text, dimensions and hatches are skipped and counted. Units from $INSUNITS; when the file does not say, the dialog asks (inches by default) and shows the plan size so a wrong unit shows at once. **Layers:** tick the ones to keep. The linework comes in at true size, is drawn as crisp lines at any zoom, and its ends, midpoints and crossings are object snaps while drawing walls (only the lines near the cursor are checked).
+- **PDF** (`Helpers/PdfPages.cs`): rendered by the PDF engine built into Windows 10/11 (Windows.Data.Pdf, referenced from System32\WinMetadata, part of every Windows 10/11 machine; no SDK, no package). Pick the sheet and the printed drawing scale: the paper size is in the PDF, so there is no resolution to guess (rendered at up to 200 dpi, longest side at most 6000 pixels). "Not to scale" sets the scale on the drawing with two points. The rendered page is stored in the project.
+- **Pictures** (PNG, JPG, TIFF...): as before.
+- **Removed (user: clean up the former image importer):** `ImageLayer.cs`, the image members of `LayerManager`, `EnterMeasurementDialog`, the older-project fields `selectedImageFilePath` / `pixelScaleX` / `pixelScaleY` and their migration. Older project files still open; a plan image saved the old way is not brought back (import it again).
+- **Tests:** SWC 134 (10 new, `DxfReaderTests`, by hand: units; line, polyline, arc, circle; bulge half circle; old-style polyline; block insert scaled, rotated and moved with layer 0 taking the insert's layer; mirrored arc vs line; paper space, text, dimensions and hatches skipped; DWG / non-DXF refused; true-size placement, endpoint snap, project round trip). PDF checked by rendering a hand-made two-page PDF: 8.5 × 11 and 36 × 24 in read back, lines at the right pixels.
+
 ## 2026-11-01 — Plan image stored in the project file (SWC)
 
 - **The image file itself is saved inside the project** (`ReferenceImage.Data`, base64 in the JSON), with its final scale, rotation, position, opacity, lock and on/off state. Reopening the project brings the image back at its scale even if the original file was moved or deleted, or the project is opened on another computer. The project file grows by about 1.3 × the image file size.

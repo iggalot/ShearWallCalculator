@@ -52,6 +52,25 @@
     <Reference Include="WindowsBase" />
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
+    <!-- PDF import: the PDF renderer built into Windows 10/11 (Windows.Data.Pdf). These metadata files are part of
+         every Windows 10/11 machine (System32\WinMetadata) and of the .NET Framework; nothing is downloaded or copied with the app. -->
+    <Reference Include="Windows.Foundation">
+      <HintPath>$(WINDIR)\System32\WinMetadata\Windows.Foundation.winmd</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Windows.Data">
+      <HintPath>$(WINDIR)\System32\WinMetadata\Windows.Data.winmd</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Windows.Storage">
+      <HintPath>$(WINDIR)\System32\WinMetadata\Windows.Storage.winmd</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="System.Runtime.WindowsRuntime">
+      <HintPath>$(WINDIR)\Microsoft.NET\Framework\v4.0.30319\System.Runtime.WindowsRuntime.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="System.Runtime" />
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml">
@@ -66,6 +85,9 @@
     <Compile Include="Controls\DesignOverlay.cs" />
     <Compile Include="Controls\ImageTool.cs" />
     <Compile Include="Dialogs\ImportImageDialog.cs" />
+    <Compile Include="Dialogs\ImportDxfDialog.cs" />
+    <Compile Include="Dialogs\ImportPdfDialog.cs" />
+    <Compile Include="Helpers\PdfPages.cs" />
     <Compile Include="Controls\WallDesignControl.xaml.cs">
       <DependentUpon>WallDesignControl.xaml</DependentUpon>
     </Compile>
@@ -77,10 +99,6 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Controls\WallResultsControl.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Dialogs\EnterMeasurementDialog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -98,9 +116,6 @@
     </Compile>
     <Compile Include="CanvasDrawer.cs" />
     <Compile Include="Dialogs\HoldownCatalogWindow.cs" />
-    <Compile Include="Dialogs\EnterMeasurementDialog.xaml.cs">
-      <DependentUpon>EnterMeasurementDialog.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Dialogs\LoadInputDialog.xaml.cs">
       <DependentUpon>LoadInputDialog.xaml</DependentUpon>
     </Compile>
@@ -108,7 +123,6 @@
     <Compile Include="Helpers\MathHelpers.cs" />
     <Compile Include="Helpers\ShearWallReport.cs" />
     <Compile Include="Helpers\TabControlManager.cs" />
-    <Compile Include="ImageLayer.cs" />
     <Compile Include="LayerData.cs" />
     <Compile Include="LayerManager.cs" />
     <Compile Include="MainWindow.xaml.cs">

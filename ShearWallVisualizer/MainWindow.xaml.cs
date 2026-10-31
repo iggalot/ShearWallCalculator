@@ -65,10 +65,6 @@ namespace ShearWallVisualizer
 
         private Dictionary<MenuTabs, string> menuTabNames = new Dictionary<MenuTabs, string>();
 
-        //// data for the image overlay
-        //string selectedImageFilePath = null;
-        //double pixelScaleX = 1.0;  // the scale factor for pixels to real-world coords
-        //double pixelScaleY = 1.0;  // the scale factor for pixels to real-world coords
 
         // grid stuff
         bool gridNeedsUpdate = true;
@@ -79,6 +75,8 @@ namespace ShearWallVisualizer
         private BitmapSource planBitmap;
         private string planBitmapPath;
         private byte[] planBitmapData;   // the stored image the bitmap was decoded from
+        private Geometry planVector;           // CAD linework of the plan, image units
+        private List<VectorPath> planVectorPaths; // the paths it was built from
         private readonly ImageTool imageTool = new ImageTool();
 
         double majorGridSpacing = 5.0;  // Major grid lines in world units
@@ -387,10 +385,16 @@ namespace ShearWallVisualizer
         private double PixelsToWorld(double pixels) => pixels / Math.Max(zoomFactorX, 1e-9);
 
         /// <summary>The object snap at a world point, or the point itself when snaps are off or nothing is in reach.</summary>
-        private SnapResult FindSnap(Point world) =>
-            snapMode && Calculator != null && (currentMode != DrawMode.None || imageTool.WantsSnaps)
-                ? Snapper.Find(world, PixelsToWorld(SnapPixels), Snapper.SegmentsOf(Calculator), snapModes, startPoint_world)
-                : new SnapResult { Kind = SnapModes.None, Point = world };
+        private SnapResult FindSnap(Point world)
+        {
+            if (!(snapMode && Calculator != null && (currentMode != DrawMode.None || imageTool.WantsSnaps)))
+                return new SnapResult { Kind = SnapModes.None, Point = world };
+            double tolerance = PixelsToWorld(SnapPixels);
+            var segments = Snapper.SegmentsOf(Calculator);
+            var img = Calculator.Image;
+            if (img != null && img.IsVector && img.Visible && !hideImage) segments.AddRange(img.SegmentsNear(world, tolerance)); // CAD plan lines
+            return Snapper.Find(world, tolerance, segments, snapModes, startPoint_world);
+        }
 
         private Point WorldToScreen(Point p, FrameworkElement element)
         {
@@ -1571,20 +1575,31 @@ namespace ShearWallVisualizer
         }
         // ------------------------------------------------------------------ plan image
 
-        /// <summary>The plan image under the drawing: image pixels → world (scale, rotation, position) → screen.</summary>
+        /// <summary>The plan under the drawing: image units → world (scale, rotation, position) → screen.</summary>
         private void DrawReferenceImage(DrawingContext ctx)
         {
             var img = Calculator?.Image;
             if (hideImage || img == null || !img.Visible) return;
-            var bmp = PlanBitmap(img);
-            if (bmp == null) return;
             try
             {
                 Point o = WorldToScreen(new Point(0, 0), m_layers), ex = WorldToScreen(new Point(1, 0), m_layers), ey = WorldToScreen(new Point(0, 1), m_layers);
                 var m = img.PixelToWorldMatrix();
                 m.Append(new Matrix(ex.X - o.X, ex.Y - o.Y, ey.X - o.X, ey.Y - o.Y, o.X, o.Y));
+                double opacity = Math.Max(0.05, Math.Min(1, img.Opacity));
+                if (img.IsVector)
+                {
+                    // the geometry is transformed, not the pen: lines stay one pixel wide at any zoom
+                    var lines = new GeometryGroup { Transform = new MatrixTransform(m) };
+                    lines.Children.Add(PlanVector(img));
+                    ctx.PushOpacity(opacity);
+                    ctx.DrawGeometry(null, PlanPen, lines);
+                    ctx.Pop();
+                    return;
+                }
+                var bmp = PlanBitmap(img);
+                if (bmp == null) return;
                 ctx.PushTransform(new MatrixTransform(m));
-                ctx.PushOpacity(Math.Max(0.05, Math.Min(1, img.Opacity)));
+                ctx.PushOpacity(opacity);
                 ctx.DrawImage(bmp, new Rect(0, 0, img.PixelWidth, img.PixelHeight));
                 ctx.Pop();
                 ctx.Pop();
@@ -1594,6 +1609,29 @@ namespace ShearWallVisualizer
                 if (!imageDrawWarned) Log.Warning("Could not draw the plan image", ex);
                 imageDrawWarned = true;
             }
+        }
+
+        private static readonly Pen PlanPen = FrozenPen(Color.FromRgb(0x4A, 0x55, 0x68), 1.0);
+
+        /// <summary>The CAD linework as one geometry in image units, built once per import.</summary>
+        private Geometry PlanVector(ReferenceImage img)
+        {
+            if (planVector != null && planVectorPaths == img.Paths) return planVector;
+            var g = new StreamGeometry();
+            using (var c = g.Open())
+                foreach (var p in img.Paths)
+                {
+                    var xy = p.Xy;
+                    if (xy == null || xy.Length < 4) continue;
+                    c.BeginFigure(new Point(xy[0], xy[1]), false, p.Closed);
+                    var pts = new List<Point>(xy.Length / 2 - 1);
+                    for (int i = 2; i + 1 < xy.Length; i += 2) pts.Add(new Point(xy[i], xy[i + 1]));
+                    c.PolyLineTo(pts, true, false);
+                }
+            g.Freeze();
+            planVector = g;
+            planVectorPaths = img.Paths;
+            return g;
         }
 
         /// <summary>
@@ -1654,7 +1692,7 @@ namespace ShearWallVisualizer
                 menu.Items.Add(mi);
             }
 
-            Item(img == null ? "Import plan image..." : "Replace plan image...", ImportPlanImage);
+            Item(img == null ? "Import plan (DXF, PDF, image)..." : "Replace plan (DXF, PDF, image)...", ImportPlanImage);
             Item(hideImage ? "Show image layer" : "Hide image layer", () => btnHideImage_Click(btnHideImage, null), img != null,
                  "The image is a layer under the drawing: it is never selected by clicks, and it is saved inside the project file.");
             menu.Items.Add(new Separator());
@@ -1683,38 +1721,87 @@ namespace ShearWallVisualizer
 
         private void ImportPlanImage_Click(object sender, RoutedEventArgs e) => ImportPlanImage();
 
-        private void ImportPlanImage()
+        /// <summary>
+        /// Import a plan under the drawing: a DXF (true size from its units, linework you can snap to), a PDF sheet
+        /// (the printed drawing scale; the paper size is in the file) or a picture (drawing scale and dpi, or set the
+        /// scale on the drawing). The plan is stored in the project file.
+        /// </summary>
+        private async void ImportPlanImage()
         {
             if (Calculator == null) return;
             var open = new Microsoft.Win32.OpenFileDialog
             {
-                Title = "Import plan image",
-                Filter = "Images (*.png;*.jpg;*.jpeg;*.bmp;*.tif;*.tiff;*.gif)|*.png;*.jpg;*.jpeg;*.bmp;*.tif;*.tiff;*.gif|All files (*.*)|*.*",
+                Title = "Import plan",
+                Filter = "Plans (*.dxf;*.pdf;*.png;*.jpg;*.jpeg;*.bmp;*.tif;*.tiff;*.gif)|*.dxf;*.pdf;*.png;*.jpg;*.jpeg;*.bmp;*.tif;*.tiff;*.gif|" +
+                         "CAD drawing (*.dxf)|*.dxf|PDF sheet (*.pdf)|*.pdf|Images (*.png;*.jpg;*.jpeg;*.bmp;*.tif;*.tiff;*.gif)|*.png;*.jpg;*.jpeg;*.bmp;*.tif;*.tiff;*.gif|" +
+                         "All files (*.*)|*.*",
             };
             if (open.ShowDialog(this) != true) return;
+            string file = open.FileName;
+            string ext = System.IO.Path.GetExtension(file).ToLowerInvariant();
 
-            ImportImageDialog dialog;
+            ReferenceImage result = null;
+            bool calibrateOnDrawing = false;
+            Cursor = Cursors.Wait;
             try
             {
-                dialog = new ImportImageDialog(open.FileName, DrawingWidthFeet()) { Owner = this };
+                if (ext == ".dwg")
+                {
+                    MessageBox.Show(this, "DWG files are not read directly. In AutoCAD, save the drawing as DXF (SAVEAS > DXF, or DXFOUT) and import the DXF: " +
+                                          "it comes in at true size.", "Import plan", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+                if (ext == ".dxf")
+                {
+                    var drawing = await PdfPages.InBackground(() => DxfReader.ReadFile(file));
+                    if (drawing.Paths.Count == 0) throw new System.IO.InvalidDataException("No lines, polylines or arcs were found in model space.");
+                    Cursor = null;
+                    var dialog = new ImportDxfDialog(file, drawing) { Owner = this };
+                    if (dialog.ShowDialog() != true) return;
+                    result = dialog.Result;
+                }
+                else if (ext == ".pdf")
+                {
+                    var pages = await PdfPages.InBackground(() => PdfPages.PaperSizes(file));
+                    if (pages.Count == 0) throw new System.IO.InvalidDataException("The PDF has no pages.");
+                    Cursor = null;
+                    var dialog = new ImportPdfDialog(file, pages, DrawingWidthFeet()) { Owner = this };
+                    if (dialog.ShowDialog() != true) return;
+                    result = dialog.Result;
+                    calibrateOnDrawing = dialog.CalibrateOnDrawing;
+                }
+                else
+                {
+                    Cursor = null;
+                    var dialog = new ImportImageDialog(file, DrawingWidthFeet()) { Owner = this };
+                    if (dialog.ShowDialog() != true) return;
+                    result = dialog.Result;
+                    result.Source = "Image";
+                    calibrateOnDrawing = dialog.CalibrateOnDrawing;
+                    if (!result.Embed(file)) Log.Warning("The plan image could not be stored in the project: " + file);
+                }
             }
             catch (Exception ex)
             {
-                Log.Warning("Could not read the image " + open.FileName, ex);
-                MessageBox.Show(this, "This file could not be read as an image.\n\n" + ex.Message, "Import plan image", MessageBoxButton.OK, MessageBoxImage.Warning);
+                Log.Warning("Could not import the plan " + file, ex);
+                MessageBox.Show(this, "This file could not be imported.\n\n" + ex.Message, "Import plan", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
-            if (dialog.ShowDialog() != true) return;
+            finally
+            {
+                Cursor = null;
+            }
 
-            Calculator.Image = dialog.Result;
-            if (!Calculator.Image.Embed(open.FileName)) Log.Warning("The plan image could not be stored in the project: " + open.FileName);
+            Calculator.Image = result;
             planBitmap = null;
+            planBitmapData = null;
+            planVector = null;
             imageDrawWarned = false;
             hideImage = false;
             btnHideImage.Tag = "on";
-            Log.Info("Plan image imported: " + open.FileName);
+            Log.Info($"Plan imported ({result.Source}): {file}");
             ZoomToImage();
-            if (dialog.CalibrateOnDrawing) StartImageCommand(ImageCommand.Calibrate);
+            if (calibrateOnDrawing) StartImageCommand(ImageCommand.Calibrate);
             ImageChanged();
         }
 
@@ -1796,9 +1883,9 @@ namespace ShearWallVisualizer
                 tbImageFileName.ToolTip = null;
                 return;
             }
-            tbImageFileName.Text = "Image: " + System.IO.Path.GetFileName(img.Path) + (img.Calibrated ? "" : "  (scale not set)") + (img.Locked ? "  (locked)" : "");
+            tbImageFileName.Text = "Plan: " + System.IO.Path.GetFileName(img.Path) + (string.IsNullOrEmpty(img.Source) ? "" : $" ({img.Source})") + (img.Calibrated ? "" : "  (scale not set)") + (img.Locked ? "  (locked)" : "");
             tbImageFileName.ToolTip = img.Path + Environment.NewLine +
-                                      $"{img.FeetPerPixel * 12:0.###} in per pixel, turned {img.RotationDegrees:0.##}°, opacity {img.Opacity * 100:0} %";
+                                      (img.IsVector ? $"CAD linework, {img.Paths.Count} paths, " : $"{img.FeetPerPixel * 12:0.###} in per pixel, ") + $"turned {img.RotationDegrees:0.##}°, opacity {img.Opacity * 100:0} %";
         }
 
         /// <summary>Width of what is drawn (ft), for the first size of an uncalibrated image; 60 ft when nothing is drawn.</summary>
@@ -1859,36 +1946,15 @@ namespace ShearWallVisualizer
 
         private void ImageForNewProject()
         {
-            MigrateOlderImage();
             planBitmap = null;
             planBitmapPath = null;
             planBitmapData = null;
+            planVector = null;
             imageDrawWarned = false;
             loggedModel = null; // a different project: start the change log afresh
             imageTool.Cancel();
             hideImage = Calculator?.Image != null && !Calculator.Image.Visible;
             btnHideImage.Tag = hideImage ? null : "on";
-        }
-
-        /// <summary>Older projects kept the image as a path and one scale; move them into the plan image.</summary>
-        private void MigrateOlderImage()
-        {
-            if (Calculator == null || Calculator.Image != null || string.IsNullOrEmpty(Calculator.selectedImageFilePath)) return;
-            string path = Calculator.selectedImageFilePath;
-            int w = 0, h = 0;
-            try
-            {
-                var f = BitmapFrame.Create(new Uri(path, UriKind.Absolute), BitmapCreateOptions.DelayCreation, BitmapCacheOption.None);
-                w = f.PixelWidth;
-                h = f.PixelHeight;
-            }
-            catch (Exception ex)
-            {
-                Log.Warning("The plan image of this older project could not be read: " + path, ex);
-            }
-            Calculator.Image = ReferenceImage.FromOlderProject(path, Calculator.pixelScaleX, h);
-            Calculator.Image.PixelWidth = w;
-            Calculator.selectedImageFilePath = null;
         }
 
         private void DrawGridInformation(DrawingContext ctx)
