@@ -21,9 +21,16 @@ _Branch `dev/wind-core-refactor`. Written 2026-10-31 in answer to the user's lis
 ## 2. Sheathing types and the capacity calculations
 - The Design tab offers every material in the tables. Each wall picks a **material per face**: none, wood structural panel (grade + thickness), wood panel over gypsum, gypsum wallboard, gypsum sheathing, gypsum lath and plaster, cement plaster, or fiberboard. The nail and fastener choices come from the selected table row.
 - **Capacity per face** from Table 4.3A, 4.3B or 4.3C, with each table's own conditions (blocked/unblocked, stud spacing, aspect-ratio limits per Table 4.3.4, species factor for WSP).
-- **Two faces:**
-  - Same material on both faces: the capacities add (SDPWS 4.3.3.2).
-  - Different materials on the two faces: SDPWS 4.3.3.3 has a separate rule for wind. **To confirm against your printed SDPWS before I code it.** Is it the sum, or the larger of (the stronger face) and (2 × the weaker face)? Which materials may be combined?
+- **Two faces — decided by the user, 2026-10-31,** from AWC and WoodWorks sources (below):
+  - **Same material and construction on both faces:** 2 × one face (SDPWS 2021 4.3.5.4.1, Eqs. 4.3-3/4.3-4).
+  - **Different materials (default):** the larger of the stronger face and 2 × the weaker face (SDPWS 2021 4.3.5.4.2). The same rule applies to stiffness.
+  - **Wind exception, a project setting (on by default for new projects; the user's usual practice is to add the two faces):** wood structural panels, hardboard panel siding or structural fiberboard on one face with gypsum wallboard on the other may be summed for wind. WoodWorks lists all three; the AWC FAQ names only wood panels with gypsum, so check this against the printed SDPWS. The report says which rule was used.
+  - **No presets by wall type** (user: exterior walls can be anything). Each face is chosen freely, with a "same on both faces" shortcut and a project default material.
+  - **Two layers on the same face:** only the Table 4.3B assemblies (wood panels over gypsum) and the two-layer rows of Table 4.3C.
+  - Sources:
+    - AWC FAQ, "Is summation of capacities allowed for shear walls sheathed on both sides with different materials?" (2021-09-27).
+    - WoodWorks Expert Tip, "Shear walls with multiple layers of shear resistance" (SDPWS 2021).
+    - The section numbers differ between the two sources (4.3.3.3.2 and 4.3.5.4.2). The repository tables are typed from the 2015 edition (see `SDPWS_EDITION.md`).
 - Hand-calculation unit tests for each table, as for Table 4.3A.
 
 ## 3. Drawing area
