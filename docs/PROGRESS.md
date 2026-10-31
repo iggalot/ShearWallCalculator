@@ -2,6 +2,16 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-10-31 (evening) — Logging, error handling, legacy pages restyled (SWC)
+
+- **Log:** `%AppData%\ShearWallCalculator\logs\swc-yyyy-MM-dd.log`, kept 14 days; Help > Open log folder. An unexpected error is logged with its detail and reported in a message; the action is cancelled and the work stays open. Warnings and errors also appear on the right of the status line (click opens the folder). Tests write their log to the temp folder.
+- **Toolbar:** one row in the workspace-bar style: DRAW Wall (L) / Diaphragm (R), Snap (S), SHOW Grid / Image / Walls & diaphragms, Loads... and the load summary. The active tool is lit. Removed: Test Design (debug), the calculator class name, the Snap and Debug message boxes.
+- **Status line:** what the tool expects next ("Wall: click the second end (right-click cancels)"), cursor in ft, zoom, latest warning. Esc cancels a shape.
+- **Fixed:** the L/R/S/D/Z shortcuts fired while typing in any box (a "d" in a wind input toggled debug mode with a message box). They now act only in the Shear walls workspace and never on text input. Moving the mouse or zooming recalculated everything and rebuilt every panel on each move; it now only redraws.
+- **Walls & diaphragms tab** (was Dimensions): typed coordinates. A wall keeps its direction (start x, start y, length, height; the end follows); a diaphragm is its lower-left corner, width and depth. Clicking a row highlights the shape on the drawing; × deletes.
+- **Calculations tab:** summary strip (loads, center of mass, center of rigidity, Σk, J or wall lines), then "All load cases (design shear)" — most +/− per wall with their cases and the design V — or any single case: rigid shows x̄, ȳ, direct, torsion, total and the case's e and Mt,comb; flexible shows the wall lines (tributary, w, share, K, arm, torsion) and each wall's direct/torsion/total. Flexible warnings are shown.
+- Removed the six legacy controls these replace. **Tests:** SWC 77 (log: daily file, levels, exception detail, event, purge, unwritable folder).
+
 ## 2026-10-31 (later) — Company default list shipped with the app; version record in the project
 
 - **Company default:** `ShearWallVisualizer/HoldownStandardList.default.json` ships with the app, with a version number. Each user's list follows it automatically unless the user has changed their own; then they are asked once per new version. The catalog window has a "Company" column, **Restore company default** and **Save as company default...** (writes the next version). New projects start on the standard list when it has options. The full procedure is in `PROPOSAL_STANDARD_HARDWARE_AND_FLEX_TORSION.md`.

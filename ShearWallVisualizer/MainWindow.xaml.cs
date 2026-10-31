@@ -23,8 +23,6 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using System.Windows.Threading;
-using static ShearWallVisualizer.Controls.DiaphragmDataControl;
-using static ShearWallVisualizer.Controls.WallDataControl;
 
 namespace ShearWallVisualizer
 {
@@ -187,32 +185,17 @@ namespace ShearWallVisualizer
 
         public void UpdateShearWallUI()
         {
-            // clear the tabs
-            sp_DimPanel_Diaphragms.Children.Clear();
-            sp_DimPanel_Walls.Children.Clear();
-            sp_RigidCalcPanel.Children.Clear();
-            sp_FlexibleCalcPanel.Children.Clear();
-
             if (Calculator != null)
             {
                 Calculator.PerformCalculations();
-                // update the calculator
-                if (Calculator.IsValidForCalculation is true)
-                {
-                    CreateCalculationResultsControls_Rigid();
-                    CreateCalculationResultsControls_Flexible();
-                }
-
-                ShowCalculationState();
                 UpdateDesign();
 
                 string img = Calculator.selectedImageFilePath;
                 tbImageFileName.Text = string.IsNullOrEmpty(img) ? "" : "Image: " + System.IO.Path.GetFileName(img);
                 tbImageFileName.ToolTip = string.IsNullOrEmpty(img) ? null : img;
 
-                // recreate the data controls
-                CreateWallDataControls();
-                CreateDiaphragmDataControls();
+                geometryPanel?.Show(Calculator, selectedKind, selectedId);
+                resultsPanel?.Show(Calculator, CalculationTodo(), selectedKind == "Wall" ? selectedId : -1);
 
                 // notify controls that we have updated
                 OnUpdated?.Invoke(this, EventArgs.Empty); // signal that the window has been updated -- so that subcontrols can refresh
@@ -236,6 +219,12 @@ namespace ShearWallVisualizer
         // ------------------------------------------------------------------ shear-wall design (Design tab)
 
         private WallDesignPanel designPanel;
+        private GeometryPanel geometryPanel;
+        private ShearResultsPanel resultsPanel;
+
+        /// <summary>The wall or diaphragm picked in a table ("Wall" / "Diaphragm", id); it is highlighted on the drawing.</summary>
+        private string selectedKind;
+        private int selectedId = -1;
         private ShearWallDesigner designer;
 
         /// <summary>The latest check of each wall (rigid diaphragm), keyed by wall id. Empty when there is nothing to check.</summary>
@@ -277,6 +266,14 @@ namespace ShearWallVisualizer
                 catch (Exception ex) { MessageBox.Show(this, "The standard hold-down list could not be saved:\n" + ex.Message, "Hold-down standard list"); }
                 UpdateShearWallUI();
             };
+            geometryPanel = new GeometryPanel();
+            geometryPanel.GeometryChanged += (s, e) => UpdateShearWallUI();
+            geometryPanel.SelectionChanged += (kind, id) => { selectedKind = kind; selectedId = id; RedrawDrawing(); };
+            tabDimensionsTabItem.Content = geometryPanel;
+            resultsPanel = new ShearResultsPanel();
+            resultsPanel.WallSelected += id => { selectedKind = "Wall"; selectedId = id; RedrawDrawing(); };
+            tabCalculationsTabItem.Content = resultsPanel;
+
             designPanel = new WallDesignPanel();
             designPanel.DesignChanged += (s, e) => UpdateShearWallUI();
             designPanel.AutoSelectRequested += (s, e) => AutoSelectAllWalls();
@@ -336,12 +333,9 @@ namespace ShearWallVisualizer
         /// Calculations tab: only the table for this calculator type, and until there is something to
         /// calculate, a note saying what to draw (the tables used to stay empty with no explanation).
         /// </summary>
-        private void ShowCalculationState()
+        /// <summary>What to draw next before the walls can be calculated, or null when they can.</summary>
+        private string CalculationTodo()
         {
-            bool rigid = Calculator is ShearWallCalculator_RigidDiaphragm;
-            spRigidSection.Visibility = rigid ? Visibility.Visible : Visibility.Collapsed;
-            spFlexibleSection.Visibility = rigid ? Visibility.Collapsed : Visibility.Visible;
-
             int walls = Calculator._wall_system?._walls?.Count ?? 0;
             int diaphragms = Calculator._diaphragm_system?._diaphragms?.Count ?? 0;
             int xWalls = Calculator._wall_system?._walls?.Values.Count(w => Math.Abs(w.End.Y - w.Start.Y) < 1e-9) ?? 0;
@@ -354,8 +348,7 @@ namespace ShearWallVisualizer
                        $"(now {xWalls} running W-E and {yWalls} running S-N).";
             else if (Calculator.IsValidForCalculation != true)
                 todo = "The walls and diaphragm cannot be calculated yet. Check that the walls sit inside the diaphragm.";
-            tbCalcEmpty.Text = todo ?? string.Empty;
-            bdCalcEmpty.Visibility = todo == null ? Visibility.Collapsed : Visibility.Visible;
+            return todo;
         }
 
         /// <summary>
@@ -759,184 +752,6 @@ namespace ShearWallVisualizer
             }.Show();
         }
 
-        private void CreateWallDataControls()
-        {
-            if (Calculator == null || Calculator._wall_system == null)
-            {
-                return;
-            }
-
-            WallSystemControl sysControl = new WallSystemControl(this, Calculator._wall_system);
-            sp_DimPanel_Walls.Children.Add(sysControl);
-            sysControl.OnWallSubControlDeleted += WallDeleted;
-        }
-        private void CreateDiaphragmDataControls()
-        {
-            if (Calculator == null || Calculator._diaphragm_system == null)
-            {
-                return;
-            }
-
-            DiaphragmSystemControl sysControl = new DiaphragmSystemControl(this, Calculator._diaphragm_system);
-            sp_DimPanel_Diaphragms.Children.Add(sysControl);
-            sysControl.OnDiaphragmSubControlDeleted += DiaphragmDeleted;
-        }
-
-        private void WallDeleted(object sender, EventArgs e)
-        {
-
-            if (Calculator == null || Calculator._wall_system == null)
-            {
-                return;
-            }
-
-            DeleteWallEventArgs args = e as DeleteWallEventArgs;
-
-            foreach (var wall in Calculator._wall_system._walls)
-            {
-                if (wall.Key == args.Id)
-                {
-                    Calculator._wall_system._walls.Remove(wall.Key);
-                    UpdateShearWallUI();
-                    return;
-                }
-            }
-        }
-
-        private void DiaphragmDeleted(object sender, EventArgs e)
-        {
-            if (Calculator == null || Calculator._diaphragm_system == null)
-            {
-                return;
-            }
-
-            DeleteDiaphragmEventArgs args = e as DeleteDiaphragmEventArgs;
-
-            foreach (var dia in Calculator._diaphragm_system._diaphragms)
-            {
-                if (dia.Key == args.Id)
-                {
-                    Calculator._diaphragm_system._diaphragms.Remove(dia.Key);
-                    UpdateShearWallUI();
-                    return;
-                }
-            }
-        }
-
-        private void CreateCalculationResultsControls_Rigid()
-        {
-            if (Calculator == null || Calculator._wall_system == null)
-                return; // nothing to show (this guard was inverted, so results never displayed)
-            {
-                foreach (var wall in Calculator._wall_system._walls)
-                {
-                    int id = wall.Key;
-                    var rigidity = wall.Value.WallRigidity;
-
-                    double xbar = double.NaN;
-                    double ybar = double.NaN;
-
-                    if (Calculator._wall_system.X_bar_walls.ContainsKey(id) is true)
-                    {
-                        xbar = Calculator._wall_system.X_bar_walls[id];
-                    }
-
-                    if (Calculator._wall_system.Y_bar_walls.ContainsKey(id) is true)
-                    {
-                        ybar = Calculator._wall_system.Y_bar_walls[id];
-                    }
-
-                    if (Calculator is ShearWallCalculator_RigidDiaphragm)
-                    {
-                        ShearWallCalculator_RigidDiaphragm calc = Calculator as ShearWallCalculator_RigidDiaphragm;
-                        // Must check validity of numbers since some walls may be in X direction and others in Y direction
-                        double vi_x = double.NaN;
-                        if (calc.DirectShear_X.ContainsKey(id) is true)
-                        {
-                            vi_x = calc.DirectShear_X[id];
-                        }
-
-                        var vi_y = double.NaN;
-                        if (calc.DirectShear_Y.ContainsKey(id) is true)
-                        {
-                            vi_y = calc.DirectShear_Y[id];
-                        }
-
-                        var v_ecc = double.NaN;
-                        if (calc.EccentricShear.ContainsKey(id) is true)
-                        {
-                            v_ecc = calc.EccentricShear[id];
-                        }
-
-                        var v_tot = double.NaN;
-                        if (calc.TotalWallShear.ContainsKey(id) is true)
-                        {
-                            v_tot = calc.TotalWallShear[id];
-                        }
-
-                        ShearWallResultsControl_Rigid control = new ShearWallResultsControl_Rigid(id, rigidity, xbar, ybar, vi_x, vi_y, v_ecc, v_tot);
-                        if (Calculator.GoverningLoadCase.TryGetValue(id, out var governing))
-                            control.ToolTip = "Governing load case: " + governing;
-                        sp_RigidCalcPanel.Children.Add(control);
-                    }
-                }
-            }
-        }
-
-        private void CreateCalculationResultsControls_Flexible()
-        {
-            if (Calculator == null || Calculator._wall_system == null)
-                return; // nothing to show (this guard was inverted, so results never displayed)
-            {
-
-                foreach (var wall in Calculator._wall_system._walls)
-                {
-                    int id = wall.Key;
-                    var rigidity = wall.Value.WallRigidity;
-
-                    double xbar = double.NaN;
-                    double ybar = double.NaN;
-
-                    if (Calculator._wall_system.X_bar_walls.ContainsKey(id) is true)
-                    {
-                        xbar = Calculator._wall_system.X_bar_walls[id];
-                    }
-
-                    if (Calculator._wall_system.Y_bar_walls.ContainsKey(id) is true)
-                    {
-                        ybar = Calculator._wall_system.Y_bar_walls[id];
-                    }
-                    if (Calculator is ShearWallCalculator_FlexibleDiaphragm)
-                    {
-                        ShearWallCalculator_FlexibleDiaphragm calc = Calculator as ShearWallCalculator_FlexibleDiaphragm;
-                        // Must check validity of numbers since some walls may be in X direction and others in Y direction
-                        double vi_x = double.NaN;
-                        if (calc.DirectShear_X.ContainsKey(id) is true)
-                        {
-                            vi_x = calc.DirectShear_X[id];
-                        }
-
-                        var vi_y = double.NaN;
-                        if (calc.DirectShear_Y.ContainsKey(id) is true)
-                        {
-                            vi_y = calc.DirectShear_Y[id];
-                        }
-
-                        var v_tot = double.NaN;
-                        if (calc.TotalWallShear.ContainsKey(id) is true)
-                        {
-                            v_tot = calc.TotalWallShear[id];
-                        }
-
-                        ShearWallResultsControl_Flexible control = new ShearWallResultsControl_Flexible(id, vi_x, vi_y);
-                        if (Calculator.GoverningLoadCase.TryGetValue(id, out var governing))
-                            control.ToolTip = "Governing load case: " + governing;
-                        sp_FlexibleCalcPanel.Children.Add(control);
-                    }
-                }
-            }
-        }
-
         #endregion
 
         #region Drawing functions
@@ -1219,6 +1034,16 @@ namespace ShearWallVisualizer
         /// <summary>
         /// The primary routine to draw all the world shapes
         /// </summary>
+        private static readonly Pen SelectionHalo = FrozenPen(Color.FromArgb(0x70, 0x2A, 0x78, 0xD6), 12);
+        private static readonly Pen SelectionOutline = FrozenPen(Color.FromRgb(0x2A, 0x78, 0xD6), 3);
+
+        private static Pen FrozenPen(Color c, double thickness)
+        {
+            var p = new Pen(new SolidColorBrush(c), thickness) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round };
+            p.Freeze();
+            return p;
+        }
+
         private void DrawShapes(DrawingContext ctx)
         {
             if (hideShapes is true)
@@ -1248,6 +1073,8 @@ namespace ShearWallVisualizer
                     SolidColorBrush lineStrokeBrush = new SolidColorBrush(
                         designResults.TryGetValue(wall.Key, out var check) ? (check.Pass ? Color.FromRgb(0x1E, 0x8E, 0x3E) : Color.FromRgb(0xC6, 0x28, 0x28)) : Colors.Blue);
                     Pen pen = new Pen(lineStrokeBrush, 4);
+                    if (selectedKind == "Wall" && selectedId == wall.Key)
+                        ctx.DrawLine(SelectionHalo, p1_screen, p2_screen); // picked in a table
                     ctx.DrawLine(pen, p1_screen, p2_screen);
 
                     Point center_world = new Point((wall.Value.Start.X + wall.Value.End.X) / 2, (wall.Value.Start.Y + wall.Value.End.Y) / 2);
@@ -1303,6 +1130,8 @@ namespace ShearWallVisualizer
                     double width = Math.Abs(p3_screen.X - p1_screen.X);
                     double height = Math.Abs(p3_screen.Y - p1_screen.Y);
                     ctx.DrawRectangle(rectFillBrush, pen, new Rect(insertPoint_screen.X, insertPoint_screen.Y, width, height));
+                    if (selectedKind == "Diaphragm" && selectedId == rect.Key)
+                        ctx.DrawRectangle(null, SelectionOutline, new Rect(insertPoint_screen.X, insertPoint_screen.Y, width, height));
 
                     Point center_world = new Point((rect.Value.P1.X + rect.Value.P3.X) / 2, (rect.Value.P1.Y + rect.Value.P3.Y) / 2);
                     Point center_screen = WorldToScreen(center_world, m_layers);
