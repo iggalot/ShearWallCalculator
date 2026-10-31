@@ -117,6 +117,43 @@ namespace ShearWallCalculator.Tests
             Assert.AreEqual(Math.Abs(calc.Mt_comb), resisted, 1e-3 * Math.Max(1, Math.Abs(calc.Mt_comb)));
         }
 
+        /// <summary>
+        /// Signed moment equilibrium about the center of rigidity, CCW positive (Mz = r x F = x̄·Fy − ȳ·Fx).
+        /// The wall shears are the resistance on the diaphragm, so their moment must cancel the applied
+        /// torsion: Σ(x̄·Fy − ȳ·Fx) + Mt = 0. Direct shears give no moment about the CR by its definition.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(10.0, 6.0, 0.0, 10.0)]
+        [DataRow(16.0, 4.0, 5.0, 10.0)]
+        [DataRow(4.0, 16.0, -5.0, 10.0)]
+        [DataRow(10.0, 10.0, 7.0, -3.0)]
+        public void WallShears_BalanceTheTorsion_Signed(double west, double east, double vx, double vy)
+        {
+            var calc = Box(west, east, vx, vy);
+            var ws = calc._wall_system;
+            double resisting =
+                ws.NS_Walls.Keys.Sum(id => ws.X_bar_walls[id] * calc.TotalWallShear[id]) -
+                ws.EW_Walls.Keys.Sum(id => ws.Y_bar_walls[id] * calc.TotalWallShear[id]);
+            Assert.AreEqual(0.0, resisting + calc.Mt_comb, 1e-3 * Math.Max(1, Math.Abs(calc.Mt_comb)));
+        }
+
+        /// <summary>
+        /// Hand check: stiff west wall puts the CR west of the CM, so a +y load at the CM turns the diaphragm
+        /// CCW about the CR. The east wall, on the far side, moves further in +y and must pick up torsional
+        /// shear (more than its direct share); the west wall is relieved.
+        /// </summary>
+        [TestMethod]
+        public void Torsion_LoadsTheWallAwayFromTheCenterOfRigidity()
+        {
+            var calc = Box(westLength: 16, eastLength: 4, vx: 0, vy: 10);
+            Assert.IsTrue(calc.Mt_comb > 0, "load east of the CR turns the diaphragm CCW");
+            var ns = calc._wall_system.NS_Walls.OrderBy(w => w.Value.Center.X).Select(w => w.Key).ToArray();
+            int west = ns[0], east = ns[1];
+            Assert.IsTrue(Math.Abs(calc.TotalWallShear[east]) > Math.Abs(calc.DirectShear_Y[east]), "east wall gains");
+            Assert.IsTrue(Math.Abs(calc.TotalWallShear[west]) < Math.Abs(calc.DirectShear_Y[west]), "west wall is relieved");
+            Assert.AreEqual(-10.0, calc.TotalWallShear[west] + calc.TotalWallShear[east], 1e-6, "still reacts Vy");
+        }
+
         [TestMethod]
         public void TotalShear_IsDirectPlusTorsional()
         {

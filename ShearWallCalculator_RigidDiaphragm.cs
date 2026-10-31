@@ -213,82 +213,23 @@ namespace calculator
             }
         }
 
+        /// <summary>
+        /// Torsional shear in each wall, as resistance on the diaphragm (same sense as the direct shear).
+        /// Mt_comb (CCW +) turns the diaphragm by θ = Mt/J about the CR; a point at (x̄, ȳ) moves (−θȳ, +θx̄),
+        /// so each wall pushes back with −k·(that movement). Signed, that is
+        ///   EW walls: Fx = +k·Mt·ȳ/J      NS walls: Fy = −k·Mt·x̄/J
+        /// and their moment about the CR, Σ(x̄·Fy − ȳ·Fx) = −Mt·(Σk x̄² + Σk ȳ²)/J = −Mt, balances the torsion.
+        /// </summary>
         private void ComputeEccentricShear()
         {
             EccentricShear.Clear();
+            double J = _wall_system.InertiaPolar;
 
             foreach (var wall in _wall_system.EW_Walls)
-            {
-                int sign = 1; // computing the resistance on the diaphragm
-                if(Mt_comb < 0)
-                {
-                    if (wall.Value.Center.Y < _wall_system.CtrRigidity.Y)
-                    {
-                        sign = +1;
-                    } else if (wall.Value.Center.Y > _wall_system.CtrRigidity.Y)
-                    {
-                        sign = -1;
-                    } else
-                    {
-                        sign = 0;
-                    } 
-                } else if (Mt_comb > 0)
-                {
-                    if (wall.Value.Center.Y > _wall_system.CtrRigidity.Y)
-                    {
-                        sign = -1;
-                    }
-                    else if (wall.Value.Center.Y < _wall_system.CtrRigidity.Y)
-                    {
-                        sign = +1;
-                    }
-                    else
-                    {
-                        sign = 0;
-                    }
-                }
-
-                double moment = Math.Abs(Mt_comb * _wall_system.Y_bar_walls[wall.Key]);
-                EccentricShear.Add(wall.Key, (sign * moment * wall.Value.WallRigidity) / _wall_system.InertiaPolar);
-            }
+                EccentricShear.Add(wall.Key, wall.Value.WallRigidity * Mt_comb * _wall_system.Y_bar_walls[wall.Key] / J);
 
             foreach (var wall in _wall_system.NS_Walls)
-            {
-                int sign = 1;
-                if (Mt_comb > 0)
-                {
-                    if (wall.Value.Center.X > _wall_system.CtrRigidity.X)
-                    {
-                        sign = +1;
-                    }
-                    else if (wall.Value.Center.X < _wall_system.CtrRigidity.X)
-                    {
-                        sign = -1;
-                    }
-                    else
-                    {
-                        sign = 0;
-                    }
-                }
-                else if (Mt_comb < 0)
-                {
-                    if (wall.Value.Center.X > _wall_system.CtrRigidity.X)
-                    {
-                        sign = -1;
-                    }
-                    else if (wall.Value.Center.X < _wall_system.CtrRigidity.X)
-                    {
-                        sign = +1;
-                    }
-                    else
-                    {
-                        sign = 0;
-                    }
-                }
-
-                double moment = Math.Abs(Mt_comb * _wall_system.X_bar_walls[wall.Key]);
-                EccentricShear.Add(wall.Key, (sign * moment * wall.Value.WallRigidity) / _wall_system.InertiaPolar);
-            }
+                EccentricShear.Add(wall.Key, -wall.Value.WallRigidity * Mt_comb * _wall_system.X_bar_walls[wall.Key] / J);
         }
 
         /// <summary>
