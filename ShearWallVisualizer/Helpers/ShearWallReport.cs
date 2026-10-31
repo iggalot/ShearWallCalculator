@@ -15,7 +15,7 @@ namespace ShearWallVisualizer.Helpers
     public static class ShearWallReport
     {
         public static IEnumerable<ReportSection> Sections(ShearWallCalculatorBase calc, bool linkedToWind,
-            IReadOnlyDictionary<int, WallDesignResult> design = null)
+            IReadOnlyDictionary<int, WallDesignResult> design = null, ShearWallDesigner designer = null)
         {
             var blocks = new List<FrameworkElement> { WindReport.Heading("Shear walls") };
             if (calc == null || !calc.IsValidForCalculation)
@@ -76,7 +76,7 @@ namespace ShearWallVisualizer.Helpers
                 sections.Add(RigidSheet(rigidCalc));
             if (calc is ShearWallCalculator_FlexibleDiaphragm flexCalc && flexCalc.CaseResults.Count > 0)
                 sections.Add(FlexibleSheet(flexCalc));
-            if (design != null && design.Count > 0) sections.Add(DesignSection(calc, design));
+            if (design != null && design.Count > 0) sections.Add(DesignSection(calc, design, designer));
             return sections;
         }
 
@@ -173,13 +173,26 @@ namespace ShearWallVisualizer.Helpers
                     "takes w × its tributary width, from half way to the neighbouring line (or the plan edge for an outer line), so the " +
                     "reactions add up to −V. The walls on a line share its reaction by rigidity: share = reaction × k / Σk(line). " +
                     "An overhang beyond the outer line goes to that line as a force only (its small moment is not redistributed)."),
+                WindReport.Para(
+                    "Torsion (equivalent weights, WoodWorks \"Torsional analysis for flexible diaphragms\"). The rigid-diaphragm stiffness " +
+                    "distribution is not used. Each line gets the weight K = its tributary share of the direct load (tributary width / plan " +
+                    "dimension, so Σ K = 1 in each direction). Center of the weights: x_c = Σ K x (N-S lines), y_c = Σ K y (E-W lines); " +
+                    "arms x̄ = x − x_c, ȳ = y − y_c; J = Σ K ȳ² (E-W) + Σ K x̄² (N-S), ft². Torsional force on the diaphragm for the case's " +
+                    "torsion Mt (CCW +): E-W lines +K·Mt·ȳ / J, N-S lines −K·Mt·x̄ / J; shared by the walls on the line by rigidity, and added " +
+                    "to the direct shear. These forces sum to zero in x and in y (a couple) and their moment about the center is −Mt. " +
+                    "Assumption: the weights are normalized to 1 in each direction separately, which sets how Mt is shared between the x " +
+                    "and y lines; a semi-rigid analysis would be needed to do better. The direct loads are uniform over the plan, so they " +
+                    "add no moment about the center of a rectangular plan."),
             };
             foreach (var w in calc.Warnings) blocks.Add(WindReport.Para("Note: " + w));
 
             foreach (var c in calc.CaseResults)
             {
                 blocks.Add(WindReport.Heading(c.Name));
-                blocks.Add(WindReport.Para($"Vx = {c.Vx:0.000} k, Vy = {c.Vy:0.000} k" + (Math.Abs(c.Mt) > 1e-9 ? $", Mt = {c.Mt:0.00} k-ft (not applied, see the note)" : "") + "."));
+                string torsion = Math.Abs(c.Mt) < 1e-9 ? "Mt = 0." :
+                    c.TorsionApplied ? $"Mt = {c.Mt:0.00} k-ft; center ({c.CenterX:0.00}, {c.CenterY:0.00}) ft, J = {c.J:0.000} ft²." :
+                    $"Mt = {c.Mt:0.00} k-ft, NOT applied (see the note).";
+                blocks.Add(WindReport.Para($"Vx = {c.Vx:0.000} k, Vy = {c.Vy:0.000} k; " + torsion));
                 foreach (var (lines, axis, v) in new[] { (c.LinesX, "y", c.Vx), (c.LinesY, "x", c.Vy) })
                 {
                     if (lines == null || lines.Count == 0) continue;
@@ -191,19 +204,27 @@ namespace ShearWallVisualizer.Helpers
                             rows.Add(new[]
                             {
                                 l.Line.ToString(), $"{axis} = {l.Location:0.00}", $"{l.From:0.00} to {l.To:0.00}", l.Width.ToString("0.00"),
-                                l.W.ToString("0.0000"), l.Reaction.ToString("0.000"), id.ToString(), wall.WallRigidity.ToString("0.0000"),
-                                l.SumRigidity.ToString("0.0000"), c.Total.TryGetValue(id, out var s) ? s.ToString("0.000") : "-",
+                                l.Reaction.ToString("0.000"), l.K.ToString("0.0000"), l.Arm.ToString("0.00"), l.Torsional.ToString("0.000"),
+                                id.ToString(), wall.WallRigidity.ToString("0.0000"), l.SumRigidity.ToString("0.0000"),
+                                c.Total.TryGetValue(id, out var s) ? s.ToString("0.000") : "-",
                             });
                         }
-                    blocks.AddRange(WindReport.Tables(new[] { "Line", "At (ft)", "Tributary (ft)", "Width (ft)", "w (k/ft)", "Reaction (k)", "Wall", "k", "Σk line", "Wall shear (k)" }, rows));
-                    blocks.Add(WindReport.Para($"Check: Σ reactions = {lines.Sum(l => l.Reaction):0.000} k (−V{(axis == "y" ? "x" : "y")} = {-v:0.000} k)."));
+                    string bar = axis == "y" ? "ȳ" : "x̄";
+                    blocks.AddRange(WindReport.Tables(new[] { "Line", "At (ft)", "Tributary (ft)", "Width (ft)", "Direct (k)", "K", $"{bar} (ft)", "Torsional (k)", "Wall", "k", "Σk line", "Wall shear (k)" }, rows));
+                    blocks.Add(WindReport.Para($"w = {(lines.Count > 0 ? lines[0].W : 0):0.0000} k/ft. Check: Σ direct = {lines.Sum(l => l.Reaction):0.000} k (−V{(axis == "y" ? "x" : "y")} = {-v:0.000} k); " +
+                                               $"Σ torsional = {lines.Sum(l => l.Torsional):0.000} k (0)."));
+                }
+                if (c.TorsionApplied && Math.Abs(c.Mt) > 1e-9)
+                {
+                    double m = c.LinesY.Sum(l => l.Arm * l.Torsional) - c.LinesX.Sum(l => l.Arm * l.Torsional);
+                    blocks.Add(WindReport.Para($"Check: moment of the torsional forces about the center = Σ x̄·Fy − Σ ȳ·Fx = {m:0.000} k-ft (−Mt = {-c.Mt:0.000} k-ft)."));
                 }
             }
             return new ReportSection("Flexible diaphragm calculation sheet", blocks);
         }
 
         /// <summary>The design checks: settings, a summary table, then every step for each wall.</summary>
-        private static ReportSection DesignSection(ShearWallCalculatorBase calc, IReadOnlyDictionary<int, WallDesignResult> design)
+        private static ReportSection DesignSection(ShearWallCalculatorBase calc, IReadOnlyDictionary<int, WallDesignResult> design, ShearWallDesigner designer)
         {
             var s = calc.DesignSettings ?? new DesignSettings();
             var blocks = new List<FrameworkElement>
@@ -213,6 +234,15 @@ namespace ShearWallVisualizer.Helpers
                                 $"({SdpwsSource.EditionName(s.Edition)}). Hold-downs are checked at ASD (0.6W) against Simpson allowable loads. " +
                                 "Blocked wood structural panels, Table 4.3A; each drawn wall is one full-height segment. " + SdpwsSource.TableSource),
             };
+            if (s.HoldownsFromStandardList)
+            {
+                var keys = designer?.StandardList.Keys.OrderBy(k => k, StringComparer.Ordinal).ToList() ?? new List<string>();
+                blocks.Add(WindReport.Para("Hold-downs selected from the company standard list only (the lightest adequate option of the wall's type; " +
+                                           "no fall-back to the full catalog). Options in the list (Model#n = n-th fastener option of the model): " +
+                                           (keys.Count == 0 ? "none." : string.Join(", ", keys) + ".")));
+            }
+            else
+                blocks.Add(WindReport.Para("Hold-downs selected from the full catalog (the lightest adequate option of the wall's type)."));
             var rows = design.Keys.OrderBy(k => k).Select(k => design[k]).Select(r => new[]
             {
                 r.WallId.ToString(), r.Panel, $"{r.Inputs.EdgeSpacing}\" / {(r.Inputs.Sides == 2 ? 2 : 1)}",

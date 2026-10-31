@@ -92,13 +92,74 @@ namespace ShearWallCalculator.Tests
             Assert.AreEqual(-4.0, calc.TotalWallShear[WallAt(calc, 0, 10)], 1e-9);
         }
 
+        /// <summary>
+        /// Torsion by equivalent weights (hand calculation), T = +50 k-ft (CCW) with Vy = 8 k.
+        /// N-S lines x = 0, 10, 40: K = 5/40, 20/40, 15/40 = 0.125, 0.5, 0.375; x_c = 0 + 5 + 15 = 20; x̄ = −20, −10, +20;
+        /// Σ K x̄² = 50 + 50 + 150 = 250. E-W lines y = 0, 20: K = 0.5, 0.5; y_c = 10; ȳ = ∓10; Σ K ȳ² = 100. J = 350 ft².
+        /// N-S: −K T x̄ / J = +125/350, +250/350, −375/350 k. E-W: +K T ȳ / J = −250/350, +250/350 k.
+        /// Moment about the center: Σ x̄ Fy − Σ ȳ Fx = −35.714 − 14.286 = −50 = −T.
+        /// </summary>
         [TestMethod]
-        public void TorsionalMoment_IsReportedAsNotApplied()
+        public void Torsion_EquivalentWeights_HandCalculation()
         {
             var calc = ThreeLines();
             calc.SetLoadCases(new[] { new LateralLoadCase("with Mt", 0, 8, 50) });
             calc.PerformCalculations();
-            Assert.IsTrue(calc.Warnings.Any(w => w.Contains("Mt")));
+            Assert.AreEqual(0, calc.Warnings.Count, string.Join(" | ", calc.Warnings));
+
+            var c = calc.CaseResults.Single();
+            Assert.IsTrue(c.TorsionApplied);
+            Assert.AreEqual(20.0, c.CenterX, 1e-9);
+            Assert.AreEqual(10.0, c.CenterY, 1e-9);
+            Assert.AreEqual(350.0, c.J, 1e-9);
+            CollectionAssert.AreEqual(new[] { 0.125, 0.5, 0.375 }, c.LinesY.Select(l => Math.Round(l.K, 12)).ToArray());
+            CollectionAssert.AreEqual(new[] { 125 / 350.0, 250 / 350.0, -375 / 350.0 }.Select(v => Math.Round(v, 9)).ToArray(),
+                                      c.LinesY.Select(l => Math.Round(l.Torsional, 9)).ToArray());
+            CollectionAssert.AreEqual(new[] { -250 / 350.0, 250 / 350.0 }.Select(v => Math.Round(v, 9)).ToArray(),
+                                      c.LinesX.Select(l => Math.Round(l.Torsional, 9)).ToArray());
+
+            // totals = direct + torsional
+            Assert.AreEqual(-1.0 + 125 / 350.0, calc.TotalWallShear[WallAt(calc, 0, 10)], 1e-9);
+            Assert.AreEqual(-4.0 + 250 / 350.0, calc.TotalWallShear[WallAt(calc, 10, 10)], 1e-9);
+            Assert.AreEqual(-250 / 350.0, calc.TotalWallShear[WallAt(calc, 20, 0)], 1e-9);
+            Assert.AreEqual(250 / 350.0, calc.TotalWallShear[WallAt(calc, 20, 20)], 1e-9);
+            double k10 = Rigidity(H, 10), k5 = Rigidity(H, 5);
+            Assert.AreEqual((-3.0 - 375 / 350.0) * k5 / (k10 + k5), calc.TotalWallShear[WallAt(calc, 40, 16.5)], 1e-6);
+
+            // statics: torsional forces are a pure couple equal and opposite to T; the walls still carry −V
+            Assert.AreEqual(0.0, c.LinesX.Sum(l => l.Torsional), 1e-9);
+            Assert.AreEqual(0.0, c.LinesY.Sum(l => l.Torsional), 1e-9);
+            double m = c.LinesY.Sum(l => l.Arm * l.Torsional) - c.LinesX.Sum(l => l.Arm * l.Torsional);
+            Assert.AreEqual(-50.0, m, 1e-9);
+            Assert.AreEqual(-8.0, calc._wall_system.NS_Walls.Keys.Sum(id => c.Total[id]), 1e-9);
+            Assert.AreEqual(0.0, calc._wall_system.EW_Walls.Keys.Sum(id => c.Total[id]), 1e-9);
+        }
+
+        /// <summary>Opposite torsion flips every torsional shear, and the range keeps both signs.</summary>
+        [TestMethod]
+        public void Torsion_BothSigns_EnterTheRange()
+        {
+            var calc = ThreeLines();
+            calc.SetLoadCases(new[] { new LateralLoadCase("+T", 0, 0, 50), new LateralLoadCase("-T", 0, 0, -50) });
+            calc.PerformCalculations();
+            int south = WallAt(calc, 20, 0);
+            Assert.AreEqual(-250 / 350.0, calc.CaseResults[0].Total[south], 1e-9);
+            Assert.AreEqual(250 / 350.0, calc.CaseResults[1].Total[south], 1e-9);
+            Assert.AreEqual(250 / 350.0, calc.WallShearRange[south].Design, 1e-9);
+        }
+
+        [TestMethod]
+        public void Torsion_WithOneLineInADirection_IsReportedAsNotApplied()
+        {
+            var calc = new ShearWallCalculator_FlexibleDiaphragm();
+            calc._wall_system.AddWall(new WallData(H, 0, 5, 0, 15));
+            calc._wall_system.AddWall(new WallData(H, 40, 5, 40, 15));
+            calc._wall_system.AddWall(new WallData(H, 15, 0, 25, 0));
+            calc._diaphragm_system.AddDiaphragm(new DiaphragmData_Rectangular(new Point(0, 0), new Point(40, 20)));
+            calc.SetLoadCases(new[] { new LateralLoadCase("with Mt", 0, 8, 50) });
+            calc.PerformCalculations();
+            Assert.IsTrue(calc.Warnings.Any(w => w.StartsWith("Torsion Mt is not applied")), string.Join(" | ", calc.Warnings));
+            Assert.IsFalse(calc.CaseResults.Single().TorsionApplied);
         }
     }
 }

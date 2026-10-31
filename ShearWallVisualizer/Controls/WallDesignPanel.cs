@@ -33,6 +33,7 @@ namespace ShearWallVisualizer.Controls
         private readonly RadioButton rbLrfd = new RadioButton { Content = "LRFD (1.0W)", Margin = new Thickness(0, 0, 20, 0), VerticalAlignment = VerticalAlignment.Center };
         private readonly ComboBox cbEdition = new ComboBox { Width = 130, Margin = new Thickness(0, 0, 20, 0) };
         private readonly Button btnAuto = new Button { Content = "Auto-select nailing (all walls)", Padding = new Thickness(10, 3, 10, 3) };
+        private readonly ComboBox cbPool = new ComboBox { Width = 150, Margin = new Thickness(0, 0, 20, 0), ToolTip = "Standard list: only the hold-downs checked as company standard in View > Hold-down catalog. Full catalog: every option." };
         private readonly TextBlock tbSummary = new TextBlock { FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(16, 0, 0, 0) };
         private readonly TextBlock tbNote = new TextBlock { TextWrapping = TextWrapping.Wrap, Foreground = InkSecondary, Margin = new Thickness(0, 6, 0, 8) };
         private readonly Grid table = new Grid();
@@ -58,6 +59,9 @@ namespace ShearWallVisualizer.Controls
             rbAsd.Checked += (s, e) => SettingsChanged();
             rbLrfd.Checked += (s, e) => SettingsChanged();
             cbEdition.SelectionChanged += (s, e) => SettingsChanged();
+            cbPool.Items.Add("Full catalog");
+            cbPool.Items.Add("Standard list");
+            cbPool.SelectionChanged += (s, e) => SettingsChanged();
             btnAuto.Click += (s, e) => AutoSelectRequested?.Invoke(this, EventArgs.Empty);
 
             var bar = new WrapPanel { Margin = new Thickness(0, 0, 0, 2) };
@@ -66,6 +70,8 @@ namespace ShearWallVisualizer.Controls
             bar.Children.Add(rbLrfd);
             bar.Children.Add(Label("Wood code:"));
             bar.Children.Add(cbEdition);
+            bar.Children.Add(Label("Hold-downs:"));
+            bar.Children.Add(cbPool);
             bar.Children.Add(btnAuto);
             bar.Children.Add(tbSummary);
 
@@ -103,6 +109,9 @@ namespace ShearWallVisualizer.Controls
             var settings = calc?.DesignSettings ?? new DesignSettings();
             (settings.Method == DesignMethods.LRFD ? rbLrfd : rbAsd).IsChecked = true;
             cbEdition.SelectedItem = cbEdition.Items.OfType<ComboBoxItem>().First(i => (SdpwsEditions)i.Tag == settings.Edition);
+            int listed = designer?.StandardList.Count ?? 0;
+            cbPool.Items[1] = $"Standard list ({listed})";
+            cbPool.SelectedIndex = settings.HoldownsFromStandardList ? 1 : 0;
             loading = false;
 
             tbNote.Text = (loadsFromWind ? "Wall shears from the ASCE 7 wind load cases (strength level). " : "Wall shears from MANUAL loads, taken as strength-level wind. ") +
@@ -110,7 +119,7 @@ namespace ShearWallVisualizer.Controls
                           "Hold-downs are always checked at ASD (0.6W) against Simpson allowable loads. Blocked wood structural panels, " +
                           "SDPWS Table 4.3A; each drawn wall is one full-height segment. " +
                           (calculator is ShearWallCalculator_FlexibleDiaphragm
-                              ? "Flexible diaphragm: each wall line takes its tributary load, split among its walls by rigidity. "
+                              ? "Flexible diaphragm: each wall line takes its tributary load, plus the case torsion by equivalent tributary weights, split among its walls by rigidity. "
                               : "Rigid diaphragm: load shared by wall rigidity, plus torsion. ") + SdpwsSource.TableSource;
 
             table.Children.Clear();
@@ -299,6 +308,7 @@ namespace ShearWallVisualizer.Controls
             calc.DesignSettings = calc.DesignSettings ?? new DesignSettings();
             calc.DesignSettings.Method = rbLrfd.IsChecked == true ? DesignMethods.LRFD : DesignMethods.ASD;
             if (cbEdition.SelectedItem is ComboBoxItem item) calc.DesignSettings.Edition = (SdpwsEditions)item.Tag;
+            calc.DesignSettings.HoldownsFromStandardList = cbPool.SelectedIndex == 1;
             DesignChanged?.Invoke(this, EventArgs.Empty);
         }
 
@@ -345,8 +355,9 @@ namespace ShearWallVisualizer.Controls
                          (d.DeadLoad > 0 ? $" − 0.6 × {d.DeadLoad:0} plf × {r.Length:0.00} ft / 2" : "") + $" = {r.TensionAsd:0} lb" +
                          $"  (LRFD 1.0W" + (d.DeadLoad > 0 ? " − 0.9D" : "") + $": {r.TensionLrfd:0} lb, for reference)";
             yield return !r.HoldownNeeded ? "No uplift: no hold-down needed for overturning."
-                : r.Holdown == null ? $"✗ No {HoldownName(d.Holdown)} in the catalog reaches {r.TensionAsd:0} lb: lengthen the wall, add dead load or use another type."
-                : $"{HoldownName(d.Holdown)}: {r.Holdown} — allowable {r.Holdown.Allowable:0} lb ({(d.Species == WoodTypes.WOODTYPE_SPF_HF ? "SPF/HF" : "DF/SP")}) → ratio {r.HoldownRatio:0.00} {mark(true)}";
+                : r.Holdown == null ? $"✗ No {HoldownName(d.Holdown)} in the {(r.HoldownFromStandardList ? "company standard list" : "catalog")} reaches {r.TensionAsd:0} lb: lengthen the wall, add dead load or use another type" +
+                                      (r.HoldownFromStandardList ? " (or add a stronger option to the standard list, or switch to the full catalog)." : ".")
+                : $"{HoldownName(d.Holdown)}{(r.HoldownFromStandardList ? " (standard list)" : "")}: {r.Holdown} — allowable {r.Holdown.Allowable:0} lb ({(d.Species == WoodTypes.WOODTYPE_SPF_HF ? "SPF/HF" : "DF/SP")}) → ratio {r.HoldownRatio:0.00} {mark(true)}";
         }
 
         private static TextBlock Label(string text) =>

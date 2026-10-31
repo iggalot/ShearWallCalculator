@@ -26,6 +26,18 @@ namespace ShearWallCalculator
         [JsonIgnore]
         public Dictionary<int, double> DirectShear_Y { get; set; } = new Dictionary<int, double>();
 
+        /// <summary>Torsional shear of each wall for the case being analysed (equivalent-weight method, see <see cref="ComputeTorsion"/>).</summary>
+        [JsonIgnore]
+        public Dictionary<int, double> TorsionalShear { get; set; } = new Dictionary<int, double>();
+
+        /// <summary>Center of the equivalent weights (ft) and their polar sum J = Σ K d² (ft²) for the torsion.</summary>
+        [JsonIgnore]
+        public double TorsionCenterX { get; private set; }
+        [JsonIgnore]
+        public double TorsionCenterY { get; private set; }
+        [JsonIgnore]
+        public double TorsionJ { get; private set; }
+
         /// <summary>Line reactions of the case being analysed (x loads to the E-W lines, y loads to the N-S lines).</summary>
         [JsonIgnore]
         public List<LineReaction> LinesX { get; } = new List<LineReaction>();
@@ -76,12 +88,12 @@ namespace ShearWallCalculator
             // check that our CoM and CoR values are valid and computed -- if not, the calculations don't work
             if (IsValidForCalculation is true)
             {
-                // A flexible diaphragm distributes by tributary width and cannot transmit torsion, so each
-                // load case contributes only its direct shears; walls keep their largest shear (envelope).
+                // Flexible diaphragm: each load case's V goes to the wall lines by tributary width (direct), and its torsion
+                // Mt by the equivalent-weight method (ComputeTorsion). Walls keep the range over all cases and the largest.
                 var cases = CasesToAnalyse();
                 double savedVx = V_x, savedVy = V_y;
                 var best = new Dictionary<int, (double total, string name, int caseIndex)>();
-                var perCase = new List<(Dictionary<int, double> dx, Dictionary<int, double> dy)>();
+                var perCase = new List<(Dictionary<int, double> dx, Dictionary<int, double> dy, Dictionary<int, double> t)>();
                 WallShearRange.Clear();
                 CaseResults.Clear();
                 Warnings.Clear();
@@ -91,12 +103,15 @@ namespace ShearWallCalculator
                     V_y = cases[i].Vy;
                     ComputeDirectShear_X();  // horizontal walls
                     ComputeDirectShear_Y();  // vertical walls
+                    bool torsionApplied = ComputeTorsion(cases[i].Mt);
                     ComputeTotalShear();
-                    perCase.Add((new Dictionary<int, double>(DirectShear_X), new Dictionary<int, double>(DirectShear_Y)));
+                    perCase.Add((new Dictionary<int, double>(DirectShear_X), new Dictionary<int, double>(DirectShear_Y), new Dictionary<int, double>(TorsionalShear)));
                     CaseResults.Add(new FlexibleCaseResult
                     {
                         Name = cases[i].Name, Vx = cases[i].Vx, Vy = cases[i].Vy, Mt = cases[i].Mt,
                         LinesX = LinesX.ToList(), LinesY = LinesY.ToList(), Total = new Dictionary<int, double>(TotalWallShear),
+                        TorsionApplied = torsionApplied, CenterX = TorsionCenterX, CenterY = TorsionCenterY, J = TorsionJ,
+                        Torsional = new Dictionary<int, double>(TorsionalShear),
                     });
                     TrackRange(TotalWallShear, cases[i].Name);
                     KeepGoverning(TotalWallShear, cases[i].Name, best, i);
@@ -106,16 +121,14 @@ namespace ShearWallCalculator
                 var distinct = Warnings.Distinct().ToList();     // one line per direction, not per case
                 Warnings.Clear();
                 Warnings.AddRange(distinct);
-                if (cases.Any(c => Math.Abs(c.Mt) > 1e-9))
-                    Warnings.Add("Some load cases carry a torsional moment Mt. The flexible distribution spreads each load uniformly " +
-                                 "and does not apply Mt; how Mt should become a non-uniform load along the diaphragm is not decided yet.");
 
-                DirectShear_X.Clear(); DirectShear_Y.Clear(); TotalWallShear.Clear(); GoverningLoadCase.Clear();
+                DirectShear_X.Clear(); DirectShear_Y.Clear(); TorsionalShear.Clear(); TotalWallShear.Clear(); GoverningLoadCase.Clear();
                 foreach (var kv in best)
                 {
                     var pc = perCase[kv.Value.caseIndex];
                     if (pc.dx.TryGetValue(kv.Key, out var dx)) DirectShear_X[kv.Key] = dx;
                     if (pc.dy.TryGetValue(kv.Key, out var dy)) DirectShear_Y[kv.Key] = dy;
+                    if (pc.t.TryGetValue(kv.Key, out var t)) TorsionalShear[kv.Key] = t;
                     TotalWallShear[kv.Key] = kv.Value.total;
                     GoverningLoadCase[kv.Key] = kv.Value.name;
                 }
@@ -238,19 +251,62 @@ namespace ShearWallCalculator
             }
         }
 
+        /// <summary>
+        /// Torsion with a flexible diaphragm, equivalent-weight method (WoodWorks, "Torsional analysis for flexible diaphragms"):
+        /// each line's weight K = its tributary share of the direct load (tributary width / plan dimension; Σ K = 1 in each
+        /// direction). Center x_c = Σ K x over the N-S lines, y_c = Σ K y over the E-W lines; J = Σ K ȳ² (E-W) + Σ K x̄² (N-S).
+        /// Line force on the diaphragm, CCW-positive torsion T: E-W lines +K T ȳ / J, N-S lines −K T x̄ / J (same signs as the
+        /// rigid calculation). They sum to zero in x and in y and their moment about the center is −T. Each line's force is
+        /// shared by its walls by rigidity. Needs at least two lines in each direction; returns false when it cannot be applied.
+        /// </summary>
+        private bool ComputeTorsion(double T)
+        {
+            TorsionalShear.Clear();
+            TorsionCenterX = TorsionCenterY = TorsionJ = 0;
+            foreach (var l in LinesX.Concat(LinesY)) { l.K = l.Arm = l.Torsional = 0; }
+            if (LinesX.Count < 2 || LinesY.Count < 2)
+            {
+                if (Math.Abs(T) > 1e-9)
+                    Warnings.Add("Torsion Mt is not applied: the flexible torsion needs at least two wall lines in each direction.");
+                return false;
+            }
+
+            void Weights(List<LineReaction> lines)
+            {
+                double span = lines.Max(l => l.To) - lines.Min(l => l.From);
+                foreach (var l in lines) l.K = l.Width / span;
+            }
+            Weights(LinesX);
+            Weights(LinesY);
+            TorsionCenterY = LinesX.Sum(l => l.K * l.Location);
+            TorsionCenterX = LinesY.Sum(l => l.K * l.Location);
+            foreach (var l in LinesX) l.Arm = l.Location - TorsionCenterY;   // ȳ
+            foreach (var l in LinesY) l.Arm = l.Location - TorsionCenterX;   // x̄
+            TorsionJ = LinesX.Concat(LinesY).Sum(l => l.K * l.Arm * l.Arm);
+            if (TorsionJ <= 0) return false;
+
+            foreach (var l in LinesX) l.Torsional = l.K * T * l.Arm / TorsionJ;
+            foreach (var l in LinesY) l.Torsional = -l.K * T * l.Arm / TorsionJ;
+            foreach (var l in LinesX.Concat(LinesY))
+            {
+                if (l.SumRigidity == 0) continue;
+                foreach (var wall in _wall_system.BWL_Manager.BracedWallLines.First(b => b.GroupNumber == l.Line && b.WallDir == (LinesX.Contains(l) ? WallDirs.EastWest : WallDirs.NorthSouth)).WallReferences)
+                {
+                    double share = l.Torsional * wall.WallRigidity / l.SumRigidity;
+                    TorsionalShear[wall.ID] = TorsionalShear.TryGetValue(wall.ID, out var v) ? v + share : share;
+                }
+            }
+            return true;
+        }
+
+        /// <summary>Total = direct (tributary) + torsional, per wall.</summary>
         public void ComputeTotalShear()
         {
             TotalWallShear.Clear();
-            foreach (var result in DirectShear_X)
-            {
-                int id = result.Key;
-                TotalWallShear.Add(id, result.Value);
-            }
-            foreach (var result in DirectShear_Y)
-            {
-                int id = result.Key;
-                TotalWallShear.Add(id, result.Value);
-            }
+            foreach (var result in DirectShear_X.Concat(DirectShear_Y))
+                TotalWallShear[result.Key] = (TotalWallShear.TryGetValue(result.Key, out var v) ? v : 0) + result.Value;
+            foreach (var result in TorsionalShear)
+                TotalWallShear[result.Key] = (TotalWallShear.TryGetValue(result.Key, out var v) ? v : 0) + result.Value;
         }
 
         public class SupportLoadDistributor
@@ -353,6 +409,11 @@ namespace ShearWallCalculator
         public double Reaction { get; set; }
 
         public double SumRigidity { get; set; }
+
+        /// <summary>Torsion: equivalent weight K = tributary share (Σ K = 1 per direction), arm from the center (ȳ or x̄, ft), and the line's torsional force (kips).</summary>
+        public double K { get; set; }
+        public double Arm { get; set; }
+        public double Torsional { get; set; }
         public List<int> WallIds { get; set; }
     }
 
@@ -366,5 +427,12 @@ namespace ShearWallCalculator
         public List<LineReaction> LinesX { get; set; }
         public List<LineReaction> LinesY { get; set; }
         public Dictionary<int, double> Total { get; set; }
+
+        /// <summary>Torsion of this case: applied (two or more lines in each direction), center of the weights, J = Σ K d² (ft²), wall torsional shears.</summary>
+        public bool TorsionApplied { get; set; }
+        public double CenterX { get; set; }
+        public double CenterY { get; set; }
+        public double J { get; set; }
+        public Dictionary<int, double> Torsional { get; set; }
     }
 }

@@ -247,6 +247,15 @@ namespace ShearWallVisualizer
         private void CreateDesignPanel()
         {
             designer = new ShearWallDesigner(null, simpsonCatalog);
+            // The company standard hold-down list belongs to the app (one file for every project).
+            try { designer.StandardList = HoldownStandardList.Load(HoldownStandardList.DefaultPath); }
+            catch (Exception ex) { MessageBox.Show(this, "The standard hold-down list could not be read and starts empty:\n" + ex.Message, "Hold-down standard list"); }
+            designer.StandardList.Changed += (s, e) =>
+            {
+                try { designer.StandardList.Save(HoldownStandardList.DefaultPath); }
+                catch (Exception ex) { MessageBox.Show(this, "The standard hold-down list could not be saved:\n" + ex.Message, "Hold-down standard list"); }
+                UpdateShearWallUI();
+            };
             designPanel = new WallDesignPanel();
             designPanel.DesignChanged += (s, e) => UpdateShearWallUI();
             designPanel.AutoSelectRequested += (s, e) => AutoSelectAllWalls();
@@ -2390,7 +2399,7 @@ namespace ShearWallVisualizer
                 ? new WindAnalysisResult(windLoadCalculator_CC, windLoadCalculator_MWFRS_Length, windLoadCalculator_MWFRS_Width)
                 : null;
             var info = new ReportInfo { Project = ProjectName, Program = "Shear Wall Calculator" };
-            var report = WindReport.Build(info, windVersion, windLoadParams, buildingData, analysis, ShearWallReport.Sections(Calculator, windLoadsLinked, designResults));
+            var report = WindReport.Build(info, windVersion, windLoadParams, buildingData, analysis, ShearWallReport.Sections(Calculator, windLoadsLinked, designResults, designer));
             new ReportPreviewWindow(report, ProjectName) { Owner = this }.Show();
         }
         #endregion

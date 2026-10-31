@@ -19,6 +19,9 @@ namespace ShearWallCalculator.Design
     {
         public DesignMethods Method { get; set; } = DesignMethods.ASD;
         public SdpwsEditions Edition { get; set; } = SdpwsEditions.SDPWS_2021;
+
+        /// <summary>Hold-downs drawn only from the company standard list (kept by the app) instead of the full catalog.</summary>
+        public bool HoldownsFromStandardList { get; set; }
     }
 
     /// <summary>The design choices for one wall (saved with the wall). Defaults: 15/32" Structural I, 8d at 6" o.c., one side.</summary>
@@ -81,6 +84,8 @@ namespace ShearWallCalculator.Design
     /// <summary>One hold-down model with one fastener option, as stored in the catalog (inches, pounds; ASD allowable tension).</summary>
     public sealed class HoldownSpecRow
     {
+        /// <summary>Stable key "Model#n" (n-th fastener option of the model, 1-based).</summary>
+        public string Key { get; set; }
         public HoldownFamilies Family { get; set; }
         public string Model { get; set; }
         public bool FirstOfModel { get; set; }
@@ -104,10 +109,74 @@ namespace ShearWallCalculator.Design
 
     public sealed class HoldownChoice
     {
+        /// <summary>Stable key of the catalog option, "Model#n" (see <see cref="ShearWallDesigner.OptionKey"/>).</summary>
+        public string Key { get; set; }
         public string Model { get; set; }
         public string Fasteners { get; set; }
         public double Allowable { get; set; }
-        public override string ToString() => string.IsNullOrEmpty(Fasteners) ? Model : $"{Model} ({Fasteners})";
+        public double? WoodMinHeight { get; set; }
+        public double? WoodMinWidth { get; set; }
+
+        /// <summary>e.g. "HDU14-SDS2.5 (36 1/4 SDS, min. 3.5 × 7.25)": the minimum member tells apart options with the same fasteners.</summary>
+        public override string ToString()
+        {
+            var parts = new List<string>();
+            if (!string.IsNullOrEmpty(Fasteners)) parts.Add(Fasteners);
+            if (WoodMinHeight.HasValue && WoodMinWidth.HasValue) parts.Add($"min. {WoodMinHeight.Value:0.##} × {WoodMinWidth.Value:0.##}");
+            return parts.Count == 0 ? Model : $"{Model} ({string.Join(", ", parts)})";
+        }
+    }
+
+    /// <summary>
+    /// The company's standard hold-downs: catalog option keys ("Model#n") chosen by the engineer. Kept by the app (not by a
+    /// project); the design can be limited to these (<see cref="DesignSettings.HoldownsFromStandardList"/>).
+    /// </summary>
+    public sealed class HoldownStandardList
+    {
+        private readonly HashSet<string> keys = new HashSet<string>(StringComparer.Ordinal);
+
+        public IReadOnlyCollection<string> Keys => keys;
+        public int Count => keys.Count;
+        public bool Contains(string key) => key != null && keys.Contains(key);
+
+        /// <summary>Raised after the list changes (the host saves it and re-runs the design).</summary>
+        public event EventHandler Changed;
+
+        public void Set(string key, bool included)
+        {
+            if (string.IsNullOrEmpty(key)) return;
+            bool changed = included ? keys.Add(key) : keys.Remove(key);
+            if (changed) Changed?.Invoke(this, EventArgs.Empty);
+        }
+
+        public void ReplaceAll(IEnumerable<string> newKeys)
+        {
+            keys.Clear();
+            foreach (var k in newKeys ?? Enumerable.Empty<string>()) if (!string.IsNullOrWhiteSpace(k)) keys.Add(k.Trim());
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>The app's own file for the list: %AppData%\ShearWallCalculator\HoldownStandardList.json.</summary>
+        public static string DefaultPath =>
+            System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ShearWallCalculator", "HoldownStandardList.json");
+
+        public void Save(string path)
+        {
+            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path));
+            var data = new { Description = "Company standard hold-downs: catalog option keys (Model#n = n-th fastener option of the model).", Keys = keys.OrderBy(k => k, StringComparer.Ordinal).ToList() };
+            System.IO.File.WriteAllText(path, Newtonsoft.Json.JsonConvert.SerializeObject(data, Newtonsoft.Json.Formatting.Indented));
+        }
+
+        /// <summary>Reads the list; a missing file gives an empty list.</summary>
+        public static HoldownStandardList Load(string path)
+        {
+            var list = new HoldownStandardList();
+            if (!System.IO.File.Exists(path)) return list;
+            var data = Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText(path));
+            foreach (var k in data["Keys"]?.Values<string>() ?? Enumerable.Empty<string>())
+                if (!string.IsNullOrWhiteSpace(k)) list.keys.Add(k.Trim());
+            return list;
+        }
     }
 
     /// <summary>All the numbers for one wall, with the code reference for each step.</summary>
@@ -139,7 +208,10 @@ namespace ShearWallCalculator.Design
 
         public double TensionAsd { get; set; }      // lb: 0.6 V h / L - 0.6 D L / 2
         public double TensionLrfd { get; set; }     // lb: 1.0 V h / L - 0.9 D L / 2 (for reference)
-        public HoldownChoice Holdown { get; set; }  // null if none in the catalog is strong enough
+        public HoldownChoice Holdown { get; set; }  // null if none in the pool is strong enough
+
+        /// <summary>True when the hold-down was drawn from the company standard list only.</summary>
+        public bool HoldownFromStandardList { get; set; }
         public bool HoldownNeeded => TensionAsd > 0;
         public double HoldownRatio => !HoldownNeeded ? 0 : Holdown == null ? double.PositiveInfinity : TensionAsd / Holdown.Allowable;
 
@@ -152,7 +224,7 @@ namespace ShearWallCalculator.Design
             !AspectOk ? $"h/b {AspectRatio:0.00} > {MaxAspectRatio:0.0} not allowed"
             : double.IsNaN(Capacity) ? "no table value for this nailing"
             : !ShearOk ? $"shear {ShearRatio:0.00} > 1"
-            : !HoldownOk ? "no hold-down strong enough"
+            : !HoldownOk ? (HoldownFromStandardList ? "no standard-list hold-down strong enough" : "no hold-down strong enough")
             : "OK";
     }
 
@@ -226,18 +298,36 @@ namespace ShearWallCalculator.Design
             double D = Math.Max(0, d.DeadLoad) * L;         // lb on the wall
             r.TensionAsd = L > 0 ? Math.Max(0, 0.6 * M / L - 0.6 * D / 2) : double.PositiveInfinity;
             r.TensionLrfd = L > 0 ? Math.Max(0, 1.0 * M / L - 0.9 * D / 2) : double.PositiveInfinity;
-            r.Holdown = r.HoldownNeeded ? SelectHoldown(d.Holdown, d.Species, r.TensionAsd) : null;
+            r.HoldownFromStandardList = settings.HoldownsFromStandardList;
+            r.Holdown = r.HoldownNeeded ? SelectHoldown(d.Holdown, d.Species, r.TensionAsd, settings.HoldownsFromStandardList) : null;
             return r;
         }
 
-        /// <summary>The lightest catalog option (smallest allowable tension) that is at least the required tension.</summary>
-        public HoldownChoice SelectHoldown(HoldownFamilies family, WoodTypes species, double requiredLb)
+        /// <summary>The company standard hold-downs (kept by the app). Empty unless the host sets it.</summary>
+        public HoldownStandardList StandardList { get; set; } = new HoldownStandardList();
+
+        /// <summary>Stable key of a catalog option: the model and the option's position (1-based) in its fastener options.</summary>
+        public static string OptionKey(string model, int optionIndex) => $"{model}#{optionIndex + 1}";
+
+        /// <summary>
+        /// The lightest option (smallest allowable tension) that is at least the required tension, from the full catalog or,
+        /// with <paramref name="standardOnly"/>, from the company standard list only (null when none there is strong enough).
+        /// </summary>
+        public HoldownChoice SelectHoldown(HoldownFamilies family, WoodTypes species, double requiredLb, bool standardOnly = false)
         {
             string key = species == WoodTypes.WOODTYPE_SPF_HF ? "SPF_HF" : "DF_SP";
             return HoldownOptions(family, key)
+                .Where(o => !standardOnly || StandardList.Contains(o.Key))
                 .Where(o => o.Allowable >= requiredLb)
                 .OrderBy(o => o.Allowable)
                 .FirstOrDefault();
+        }
+
+        /// <summary>Standard-list keys that are not options in the catalog (e.g. after a catalog edit).</summary>
+        public List<string> StandardKeysNotInCatalog()
+        {
+            var all = new HashSet<string>(CatalogRows().Select(r => r.Key));
+            return StandardList.Keys.Where(k => !all.Contains(k)).OrderBy(k => k).ToList();
         }
 
         /// <summary>
@@ -248,11 +338,11 @@ namespace ShearWallCalculator.Design
         {
             var rows = new List<HoldownSpecRow>();
             void Add(HoldownFamilies family, string model, int gauge, double w, double hl, double? b, double? cl, double? so, double? bolt, string code,
-                     int qty, string type, string size, double length, double? minH, double? minW, IDictionary<string, double> loads, double? defl, bool first)
+                     int qty, string type, string size, double length, double? minH, double? minW, IDictionary<string, double> loads, double? defl, int index)
             {
                 rows.Add(new HoldownSpecRow
                 {
-                    Family = family, Model = model, FirstOfModel = first, Gauge = gauge, W = w, HeightOrLength = hl, B = b, CL = cl, SO = so,
+                    Key = OptionKey(model, index), Family = family, Model = model, FirstOfModel = index == 0, Gauge = gauge, W = w, HeightOrLength = hl, B = b, CL = cl, SO = so,
                     AnchorBoltDia = bolt, CodeRef = code, Fasteners = Fasteners(qty, type, size), FastenerLength = length,
                     WoodMinHeight = minH, WoodMinWidth = minW, DeflectionAtAllowable = defl,
                     AllowableDF_SP = loads.TryGetValue("DF_SP", out var df) ? df : (double?)null,
@@ -264,21 +354,21 @@ namespace ShearWallCalculator.Design
                 {
                     var f = m.FastenerOptions[i];
                     Add(HoldownFamilies.HDU_ToFoundation, m.Model, m.Gauge, m.W, m.H, m.B, m.CL, m.SO, m.AnchorBoltDia, m.CodeRef,
-                        f.Screws_Quantity, f.Screws_Type, f.ScrewSize, f.Length, f.WoodMinHeight, f.WoodMinWidth, f.AllowableTensionLoads, f.DeflectionAtAllowableLoad, i == 0);
+                        f.Screws_Quantity, f.Screws_Type, f.ScrewSize, f.Length, f.WoodMinHeight, f.WoodMinWidth, f.AllowableTensionLoads, f.DeflectionAtAllowableLoad, i);
                 }
             foreach (var m in catalog.HTTManager.HTT_Dict.Values)
                 for (int i = 0; i < m.FastenerOptions.Count; i++)
                 {
                     var f = m.FastenerOptions[i];
                     Add(HoldownFamilies.HTT_ToFoundation, m.Model, m.Gauge, m.W, m.L, m.B, m.CL, m.SO, m.AnchorBoltDia, m.CodeRef,
-                        f.Screws_Quantity, f.Screws_Type, f.ScrewSize, f.Length, f.WoodMinHeight, f.WoodMinWidth, f.AllowableTensionLoads, f.DeflectionAtAllowableLoad, i == 0);
+                        f.Screws_Quantity, f.Screws_Type, f.ScrewSize, f.Length, f.WoodMinHeight, f.WoodMinWidth, f.AllowableTensionLoads, f.DeflectionAtAllowableLoad, i);
                 }
             foreach (var m in catalog.StrapTiesManager.StrapTies_Dict.Values)
                 for (int i = 0; i < m.FastenerOptions.Count; i++)
                 {
                     var f = m.FastenerOptions[i];
                     Add(HoldownFamilies.Strap_ToWallBelow, m.Model, m.Gauge, m.W, m.L, null, null, null, null, m.CodeRef,
-                        f.Screws_Quantity, f.Screws_Type, f.ScrewSize, f.Length, null, null, f.AllowableTensionLoads, null, i == 0);
+                        f.Screws_Quantity, f.Screws_Type, f.ScrewSize, f.Length, null, null, f.AllowableTensionLoads, null, i);
                 }
             return rows;
         }
@@ -287,28 +377,18 @@ namespace ShearWallCalculator.Design
         public IEnumerable<HoldownChoice> Options(HoldownFamilies family, WoodTypes species) =>
             HoldownOptions(family, species == WoodTypes.WOODTYPE_SPF_HF ? "SPF_HF" : "DF_SP");
 
+        /// <summary>The selectable options of one family for one species, built from <see cref="CatalogRows"/> (one source of data).</summary>
         private IEnumerable<HoldownChoice> HoldownOptions(HoldownFamilies family, string species)
         {
-            switch (family)
+            foreach (var r in CatalogRows().Where(r => r.Family == family))
             {
-                case HoldownFamilies.HDU_ToFoundation:
-                    foreach (var m in catalog.HDUManager.HDU_Dict.Values)
-                        foreach (var f in m.FastenerOptions)
-                            if (f.AllowableTensionLoads.TryGetValue(species, out var a))
-                                yield return new HoldownChoice { Model = m.Model, Fasteners = Fasteners(f.Screws_Quantity, f.Screws_Type, f.ScrewSize), Allowable = a };
-                    break;
-                case HoldownFamilies.HTT_ToFoundation:
-                    foreach (var m in catalog.HTTManager.HTT_Dict.Values)
-                        foreach (var f in m.FastenerOptions)
-                            if (f.AllowableTensionLoads.TryGetValue(species, out var a))
-                                yield return new HoldownChoice { Model = m.Model, Fasteners = Fasteners(f.Screws_Quantity, f.Screws_Type, f.ScrewSize), Allowable = a };
-                    break;
-                default:
-                    foreach (var m in catalog.StrapTiesManager.StrapTies_Dict.Values)
-                        foreach (var f in m.FastenerOptions)
-                            if (f.AllowableTensionLoads.TryGetValue(species, out var a))
-                                yield return new HoldownChoice { Model = m.Model, Fasteners = Fasteners(f.Screws_Quantity, f.Screws_Type, f.ScrewSize), Allowable = a };
-                    break;
+                double? a = species == "SPF_HF" ? r.AllowableSPF_HF : r.AllowableDF_SP;
+                if (a.HasValue)
+                    yield return new HoldownChoice
+                    {
+                        Key = r.Key, Model = r.Model, Fasteners = r.Fasteners, Allowable = a.Value,
+                        WoodMinHeight = r.WoodMinHeight, WoodMinWidth = r.WoodMinWidth,
+                    };
             }
         }
 

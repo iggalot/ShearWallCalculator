@@ -238,5 +238,85 @@ namespace ShearWallCalculator.Tests
             Assert.AreEqual(840, dtt.AllowableSPF_HF.Value, 0.0);
             Assert.AreEqual(0.17, dtt.DeflectionAtAllowable.Value, 0.0);
         }
+
+        /// <summary>
+        /// Company standard list: with the toggle on, the lightest adequate option from the list only; none strong enough
+        /// means no hold-down (and the status says it was the standard list), never a silent fall-back to the full catalog.
+        /// </summary>
+        [TestMethod]
+        public void StandardList_LimitsTheSelection_AndSaysWhenNoneFits()
+        {
+            var d = new ShearWallDesigner();
+            // full catalog: 2146 lb -> HDU2-SDS2.5 (3075 lb DF/SP)
+            Assert.AreEqual("HDU2-SDS2.5", d.SelectHoldown(HoldownFamilies.HDU_ToFoundation, WoodTypes.WOODTYPE_DF_SP, 2146).Model);
+
+            d.StandardList.Set(ShearWallDesigner.OptionKey("HDU5-SDS2.5", 0), true);
+            d.StandardList.Set(ShearWallDesigner.OptionKey("HDU8-SDS2.5", 0), true);
+            var c = d.SelectHoldown(HoldownFamilies.HDU_ToFoundation, WoodTypes.WOODTYPE_DF_SP, 2146, standardOnly: true);
+            Assert.AreEqual("HDU5-SDS2.5", c.Model);
+            Assert.AreEqual("HDU5-SDS2.5#1", c.Key);
+            Assert.AreEqual(5645, c.Allowable, 0.0);
+            Assert.AreEqual("HDU8-SDS2.5", d.SelectHoldown(HoldownFamilies.HDU_ToFoundation, WoodTypes.WOODTYPE_DF_SP, 6000, true).Model);
+            Assert.IsNull(d.SelectHoldown(HoldownFamilies.HDU_ToFoundation, WoodTypes.WOODTYPE_DF_SP, 7000, true), "HDU8 #1 is 6765 lb");
+            Assert.IsNotNull(d.SelectHoldown(HoldownFamilies.HDU_ToFoundation, WoodTypes.WOODTYPE_DF_SP, 7000, false));
+
+            var settings = new DesignSettings { Method = DesignMethods.ASD, HoldownsFromStandardList = true };
+            var small = new ShearWallDesigner();
+            small.StandardList.Set(ShearWallDesigner.OptionKey("HDU2-SDS2.5", 0), true);
+            var r = small.Check(1, Wall(4, 10), 2.2, null, settings);   // v = 0.6 x 2200 / 4 = 330 plf; T = 0.6 x 2200 x 10 / 4 = 3300 lb > HDU2 3075 lb
+            Assert.IsNull(r.Holdown);
+            Assert.IsTrue(r.HoldownFromStandardList);
+            Assert.AreEqual("no standard-list hold-down strong enough", r.Status);
+        }
+
+        [TestMethod]
+        public void StandardList_KeysAreStable_TextNamesThePostSize_AndUnknownKeysAreReported()
+        {
+            var d = new ShearWallDesigner();
+            var rows = d.CatalogRows();
+            Assert.AreEqual(rows.Count, System.Linq.Enumerable.Count(System.Linq.Enumerable.Distinct(System.Linq.Enumerable.Select(rows, r => r.Key))), "keys are unique");
+            // HDU14-SDS2.5 options 1 and 3 share fasteners and minimum wood text but are different options
+            var hdu14 = System.Linq.Enumerable.ToList(System.Linq.Enumerable.Where(rows, r => r.Model == "HDU14-SDS2.5"));
+            CollectionAssert.AreEqual(new[] { "HDU14-SDS2.5#1", "HDU14-SDS2.5#2", "HDU14-SDS2.5#3" }, System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Select(hdu14, r => r.Key)));
+            var choice = d.SelectHoldown(HoldownFamilies.HDU_ToFoundation, WoodTypes.WOODTYPE_DF_SP, 14400);
+            Assert.AreEqual("HDU14-SDS2.5 (36 1/4 SDS, min. 3.5 × 5.5)", choice.ToString());
+
+            d.StandardList.Set("NOT-A-MODEL#1", true);
+            CollectionAssert.AreEqual(new[] { "NOT-A-MODEL#1" }, d.StandardKeysNotInCatalog());
+        }
+
+        [TestMethod]
+        public void StandardList_SavesAndLoads_AndRaisesChanged()
+        {
+            string path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "swc-test-" + Guid.NewGuid().ToString("N"), "HoldownStandardList.json");
+            try
+            {
+                Assert.AreEqual(0, HoldownStandardList.Load(path).Count, "a missing file is an empty list");
+                var list = new HoldownStandardList();
+                int changed = 0;
+                list.Changed += (s, e) => changed++;
+                list.Set("HDU5-SDS2.5#1", true);
+                list.Set("HDU5-SDS2.5#1", true);        // already there: no change
+                list.Set("LTTP2#2", true);
+                Assert.AreEqual(2, changed);
+                list.Save(path);
+                var back = HoldownStandardList.Load(path);
+                CollectionAssert.AreEquivalent(new[] { "HDU5-SDS2.5#1", "LTTP2#2" }, System.Linq.Enumerable.ToArray(back.Keys));
+            }
+            finally
+            {
+                var dir = System.IO.Path.GetDirectoryName(path);
+                if (System.IO.Directory.Exists(dir)) System.IO.Directory.Delete(dir, true);
+            }
+        }
+
+        [TestMethod]
+        public void StandardListToggle_SavesWithTheProject()
+        {
+            var calc = new ShearWallCalculator_RigidDiaphragm();
+            calc.DesignSettings.HoldownsFromStandardList = true;
+            var read = ShearWallCalculator.Interfaces.ProjectSerializer.Read(ShearWallCalculator.Interfaces.ProjectSerializer.ToJson(calc, null, false));
+            Assert.IsTrue(read.Calculator.DesignSettings.HoldownsFromStandardList);
+        }
     }
 }
