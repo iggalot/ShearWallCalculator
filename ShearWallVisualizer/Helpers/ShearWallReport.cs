@@ -232,7 +232,12 @@ namespace ShearWallVisualizer.Helpers
                 WindReport.Heading("Shear wall design"),
                 WindReport.Para($"{(s.Method == DesignMethods.ASD ? "ASD: walls 0.6W, capacity = nominal / 2.0" : "LRFD: walls 1.0W, capacity = 0.80 x nominal")} " +
                                 $"({SdpwsSource.EditionName(s.Edition)}). Hold-downs are checked at ASD (0.6W) against Simpson allowable loads. " +
-                                "Blocked wood structural panels, Table 4.3A; each drawn wall is one full-height segment. " + SdpwsSource.TableSource),
+                                "Sheathing from SDPWS Tables 4.3A (wood structural panels), 4.3B (wood over gypsum) and 4.3C (gypsum, plaster), wind columns; " +
+                                "each drawn wall is one full-height segment. " + SdpwsSource.TableSource),
+                WindReport.Para("Two faces: the same material on both faces is 2 × one face; different materials take the larger of the stronger face and 2 × the weaker. " +
+                                (s.SumWindFaces
+                                    ? "This project adds a wood structural panel or structural fiberboard face to a gypsum wallboard face for wind (SDPWS 4.3.5.4.2 exception)."
+                                    : "This project does not add a wood face to a gypsum wallboard face (the SDPWS 4.3.5.4.2 exception is off).")),
             };
             if (s.HoldownsFromStandardList)
             {
@@ -246,15 +251,27 @@ namespace ShearWallVisualizer.Helpers
                 blocks.Add(WindReport.Para("Hold-downs selected from the full catalog (the lightest adequate option of the wall's type)."));
             var rows = design.Keys.OrderBy(k => k).Select(k => design[k]).Select(r => new[]
             {
-                r.WallId.ToString(), r.Panel, $"{r.Inputs.EdgeSpacing}\" / {(r.Inputs.Sides == 2 ? 2 : 1)}",
+                r.WallId.ToString(), r.Panel, ShortRule(r.CombineRule),
                 double.IsInfinity(r.Demand) ? "-" : r.Demand.ToString("0"), double.IsNaN(r.Capacity) ? "-" : r.Capacity.ToString("0"),
                 double.IsNaN(r.Capacity) ? "-" : r.ShearRatio.ToString("0.00"), r.TensionAsd.ToString("0"),
                 !r.HoldownNeeded ? "none" : r.Holdown?.ToString() ?? "none strong enough", r.Pass ? "OK" : r.Status,
             }).ToList();
-            blocks.AddRange(WindReport.Tables(new[] { "Wall", "Sheathing", "Nails / sides", "v (plf)", "Allowed", "Ratio", "T (lb)", "Hold-down", "Result" }, rows));
+            blocks.AddRange(WindReport.Tables(new[] { "Wall", "Sheathing", "Faces", "v (plf)", "Allowed", "Ratio", "T (lb)", "Hold-down", "Result" }, rows));
             foreach (var r in design.Keys.OrderBy(k => k).Select(k => design[k]))
                 blocks.Add(WindReport.Para(string.Join(Environment.NewLine, WallDesignPanel.Explain(r))));
             return new ReportSection("Shear wall design", blocks);
+        }
+
+        /// <summary>The two-face rule in a few words for the summary table; the full rule is in each wall's steps.</summary>
+        private static string ShortRule(string rule)
+        {
+            if (string.IsNullOrEmpty(rule)) return "-";
+            if (rule.StartsWith("one face")) return "1";
+            if (rule.StartsWith("same material")) return "2 × one";
+            if (rule.Contains("added for wind")) return "sum";
+            if (rule.EndsWith("stronger face")) return "stronger";
+            if (rule.EndsWith("2 × weaker face")) return "2 × weaker";
+            return rule;
         }
     }
 }

@@ -64,9 +64,7 @@ namespace ShearWallVisualizer.Controls
 
             if (design != null && design.TryGetValue(id, out var r))
             {
-                var d = r.Inputs ?? w.Design ?? new WallDesignInputs();
-                Row("Sheathing", $"{r.Panel}, {d.Sides} side{(d.Sides == 1 ? "" : "s")}");
-                Row("Edge nailing", $"{d.EdgeSpacing}\" o.c.");
+                Row("Sheathing", r.Panel, r.Faces.Count > 1 ? r.CombineRule : null);
                 Row("Unit shear v", double.IsNaN(r.Capacity) ? $"{r.Demand:0} plf (no capacity)" : $"{r.Demand:0} / {r.Capacity:0} plf  ({r.ShearRatio:0.00})",
                     ink: r.ShearOk ? Ui.Ink : Ui.FailInk);
                 Row("Hold-down", !r.HoldownNeeded ? "no uplift" : r.Holdown == null ? $"none fits T = {r.TensionAsd:0} lb" : $"{r.Holdown.Model}  (T = {r.TensionAsd:0} lb)",

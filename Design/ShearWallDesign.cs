@@ -25,6 +25,15 @@ namespace ShearWallCalculator.Design
 
         /// <summary>The hold-downs and list version when the project was last saved (null in older projects).</summary>
         public HoldownListRecord HoldownList { get; set; }
+
+        /// <summary>
+        /// For wind, add a wood structural panel or structural fiberboard face to a gypsum wallboard face (SDPWS 4.3.5.4.2
+        /// exception). Off: the larger of the stronger face and twice the weaker. On by default for new projects.
+        /// </summary>
+        public bool SumWindFaces { get; set; } = true;
+
+        /// <summary>The sheathing, nailing and hold-down type given to a newly drawn wall (null: the program default).</summary>
+        public WallDesignInputs NewWallDesign { get; set; }
     }
 
     /// <summary>The design choices for one wall (saved with the wall). Defaults: 15/32" Structural I, 8d at 6" o.c., one side.</summary>
@@ -50,7 +59,40 @@ namespace ShearWallCalculator.Design
         /// <summary>Hold-down on the inside face of the end post (SDPWS 2021 Table 4.3A footnote 10, with 10d nails).</summary>
         public bool HoldownOnInsideFace { get; set; } = true;
 
-        public WallDesignInputs Clone() => (WallDesignInputs)MemberwiseClone();
+        /// <summary>Face 1 sheathing (any table). Null in projects saved before faces: then the panel fields above are face 1.</summary>
+        public FaceSheathing Face1 { get; set; }
+
+        /// <summary>Face 2 sheathing; null = one face. (Older projects: Sides = 2 meant the same panel on both faces.)</summary>
+        public FaceSheathing Face2 { get; set; }
+
+        /// <summary>Face 1 as used by the design (from the panel fields in older projects).</summary>
+        public FaceSheathing EffectiveFace1() => Face1 ?? new FaceSheathing
+        {
+            Table = SheathingTable.WoodPanels, Material = Sheathing, Thickness = Thickness, Nail = Nail, EdgeSpacing = EdgeSpacing,
+        };
+
+        /// <summary>Face 2 as used by the design: null when there is one face.</summary>
+        public FaceSheathing EffectiveFace2() => Face1 != null ? Face2 : (Sides == 2 ? EffectiveFace1() : null);
+
+        /// <summary>Sets both faces and keeps the older fields (panel, edge spacing, sides) in step for older readers.</summary>
+        public void SetFaces(FaceSheathing face1, FaceSheathing face2)
+        {
+            Face1 = face1?.Clone() ?? throw new ArgumentNullException(nameof(face1));
+            Face2 = face2?.Clone();
+            if (Face1.Table == SheathingTable.WoodPanels)
+            {
+                Sheathing = Face1.Material; Thickness = Face1.Thickness; Nail = Face1.Nail; EdgeSpacing = Face1.EdgeSpacing;
+            }
+            Sides = Face2 == null ? 1 : 2;
+        }
+
+        public WallDesignInputs Clone()
+        {
+            var c = (WallDesignInputs)MemberwiseClone();
+            c.Face1 = Face1?.Clone();
+            c.Face2 = Face2?.Clone();
+            return c;
+        }
     }
 
     /// <summary>One wood structural panel choice from SDPWS Table 4.3A.</summary>
@@ -344,6 +386,12 @@ namespace ShearWallCalculator.Design
         public double SpeciesFactor { get; set; }   // Table 4.3A footnote: 1 - (0.5 - G)
         public double InsideFaceFactor { get; set; }// 2021 footnote 10
         public double Capacity { get; set; }        // design capacity, plf (all sides)
+        /// <summary>Each sheathed face with its table value and factors (one or two).</summary>
+        public List<FaceResult> Faces { get; set; } = new List<FaceResult>();
+        /// <summary>Nominal unit shear of the wall from its faces (plf), before Omega or phi.</summary>
+        public double CombinedNominal { get; set; }
+        /// <summary>How the faces were combined.</summary>
+        public string CombineRule { get; set; }
         public double ShearRatio => Capacity > 0 ? Demand / Capacity : double.PositiveInfinity;
 
         public double TensionAsd { get; set; }      // lb: 0.6 V h / L - 0.6 D L / 2
@@ -393,6 +441,52 @@ namespace ShearWallCalculator.Design
         /// <summary>The wood structural panel rows of Table 4.3A offered for design.</summary>
         public IReadOnlyList<PanelOption> Panels => panels;
 
+        private List<SheathingOption> sheathingOptions;
+
+        /// <summary>Every face choice: Tables 4.3A, 4.3B and 4.3C.</summary>
+        public IReadOnlyList<SheathingOption> SheathingOptions => sheathingOptions ?? (sheathingOptions = SheathingRules.AllOptions());
+
+        public SheathingOption FindOption(FaceSheathing f) => f == null ? null : SheathingOptions.FirstOrDefault(o => o.Matches(f));
+
+        /// <summary>One face: table value, species factor (Tables 4.3A/B), footnote 10 (Table 4.3A, 2021), aspect factor; 0 if over its h/b limit.</summary>
+        public FaceResult CheckFace(FaceSheathing f, WallDesignInputs d, DesignSettings settings, double h, double L)
+        {
+            var o = FindOption(f);
+            var fr = new FaceResult { Face = f, Option = o };
+            if (o == null)
+            {
+                fr.Tabulated = fr.Nominal = double.NaN;
+                fr.Note = "not in the tables";
+                return fr;
+            }
+            fr.Tabulated = o.NominalWind(f.EdgeSpacing);
+            fr.SpeciesFactor = o.Table == SheathingTable.GypsumAndPlaster ? 1.0 : SpeciesFactor(d.Species);
+            fr.InsideFaceFactor = o.Table == SheathingTable.WoodPanels
+                ? SdpwsSource.InsideFaceHoldownFactor(settings.Edition, f.Nail == CommonNailSizes.NAILSIZE_10D, d.HoldownOnInsideFace) : 1.0;
+            fr.MaxAspectRatio = SheathingRules.MaxAspectRatio(o);
+            fr.AspectOk = L > 0 && h / L <= fr.MaxAspectRatio + 1e-9;
+            fr.AspectFactor = SheathingRules.AspectFactor(o, h, L);
+            if (!fr.AspectOk)
+            {
+                fr.Nominal = 0;
+                fr.Note = $"h/b over {fr.MaxAspectRatio:0.0}: this face does not count";
+            }
+            else fr.Nominal = fr.Tabulated * fr.SpeciesFactor * fr.InsideFaceFactor * fr.AspectFactor;
+            return fr;
+        }
+
+        /// <summary>The sheathing as one line: "A", "A, both faces" or "A + B".</summary>
+        public string SheathingName(WallDesignInputs d)
+        {
+            var f1 = d.EffectiveFace1();
+            var f2 = d.EffectiveFace2();
+            string n1 = FindOption(f1)?.Name ?? "(not in the tables)";
+            string Sp(FaceSheathing f) => FindOption(f)?.UsesEdgeSpacing == true ? $" @ {f.EdgeSpacing}\"" : "";
+            if (f2 == null) return n1 + Sp(f1);
+            if (f1.SameConstructionAs(f2)) return n1 + Sp(f1) + ", both faces";
+            return n1 + Sp(f1) + " + " + (FindOption(f2)?.Name ?? "(not in the tables)") + Sp(f2);
+        }
+
         public static readonly int[] EdgeSpacings = { 6, 4, 3, 2 };
 
         public PanelOption FindPanel(WallDesignInputs d) =>
@@ -405,7 +499,6 @@ namespace ShearWallCalculator.Design
         {
             d = d ?? wall.Design ?? new WallDesignInputs();
             settings = settings ?? new DesignSettings();
-            var panel = FindPanel(d);
             double L = wall.WallLength, h = wall.WallHeight, V = Math.Abs(vKips);
             double factor = settings.Method == DesignMethods.ASD ? 0.6 : 1.0;
 
@@ -416,22 +509,30 @@ namespace ShearWallCalculator.Design
                 Method = settings.Method,
                 Edition = settings.Edition,
                 Inputs = d.Clone(),
-                Panel = panel?.Name ?? "(not in Table 4.3A)",
                 Length = L,
                 Height = h,
                 V = V,
                 LoadFactor = factor,
                 AspectRatio = L > 0 ? h / L : double.PositiveInfinity,
-                MaxAspectRatio = SDPWS_Table4_3_4.GetMaxAspectRatio(ShearWallSheathingTypes.SheathingTypes_WOOD_BLOCKED),
             };
-            r.AspectFactor = L > 0 && h > 0 ? SdpwsSource.AspectRatioFactor(h, L) : 0;
             r.Demand = L > 0 ? factor * V * 1000.0 / L : double.PositiveInfinity;
 
-            r.Nominal = panel?.NominalWind(d.EdgeSpacing) ?? double.NaN;
-            r.SpeciesFactor = SpeciesFactor(d.Species);
-            r.InsideFaceFactor = SdpwsSource.InsideFaceHoldownFactor(settings.Edition, d.Nail == CommonNailSizes.NAILSIZE_10D, d.HoldownOnInsideFace);
-            int sides = d.Sides == 2 ? 2 : 1;
-            r.Capacity = SdpwsSource.DesignUnitShearWind(r.Nominal * r.SpeciesFactor * r.InsideFaceFactor * r.AspectFactor * sides, settings.Method);
+            var face1 = d.EffectiveFace1();
+            var face2 = d.EffectiveFace2();
+            var fr1 = CheckFace(face1, d, settings, h, L);
+            var fr2 = face2 == null ? null : CheckFace(face2, d, settings, h, L);
+            r.Faces.Add(fr1);
+            if (fr2 != null) r.Faces.Add(fr2);
+            r.Panel = SheathingName(d);
+            r.Nominal = fr1.Tabulated;
+            r.SpeciesFactor = fr1.SpeciesFactor;
+            r.InsideFaceFactor = fr1.InsideFaceFactor;
+            r.AspectFactor = fr1.AspectFactor;
+            r.MaxAspectRatio = r.Faces.Max(f => f.MaxAspectRatio); // the wall counts while any face is within its limit
+            var (nominal, rule) = SheathingRules.Combine(fr1, fr2, face2 != null && face1.SameConstructionAs(face2), settings.SumWindFaces);
+            r.CombinedNominal = nominal;
+            r.CombineRule = rule;
+            r.Capacity = SdpwsSource.DesignUnitShearWind(nominal, settings.Method);
 
             // Hold-down: the moment of the shear at the top of the wall over the wall length (M / L), less dead load.
             double M = V * 1000.0 * h;                      // lb-ft
@@ -548,26 +649,54 @@ namespace ShearWallCalculator.Design
         public WallDesignInputs AutoSelect(WallData wall, double vKips, DesignSettings settings)
         {
             var start = (wall.Design ?? new WallDesignInputs()).Clone();
+            var f1 = start.EffectiveFace1();
+            var f2 = start.EffectiveFace2();
+            var trials = new List<(FaceSheathing a, FaceSheathing b)>();
+            FaceSheathing At(FaceSheathing f, int s) { var c = f.Clone(); if (FindOption(f)?.UsesEdgeSpacing == true) c.EdgeSpacing = s; return c; }
+            if (f2 == null)
+            {
+                foreach (int s in EdgeSpacings) trials.Add((At(f1, s), null));
+                foreach (int s in EdgeSpacings) trials.Add((At(f1, s), At(f1, s)));   // then the same on both faces
+            }
+            else
+                foreach (int s in EdgeSpacings) trials.Add((At(f1, s), At(f2, s)));
+
             WallDesignInputs last = start;
-            foreach (int sides in new[] { 1, 2 })
-                foreach (int s in EdgeSpacings)
+            foreach (var (a, b) in trials)
+            {
+                var trial = start.Clone();
+                if (start.Face1 == null && (b == null || a.SameConstructionAs(b)))
                 {
-                    var trial = start.Clone();
-                    trial.Sides = sides;
-                    trial.EdgeSpacing = s;
-                    if (double.IsNaN(FindPanel(trial)?.NominalWind(s) ?? double.NaN)) continue;
-                    last = trial;
-                    var r = Check(0, wall, vKips, null, settings, trial);
-                    if (r.AspectOk && r.ShearOk) return trial;
+                    trial.EdgeSpacing = a.EdgeSpacing;   // older project: stay on the panel fields
+                    trial.Sides = b == null ? 1 : 2;
                 }
+                else trial.SetFaces(a, b);
+                var r = Check(0, wall, vKips, null, settings, trial);
+                if (double.IsNaN(r.Capacity)) continue;
+                last = trial;
+                if (r.AspectOk && r.ShearOk) return trial;
+            }
             return last;
         }
 
         // ------------------------------------------------------------------ names
 
-        public static string MaterialName(SheathingMaterials m) =>
-            m == SheathingMaterials.SHEATH_MAT_STRUCTURAL_1 ? "Structural I" :
-            m == SheathingMaterials.SHEATH_MAT_SHEATHING_AND_SINGLE_FLOOR ? "Sheathing" : m.ToString();
+        public static string MaterialName(SheathingMaterials m)
+        {
+            switch (m)
+            {
+                case SheathingMaterials.SHEATH_MAT_STRUCTURAL_1: return "Structural I";
+                case SheathingMaterials.SHEATH_MAT_SHEATHING_AND_SINGLE_FLOOR: return "Sheathing";
+                case SheathingMaterials.SHEATH_MAT_PLYWOOD: return "Plywood panel siding";
+                case SheathingMaterials.SHEATH_MAT_PARTICLEBOARD: return "Particleboard";
+                case SheathingMaterials.SHEATH_MAT_FIBERBOARD: return "Structural fiberboard";
+                case SheathingMaterials.SHEATH_MAT_GYPSUM_WALLBOARD: return "Gypsum wallboard";
+                case SheathingMaterials.SHEATH_MAT_GYPSUM_SHEATHING_BOARD: return "Gypsum sheathing";
+                case SheathingMaterials.SHEATH_MAT_GYPSUM_LATH_PLASTER: return "Gypsum lath and plaster";
+                case SheathingMaterials.SHEATH_MAT_CEMENT_PLASTER_OVER_METAL: return "Portland cement plaster on metal lath";
+                default: return m.ToString();
+            }
+        }
 
         public static string ThicknessName(NominalPanelThicknesses t)
         {

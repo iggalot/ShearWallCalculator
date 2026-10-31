@@ -2,6 +2,17 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-10-31 (late night) — Sheathing on one or two faces, any SDPWS table (SWC)
+
+- **Each wall face picks its own sheathing** from SDPWS Table 4.3A (wood structural panels), 4.3B (wood over gypsum) or 4.3C (gypsum wallboard, lath, plaster, fiberboard), wind columns. Design tab columns: Face 1 / Nails / Face 2 / Nails. Face 2 is None, "Same as face 1", or any other row. Table 4.3A/B faces pick an edge spacing (only the spacings the row has); Table 4.3C rows carry their own fastener spacing. The species factor applies to the wood tables only.
+- **Two-face rule** (user): same material on both faces, 2 × one face; different materials, the larger of the stronger face and 2 × the weaker; for wind, wood structural panel or structural fiberboard + gypsum wallboard are added. Settings bar: "Add wood + gypsum faces (wind)", on for new projects, saved with the project.
+- **Aspect ratio per face** (Table 4.3.4): a face over its limit does not count, with a note; wood panels take 1.25 − 0.125 h/b above 2:1, fiberboard 1.09 − 0.09 h/b above 1:1.
+- **Defaults:** details card buttons "Use this sheathing for new walls" (saved with the project; walls drawn afterwards start with it) and "Same sheathing on every wall" (asks first; dead loads and hold-down types stay).
+- The details list each face, the two-face rule and the capacity. The report table has a "Faces" column (1, 2 × one, sum, stronger, 2 × weaker) and states the project's summing setting. The selection card shows the sheathing and the two-face rule.
+- Older projects open unchanged: "2 sides" becomes the same face on both sides.
+- Data items to check (repeated 4.3C row, plywood siding rows in 4.3B, gypsum aspect limit, fiberboard factor, gypsum lath values): `DATA_VERIFICATION.md`.
+- **Tests:** SWC 107 (15 new, by hand: 4.3C values, gypsum one/two faces, wood + gypsum summed and not, gypsum + plaster not summed, tall wall with gypsum face dropped, species factor, fiberboard aspect factor, Table 4.3B, option list, older project, deep clone, auto-select, project file round trip, summing on by default).
+
 ## 2026-10-31 (night) — Drawing tools: typed points, object snaps, select and details card (SWC)
 
 - **Typed points** (`Drawing/CoordinateInput.cs`): the Point box on the status line, or just start typing a number while drawing. `12,30` absolute; `@5,0` relative; `@20<90` length and angle (degrees from +x); `20` a length toward the cursor. Feet-inches everywhere: `12'6"`, `12'-6"`, `6"`. A wall end that is not E-W or N-S is squared, and the status line says so; a bad entry says why.

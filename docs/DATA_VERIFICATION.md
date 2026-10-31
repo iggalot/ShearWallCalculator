@@ -88,3 +88,12 @@ See `AUDIT.md` for details:
 7. **Zones on the walls (user, 2026-10-30).** Wind normal to the ridge (7-16 Case A; 7-22 Load Cases 1 and 3): no zones on the gable end walls; 1/1T/1E and 4/4T/4E on the walls parallel to the ridge. Wind along the ridge (7-16 Case B; 7-22 Load Cases 2 and 4): zones on all four walls. Matches W7. Every wall area's force is now computed and summed with its sign (W7 47bd5de), so the side-wall zones that cancel in Vx still show in the tally and enter the torsion.
 8. **Case B values confirmed by the user (7-16):** 2 = −0.69, 3 = −0.37, 1E = 4E = −0.48, 2E = −1.07, 3E = −0.53 (1 = 4 = −0.45 as before).
 9. **Still assumed (not answered):** in the Case B torsional case only 5T/6T take the 25% reduction; the side walls and the roof keep full pressure.
+
+## SDPWS sheathing Tables 4.3B and 4.3C, and the two-face rules (SWC) — to verify against the printed SDPWS
+
+1. **Table 4.3C rows 1 and 2 are the same row** in the typed table (1/2" gypsum wallboard, 7" edge / 24" studs, unblocked). The app lists it once.
+2. **Table 4.3B rows 10–11 are plywood siding** but are typed as `SHEATHING_AND_SINGLE_FLOOR`; the app names them plywood siding from their note. Row 11's note says "8d (3.0 × 0.128)", which is the size of a 10d common nail. Check both rows.
+3. **Table 4.3.4 aspect limit for unblocked gypsum wallboard:** the app uses 2:1 for every Table 4.3C row (1:1 is used by some editions for unblocked gypsum). Check against the edition in use.
+4. **Structural fiberboard aspect factor** 1.09 − 0.09 h/b above 1:1 (up to 3.5:1): check against the printed 4.3.4.2.
+5. **Gypsum lath rows 24 and 25** (360 vs 200 plf): the difference between them looks large; check the values.
+6. **Two faces (user, 2026-10-31):** same material on both faces = 2 × one face; different materials = the larger of the stronger face and 2 × the weaker (SDPWS 2021 4.3.5.4.2); for wind only, a wood structural panel or structural fiberboard face plus a gypsum wallboard face are added (4.3.5.4.2 exception) — a project setting, on by default. Gypsum + cement plaster, or wood + plaster, do not add. A face over its h/b limit does not count.

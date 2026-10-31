@@ -510,7 +510,11 @@ namespace ShearWallVisualizer
                     Calculator._wall_system = new WallSystem();
                 }
 
-                Calculator._wall_system.AddWall(new WallData(defaultWallHeight, startPoint.X, startPoint.Y, endPoint.X, endPoint.Y));
+                // a new wall starts with the project's default sheathing, if one was set in the Design tab
+                Calculator._wall_system.AddWall(new WallData(defaultWallHeight, startPoint.X, startPoint.Y, endPoint.X, endPoint.Y)
+                {
+                    Design = Calculator.DesignSettings?.NewWallDesign?.Clone(),
+                });
             }
             else if (currentMode == DrawMode.Rectangle)
             {

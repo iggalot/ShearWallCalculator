@@ -87,6 +87,7 @@
     <Compile Include="NDSProvisions\SDPWS_Table4_3_4.cs" />
     <Compile Include="NDSProvisions\SdpwsSource.cs" />
     <Compile Include="Design\ShearWallDesign.cs" />
+    <Compile Include="Design\Sheathing.cs" />
     <Compile Include="Diagnostics\Log.cs" />
     <Compile Include="Drawing\Snapping.cs" />
     <Compile Include="Drawing\CoordinateInput.cs" />
