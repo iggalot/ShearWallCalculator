@@ -2,6 +2,13 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-10-31 (later) — Company default list shipped with the app; version record in the project
+
+- **Company default:** `ShearWallVisualizer/HoldownStandardList.default.json` ships with the app, with a version number. Each user's list follows it automatically unless the user has changed their own; then they are asked once per new version. The catalog window has a "Company" column, **Restore company default** and **Save as company default...** (writes the next version). New projects start on the standard list when it has options. The full procedure is in `PROPOSAL_STANDARD_HARDWARE_AND_FLEX_TORSION.md`.
+- **Project record:** on save, the project stores the list version and each wall's hold-down. On opening, any wall whose hold-down would now differ is listed with both versions. The report states the list version.
+- **Shipped file is empty (version 0)** until the company list is chosen.
+- **Tests:** SWC 71 (startup cases: seeded, updated, asks once, keep-mine remembered, pre-version file, missing file; shipped file loads with known keys; project record round trip and differences).
+
 ## 2026-10-31 — Company standard hold-downs, flexible-diaphragm torsion (SWC; design in `PROPOSAL_STANDARD_HARDWARE_AND_FLEX_TORSION.md`)
 
 - **Company standard hold-down list** (user: belongs to the app, "company minimum standard hardware"). Catalog options get stable keys `Model#n` (n-th fastener option of the model). The list is one app file, `%AppData%\ShearWallCalculator\HoldownStandardList.json`, loaded at startup and saved on every change. Edit it with the new "Standard" check boxes in View > Hold-down catalog (filter "Only the standard list"; keys no longer in the catalog are listed under the table, kept, never selected).

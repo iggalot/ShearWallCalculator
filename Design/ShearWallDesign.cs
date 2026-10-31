@@ -22,6 +22,9 @@ namespace ShearWallCalculator.Design
 
         /// <summary>Hold-downs drawn only from the company standard list (kept by the app) instead of the full catalog.</summary>
         public bool HoldownsFromStandardList { get; set; }
+
+        /// <summary>The hold-downs and list version when the project was last saved (null in older projects).</summary>
+        public HoldownListRecord HoldownList { get; set; }
     }
 
     /// <summary>The design choices for one wall (saved with the wall). Defaults: 15/32" Structural I, 8d at 6" o.c., one side.</summary>
@@ -128,8 +131,11 @@ namespace ShearWallCalculator.Design
     }
 
     /// <summary>
-    /// The company's standard hold-downs: catalog option keys ("Model#n") chosen by the engineer. Kept by the app (not by a
-    /// project); the design can be limited to these (<see cref="DesignSettings.HoldownsFromStandardList"/>).
+    /// The company's standard hold-downs: catalog option keys ("Model#n") chosen by the engineer. Kept by the app, not by a
+    /// project; the design can be limited to these (<see cref="DesignSettings.HoldownsFromStandardList"/>).
+    /// The company default ships with the app (<see cref="PackagedPath"/>, with a version number). Each user's own copy
+    /// (<see cref="DefaultPath"/>) records which company version it came from and whether the user has changed it, so a
+    /// newer company version is taken automatically unless the user has edits (see <see cref="Startup"/>).
     /// </summary>
     public sealed class HoldownStandardList
     {
@@ -139,35 +145,85 @@ namespace ShearWallCalculator.Design
         public int Count => keys.Count;
         public bool Contains(string key) => key != null && keys.Contains(key);
 
+        /// <summary>Company default version: of the file itself (company file) or the one this copy last took or was offered (user file). 0 = none.</summary>
+        public int CompanyVersion { get; set; }
+
+        /// <summary>Date of that company version (yyyy-MM-dd), or null.</summary>
+        public string CompanyDate { get; set; }
+
+        /// <summary>True once the user has changed this copy (it no longer simply follows the company default).</summary>
+        public bool Customized { get; private set; }
+
         /// <summary>Raised after the list changes (the host saves it and re-runs the design).</summary>
         public event EventHandler Changed;
 
+        /// <summary>The user ticks or unticks one option: the list becomes the user's own.</summary>
         public void Set(string key, bool included)
         {
             if (string.IsNullOrEmpty(key)) return;
             bool changed = included ? keys.Add(key) : keys.Remove(key);
-            if (changed) Changed?.Invoke(this, EventArgs.Empty);
-        }
-
-        public void ReplaceAll(IEnumerable<string> newKeys)
-        {
-            keys.Clear();
-            foreach (var k in newKeys ?? Enumerable.Empty<string>()) if (!string.IsNullOrWhiteSpace(k)) keys.Add(k.Trim());
+            if (!changed) return;
+            Customized = true;
             Changed?.Invoke(this, EventArgs.Empty);
         }
 
-        /// <summary>The app's own file for the list: %AppData%\ShearWallCalculator\HoldownStandardList.json.</summary>
+        /// <summary>Replaces this list by the company default (keys and version); it is no longer customized.</summary>
+        public void RestoreFrom(HoldownStandardList company)
+        {
+            keys.Clear();
+            foreach (var k in company?.keys ?? Enumerable.Empty<string>()) keys.Add(k);
+            CompanyVersion = company?.CompanyVersion ?? 0;
+            CompanyDate = company?.CompanyDate;
+            Customized = false;
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>Records that the user saw company version <paramref name="company"/> and kept their own list.</summary>
+        public void KeepMineOver(HoldownStandardList company)
+        {
+            CompanyVersion = company.CompanyVersion;
+            CompanyDate = company.CompanyDate;
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>This list becomes company default <paramref name="version"/> (after "Save as company default").</summary>
+        public void MarkAsCompanyVersion(int version, string date)
+        {
+            CompanyVersion = version;
+            CompanyDate = date;
+            Customized = false;
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
+
+        public bool SameKeysAs(HoldownStandardList other) => other != null && keys.SetEquals(other.keys);
+
+        /// <summary>File name of the company default shipped next to the program.</summary>
+        public const string PackagedFileName = "HoldownStandardList.default.json";
+
+        /// <summary>The company default shipped with the app (next to the program).</summary>
+        public static string PackagedPath => System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, PackagedFileName);
+
+        /// <summary>Each user's own copy: %AppData%\ShearWallCalculator\HoldownStandardList.json.</summary>
         public static string DefaultPath =>
             System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ShearWallCalculator", "HoldownStandardList.json");
 
         public void Save(string path)
         {
-            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path));
-            var data = new { Description = "Company standard hold-downs: catalog option keys (Model#n = n-th fastener option of the model).", Keys = keys.OrderBy(k => k, StringComparer.Ordinal).ToList() };
+            var dir = System.IO.Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(dir)) System.IO.Directory.CreateDirectory(dir);
+            var data = new
+            {
+                Description = "Standard hold-downs: catalog option keys (Model#n = n-th fastener option of the model). " +
+                              "Version/Date: the company default version. Customized: changed by the user since.",
+                Version = CompanyVersion,
+                Date = CompanyDate,
+                Customized,
+                Keys = keys.OrderBy(k => k, StringComparer.Ordinal).ToList(),
+            };
             System.IO.File.WriteAllText(path, Newtonsoft.Json.JsonConvert.SerializeObject(data, Newtonsoft.Json.Formatting.Indented));
         }
 
-        /// <summary>Reads the list; a missing file gives an empty list.</summary>
+        /// <summary>Reads a list; a missing file gives an empty list (version 0).</summary>
         public static HoldownStandardList Load(string path)
         {
             var list = new HoldownStandardList();
@@ -175,8 +231,92 @@ namespace ShearWallCalculator.Design
             var data = Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText(path));
             foreach (var k in data["Keys"]?.Values<string>() ?? Enumerable.Empty<string>())
                 if (!string.IsNullOrWhiteSpace(k)) list.keys.Add(k.Trim());
+            list.CompanyVersion = (int?)data["Version"] ?? 0;
+            list.CompanyDate = (string)data["Date"];
+            // A list saved before versions existed counts as the user's own if it has anything in it.
+            list.Customized = (bool?)data["Customized"] ?? list.keys.Count > 0;
             return list;
         }
+
+        /// <summary>What <see cref="Startup"/> did with the company default.</summary>
+        public enum CompanyUpdate
+        {
+            None,           // the user's list is up to date with the company default
+            Seeded,         // first run: the user's list was created from the company default
+            Updated,        // a newer company default replaced a list the user had not changed
+            NeedsChoice,    // a newer company default exists but the user has edits: ask (RestoreFrom or KeepMineOver)
+        }
+
+        /// <summary>
+        /// At start-up: reads the company default (<paramref name="companyPath"/>) and the user's list (<paramref name="userPath"/>).
+        /// No user list yet: it is created from the company default. A newer company version replaces a list the user has not
+        /// changed (or that already matches it); if the user has edits, the caller asks. The user file is saved when changed.
+        /// </summary>
+        public static (HoldownStandardList user, HoldownStandardList company, CompanyUpdate update) Startup(string userPath, string companyPath)
+        {
+            var company = Load(companyPath);
+            company.Customized = false;
+            if (!System.IO.File.Exists(userPath))
+            {
+                var seeded = new HoldownStandardList();
+                seeded.RestoreFrom(company);
+                seeded.Save(userPath);
+                return (seeded, company, CompanyUpdate.Seeded);
+            }
+            var user = Load(userPath);
+            if (company.CompanyVersion <= user.CompanyVersion) return (user, company, CompanyUpdate.None);
+            if (!user.Customized || user.SameKeysAs(company))
+            {
+                user.RestoreFrom(company);
+                user.Save(userPath);
+                return (user, company, CompanyUpdate.Updated);
+            }
+            return (user, company, CompanyUpdate.NeedsChoice);
+        }
+    }
+
+    /// <summary>
+    /// What the hold-down selection used when the project was saved: the standard list's company version, whether it was the
+    /// user's own edit, and each wall's hold-down (catalog key, "" for none). On opening, <see cref="Differences"/> says which
+    /// walls would now get a different hold-down.
+    /// </summary>
+    public sealed class HoldownListRecord
+    {
+        public bool FromStandardList { get; set; }
+        public int CompanyVersion { get; set; }
+        public string CompanyDate { get; set; }
+        public bool Customized { get; set; }
+        public Dictionary<int, string> WallHoldowns { get; set; } = new Dictionary<int, string>();
+
+        public static HoldownListRecord Make(IReadOnlyDictionary<int, WallDesignResult> design, HoldownStandardList list, bool fromStandardList) =>
+            new HoldownListRecord
+            {
+                FromStandardList = fromStandardList,
+                CompanyVersion = list?.CompanyVersion ?? 0,
+                CompanyDate = list?.CompanyDate,
+                Customized = list?.Customized ?? false,
+                WallHoldowns = (design ?? new Dictionary<int, WallDesignResult>()).ToDictionary(kv => kv.Key, kv => kv.Value.Holdown?.Key ?? ""),
+            };
+
+        /// <summary>"Wall 3: HDU5-SDS2.5#1 → HDU8-SDS2.5#1" for each saved wall whose hold-down is now different.</summary>
+        public List<string> Differences(IReadOnlyDictionary<int, WallDesignResult> design)
+        {
+            var lines = new List<string>();
+            foreach (var kv in WallHoldowns.OrderBy(k => k.Key))
+            {
+                if (design == null || !design.TryGetValue(kv.Key, out var r)) continue;
+                string now = r.Holdown?.Key ?? "";
+                if (now != kv.Value) lines.Add($"Wall {kv.Key}: {Name(kv.Value)} → {Name(now)}");
+            }
+            return lines;
+        }
+
+        /// <summary>"company list v3 (2026-11-15)", plus ", with the user's own changes".</summary>
+        public static string Describe(int version, string date, bool customized) =>
+            (version == 0 ? "no company list version" : $"company list v{version}" + (string.IsNullOrEmpty(date) ? "" : $" ({date})")) +
+            (customized ? ", with the user's own changes" : "");
+
+        private static string Name(string key) => string.IsNullOrEmpty(key) ? "none" : key;
     }
 
     /// <summary>All the numbers for one wall, with the code reference for each step.</summary>
@@ -305,6 +445,9 @@ namespace ShearWallCalculator.Design
 
         /// <summary>The company standard hold-downs (kept by the app). Empty unless the host sets it.</summary>
         public HoldownStandardList StandardList { get; set; } = new HoldownStandardList();
+
+        /// <summary>The company default shipped with the app (for "Restore company default" and the catalog's Company column).</summary>
+        public HoldownStandardList CompanyList { get; set; } = new HoldownStandardList();
 
         /// <summary>Stable key of a catalog option: the model and the option's position (1-based) in its fastener options.</summary>
         public static string OptionKey(string model, int optionIndex) => $"{model}#{optionIndex + 1}";

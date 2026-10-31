@@ -21,6 +21,27 @@ _Branch `dev/wind-core-refactor`. Written 2026-10-30 before the work, per the us
 - **Design tab:** a toggle in the settings bar, "Hold-downs: Standard list / Full catalog". Clicking it re-runs every wall check. The bar says how many options are in the list ("Standard list: 7 options").
 - **Report:** says which pool was used, and lists the standard options.
 
+### Company default shipped with the app (built 2026-10-31, user chose "Option A plus the version record")
+- **Packaged file:** `ShearWallVisualizer/HoldownStandardList.default.json` (copied next to the exe on build). It has `Version`, `Date` and `Keys`. It starts at version 0, empty.
+- **Each user's copy** (`%AppData%\ShearWallCalculator\HoldownStandardList.json`) records the company version it came from and whether the user has changed it (`Customized`).
+- **At start-up** (`HoldownStandardList.Startup`):
+  - No user copy yet: the user copy is created from the company default.
+  - The company version is newer and the user has not changed their copy (or it already matches): the copy is replaced automatically.
+  - The company version is newer and the user has edits: a one-time question. **Yes** replaces their list with the company list. **No** keeps their list, and they are not asked again for that version.
+- **New projects** start with "Standard list" on whenever the list has any options. Older projects keep what they saved.
+- **Catalog window:**
+  - A "Company" column marks the options in the company default.
+  - **Restore company default** replaces the user's list.
+  - **Save as company default...** writes the next version.
+  - The footer says how the user's list differs from the company default.
+
+**How to change the company list later:**
+1. Run the app, open View > Hold-down catalog, and tick the options you want.
+2. Click **Save as company default...** and save over `ShearWallVisualizer\HoldownStandardList.default.json` in the source. The dialog opens there when the app runs from a build inside the source tree. The version number goes up by one and today's date is stamped.
+3. Commit the file and rebuild. Each user gets the new list the next time they start the app, or is asked if they have changed their own.
+
+**Version record in the project** (`DesignSettings.HoldownList`, written on every save): which pool was used, the company list version and date, whether it was the user's own edit, and each wall's hold-down key. On opening, walls whose hold-down is now different are listed (e.g. "Wall 3: HDU5-SDS2.5#1 → HDU8-SDS2.5#1") with both list versions. The project then counts as changed: save to keep the new design, or close without saving to leave the file as it was. Older projects have no record and are not checked. The report states the list version used.
+
 ## 2. Torsion with a flexible diaphragm
 
 **Basis (from the user's notes):** a flexible diaphragm gives each wall line its direct force by tributary area (simple spans between lines), not by wall stiffness. Torsion is not distributed by the rigid-diaphragm stiffness equation. One published approach (WoodWorks, *Torsional analysis for flexible diaphragms*) builds **equivalent distribution weights** that reproduce the flexible direct distribution, then distributes the torsional moment with them:

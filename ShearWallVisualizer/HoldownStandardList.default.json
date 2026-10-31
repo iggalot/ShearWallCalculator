@@ -1,0 +1,7 @@
+{
+  "Description": "Company default standard hold-downs, shipped with the app. Keys: Model#n = n-th fastener option of the model. To change it: tick the options in View > Hold-down catalog, click 'Save as company default...' (raises Version), commit this file and rebuild.",
+  "Version": 0,
+  "Date": null,
+  "Customized": false,
+  "Keys": []
+}

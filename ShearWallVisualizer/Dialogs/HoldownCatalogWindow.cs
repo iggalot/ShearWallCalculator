@@ -58,8 +58,8 @@ namespace ShearWallVisualizer.Dialogs
                 Text = "Read directly from the app's catalog data (ShearWallCalculator, NDSProvisions/SimpsonCatalog): the same objects the wall " +
                        "design selects hold-downs from, so these are the values in use. Allowable tension loads are ASD (lb) for each framing " +
                        "species; dimensions and fastener lengths in inches. The design picks the lightest option whose allowable load is at " +
-                       "least the required tension, and uses it at both ends of the wall (a pair). \"Standard\" marks the company standard " +
-                       "hardware (saved with the app, not the project); the Design tab can limit the selection to it. Columns: W, H or L, B, CL, " +
+                       "least the required tension, and uses it at both ends of the wall (a pair). \"Standard\" marks your standard list (kept by " +
+                       "the app for every project; the Design tab can limit the selection to it); \"Company\" marks the company default shipped with the app. Columns: W, H or L, B, CL, " +
                        "SO and bolt diameter per the catalog figure (in); fastener length (in); minimum wood member h × w (in); DF/SP and SPF/HF " +
                        "allowable tension (lb); deflection at the allowable load (in).",
             });
@@ -74,8 +74,19 @@ namespace ShearWallVisualizer.Dialogs
             header.Children.Add(filters);
             DockPanel.SetDock(header, Dock.Top);
             root.Children.Add(header);
-            DockPanel.SetDock(count, Dock.Bottom);
-            root.Children.Add(count);
+            var footer = new DockPanel { Margin = new Thickness(0, 6, 0, 0) };
+            var restore = new Button { Content = "Restore company default", Padding = new Thickness(10, 3, 10, 3), Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Top };
+            var saveCompany = new Button { Content = "Save as company default...", Padding = new Thickness(10, 3, 10, 3), Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Top };
+            restore.Click += (s, e) => RestoreCompanyDefault();
+            saveCompany.Click += (s, e) => SaveAsCompanyDefault();
+            DockPanel.SetDock(saveCompany, Dock.Right);
+            DockPanel.SetDock(restore, Dock.Right);
+            footer.Children.Add(saveCompany);
+            footer.Children.Add(restore);
+            count.Margin = new Thickness(0);
+            footer.Children.Add(count);
+            DockPanel.SetDock(footer, Dock.Bottom);
+            root.Children.Add(footer);
 
             grid = new DataGrid
             {
@@ -90,6 +101,7 @@ namespace ShearWallVisualizer.Dialogs
             check.SetValue(HorizontalAlignmentProperty, HorizontalAlignment.Center);
             check.SetValue(VerticalAlignmentProperty, VerticalAlignment.Center);
             grid.Columns.Add(new DataGridTemplateColumn { Header = "Standard", CellTemplate = new DataTemplate { VisualTree = check } });
+            grid.Columns.Add(new DataGridTextColumn { Header = "Company", Binding = new Binding(nameof(Row.Company)), ElementStyle = new Style(typeof(TextBlock)) { Setters = { new Setter(TextBlock.TextAlignmentProperty, TextAlignment.Center) } } });
             void Col(string title, string path, bool number = false)
             {
                 var c = new DataGridTextColumn { Header = title, Binding = new Binding(path) };
@@ -116,7 +128,7 @@ namespace ShearWallVisualizer.Dialogs
             root.Children.Add(grid);
             Content = root;
 
-            rows = designer.CatalogRows().Select(r => new Row(r, designer.StandardList)).ToList();
+            rows = designer.CatalogRows().Select(r => new Row(r, designer.StandardList, designer.CompanyList)).ToList();
             view = CollectionViewSource.GetDefaultView(rows);
             view.Filter = o => Keep((Row)o);
             grid.ItemsSource = view;
@@ -174,9 +186,78 @@ namespace ShearWallVisualizer.Dialogs
             int shown = view.Cast<object>().Count();
             int models = rows.Select(r => r.Model).Distinct().Count();
             var missing = designer.StandardKeysNotInCatalog();
-            count.Text = $"{shown} of {rows.Count} fastener options shown ({models} models in the catalog). Standard list: {designer.StandardList.Count} option" +
-                         (designer.StandardList.Count == 1 ? "" : "s") +
+            var mine = designer.StandardList;
+            var company = designer.CompanyList;
+            string companyText = company.CompanyVersion == 0 && company.Count == 0
+                ? "No company default yet (version 0, empty)."
+                : $"Company default v{company.CompanyVersion}" + (string.IsNullOrEmpty(company.CompanyDate) ? "" : $" ({company.CompanyDate})") + $": {company.Count} options.";
+            int differ = mine.Keys.Count(k => !company.Contains(k)) + company.Keys.Count(k => !mine.Contains(k));
+            string mineText = $"Your standard list: {mine.Count} option{(mine.Count == 1 ? "" : "s")}, " +
+                              (differ == 0 ? "same as the company default" : $"{differ} different from the company default");
+            count.Text = $"{shown} of {rows.Count} fastener options shown ({models} models). {companyText} {mineText}" +
                          (missing.Count == 0 ? "." : $"; not in this catalog (kept in the list, never selected): {string.Join(", ", missing)}.");
+        }
+
+        /// <summary>Replaces the user's list by the company default shipped with the app.</summary>
+        private void RestoreCompanyDefault()
+        {
+            var company = designer.CompanyList;
+            if (designer.StandardList.SameKeysAs(company) && designer.StandardList.CompanyVersion == company.CompanyVersion) return;
+            if (MessageBox.Show(this, $"Replace your standard list ({designer.StandardList.Count} options) with the company default " +
+                                      $"(version {company.CompanyVersion}, {company.Count} options)?", "Restore company default",
+                                MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK) return;
+            designer.StandardList.RestoreFrom(company);
+        }
+
+        /// <summary>
+        /// Saves the current standard list as the next company default version. To ship it, the file is
+        /// ShearWallVisualizer\HoldownStandardList.default.json in the source (the dialog opens there when it can find it):
+        /// commit it and rebuild; each user's copy then follows it (or asks, if the user has changed theirs).
+        /// </summary>
+        private void SaveAsCompanyDefault()
+        {
+            var mine = designer.StandardList;
+            int next = Math.Max(designer.CompanyList.CompanyVersion, mine.CompanyVersion) + 1;
+            string date = DateTime.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            var dialog = new Microsoft.Win32.SaveFileDialog
+            {
+                Title = $"Save company default hold-down list, version {next}",
+                FileName = HoldownStandardList.PackagedFileName,
+                Filter = "Hold-down list (*.json)|*.json",
+                InitialDirectory = SourceFolder() ?? AppDomain.CurrentDomain.BaseDirectory,
+            };
+            if (dialog.ShowDialog(this) != true) return;
+
+            var company = new HoldownStandardList();
+            company.RestoreFrom(mine);
+            company.CompanyVersion = next;
+            company.CompanyDate = date;
+            try { company.Save(dialog.FileName); }
+            catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException)
+            {
+                MessageBox.Show(this, "The company default could not be saved:\n" + ex.Message, "Save as company default", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            designer.CompanyList = company;
+            foreach (var r in rows) r.SetCompany(company);
+            mine.MarkAsCompanyVersion(next, date);   // raises Changed: the host saves the user's copy and re-runs the design
+            MessageBox.Show(this, $"Saved company default version {next} ({mine.Count} options) to:\n{dialog.FileName}\n\n" +
+                                  "To ship it with the app, this file must be ShearWallVisualizer\\HoldownStandardList.default.json in the " +
+                                  "source. Commit it and rebuild. On start-up, each user's list then follows the new version, or the user " +
+                                  "is asked if they have changed their own list.", "Save as company default", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        /// <summary>The ShearWallVisualizer source folder when the program runs from a build inside the source tree, else null.</summary>
+        private static string SourceFolder()
+        {
+            var dir = new System.IO.DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
+            for (int i = 0; i < 6 && dir != null; i++, dir = dir.Parent)
+            {
+                if (System.IO.File.Exists(System.IO.Path.Combine(dir.FullName, "ShearWallVisualizer.csproj"))) return dir.FullName;
+                var sub = System.IO.Path.Combine(dir.FullName, "ShearWallVisualizer");
+                if (System.IO.File.Exists(System.IO.Path.Combine(sub, "ShearWallVisualizer.csproj"))) return sub;
+            }
+            return null;
         }
 
         private static string FamilyName(HoldownFamilies f) =>
@@ -191,7 +272,7 @@ namespace ShearWallVisualizer.Dialogs
             private string used = "";
             private bool standard;
 
-            public Row(HoldownSpecRow r, HoldownStandardList list)
+            public Row(HoldownSpecRow r, HoldownStandardList list, HoldownStandardList company)
             {
                 Source = r;
                 this.list = list;
@@ -208,6 +289,7 @@ namespace ShearWallVisualizer.Dialogs
                 SPF = r.AllowableSPF_HF?.ToString("0", CultureInfo.InvariantCulture) ?? "";
                 Defl = N(r.DeflectionAtAllowable); Code = first ? r.CodeRef : "";
                 standard = list.Contains(Key);
+                SetCompany(company);
             }
 
             public HoldownSpecRow Source { get; }
@@ -246,6 +328,15 @@ namespace ShearWallVisualizer.Dialogs
                     Raise(nameof(Standard));
                     list.Set(Key, value);
                 }
+            }
+
+            /// <summary>"✓" when the option is in the company default shipped with the app.</summary>
+            public string Company { get; private set; } = "";
+
+            public void SetCompany(HoldownStandardList company)
+            {
+                string now = company != null && company.Contains(Key) ? "✓" : "";
+                if (now != Company) { Company = now; Raise(nameof(Company)); }
             }
 
             public void SyncStandard()

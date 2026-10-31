@@ -247,9 +247,33 @@ namespace ShearWallVisualizer
         private void CreateDesignPanel()
         {
             designer = new ShearWallDesigner(null, simpsonCatalog);
-            // The company standard hold-down list belongs to the app (one file for every project).
-            try { designer.StandardList = HoldownStandardList.Load(HoldownStandardList.DefaultPath); }
-            catch (Exception ex) { MessageBox.Show(this, "The standard hold-down list could not be read and starts empty:\n" + ex.Message, "Hold-down standard list"); }
+            // The standard hold-down list belongs to the app (one list for every project). The company default ships with the
+            // program; each user's copy follows it unless the user has changed theirs.
+            try
+            {
+                var (user, company, update) = HoldownStandardList.Startup(HoldownStandardList.DefaultPath, HoldownStandardList.PackagedPath);
+                designer.StandardList = user;
+                designer.CompanyList = company;
+                if (update == HoldownStandardList.CompanyUpdate.NeedsChoice)
+                {
+                    var answer = MessageBox.Show(this,
+                        $"The company hold-down list has been updated to version {company.CompanyVersion}" +
+                        (string.IsNullOrEmpty(company.CompanyDate) ? "" : $" ({company.CompanyDate})") + $" ({company.Count} options).\n\n" +
+                        $"You have changed your own list ({user.Count} options).\n\n" +
+                        "Yes: use the new company list (your changes are replaced).\nNo: keep your list (you can restore the company list " +
+                        "later from View > Hold-down catalog).",
+                        "Company hold-down list updated", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                    if (answer == MessageBoxResult.Yes) user.RestoreFrom(company);
+                    else user.KeepMineOver(company);
+                    user.Save(HoldownStandardList.DefaultPath);
+                }
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is JsonException)
+            {
+                MessageBox.Show(this, "The standard hold-down list could not be read and starts empty:\n" + ex.Message, "Hold-down standard list");
+            }
+            // A new project uses the standard list whenever there is one.
+            Calculator.DesignSettings.HoldownsFromStandardList = designer.StandardList.Count > 0;
             designer.StandardList.Changed += (s, e) =>
             {
                 try { designer.StandardList.Save(HoldownStandardList.DefaultPath); }
@@ -2268,6 +2292,7 @@ namespace ShearWallVisualizer
         {
             if (!ConfirmDiscardOrSave()) return;
             Calculator = new ShearWallCalculator_RigidDiaphragm();
+            Calculator.DesignSettings.HoldownsFromStandardList = designer != null && designer.StandardList.Count > 0;
             currentProjectPath = null;
             windSetup.SetInputs(null, ASCE7_Versions.ASCE_VER_7_22, null);
             windSetup.SetOnlyCases1And3(false);
@@ -2305,6 +2330,7 @@ namespace ShearWallVisualizer
 
             try
             {
+                RecordHoldowns();
                 ProjectSerializer.Save(path, Calculator, CurrentWindInputs(), windLoadsLinked);
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
@@ -2381,11 +2407,39 @@ namespace ShearWallVisualizer
 
             AddToRecentFiles(path);
             UpdateShearWallUI();
-            // An older file, or loads that changed, count as unsaved so the user is asked before closing.
+            string holdownNote = HoldownChangesSinceSave();
+            if (holdownNote != null) note = note == null ? holdownNote : note + "\n\n" + holdownNote;
+            // An older file, or loads or hold-downs that changed, count as unsaved so the user is asked before closing.
             savedProjectJson = note == null ? CurrentProjectJson() : string.Empty;
             UpdateTitle();
             if (note != null)
                 MessageBox.Show(this, note, "Open", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        /// <summary>Stores in the project which hold-down list (version) the design used and each wall's hold-down.</summary>
+        private void RecordHoldowns()
+        {
+            if (Calculator?.DesignSettings == null || designer == null) return;
+            Calculator.DesignSettings.HoldownList = HoldownListRecord.Make(designResults, designer.StandardList, Calculator.DesignSettings.HoldownsFromStandardList);
+        }
+
+        /// <summary>
+        /// After opening: the walls whose hold-down differs from the one saved in the project (the standard list or the catalog
+        /// changed since), with both list versions; null when nothing changed or the project predates the record.
+        /// </summary>
+        private string HoldownChangesSinceSave()
+        {
+            var record = Calculator?.DesignSettings?.HoldownList;
+            if (record == null || designer == null) return null;
+            var lines = record.Differences(designResults);
+            if (lines.Count == 0) return null;
+            var list = designer.StandardList;
+            string pool(bool std, int v, string d, bool c) => std ? "standard list, " + HoldownListRecord.Describe(v, d, c) : "full catalog";
+            return $"Hold-downs differ from when this project was saved.\nSaved with: {pool(record.FromStandardList, record.CompanyVersion, record.CompanyDate, record.Customized)}." +
+                   $"\nNow: {pool(Calculator.DesignSettings.HoldownsFromStandardList, list.CompanyVersion, list.CompanyDate, list.Customized)}.\n\n" +
+                   string.Join("\n", lines) +
+                   "\n\nThe design now uses the current list. Save to keep it, or close without saving to leave the file as it was " +
+                   "(the Design tab can also switch between the standard list and the full catalog).";
         }
 
         /// <summary>More than 0.5% (or 0.01 k) apart.</summary>

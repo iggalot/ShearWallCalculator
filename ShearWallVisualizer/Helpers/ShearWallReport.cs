@@ -237,7 +237,8 @@ namespace ShearWallVisualizer.Helpers
             if (s.HoldownsFromStandardList)
             {
                 var keys = designer?.StandardList.Keys.OrderBy(k => k, StringComparer.Ordinal).ToList() ?? new List<string>();
-                blocks.Add(WindReport.Para("Hold-downs selected from the company standard list only (the lightest adequate option of the wall's type; " +
+                string version = designer == null ? "" : " — " + HoldownListRecord.Describe(designer.StandardList.CompanyVersion, designer.StandardList.CompanyDate, designer.StandardList.Customized);
+                blocks.Add(WindReport.Para("Hold-downs selected from the standard list only" + version + " (the lightest adequate option of the wall's type; " +
                                            "no fall-back to the full catalog). Options in the list (Model#n = n-th fastener option of the model): " +
                                            (keys.Count == 0 ? "none." : string.Join(", ", keys) + ".")));
             }

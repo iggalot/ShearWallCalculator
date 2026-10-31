@@ -192,6 +192,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="HoldownStandardList.default.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\ASCE7-Wind-Load-Calculator\ASCE7WindLoadCalculator.csproj">
