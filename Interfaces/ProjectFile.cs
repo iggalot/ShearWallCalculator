@@ -59,6 +59,7 @@ namespace ShearWallCalculator.Interfaces
                 EaveHeight = b.BuildingHeight,
                 OverhangWidth = b.OverhangWidth,
                 ParapetHeight = b.ParapetHeight,
+                ParapetEnclosure = b.ParapetEnclosure,
                 RoofPitch = b.RoofPitch,
                 RoofType = b.RoofType,
                 Ridge = b.RidgeDirection,
@@ -87,6 +88,7 @@ namespace ShearWallCalculator.Interfaces
             BuildingHeight = Building.EaveHeight,
             OverhangWidth = Building.OverhangWidth,
             ParapetHeight = Building.ParapetHeight,
+            ParapetEnclosure = Building.ParapetEnclosure,
             RoofPitch = Building.RoofPitch,
             RoofType = Building.RoofType,
             RidgeDirection = Building.Ridge,
@@ -114,6 +116,8 @@ namespace ShearWallCalculator.Interfaces
         public double OverhangWidth { get; set; }
         /// <summary>Parapet height above a flat roof (ft); 0 for none (absent in older files).</summary>
         public double ParapetHeight { get; set; }
+        /// <summary>Parapet envelope porosity for its C&amp;C internal pressure (30.6); enclosed when absent in older files.</summary>
+        public BuildingEnclosures ParapetEnclosure { get; set; } = BuildingEnclosures.BLDG_ENCLOSED;
         public double RoofPitch { get; set; } = 15;
         public RoofTypes RoofType { get; set; } = RoofTypes.ROOF_TYPE_FLAT;
         public RidgeDirections Ridge { get; set; } = RidgeDirections.RIDGE_DIR_NONE;

@@ -19,9 +19,10 @@ _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`
   - Edge nets: 83.9 and 53.4 psf.
   - All match the app.
 - **To verify:**
-  - GC_pi is the building's enclosure value. §30.6 bases it on the porosity of the parapet envelope; confirm which applies for typical solid parapets.
+  - (resolved) GC_pi: see the parapet-envelope entry below.
 - **Fig. 30.3-2A note 5 (applied, wording confirmed by the user):** parapet ≥ 3 ft (0.9 m) around a roof with θ ≤ 7° → negative GCp in roof Zone 3 = Zone 2; positive GCp in roof Zones 2 and 3 = wall Zones 4 and 5. Applies to the roof table and to parapet case A. Below 3 ft nothing changes. Same note in 7-16 and 7-22.
-- **Tests:** W7 engine 244 (2 skipped), W7 UI 52, SWC 45.
+- **Parapet GC_pi (§30.6, wording confirmed by the user):** GC_pi from Table 26.13-1 for the porosity of the parapet envelope, a separate Building-page setting (default Enclosed ±0.18; Open or solid = 0; saved in project files). Each face is evaluated under +GC_pi and −GC_pi and both are tabled; the diagram shows the larger. Net load unchanged (internal pressure cancels). Shear-wall loads unaffected.
+- **Tests:** W7 engine 246 (2 skipped), W7 UI 52, SWC 45.
 
 ## 2026-10-30 (late) — Item 3d: parapets; scope line
 
