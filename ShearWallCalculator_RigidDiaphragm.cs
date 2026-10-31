@@ -3,6 +3,7 @@ using ShearWallCalculator;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 
 namespace calculator
 {
@@ -39,6 +40,10 @@ namespace calculator
         // shear force in line of wall from eccentric loading, Mr -- resistance at base of diaphragm at top of walls
         [JsonIgnore]
         public Dictionary<int, double> EccentricShear { get; set; } = new Dictionary<int, double>();
+
+        /// <summary>Every load case with its subcalculations, in the order analysed (for the calculation sheets).</summary>
+        [JsonIgnore]
+        public List<RigidCaseResult> CaseResults { get; } = new List<RigidCaseResult>();
 
         /// <summary>
         /// default constructor
@@ -80,6 +85,8 @@ namespace calculator
             double savedVx = V_x, savedVy = V_y;
             var best = new Dictionary<int, (double total, string name, int caseIndex)>();
             var perCase = new List<(Dictionary<int, double> dx, Dictionary<int, double> dy, Dictionary<int, double> ecc, double mt, double ex, double ey)>();
+            CaseResults.Clear();
+            WallShearRange.Clear();
 
             for (int i = 0; i < cases.Count; i++)
             {
@@ -89,6 +96,14 @@ namespace calculator
                 AnalyseOneCase(c);
                 perCase.Add((new Dictionary<int, double>(DirectShear_X), new Dictionary<int, double>(DirectShear_Y),
                              new Dictionary<int, double>(EccentricShear), Mt_comb, ecc_x, ecc_y));
+                var direct = new Dictionary<int, double>(DirectShear_X);
+                foreach (var kv in DirectShear_Y) direct[kv.Key] = kv.Value;
+                CaseResults.Add(new RigidCaseResult
+                {
+                    Name = c.Name, Vx = c.Vx, Vy = c.Vy, Mt = c.Mt, EccX = ecc_x, EccY = ecc_y, MtComb = Mt_comb,
+                    Direct = direct, Torsional = new Dictionary<int, double>(EccentricShear), Total = new Dictionary<int, double>(TotalWallShear),
+                });
+                TrackRange(TotalWallShear, c.Name);
                 KeepGoverning(TotalWallShear, c.Name, best, i);
             }
             V_x = savedVx;
@@ -249,6 +264,47 @@ namespace calculator
                 int id = result.Key;
                 TotalWallShear.Add(id, result.Value + EccentricShear[id]);
             }
+        }
+    }
+
+    /// <summary>
+    /// One load case through the rigid-diaphragm distribution. Building axes: x right, y up, moments CCW positive.
+    /// Vx, Vy act at the center of mass; Mt is the torsion the case itself carries. ecc = CR − CM;
+    /// Mt_comb = Vx·ecc_y − Vy·ecc_x + Mt is the moment about the center of rigidity. Wall shears are the force each wall
+    /// exerts on the diaphragm (opposite to the load): direct = −k·V/Σk, torsional = +k·Mt_comb·ȳ/J (E-W walls, along x)
+    /// or −k·Mt_comb·x̄/J (N-S walls, along y), with x̄, ȳ measured from the center of rigidity.
+    /// </summary>
+    public sealed class RigidCaseResult
+    {
+        public string Name { get; set; }
+        public double Vx { get; set; }
+        public double Vy { get; set; }
+        public double Mt { get; set; }
+        public double EccX { get; set; }
+        public double EccY { get; set; }
+        public double MtComb { get; set; }
+        public Dictionary<int, double> Direct { get; set; }
+        public Dictionary<int, double> Torsional { get; set; }
+        public Dictionary<int, double> Total { get; set; }
+
+        /// <summary>The Mt_comb terms: Vx·ecc_y and −Vy·ecc_x (kip-ft).</summary>
+        public double MomentFromVx => Vx * EccY;
+        public double MomentFromVy => -Vy * EccX;
+
+        /// <summary>
+        /// Statics checks on the wall forces (forces on the diaphragm, E-W walls along x, N-S walls along y):
+        /// ΣFx = −Vx and ΣFy = −Vy (the walls react the load); the torsional shears alone sum to zero in x and in y (a
+        /// couple); and the moment of the wall forces about the center of rigidity, Σ(x̄·Fy − ȳ·Fx), is −Mt_comb.
+        /// </summary>
+        public (double sumFx, double sumFy, double torsionalFx, double torsionalFy, double momentAboutCR) Checks(WallSystem walls)
+        {
+            double fx = walls.EW_Walls.Keys.Where(Total.ContainsKey).Sum(id => Total[id]);
+            double fy = walls.NS_Walls.Keys.Where(Total.ContainsKey).Sum(id => Total[id]);
+            double tx = walls.EW_Walls.Keys.Where(Torsional.ContainsKey).Sum(id => Torsional[id]);
+            double ty = walls.NS_Walls.Keys.Where(Torsional.ContainsKey).Sum(id => Torsional[id]);
+            double m = walls.NS_Walls.Keys.Where(Total.ContainsKey).Sum(id => walls.X_bar_walls[id] * Total[id])
+                     - walls.EW_Walls.Keys.Where(Total.ContainsKey).Sum(id => walls.Y_bar_walls[id] * Total[id]);
+            return (fx, fy, tx, ty, m);
         }
     }
 }

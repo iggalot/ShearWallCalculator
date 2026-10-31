@@ -154,6 +154,47 @@ namespace ShearWallCalculator.Tests
             Assert.AreEqual(-10.0, calc.TotalWallShear[west] + calc.TotalWallShear[east], 1e-6, "still reacts Vy");
         }
 
+        /// <summary>
+        /// Every case of a set (wind from both sides, both torsion signs) passes the statics checks the calculation sheet
+        /// prints, and each wall's range holds its most positive and most negative shear with the design shear the larger magnitude.
+        /// </summary>
+        [TestMethod]
+        public void EveryCase_PassesTheStaticsChecks_AndRangeKeepsBothSigns()
+        {
+            var calc = new ShearWallCalculator_RigidDiaphragm();
+            calc._wall_system.AddWall(new WallData(H, 0, 5, 0, 21));
+            calc._wall_system.AddWall(new WallData(H, 40, 5, 40, 9));
+            calc._wall_system.AddWall(new WallData(H, 15, 0, 25, 0));
+            calc._wall_system.AddWall(new WallData(H, 15, 20, 25, 20));
+            calc._diaphragm_system.AddDiaphragm(new DiaphragmData_Rectangular(new Point(0, 0), new Point(40, 20)));
+            var cases = new[] { 1, -1 }.SelectMany(s => new[] { 1, -1 }.Select(t =>
+                new LateralLoadCase($"{s} {t}", s * 6.0, 4.0 * t, s * t * 25.0))).ToList();
+            calc.SetLoadCases(cases);
+            calc.PerformCalculations();
+
+            Assert.AreEqual(cases.Count, calc.CaseResults.Count);
+            foreach (var c in calc.CaseResults)
+            {
+                Assert.AreEqual(c.Vx * c.EccY - c.Vy * c.EccX + c.Mt, c.MtComb, 1e-9);
+                var (fx, fy, tx, ty, m) = c.Checks(calc._wall_system);
+                Assert.AreEqual(-c.Vx, fx, 1e-6, c.Name);
+                Assert.AreEqual(-c.Vy, fy, 1e-6, c.Name);
+                Assert.AreEqual(0, tx, 1e-6, c.Name);
+                Assert.AreEqual(0, ty, 1e-6, c.Name);
+                Assert.AreEqual(-c.MtComb, m, 1e-3, c.Name);
+            }
+
+            foreach (var id in calc.TotalWallShear.Keys)
+            {
+                var all = calc.CaseResults.Select(c => c.Total[id]).ToList();
+                var r = calc.WallShearRange[id];
+                Assert.AreEqual(all.Max(), r.MaxPositive, 1e-12);
+                Assert.AreEqual(all.Min(), r.MaxNegative, 1e-12);
+                Assert.IsTrue(r.MaxPositive > 0 && r.MaxNegative < 0, "wind from both sides gives both signs");
+                Assert.AreEqual(Math.Abs(calc.TotalWallShear[id]), r.Design, 1e-12);
+            }
+        }
+
         [TestMethod]
         public void TotalShear_IsDirectPlusTorsional()
         {

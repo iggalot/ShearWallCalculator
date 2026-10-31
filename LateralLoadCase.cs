@@ -28,4 +28,23 @@ namespace ShearWallCalculator
             Name = name; Vx = vx; Vy = vy; Mt = mt; ApplyMinimumEccentricity = applyMinimumEccentricity;
         }
     }
+
+    /// <summary>
+    /// One wall's shear over all load cases: the most positive and most negative total shear (kips, the wall's force on the
+    /// diaphragm, signed in the building axes) and the case that gives each. Hold-downs come in pairs, one at each end of
+    /// the wall, so both are sized for the design shear, the larger magnitude of the two.
+    /// </summary>
+    public sealed class ShearRange
+    {
+        public double MaxPositive { get; set; }
+        public string MaxPositiveCase { get; set; }
+        public double MaxNegative { get; set; }
+        public string MaxNegativeCase { get; set; }
+
+        /// <summary>max(|most positive|, |most negative|) (kips).</summary>
+        public double Design => System.Math.Max(System.Math.Abs(MaxPositive), System.Math.Abs(MaxNegative));
+
+        /// <summary>The case giving the design shear.</summary>
+        public string DesignCase => System.Math.Abs(MaxPositive) >= System.Math.Abs(MaxNegative) ? MaxPositiveCase : MaxNegativeCase;
+    }
 }

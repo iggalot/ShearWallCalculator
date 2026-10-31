@@ -26,6 +26,20 @@ namespace ShearWallCalculator
         [JsonIgnore]
         public Dictionary<int, double> DirectShear_Y { get; set; } = new Dictionary<int, double>();
 
+        /// <summary>Line reactions of the case being analysed (x loads to the E-W lines, y loads to the N-S lines).</summary>
+        [JsonIgnore]
+        public List<LineReaction> LinesX { get; } = new List<LineReaction>();
+        [JsonIgnore]
+        public List<LineReaction> LinesY { get; } = new List<LineReaction>();
+
+        /// <summary>Every load case with its line reactions and wall shears (for the calculation sheet).</summary>
+        [JsonIgnore]
+        public List<FlexibleCaseResult> CaseResults { get; } = new List<FlexibleCaseResult>();
+
+        /// <summary>What the flexible distribution could not do for these walls and loads (shown on the sheet).</summary>
+        [JsonIgnore]
+        public List<string> Warnings { get; } = new List<string>();
+
 
         public new string CalculatorType { get => "Flexible Diaphragm"; }
 
@@ -68,6 +82,9 @@ namespace ShearWallCalculator
                 double savedVx = V_x, savedVy = V_y;
                 var best = new Dictionary<int, (double total, string name, int caseIndex)>();
                 var perCase = new List<(Dictionary<int, double> dx, Dictionary<int, double> dy)>();
+                WallShearRange.Clear();
+                CaseResults.Clear();
+                Warnings.Clear();
                 for (int i = 0; i < cases.Count; i++)
                 {
                     V_x = cases[i].Vx;
@@ -76,10 +93,22 @@ namespace ShearWallCalculator
                     ComputeDirectShear_Y();  // vertical walls
                     ComputeTotalShear();
                     perCase.Add((new Dictionary<int, double>(DirectShear_X), new Dictionary<int, double>(DirectShear_Y)));
+                    CaseResults.Add(new FlexibleCaseResult
+                    {
+                        Name = cases[i].Name, Vx = cases[i].Vx, Vy = cases[i].Vy, Mt = cases[i].Mt,
+                        LinesX = LinesX.ToList(), LinesY = LinesY.ToList(), Total = new Dictionary<int, double>(TotalWallShear),
+                    });
+                    TrackRange(TotalWallShear, cases[i].Name);
                     KeepGoverning(TotalWallShear, cases[i].Name, best, i);
                 }
                 V_x = savedVx;
                 V_y = savedVy;
+                var distinct = Warnings.Distinct().ToList();     // one line per direction, not per case
+                Warnings.Clear();
+                Warnings.AddRange(distinct);
+                if (cases.Any(c => Math.Abs(c.Mt) > 1e-9))
+                    Warnings.Add("Some load cases carry a torsional moment Mt. The flexible distribution spreads each load uniformly " +
+                                 "and does not apply Mt; how Mt should become a non-uniform load along the diaphragm is not decided yet.");
 
                 DirectShear_X.Clear(); DirectShear_Y.Clear(); TotalWallShear.Clear(); GoverningLoadCase.Clear();
                 foreach (var kv in best)
@@ -151,195 +180,64 @@ namespace ShearWallCalculator
             return str;
         }
 
+        /// <summary>X loads go to the east-west wall lines, spread over the plan depth (y).</summary>
         private void ComputeDirectShear_X()
         {
-            double shear_x_plf = V_x / BoundingBoxWorld.Height;
-            double beamStart = BoundingBoxWorld.Y;
-            double beamEnd = BoundingBoxWorld.Y + BoundingBoxWorld.Height;
-
-            // Step 1: Collect supports from all East-West braced wall lines
-            List<SupportLoadDistributor.Support> supports = new List<SupportLoadDistributor.Support>();
-            foreach (var bwl in _wall_system.BWL_Manager.BracedWallLines)
-            {
-                if (bwl.WallDir == WallDirs.EastWest)
-                {
-                    supports.Add(new SupportLoadDistributor.Support
-                    {
-                        ID = bwl.GroupNumber,
-                        Location = bwl.Center.Y
-                    });
-                }
-            }
-
-            // Debugging: Print the number of east-west braced wall lines found
-
-            // Step 2: Sort supports by Y-location
-            supports.Sort((a, b) => a.Location.CompareTo(b.Location));
-
-            // Step 3: Distribute the total shear to the supports
-            List<SupportLoadDistributor.Support> loads = SupportLoadDistributor.DistributeLoad(supports, shear_x_plf, beamStart, beamEnd);
-
-            // Step 4: Initialize result dictionaries
-            DirectShear_X_BracedLine.Clear();
-            DirectShear_X.Clear();
-
-            // Step 5: Build a lookup of distributed shear loads by group ID
-            Dictionary<int, double> groupLoadMap = loads.ToDictionary(l => l.ID, l => l.Load);
-
-            // Debugging: Print the total shear for each braced wall line
-            foreach (var load in loads)
-            {
-            }
-
-            // Step 6: Accumulate shear load to each wall based on rigidity
-            foreach (var bwl in _wall_system.BWL_Manager.BracedWallLines)
-            {
-                if (bwl.WallDir != WallDirs.EastWest)
-                    continue;
-
-                // Get total load for this braced wall line from the lookup table
-                if (!groupLoadMap.TryGetValue(bwl.GroupNumber, out double totalShear))
-                    continue;
-
-                // Store total shear for this BWL
-                DirectShear_X_BracedLine[bwl] = totalShear;
-
-                // Debugging: Log the total shear for the current BWL
-
-                // Calculate total rigidity of all walls in this BWL
-                double sum_rigid = bwl.WallReferences.Sum(w => w.WallRigidity);
-                if (sum_rigid == 0)
-                    continue;
-
-                // Distribute the shear load to individual wall segments
-                foreach (var wall in bwl.WallReferences)
-                {
-                    // Make sure wall ID is correctly populated
-                    if (wall.ID == 0)
-                    {
-                    }
-
-                    double wallShear = totalShear * (wall.WallRigidity / sum_rigid);
-
-                    // Check if the wall ID already exists in DirectShear_X and accumulate the shear value
-                    if (DirectShear_X.ContainsKey(wall.ID))
-                    {
-                        DirectShear_X[wall.ID] += wallShear; // Accumulate shear for duplicate wall ID
-                    }
-                    else
-                    {
-                        DirectShear_X.Add(wall.ID, wallShear); // Add new shear for a unique wall ID
-                    }
-
-                    // Debugging: Print the shear assigned to this wall
-                }
-            }
-
-            // Debugging: Print the final shear for each wall
-            foreach (var entry in DirectShear_X)
-            {
-            }
+            Distribute(WallDirs.EastWest, V_x, BoundingBoxWorld.Y, BoundingBoxWorld.Y + BoundingBoxWorld.Height, b => b.Center.Y,
+                       DirectShear_X, DirectShear_X_BracedLine, LinesX);
         }
 
-
-        /// <summary>
-        /// Compute the direct shear for loads acting in the Y-direction
-        /// </summary>
+        /// <summary>Y loads go to the north-south wall lines, spread over the plan width (x).</summary>
         private void ComputeDirectShear_Y()
         {
-            // Y-direction load spreads along the plan X extent; north-south wall lines sit at x positions.
-            double shear_x_plf = V_y / BoundingBoxWorld.Width;
-            double beamStart = BoundingBoxWorld.X;
-            double beamEnd = BoundingBoxWorld.X + BoundingBoxWorld.Width;
-
-            // Step 1: Collect supports from all East-West braced wall lines
-            List<SupportLoadDistributor.Support> supports = new List<SupportLoadDistributor.Support>();
-            foreach (var bwl in _wall_system.BWL_Manager.BracedWallLines)
-            {
-                if (bwl.WallDir == WallDirs.NorthSouth)
-                {
-                    supports.Add(new SupportLoadDistributor.Support
-                    {
-                        ID = bwl.GroupNumber,
-                        Location = bwl.Center.X
-                    });
-                }
-            }
-
-            // Debugging: Print the number of east-west braced wall lines found
-
-            // Step 2: Sort supports by Y-location
-            supports.Sort((a, b) => a.Location.CompareTo(b.Location));
-
-            // Step 3: Distribute the total shear to the supports
-            List<SupportLoadDistributor.Support> loads = SupportLoadDistributor.DistributeLoad(supports, shear_x_plf, beamStart, beamEnd);
-
-            // Step 4: Initialize result dictionaries
-            DirectShear_Y_BracedLine.Clear();
-            DirectShear_Y.Clear();
-
-            // Step 5: Build a lookup of distributed shear loads by group ID
-            Dictionary<int, double> groupLoadMap = loads.ToDictionary(l => l.ID, l => l.Load);
-
-            // Debugging: Print the total shear for each braced wall line
-            foreach (var load in loads)
-            {
-            }
-
-            // Step 6: Accumulate shear load to each wall based on rigidity
-            foreach (var bwl in _wall_system.BWL_Manager.BracedWallLines)
-            {
-                if (bwl.WallDir != WallDirs.NorthSouth)
-                    continue;
-
-                // Get total load for this braced wall line from the lookup table
-                if (!groupLoadMap.TryGetValue(bwl.GroupNumber, out double totalShear))
-                    continue;
-
-                // Store total shear for this BWL
-                DirectShear_Y_BracedLine[bwl] = totalShear;
-
-                // Debugging: Log the total shear for the current BWL
-
-                // Calculate total rigidity of all walls in this BWL
-                double sum_rigid = bwl.WallReferences.Sum(w => w.WallRigidity);
-                if (sum_rigid == 0)
-                    continue;
-
-                // Distribute the shear load to individual wall segments
-                foreach (var wall in bwl.WallReferences)
-                {
-                    // Make sure wall ID is correctly populated
-                    if (wall.ID == 0)
-                    {
-                    }
-
-                    double wallShear = totalShear * (wall.WallRigidity / sum_rigid);
-
-                    // Check if the wall ID already exists in DirectShear_X and accumulate the shear value
-                    if (DirectShear_Y.ContainsKey(wall.ID))
-                    {
-                        DirectShear_Y[wall.ID] += wallShear; // Accumulate shear for duplicate wall ID
-                    }
-                    else
-                    {
-                        DirectShear_Y.Add(wall.ID, wallShear); // Add new shear for a unique wall ID
-                    }
-
-                    // Debugging: Print the shear assigned to this wall
-                }
-            }
-
-            // Debugging: Print the final shear for each wall
-            foreach (var entry in DirectShear_Y)
-            {
-            }
+            Distribute(WallDirs.NorthSouth, V_y, BoundingBoxWorld.X, BoundingBoxWorld.X + BoundingBoxWorld.Width, b => b.Center.X,
+                       DirectShear_Y, DirectShear_Y_BracedLine, LinesY);
         }
 
         /// <summary>
-        /// Tallies the total shear acting on a wall as the sum of direct shear and eccentric shear
+        /// Flexible diaphragm: the load V is a uniform line load w = V / (end − start) across the plan; the diaphragm spans as
+        /// simple beams between the wall lines, so each line takes w × its tributary width (half way to each neighbour, to the
+        /// plan edge for the outer lines). The walls on a line share its reaction by rigidity. Wall shears are the force each
+        /// wall exerts on the diaphragm, opposite in sign to the load (the same convention as the rigid calculation).
         /// </summary>
-        /// <exception cref="NotImplementedException"></exception>
+        private void Distribute(WallDirs dir, double V, double start, double end, Func<BracedWallLine, double> location,
+            Dictionary<int, double> wallShears, Dictionary<BracedWallLine, double> lineShears, List<LineReaction> lines)
+        {
+            wallShears.Clear();
+            lineShears.Clear();
+            lines.Clear();
+            var bwls = _wall_system.BWL_Manager.BracedWallLines.Where(b => b.WallDir == dir).ToList();
+            if (bwls.Count < 2 || end <= start)
+            {
+                Warnings.Add($"{(dir == WallDirs.EastWest ? "East-west" : "North-south")} walls: a flexible diaphragm needs at least two wall lines " +
+                             $"in this direction (found {bwls.Count}); these walls get no shear.");
+                return;
+            }
+
+            double w = V / (end - start);
+            var supports = bwls.Select(b => new SupportLoadDistributor.Support { ID = b.GroupNumber, Location = location(b) }).ToList();
+            var loads = SupportLoadDistributor.DistributeLoad(supports, w, start, end).ToDictionary(l => l.ID);
+
+            foreach (var bwl in bwls.OrderBy(location))
+            {
+                var s = loads[bwl.GroupNumber];
+                double reaction = -s.Load;                        // the line's force on the diaphragm
+                lineShears[bwl] = reaction;
+                double sumK = bwl.WallReferences.Sum(x => x.WallRigidity);
+                lines.Add(new LineReaction
+                {
+                    Line = bwl.GroupNumber, Location = s.Location, From = s.TributaryStart, To = s.TributaryEnd, W = w, Reaction = reaction,
+                    SumRigidity = sumK, WallIds = bwl.WallReferences.Select(x => x.ID).ToList(),
+                });
+                if (sumK == 0) continue;
+                foreach (var wall in bwl.WallReferences)
+                {
+                    double share = reaction * wall.WallRigidity / sumK;
+                    wallShears[wall.ID] = wallShears.TryGetValue(wall.ID, out var v) ? v + share : share;
+                }
+            }
+        }
+
         public void ComputeTotalShear()
         {
             TotalWallShear.Clear();
@@ -362,6 +260,8 @@ namespace ShearWallCalculator
                 public int ID { get; set; } // the ID number of the braced wall line
                 public double Location { get; set; }
                 public double Load { get; set; }
+                public double TributaryStart { get; set; }
+                public double TributaryEnd { get; set; }
             }
 
             /// <summary>
@@ -422,12 +322,49 @@ namespace ShearWallCalculator
                     {
                         ID = supports[i].ID,
                         Location = supports[i].Location,
-                        Load = uniformLoad * width
+                        Load = uniformLoad * width,
+                        TributaryStart = tributaryStart,
+                        TributaryEnd = tributaryEnd,
                     });
                 }
 
                 return results;
             }
         }
+    }
+
+    /// <summary>One wall line's share of a load in a flexible diaphragm (tributary width).</summary>
+    public sealed class LineReaction
+    {
+        public int Line { get; set; }
+
+        /// <summary>Position of the line across the load (ft): y for E-W lines, x for N-S lines.</summary>
+        public double Location { get; set; }
+
+        /// <summary>Tributary extent (ft): half way to each neighbouring line, to the plan edge for the outer lines.</summary>
+        public double From { get; set; }
+        public double To { get; set; }
+        public double Width => To - From;
+
+        /// <summary>Uniform line load w = V / plan dimension (k/ft).</summary>
+        public double W { get; set; }
+
+        /// <summary>The line's force on the diaphragm, −w × width (kips).</summary>
+        public double Reaction { get; set; }
+
+        public double SumRigidity { get; set; }
+        public List<int> WallIds { get; set; }
+    }
+
+    /// <summary>One load case through the flexible distribution.</summary>
+    public sealed class FlexibleCaseResult
+    {
+        public string Name { get; set; }
+        public double Vx { get; set; }
+        public double Vy { get; set; }
+        public double Mt { get; set; }
+        public List<LineReaction> LinesX { get; set; }
+        public List<LineReaction> LinesY { get; set; }
+        public Dictionary<int, double> Total { get; set; }
     }
 }

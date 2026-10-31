@@ -60,6 +60,25 @@ namespace ShearWallCalculator
                 ? LoadCases
                 : new List<LateralLoadCase> { new LateralLoadCase("Manual load", V_x, V_y, 0, applyMinimumEccentricity: true) };
 
+        /// <summary>
+        /// Per wall, across all load cases: the most positive and the most negative total shear and the cases that give them.
+        /// The design shear is the larger magnitude of the two (<see cref="ShearRange.Design"/>), the same as TotalWallShear.
+        /// </summary>
+        [JsonIgnore]
+        public Dictionary<int, ShearRange> WallShearRange { get; } = new Dictionary<int, ShearRange>();
+
+        /// <summary>Adds one load case's wall shears to <see cref="WallShearRange"/>.</summary>
+        protected void TrackRange(Dictionary<int, double> totals, string caseName)
+        {
+            foreach (var kv in totals)
+            {
+                if (!WallShearRange.TryGetValue(kv.Key, out var r))
+                    WallShearRange[kv.Key] = r = new ShearRange { MaxPositive = kv.Value, MaxPositiveCase = caseName, MaxNegative = kv.Value, MaxNegativeCase = caseName };
+                if (kv.Value > r.MaxPositive) { r.MaxPositive = kv.Value; r.MaxPositiveCase = caseName; }
+                if (kv.Value < r.MaxNegative) { r.MaxNegative = kv.Value; r.MaxNegativeCase = caseName; }
+            }
+        }
+
         /// <summary>Keeps, per wall, the shear with the largest magnitude across load cases.</summary>
         protected static void KeepGoverning(Dictionary<int, double> totals, string caseName,
             Dictionary<int, (double total, string name, int caseIndex)> best, int caseIndex)

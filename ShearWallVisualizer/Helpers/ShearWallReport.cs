@@ -30,7 +30,7 @@ namespace ShearWallVisualizer.Helpers
                 (rigid ? "Rigid diaphragm: the load is shared by wall rigidity, plus torsion from the eccentricity between the centre of mass and the centre of rigidity. "
                        : "Flexible diaphragm: each wall line takes the load tributary to it. ") +
                 (linkedToWind
-                    ? "Loads: the ASCE 7 wind load cases (Fig. 27.3-8) from the wind pages, strength level; each wall shows its governing case."
+                    ? "Loads: the ASCE 7 wind load cases from the wind pages (Ch. 27 Fig. 27.3-8 or Ch. 28 Fig. 28.3-1, the wind from every side), strength level."
                     : "Loads: MANUAL loads entered by the user, not the wind calculation.")));
 
             if (calc.LoadCases != null && calc.LoadCases.Count > 0)
@@ -48,26 +48,158 @@ namespace ShearWallVisualizer.Helpers
             foreach (var kv in calc._wall_system._walls.OrderBy(w => w.Key))
             {
                 var wall = kv.Value;
-                double v = calc.TotalWallShear.TryGetValue(kv.Key, out var s) ? s : double.NaN;
-                calc.GoverningLoadCase.TryGetValue(kv.Key, out var governing);
+                if (!calc.WallShearRange.TryGetValue(kv.Key, out var range))
+                {
+                    rows.Add(new[] { kv.Key.ToString(), Dir(wall), wall.WallLength.ToString("0.00"), wall.WallHeight.ToString("0.0"), "-", "-", "-", "-", "-", "-" });
+                    continue;
+                }
+                double v = range.Design;
                 rows.Add(new[]
                 {
-                    kv.Key.ToString(),
-                    wall.WallDir == WallDirs.EastWest ? "E-W" : "N-S",
-                    wall.WallLength.ToString("0.00"),
-                    wall.WallHeight.ToString("0.0"),
-                    double.IsNaN(v) ? "-" : Math.Abs(v).ToString("0.00"),
-                    double.IsNaN(v) || wall.WallLength <= 0 ? "-" : (1000 * Math.Abs(v) / wall.WallLength).ToString("0"),
-                    governing ?? "-",
+                    kv.Key.ToString(), Dir(wall), wall.WallLength.ToString("0.00"), wall.WallHeight.ToString("0.0"),
+                    range.MaxPositive.ToString("0.000"), range.MaxPositiveCase ?? "-",
+                    range.MaxNegative.ToString("0.000"), range.MaxNegativeCase ?? "-",
+                    v.ToString("0.000"),
+                    wall.WallLength <= 0 ? "-" : (1000 * v / wall.WallLength).ToString("0"),
                 });
             }
             blocks.Add(WindReport.Heading("Wall shears"));
-            blocks.Add(WindReport.Para("V is the largest shear over all load cases (strength level); v = V / L is the unit shear along the wall."));
-            blocks.AddRange(WindReport.Tables(new[] { "Wall", "Direction", "L (ft)", "h (ft)", "V (k)", "v (plf)", "Governing case" }, rows));
+            blocks.Add(WindReport.Para(
+                "Each wall's shear over all load cases (strength level, kips). The signed values are the force the wall exerts on the " +
+                "diaphragm in the building axes (+x right, +y up), so they oppose the load. The most positive and most negative values " +
+                "come from the wind blowing from opposite sides. Design shear V = max(|most positive|, |most negative|); v = V / L. " +
+                "Hold-downs come in pairs, one at each end of the wall, both sized for the tension from V."));
+            blocks.AddRange(WindReport.Tables(new[] { "Wall", "Dir.", "L (ft)", "h (ft)", "Most + (k)", "Case", "Most − (k)", "Case", "V (k)", "v (plf)" }, rows));
 
             var sections = new List<ReportSection> { new ReportSection("Shear walls", blocks) };
+            if (calc is ShearWallCalculator_RigidDiaphragm rigidCalc && rigidCalc.CaseResults.Count > 0)
+                sections.Add(RigidSheet(rigidCalc));
+            if (calc is ShearWallCalculator_FlexibleDiaphragm flexCalc && flexCalc.CaseResults.Count > 0)
+                sections.Add(FlexibleSheet(flexCalc));
             if (design != null && design.Count > 0) sections.Add(DesignSection(calc, design));
             return sections;
+        }
+
+        private static string Dir(WallData wall) => wall.WallDir == WallDirs.EastWest ? "E-W" : "N-S";
+
+        /// <summary>
+        /// The rigid-diaphragm calculation sheet: sign convention and formulas, wall properties, then every load case with its
+        /// Mt_comb terms, each wall's direct, torsional and total shear, and the statics checks.
+        /// </summary>
+        private static ReportSection RigidSheet(ShearWallCalculator_RigidDiaphragm calc)
+        {
+            var ws = calc._wall_system;
+            var cm = calc._diaphragm_system.CtrMass;
+            var cr = ws.CtrRigidity;
+            double sumKx = ws.EW_Walls.Values.Sum(w => w.WallRigidity), sumKy = ws.NS_Walls.Values.Sum(w => w.WallRigidity);
+            var blocks = new List<FrameworkElement>
+            {
+                WindReport.Heading("Rigid diaphragm calculation sheet"),
+                WindReport.Para(
+                    "Sign convention. Building axes: x to the right, y up, origin at the bottom-left of the plan; moments counterclockwise " +
+                    "(seen from above) positive, M = (r × F)z = rx Fy − ry Fx (right-hand rule). Each case's Vx and Vy act at the center of " +
+                    "mass (CM) and Mt is the torsion the case itself carries about the CM. E-W walls carry forces along x, N-S walls along y. " +
+                    "Wall shears are the force each wall exerts on the diaphragm: they resist the load, so they are opposite in sign to it."),
+                WindReport.Para(
+                    "Formulas. k = 1 / (0.4 (h/L)³ + 0.3 (h/L)) (cantilever pier, relative rigidity). Center of rigidity (CR): " +
+                    "x_CR = Σk x / Σk over the N-S walls, y_CR = Σk y / Σk over the E-W walls. x̄ = x − x_CR, ȳ = y − y_CR. " +
+                    "J = Σ(E-W) k ȳ² + Σ(N-S) k x̄². Eccentricity ecc = CR − CM. Torsional moment about the CR: " +
+                    "Mt_comb = Vx·ecc_y − Vy·ecc_x + Mt. Direct shear: −k·Vx / Σk (E-W), −k·Vy / Σk (N-S). " +
+                    "Torsional shear (the wall's share of the force couple equal to Mt_comb): +k·Mt_comb·ȳ / J (E-W), −k·Mt_comb·x̄ / J (N-S). " +
+                    "Total = direct + torsional."),
+                WindReport.Para(
+                    "Checks for every case: ΣFx = −Vx and ΣFy = −Vy (the walls react the load); the torsional shears alone sum to zero in x " +
+                    "and in y (a couple, no net force); the moment of the wall shears about the CR, Σ(x̄·Fy − ȳ·Fx), equals −Mt_comb " +
+                    "(the walls resist the torsion: the diaphragm's forces on the walls produce +Mt_comb)."),
+            };
+
+            var props = ws._walls.OrderBy(w => w.Key).Select(kv =>
+            {
+                var w = kv.Value;
+                bool ew = w.WallDir == WallDirs.EastWest;
+                double xb = ws.X_bar_walls.TryGetValue(kv.Key, out var a) ? a : double.NaN, yb = ws.Y_bar_walls.TryGetValue(kv.Key, out var b) ? b : double.NaN;
+                double arm = ew ? yb : xb;
+                return new[]
+                {
+                    kv.Key.ToString(), Dir(w), w.Center.X.ToString("0.00"), w.Center.Y.ToString("0.00"), w.WallLength.ToString("0.00"),
+                    w.WallHeight.ToString("0.00"), w.WallRigidity.ToString("0.0000"), xb.ToString("0.000"), yb.ToString("0.000"),
+                    (w.WallRigidity * arm * arm).ToString("0.000"),
+                };
+            }).ToList();
+            blocks.Add(WindReport.Heading("Walls"));
+            blocks.AddRange(WindReport.Tables(new[] { "Wall", "Dir.", "x (ft)", "y (ft)", "L (ft)", "h (ft)", "k", "x̄ (ft)", "ȳ (ft)", "k·arm² (ft²)" }, props));
+            blocks.Add(WindReport.Para(
+                $"Σk (E-W) = {sumKx:0.0000}, Σk (N-S) = {sumKy:0.0000}. CR = ({cr.X:0.000}, {cr.Y:0.000}) ft; CM = ({cm.X:0.000}, {cm.Y:0.000}) ft. " +
+                $"J = {ws.InertiaXX:0.000} (E-W) + {ws.InertiaYY:0.000} (N-S) = {ws.InertiaPolar:0.000} ft². " +
+                "The arm is ȳ for E-W walls and x̄ for N-S walls."));
+
+            foreach (var c in calc.CaseResults)
+            {
+                var (fx, fy, tx, ty, m) = c.Checks(ws);
+                blocks.Add(WindReport.Heading(c.Name));
+                blocks.Add(WindReport.Para(
+                    $"Vx = {c.Vx:0.000} k, Vy = {c.Vy:0.000} k, Mt = {c.Mt:0.00} k-ft; ecc_x = {c.EccX:0.000} ft, ecc_y = {c.EccY:0.000} ft. " +
+                    $"Mt_comb = Vx·ecc_y − Vy·ecc_x + Mt = ({c.Vx:0.000})({c.EccY:0.000}) − ({c.Vy:0.000})({c.EccX:0.000}) + ({c.Mt:0.00}) = " +
+                    $"{c.MomentFromVx:0.00} + {c.MomentFromVy:0.00} + {c.Mt:0.00} = {c.MtComb:0.00} k-ft ({(c.MtComb >= 0 ? "CCW" : "CW")})."));
+                var rows = ws._walls.Keys.OrderBy(k => k).Where(c.Total.ContainsKey).Select(id => new[]
+                {
+                    id.ToString(), Dir(ws._walls[id]),
+                    c.Direct.TryGetValue(id, out var d) ? d.ToString("0.000") : "-",
+                    c.Torsional.TryGetValue(id, out var t) ? t.ToString("0.000") : "-",
+                    c.Total[id].ToString("0.000"),
+                }).ToList();
+                blocks.AddRange(WindReport.Tables(new[] { "Wall", "Dir.", "Direct (k)", "Torsional (k)", "Total (k)" }, rows));
+                blocks.Add(WindReport.Para(
+                    $"Checks: ΣFx = {fx:0.000} (−Vx = {-c.Vx:0.000}); ΣFy = {fy:0.000} (−Vy = {-c.Vy:0.000}); torsional ΣFx = {tx:0.000}, ΣFy = {ty:0.000}; " +
+                    $"Σ(x̄·Fy − ȳ·Fx) = {m:0.00} (−Mt_comb = {-c.MtComb:0.00})."));
+            }
+            return new ReportSection("Rigid diaphragm calculation sheet", blocks);
+        }
+
+        /// <summary>The flexible-diaphragm calculation sheet: method, warnings, then every case's line reactions and wall shares.</summary>
+        private static ReportSection FlexibleSheet(ShearWallCalculator_FlexibleDiaphragm calc)
+        {
+            var ws = calc._wall_system;
+            var box = calc.BoundingBoxWorld;
+            var blocks = new List<FrameworkElement>
+            {
+                WindReport.Heading("Flexible diaphragm calculation sheet"),
+                WindReport.Para(
+                    "Sign convention. Building axes: x to the right, y up. E-W wall lines take the x loads, N-S wall lines the y loads. " +
+                    "Line reactions and wall shears are the force on the diaphragm, opposite in sign to the load (as in the rigid calculation)."),
+                WindReport.Para(
+                    $"Method. Each load V is a uniform line load across the plan, w = V / {box.Height:0.##} ft for x loads (plan depth) and " +
+                    $"w = V / {box.Width:0.##} ft for y loads (plan width). The diaphragm spans as simple beams between wall lines: each line " +
+                    "takes w × its tributary width, from half way to the neighbouring line (or the plan edge for an outer line), so the " +
+                    "reactions add up to −V. The walls on a line share its reaction by rigidity: share = reaction × k / Σk(line). " +
+                    "An overhang beyond the outer line goes to that line as a force only (its small moment is not redistributed)."),
+            };
+            foreach (var w in calc.Warnings) blocks.Add(WindReport.Para("Note: " + w));
+
+            foreach (var c in calc.CaseResults)
+            {
+                blocks.Add(WindReport.Heading(c.Name));
+                blocks.Add(WindReport.Para($"Vx = {c.Vx:0.000} k, Vy = {c.Vy:0.000} k" + (Math.Abs(c.Mt) > 1e-9 ? $", Mt = {c.Mt:0.00} k-ft (not applied, see the note)" : "") + "."));
+                foreach (var (lines, axis, v) in new[] { (c.LinesX, "y", c.Vx), (c.LinesY, "x", c.Vy) })
+                {
+                    if (lines == null || lines.Count == 0) continue;
+                    var rows = new List<string[]>();
+                    foreach (var l in lines)
+                        foreach (var id in l.WallIds)
+                        {
+                            var wall = ws._walls[id];
+                            rows.Add(new[]
+                            {
+                                l.Line.ToString(), $"{axis} = {l.Location:0.00}", $"{l.From:0.00} to {l.To:0.00}", l.Width.ToString("0.00"),
+                                l.W.ToString("0.0000"), l.Reaction.ToString("0.000"), id.ToString(), wall.WallRigidity.ToString("0.0000"),
+                                l.SumRigidity.ToString("0.0000"), c.Total.TryGetValue(id, out var s) ? s.ToString("0.000") : "-",
+                            });
+                        }
+                    blocks.AddRange(WindReport.Tables(new[] { "Line", "At (ft)", "Tributary (ft)", "Width (ft)", "w (k/ft)", "Reaction (k)", "Wall", "k", "Σk line", "Wall shear (k)" }, rows));
+                    blocks.Add(WindReport.Para($"Check: Σ reactions = {lines.Sum(l => l.Reaction):0.000} k (−V{(axis == "y" ? "x" : "y")} = {-v:0.000} k)."));
+                }
+            }
+            return new ReportSection("Flexible diaphragm calculation sheet", blocks);
         }
 
         /// <summary>The design checks: settings, a summary table, then every step for each wall.</summary>
