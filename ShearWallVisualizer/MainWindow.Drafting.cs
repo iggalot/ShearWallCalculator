@@ -1,6 +1,8 @@
 using ShearWallCalculator.Diagnostics;
+using ShearWallCalculator;
 using ShearWallCalculator.Drawing;
 using System;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
@@ -14,8 +16,9 @@ namespace ShearWallVisualizer
     /// </summary>
     public partial class MainWindow
     {
-        private readonly DrawingHistory history = new DrawingHistory();
-        private object historyFor;                 // the calculator the history belongs to (a new or opened project starts a new one)
+        /// <summary>One undo history per level (a new or opened project starts afresh).</summary>
+        private readonly Dictionary<ShearWallCalculatorBase, DrawingHistory> histories = new Dictionary<ShearWallCalculatorBase, DrawingHistory>();
+        private DrawingHistory history => histories.TryGetValue(Calculator, out var h) ? h : new DrawingHistory();
         private bool orthoMode;                    // F8: move, copy and measure go straight across or straight up
         private (Point a, Point b)? lastMeasure;   // the last measured distance, drawn until the next command
         private DrawMode lastDrawMode = DrawMode.Line; // Space or Enter repeats it
@@ -30,10 +33,10 @@ namespace ShearWallVisualizer
         private void RecordHistory()
         {
             if (Calculator == null) return;
-            if (!ReferenceEquals(historyFor, Calculator))
+            if (!histories.ContainsKey(Calculator))
             {
-                history.Reset(Calculator);
-                historyFor = Calculator;
+                histories[Calculator] = new DrawingHistory();
+                histories[Calculator].Reset(Calculator);
             }
             else history.Record(Calculator);
         }

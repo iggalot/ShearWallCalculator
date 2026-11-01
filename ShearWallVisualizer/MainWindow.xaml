@@ -154,6 +154,16 @@
                 </Border.Resources>
                 <DockPanel>
                     <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                        <!-- Multi-story (Floors in the building inputs): which level the plan shows and edits -->
+                        <StackPanel x:Name="levelGroup" Orientation="Horizontal" Visibility="Collapsed">
+                            <TextBlock Style="{StaticResource ToolGroup}" Text="LEVEL"/>
+                            <Button x:Name="btnLevel1" Style="{StaticResource Tool}" Content="1" Padding="9,4" CommandParameter="1" Click="LevelButton_Click"/>
+                            <Button x:Name="btnLevel2" Style="{StaticResource Tool}" Content="2" Padding="9,4" CommandParameter="2" Click="LevelButton_Click"/>
+                            <Button x:Name="btnLevel3" Style="{StaticResource Tool}" Content="3" Padding="9,4" CommandParameter="3" Click="LevelButton_Click"/>
+                            <Button x:Name="btnCopyFromBelow" Style="{StaticResource Tool}" Content="Copy ↑" Click="CopyFromBelow_Click"
+                                    ToolTip="Copy every wall (with its design) and diaphragm of the level below onto this level, to start it. Ctrl+Z undoes it."/>
+                            <Rectangle Style="{StaticResource ToolDivider}"/>
+                        </StackPanel>
                         <TextBlock Style="{StaticResource ToolGroup}" Text="DRAW"/>
                         <Button x:Name="btnSelectMode" Style="{StaticResource Tool}" Content="Select  (Esc)" Click="btnSelectMode_Click"
                                 ToolTip="Click a wall or diaphragm on the drawing to see its size and design"/>
@@ -188,7 +198,10 @@
                                 ToolTip="Show or hide the plan image layer (under the drawing, never selectable; the image is stored in the project file)"/>
                         <Button x:Name="btnImageOptions" Style="{StaticResource Tool}" Content="▾" Padding="6,4" Click="btnImageOptions_Click"
                                 ToolTip="Plan image: import, set the scale with two points, straighten, move, opacity, lock"/>
-                        <Button x:Name="btnHideShapes" Style="{StaticResource Tool}" Content="Walls &amp; diaphragms" Tag="on" Click="btnHideShapes_Click"/>
+                        <Button x:Name="btnHideWalls" Style="{StaticResource Tool}" Content="Walls" Tag="on" Click="btnHideWalls_Click"
+                                ToolTip="Show or hide the shear walls (and their design marks)"/>
+                        <Button x:Name="btnHideDiaphragms" Style="{StaticResource Tool}" Content="Diaphragms" Tag="on" Click="btnHideDiaphragms_Click"
+                                ToolTip="Show or hide the diaphragms (floor and roof areas)"/>
                         <Button x:Name="btnShowDesign" Style="{StaticResource Tool}" Content="Design" Tag="on" Click="btnShowDesign_Click"
                                 ToolTip="Shear wall marks (SW1, SW2, ...) with each wall's hold-down, the hold-downs at the wall ends, and the shear wall schedule"/>
                         <Rectangle Style="{StaticResource ToolDivider}"/>

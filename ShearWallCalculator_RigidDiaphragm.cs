@@ -45,6 +45,9 @@ namespace calculator
         [JsonIgnore]
         public List<RigidCaseResult> CaseResults { get; } = new List<RigidCaseResult>();
 
+        public override IEnumerable<KeyValuePair<string, Dictionary<int, double>>> CaseWallTotals() =>
+            CaseResults.Select(c => new KeyValuePair<string, Dictionary<int, double>>(c.Name, c.Total));
+
         /// <summary>
         /// default constructor
         /// </summary>

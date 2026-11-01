@@ -58,6 +58,9 @@ namespace ShearWallVisualizer.Controls
             Content = root;
         }
 
+        /// <summary>Multi-story: what to check about the levels (unsupported walls above, approximations), shown under the summary.</summary>
+        public IList<string> Notes { get; set; }
+
         /// <summary>Shows the results. <paramref name="todo"/> (what to draw next) replaces them when the model cannot be calculated.</summary>
         public void Show(ShearWallCalculatorBase calculator, string todo, int selectedWallId)
         {
@@ -124,6 +127,8 @@ namespace ShearWallVisualizer.Controls
             if (calc is ShearWallCalculator_FlexibleDiaphragm flex)
                 foreach (var w in flex.Warnings.Distinct())
                     top.Children.Add(new Border { Margin = new Thickness(0, 8, 0, 0), Child = Ui.Banner(w, warning: true) });
+            foreach (var n in Notes ?? new List<string>())
+                top.Children.Add(new Border { Margin = new Thickness(0, 8, 0, 0), Child = Ui.Banner(n, warning: true) });
         }
 
         // ------------------------------------------------------------------ tables
@@ -190,10 +195,18 @@ namespace ShearWallVisualizer.Controls
             Place(wallTable.InFrame(), 0);
         }
 
+        /// <summary>Multi-story: the part of a case that comes from the walls of the level above (empty when none).</summary>
+        private string AboveText(string caseName)
+        {
+            var c = calc?.CasesToAnalyse().FirstOrDefault(x => x.Name == caseName);
+            if (c == null || (c.AboveVx == 0 && c.AboveVy == 0 && c.AboveMt == 0)) return "";
+            return $".   From the level above (its walls standing on this floor): Vx {Ui.Num(c.AboveVx)} k,  Vy {Ui.Num(c.AboveVy)} k,  Mt {Ui.Num(c.AboveMt, "0.0")} k·ft about the center of mass";
+        }
+
         private void RigidCase(RigidCaseResult rc)
         {
             tbCaseInfo.Text = $"Vx {Ui.Num(rc.Vx)} k,  Vy {Ui.Num(rc.Vy)} k,  Mt {Ui.Num(rc.Mt, "0.0")} k·ft,  e = ({Ui.Num(rc.EccX)}, {Ui.Num(rc.EccY)}) ft,  " +
-                              $"Mt,comb = Vx·ey − Vy·ex + Mt = {Ui.Num(rc.MtComb, "0.0")} k·ft";
+                              $"Mt,comb = Vx·ey − Vy·ex + Mt = {Ui.Num(rc.MtComb, "0.0")} k·ft" + AboveText(rc.Name);
             var ws = calc._wall_system;
             wallTable = NewWallTable(caseSort,
                 ("Wall", 44, ""), ("Dir", 40, ""), ("k", 54, "Relative rigidity"),
@@ -220,7 +233,7 @@ namespace ShearWallVisualizer.Controls
         private void FlexibleCase(FlexibleCaseResult fc)
         {
             tbCaseInfo.Text = $"Vx {Ui.Num(fc.Vx)} k,  Vy {Ui.Num(fc.Vy)} k,  Mt {Ui.Num(fc.Mt, "0.0")} k·ft" +
-                              (fc.TorsionApplied ? $",  torsion center ({Ui.Num(fc.CenterX, "0.0")}, {Ui.Num(fc.CenterY, "0.0")}) ft,  J = Σ K·d² = {Ui.Num(fc.J, "0.0")} ft²" : "");
+                              (fc.TorsionApplied ? $",  torsion center ({Ui.Num(fc.CenterX, "0.0")}, {Ui.Num(fc.CenterY, "0.0")}) ft,  J = Σ K·d² = {Ui.Num(fc.J, "0.0")} ft²" : "") + AboveText(fc.Name);
 
             var lines = new UiTable(linesSort,
                 ("Line", 40, ""), ("Dir", 40, ""), ("At (ft)", 56, "Line position across the load: y for E-W lines, x for N-S lines"),

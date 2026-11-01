@@ -120,10 +120,12 @@ _Branch `dev/wind-core-refactor`. Written 2026-10-31 in answer to the user's lis
    - Σ upper reactions delivered = Σ upper wall shears.
 
 ### Phases
-1. Levels in the data model, project file and drawing (ghosted level below, copy walls).
-2. Wind per level (W7 core `StoryForces`, both chapters) with tests.
-3. Top-down cascade, rigid diaphragms, with the per-level sheet.
-4. Flexible diaphragms with point loads.
+_Status 2026-11-01: phases 1–3 done (see PROGRESS.md); phase 4 uses the rigid resultant as a flagged approximation for now._
+
+1. **Done.** Levels in the data model, project file (format 3) and drawing (level buttons, the level below in gray with snaps, Copy ↑). Floors 1–3 in the building inputs; equal story heights (eave height ÷ floors) for now.
+2. **Done.** Wind per level (W7 core `StoryWindLoads`, both chapters) with tests. Difference from the text above: level 1's strip starts at the ground, not at mid-height of story 1 (conservative: the levels add up to the building base shear, and one story gives exactly the same loads as before).
+3. **Done.** Top-down cascade (`StoryCascade`), rigid diaphragms; the per-level sheet shows the loads from above.
+4. Flexible diaphragms with point loads. (Now: the loads from above are applied as a resultant plus torsion, and the level is flagged as an approximation.)
 5. Stacked hold-downs, cumulative tension and discontinuity flags.
 
 ### Questions for later

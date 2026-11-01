@@ -139,7 +139,7 @@ namespace ShearWallCalculator.Tests
         public void File_IsReadableText_WithNamedEnums()
         {
             string json = ProjectSerializer.ToJson(Drawing(), Wind(), true);
-            StringAssert.Contains(json, "\"FormatVersion\": 2");
+            StringAssert.Contains(json, "\"FormatVersion\": 3");
             StringAssert.Contains(json, "\"ASCE_VER_7_16\"");
             StringAssert.Contains(json, "\"WIND_EXP_CAT_D\"");
         }

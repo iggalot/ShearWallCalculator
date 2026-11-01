@@ -21,6 +21,12 @@ namespace ShearWallCalculator
         /// <summary>Raise the center-of-rigidity eccentricity to the calculator's minimum (manual loads).</summary>
         public bool ApplyMinimumEccentricity { get; set; }
 
+        /// <summary>Multi-story: the part of <see cref="Vx"/>, <see cref="Vy"/> and <see cref="Mt"/> (about the center of mass) that comes from the
+        /// walls of the story above; 0 for this level's own wind. Set on the cases a calculation uses, never saved.</summary>
+        [Newtonsoft.Json.JsonIgnore] public double AboveVx { get; set; }
+        [Newtonsoft.Json.JsonIgnore] public double AboveVy { get; set; }
+        [Newtonsoft.Json.JsonIgnore] public double AboveMt { get; set; }
+
         public LateralLoadCase() { }
 
         public LateralLoadCase(string name, double vx, double vy, double mt = 0, bool applyMinimumEccentricity = false)
@@ -46,5 +52,23 @@ namespace ShearWallCalculator
 
         /// <summary>The case giving the design shear.</summary>
         public string DesignCase => System.Math.Abs(MaxPositive) >= System.Math.Abs(MaxNegative) ? MaxPositiveCase : MaxNegativeCase;
+    }
+}
+
+namespace ShearWallCalculator
+{
+    /// <summary>
+    /// A horizontal force on a diaphragm at a point (kips, ft): the reaction of a wall of the story above, which stands on this
+    /// floor. Its force on this diaphragm is minus its shear (the shear is the wall's force on the diaphragm above it).
+    /// </summary>
+    public sealed class PointLoad
+    {
+        public double X { get; set; }
+        public double Y { get; set; }
+        public double Fx { get; set; }
+        public double Fy { get; set; }
+
+        /// <summary>The upper wall it comes from ("level 2, wall 3").</summary>
+        public string From { get; set; }
     }
 }

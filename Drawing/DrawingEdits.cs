@@ -108,6 +108,16 @@ namespace ShearWallCalculator.Drawing
         public static Point Ortho(Point p, Point from) =>
             Math.Abs(p.X - from.X) >= Math.Abs(p.Y - from.Y) ? new Point(p.X, from.Y) : new Point(from.X, p.Y);
 
+        /// <summary>Multi-story: copies every wall (with its design) and diaphragm of <paramref name="from"/> onto <paramref name="to"/>, in place. Returns how many.</summary>
+        public static int CopyFloor(ShearWallCalculatorBase from, ShearWallCalculatorBase to)
+        {
+            if (from == null || to == null || ReferenceEquals(from, to)) return 0;
+            int n = 0;
+            foreach (var id in from._wall_system._walls.Keys.ToList()) { var w = Clone(from._wall_system._walls[id]); to._wall_system.AddWall(w); n++; }
+            foreach (var id in from._diaphragm_system._diaphragms.Keys.ToList()) { var d = Clone(from._diaphragm_system._diaphragms[id]); to._diaphragm_system.AddDiaphragm(d); n++; }
+            return n;
+        }
+
         private static T Clone<T>(T item) => JsonConvert.DeserializeObject<T>(JsonConvert.SerializeObject(item),
             new JsonSerializerSettings { ObjectCreationHandling = ObjectCreationHandling.Replace });
     }

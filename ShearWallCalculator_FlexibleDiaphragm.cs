@@ -48,6 +48,9 @@ namespace ShearWallCalculator
         [JsonIgnore]
         public List<FlexibleCaseResult> CaseResults { get; } = new List<FlexibleCaseResult>();
 
+        public override IEnumerable<KeyValuePair<string, Dictionary<int, double>>> CaseWallTotals() =>
+            CaseResults.Select(c => new KeyValuePair<string, Dictionary<int, double>>(c.Name, c.Total));
+
         /// <summary>What the flexible distribution could not do for these walls and loads (shown on the sheet).</summary>
         [JsonIgnore]
         public List<string> Warnings { get; } = new List<string>();

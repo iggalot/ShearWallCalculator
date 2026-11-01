@@ -14,6 +14,43 @@ namespace ShearWallVisualizer.Helpers
     /// <summary>The shear-wall part of the printed report (added after the wind pages).</summary>
     public static class ShearWallReport
     {
+        /// <summary>
+        /// Multi-story: the sections of every level, roof first (the order of the analysis), each titled with its level, with
+        /// the loads each level takes from the walls above it. One level gives the same sections as <see cref="Sections"/>.
+        /// </summary>
+        public static IEnumerable<ReportSection> Levels(IList<ShearWallCalculatorBase> levels, bool linkedToWind,
+            Func<ShearWallCalculatorBase, IReadOnlyDictionary<int, WallDesignResult>> design, ShearWallDesigner designer, IList<string> notes)
+        {
+            if (levels == null || levels.Count <= 1)
+                return Sections(levels?.FirstOrDefault(), linkedToWind, design?.Invoke(levels?.FirstOrDefault()), designer);
+            var all = new List<ReportSection>();
+            for (int i = levels.Count - 1; i >= 0; i--)
+            {
+                string name = i == levels.Count - 1 ? $"Level {i + 1} (roof)" : $"Level {i + 1}";
+                var calc = levels[i];
+                var sections = Sections(calc, linkedToWind, design?.Invoke(calc), designer).ToList();
+                var intro = new List<FrameworkElement> { WindReport.Heading(name) };
+                intro.Add(WindReport.Para(i == levels.Count - 1
+                    ? $"The top story and the roof. Analysed first: its walls stand on level {i}, which carries their shears."
+                    : $"Story {i + 1} and the floor over it. Its diaphragm takes its own wind plus the walls of level {i + 2} standing on it: " +
+                      "each of those walls pushes on this floor with minus its shear, at the wall's middle. They are added at the center of mass " +
+                      "with their moment about it (below), so a wall that stacks passes its shear straight down and one that does not is spread by this floor."));
+                var above = calc?.IsValidForCalculation == true ? calc.CasesToAnalyse().Where(c => c.AboveVx != 0 || c.AboveVy != 0 || c.AboveMt != 0).ToList() : new List<LateralLoadCase>();
+                if (above.Count > 0)
+                    intro.AddRange(WindReport.Tables(new[] { "Case", "From above Vx (k)", "Vy (k)", "Mt about CM (k-ft)", "Total Vx (k)", "Vy (k)", "Mt (k-ft)" },
+                        above.Select(c => new[] { c.Name, c.AboveVx.ToString("0.00"), c.AboveVy.ToString("0.00"), c.AboveMt.ToString("0.0"),
+                                                  c.Vx.ToString("0.00"), c.Vy.ToString("0.00"), c.Mt.ToString("0.0") }).ToList()));
+                foreach (var n in (notes ?? new List<string>()).Where(n => n.StartsWith($"Level {i + 2}, wall") || n.StartsWith($"Level {i + 1} ")))
+                    intro.Add(WindReport.Para("Check: " + n));
+                for (int k = 0; k < sections.Count; k++)
+                {
+                    var blocks = k == 0 ? intro.Concat(sections[k].Blocks).ToList() : sections[k].Blocks;
+                    all.Add(new ReportSection($"{name}: {sections[k].Title}", blocks));
+                }
+            }
+            return all;
+        }
+
         public static IEnumerable<ReportSection> Sections(ShearWallCalculatorBase calc, bool linkedToWind,
             IReadOnlyDictionary<int, WallDesignResult> design = null, ShearWallDesigner designer = null)
         {

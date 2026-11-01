@@ -4,7 +4,9 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace ShearWallCalculator.Interfaces
 {
@@ -15,7 +17,8 @@ namespace ShearWallCalculator.Interfaces
     /// </summary>
     public class ProjectFile
     {
-        public const int CurrentFormat = 2;
+        /// <summary>3: <see cref="UpperLevels"/> and the number of stories (format 2 files open as one story).</summary>
+        public const int CurrentFormat = 3;
 
         public int FormatVersion { get; set; } = CurrentFormat;
 
@@ -23,8 +26,12 @@ namespace ShearWallCalculator.Interfaces
 
         public WindInputs Wind { get; set; }
 
-        /// <summary>The shear-wall calculator, in the same JSON the older drawing files hold.</summary>
+        /// <summary>The shear-wall calculator of level 1 (the walls of the first story and the floor or roof over them),
+        /// in the same JSON the older drawing files hold.</summary>
         public JObject Walls { get; set; }
+
+        /// <summary>Levels 2 and 3 (same JSON as <see cref="Walls"/>), bottom to top; none for one story.</summary>
+        public List<JObject> UpperLevels { get; set; }
 
         public LoadsInfo Loads { get; set; }
     }
@@ -59,6 +66,7 @@ namespace ShearWallCalculator.Interfaces
                 Length = b.BuildingLength,
                 Width = b.BuildingWidth,
                 EaveHeight = b.BuildingHeight,
+                Stories = b.NumberOfStories,
                 OverhangWidth = b.OverhangWidth,
                 ParapetHeight = b.ParapetHeight,
                 ParapetEnclosure = b.ParapetEnclosure,
@@ -90,6 +98,7 @@ namespace ShearWallCalculator.Interfaces
             BuildingLength = Building.Length,
             BuildingWidth = Building.Width,
             BuildingHeight = Building.EaveHeight,
+            NumberOfStories = Building.Stories,
             OverhangWidth = Building.OverhangWidth,
             ParapetHeight = Building.ParapetHeight,
             ParapetEnclosure = Building.ParapetEnclosure,
@@ -116,6 +125,9 @@ namespace ShearWallCalculator.Interfaces
         public double Length { get; set; } = 60;
         public double Width { get; set; } = 40;
         public double EaveHeight { get; set; } = 15;
+
+        /// <summary>Stories (floors), 1 to 3; older files have none and open as one story.</summary>
+        public int Stories { get; set; } = 1;
         /// <summary>Roof overhang beyond the wall face (ft); 0 for none (absent in older files).</summary>
         public double OverhangWidth { get; set; }
         /// <summary>Parapet height above a flat roof (ft); 0 for none (absent in older files).</summary>
@@ -143,6 +155,9 @@ namespace ShearWallCalculator.Interfaces
     {
         public ShearWallCalculatorBase Calculator { get; set; }
 
+        /// <summary>Levels 2 and 3, bottom to top; empty for one story or an older file.</summary>
+        public List<ShearWallCalculatorBase> UpperLevels { get; set; } = new List<ShearWallCalculatorBase>();
+
         /// <summary>Null for an older drawing-only file.</summary>
         public WindInputs Wind { get; set; }
 
@@ -161,20 +176,23 @@ namespace ShearWallCalculator.Interfaces
         };
 
         /// <summary>The file text for this project (also used to tell whether there are unsaved changes).</summary>
-        public static string ToJson(ShearWallCalculatorBase calculator, WindInputs wind, bool linkedToWind)
+        /// <param name="upperLevels">Levels 2 and 3, bottom to top (none for one story).</param>
+        public static string ToJson(ShearWallCalculatorBase calculator, WindInputs wind, bool linkedToWind, IEnumerable<ShearWallCalculatorBase> upperLevels = null)
         {
             var settings = Settings();
+            var upper = upperLevels?.Where(c => c != null).Select(c => JObject.Parse(JsonConvert.SerializeObject(c, settings))).ToList();
             var file = new ProjectFile
             {
                 Wind = wind,
                 Walls = calculator == null ? null : JObject.Parse(JsonConvert.SerializeObject(calculator, settings)),
+                UpperLevels = upper != null && upper.Count > 0 ? upper : null,
                 Loads = new LoadsInfo { LinkedToWind = linkedToWind, Vx = calculator?.V_x ?? 0, Vy = calculator?.V_y ?? 0 },
             };
             return JsonConvert.SerializeObject(file, settings);
         }
 
-        public static void Save(string path, ShearWallCalculatorBase calculator, WindInputs wind, bool linkedToWind) =>
-            File.WriteAllText(path, ToJson(calculator, wind, linkedToWind));
+        public static void Save(string path, ShearWallCalculatorBase calculator, WindInputs wind, bool linkedToWind, IEnumerable<ShearWallCalculatorBase> upperLevels = null) =>
+            File.WriteAllText(path, ToJson(calculator, wind, linkedToWind, upperLevels));
 
         public static ProjectContents Load(string path) => Read(File.ReadAllText(path));
 
@@ -204,6 +222,7 @@ namespace ShearWallCalculator.Interfaces
             return new ProjectContents
             {
                 Calculator = file.Walls == null ? new ShearWallCalculator_RigidDiaphragm() : ReadCalculator(file.Walls, settings),
+                UpperLevels = (file.UpperLevels ?? new List<JObject>()).Select(o => ReadCalculator(o, settings)).ToList(),
                 Wind = file.Wind,
                 Loads = file.Loads,
             };

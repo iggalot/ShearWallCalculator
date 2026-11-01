@@ -86,7 +86,6 @@ namespace ShearWallVisualizer
 
         bool hideImage = false;
         bool hideGrid = false;
-        bool hideShapes = false;
         bool showDesign = true; // schedule marks, hold-downs and the schedule on the plan
         bool imageDrawWarned = false;   // log a reference-image drawing failure once, not every frame
 
@@ -197,7 +196,7 @@ namespace ShearWallVisualizer
         {
             if (Calculator != null)
             {
-                Calculator.PerformCalculations();
+                AnalyzeLevels(); // every level, roof first (one level: the same as before)
                 UpdateDesign();
                 LogModelChanges();
                 RecordHistory(); // an undo step when the drawing changed
@@ -206,6 +205,7 @@ namespace ShearWallVisualizer
                 ShowImageName();
 
                 geometryPanel?.Show(Calculator, selectedKind, selectedId);
+                if (resultsPanel != null) resultsPanel.Notes = levelNotes;
                 resultsPanel?.Show(Calculator, CalculationTodo(), selectedKind == "Wall" ? selectedId : -1);
                 selectionCard.Show(Calculator, selectionCardOpen ? selectedKind : null, selectedId, designResults);
 
@@ -307,17 +307,26 @@ namespace ShearWallVisualizer
                 message = "Draw a diaphragm and walls in both directions first (see the Calculations tab).";
             else
             {
-                foreach (var kv in Calculator._wall_system._walls)
-                {
-                    if (!Calculator.TotalWallShear.TryGetValue(kv.Key, out double v)) continue;
-                    Calculator.GoverningLoadCase.TryGetValue(kv.Key, out string governing);
-                    designResults[kv.Key] = designer.Check(kv.Key, kv.Value, v, governing, Calculator.DesignSettings);
-                }
+                designResults = CheckWalls(Calculator);
                 if (designResults.Count == 0) message = "No wall shears yet: add loads (LOADS button) or link the wind loads.";
             }
             designPanel.Show(Calculator, designResults, designer, windLoadsLinked, message);
             if (selectedKind == "Wall") designPanel.SelectWall(selectedId); // the same wall as on the drawing and the other tabs
             holdownCatalog?.SetDesign(designResults);
+        }
+
+        /// <summary>The check of each wall of one level for its governing shear (empty when the level cannot be calculated).</summary>
+        private Dictionary<int, WallDesignResult> CheckWalls(ShearWallCalculatorBase calc)
+        {
+            var results = new Dictionary<int, WallDesignResult>();
+            if (calc == null || designer == null || !calc.IsValidForCalculation) return results;
+            foreach (var kv in calc._wall_system._walls)
+            {
+                if (!calc.TotalWallShear.TryGetValue(kv.Key, out double v)) continue;
+                calc.GoverningLoadCase.TryGetValue(kv.Key, out string governing);
+                results[kv.Key] = designer.Check(kv.Key, kv.Value, v, governing, calc.DesignSettings);
+            }
+            return results;
         }
 
         private Dialogs.HoldownCatalogWindow holdownCatalog;
@@ -400,6 +409,7 @@ namespace ShearWallVisualizer
                 return new SnapResult { Kind = SnapModes.None, Point = world };
             double tolerance = PixelsToWorld(SnapPixels);
             var segments = Snapper.SegmentsOf(Calculator);
+            if (LevelBelow != null) segments.AddRange(Snapper.SegmentsOf(LevelBelow)); // draw on top of the walls below
             var img = Calculator.Image;
             if (img != null && img.IsVector && img.Visible && !hideImage) segments.AddRange(img.SegmentsNear(world, tolerance)); // CAD plan lines
             return Snapper.Find(world, tolerance, segments, snapModes, startPoint_world);
@@ -611,6 +621,7 @@ namespace ShearWallVisualizer
             buildingData = windSetup.Building.Clone();
             windLoadParams = windSetup.Parameters.Clone();
             windVersion = windSetup.Version;
+            MatchLevelsToStories(buildingData.NumberOfStories); // Floors: 1 to 3 levels
 
             RecalculateWind();
             UpdateShearWallUI();
@@ -647,20 +658,17 @@ namespace ShearWallVisualizer
 
             if (windLoadCalculator_MWFRS_Length == null || windLoadCalculator_MWFRS_Width == null)
             {
-                Calculator.SetLoadCases(new List<ShearWallCalculator.LateralLoadCase>()); // no stale loads
+                foreach (var level in levels.DefaultIfEmpty(Calculator))
+                    level.SetLoadCases(new List<ShearWallCalculator.LateralLoadCase>()); // no stale loads
                 windSetup?.SetShearWallLink(true,
                     "But the wind inputs cannot be calculated right now, so the walls have no wind load. Fix the inputs and the walls update automatically.");
                 return;
             }
 
-            var lateral = WindLateralLoads.Compute(
-                new WindAnalysisResult(windLoadCalculator_CC, windLoadCalculator_MWFRS_Length, windLoadCalculator_MWFRS_Width),
-                windSetup?.OnlyCases1And3 ?? false);
-            Calculator.SetLoadCases(lateral.LoadCases
-                .Select(c => new ShearWallCalculator.LateralLoadCase(c.Name, c.Vx, c.Vy, c.Mt, applyMinimumEccentricity: false)));
-            windSetup?.SetShearWallLink(true,
-                $"{lateral.LoadCases.Count} load cases (from W {lateral.AlongLength.DesignKips:0.0} k, from S {lateral.AlongWidth.DesignKips:0.0} k). " +
-                "Updated automatically. Per-wall results: 2 Shear walls, Calculations tab.");
+            if (levels.Count == 0 || !levels.Contains(Calculator)) SetLevels(new[] { Calculator });
+            SetWindLoadsPerLevel(new WindAnalysisResult(windLoadCalculator_CC, windLoadCalculator_MWFRS_Length, windLoadCalculator_MWFRS_Width),
+                windSetup?.OnlyCases1And3 ?? false, out string message); // one floor: the building's load cases, as before
+            windSetup?.SetShearWallLink(true, message);
         }
 
         /// <param name="reason">Shown in the warning on the Wind Setup screen.</param>
@@ -1041,7 +1049,7 @@ namespace ShearWallVisualizer
         /// <summary>Schedule marks, hold-downs and the schedule over the plan (SHOW Design).</summary>
         private void DrawWallDesign(DrawingContext ctx)
         {
-            if (!showDesign || hideShapes || Calculator?._wall_system == null) return;
+            if (!showDesign || hideWalls || Calculator?._wall_system == null) return;
             DesignOverlay.Draw(ctx, Calculator._wall_system._walls, designResults, p => WorldToScreen(p, m_layers),
                                new Size(m_layers.ActualWidth, m_layers.ActualHeight), VisualTreeHelper.GetDpi(this).PixelsPerDip);
         }
@@ -1058,13 +1066,10 @@ namespace ShearWallVisualizer
 
         private void DrawShapes(DrawingContext ctx)
         {
-            if (hideShapes is true)
-            {
-                return;
-            }
+            DrawLevelBelow(ctx); // multi-story: the level below in gray
             double center_pt_dia = 5;
 
-            if ((Calculator != null) && (Calculator._wall_system != null))
+            if (!hideWalls && (Calculator != null) && (Calculator._wall_system != null))
             {
                 // Redraw all the shapes in world coordinates
                 foreach (var wall in Calculator._wall_system._walls)
@@ -1118,7 +1123,7 @@ namespace ShearWallVisualizer
             }
 
             // Redraw all the shapes in world coordinates
-            if ((Calculator != null) && (Calculator._diaphragm_system != null))
+            if (!hideDiaphragms && (Calculator != null) && (Calculator._diaphragm_system != null))
             {
                 foreach (var rect in Calculator._diaphragm_system._diaphragms)
                 {
@@ -2257,14 +2262,6 @@ namespace ShearWallVisualizer
         #endregion
 
         #region UI Events
-        private void btnHideShapes_Click(object sender, RoutedEventArgs e)
-        {
-            hideShapes = !hideShapes;
-            UpdateShearWallUI();
-            btnHideShapes.Tag = hideShapes ? null : "on";
-
-        }
-
         private void btnShowDesign_Click(object sender, RoutedEventArgs e)
         {
             showDesign = !showDesign;
@@ -2488,7 +2485,8 @@ namespace ShearWallVisualizer
             : WindInputs.From(windSetup.Version, windSetup.Parameters, windSetup.Building, windSetup.OnlyCases1And3,
                               windSetup.RoofComponent, windSetup.WallComponent);
 
-        private string CurrentProjectJson() => ProjectSerializer.ToJson(Calculator, CurrentWindInputs(), windLoadsLinked);
+        private string CurrentProjectJson() => levels.Count == 0 ? ProjectSerializer.ToJson(Calculator, CurrentWindInputs(), windLoadsLinked)
+            : ProjectSerializer.ToJson(levels[0], CurrentWindInputs(), windLoadsLinked, levels.Skip(1));
 
         private bool HasUnsavedChanges => savedProjectJson != null && Calculator != null && CurrentProjectJson() != savedProjectJson;
 
@@ -2545,7 +2543,7 @@ namespace ShearWallVisualizer
         private void MenuItem_New_Click(object sender, RoutedEventArgs e)
         {
             if (!ConfirmDiscardOrSave()) return;
-            Calculator = new ShearWallCalculator_RigidDiaphragm();
+            SetLevels(new[] { new ShearWallCalculator_RigidDiaphragm() });
             Calculator.DesignSettings.HoldownsFromStandardList = designer != null && designer.StandardList.Count > 0;
             currentProjectPath = null;
             ImageForNewProject();
@@ -2587,7 +2585,7 @@ namespace ShearWallVisualizer
             try
             {
                 RecordHoldowns();
-                ProjectSerializer.Save(path, Calculator, CurrentWindInputs(), windLoadsLinked);
+                ProjectSerializer.Save(path, levels[0], CurrentWindInputs(), windLoadsLinked, levels.Skip(1));
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
@@ -2627,7 +2625,7 @@ namespace ShearWallVisualizer
                 return;
             }
 
-            Calculator = contents.Calculator;
+            SetLevels(new[] { contents.Calculator }.Concat(contents.UpperLevels ?? new List<ShearWallCalculatorBase>()));
             currentProjectPath = path;
             ImageForNewProject();
             Log.Info("Project opened: " + path);
@@ -2640,6 +2638,11 @@ namespace ShearWallVisualizer
                                 "Enter the wind inputs here and click the button below to use the wind loads instead.");
                 note = "This is an older drawing file: it has the walls and loads but no wind inputs. " +
                        "Saving it creates a project file that keeps both.";
+                if (buildingData != null && buildingData.NumberOfStories != levels.Count)
+                {
+                    buildingData.NumberOfStories = levels.Count; // one story
+                    SyncWindSetup();
+                }
             }
             else
             {
@@ -2650,6 +2653,7 @@ namespace ShearWallVisualizer
                 buildingData = windSetup.Building.Clone();
                 windLoadParams = windSetup.Parameters.Clone();
                 windVersion = windSetup.Version;
+                MatchLevelsToStories(buildingData.NumberOfStories);
 
                 var saved = contents.Loads ?? new LoadsInfo();
                 windLoadsLinked = saved.LinkedToWind;
@@ -2679,7 +2683,9 @@ namespace ShearWallVisualizer
         private void RecordHoldowns()
         {
             if (Calculator?.DesignSettings == null || designer == null) return;
-            Calculator.DesignSettings.HoldownList = HoldownListRecord.Make(designResults, designer.StandardList, Calculator.DesignSettings.HoldownsFromStandardList);
+            var level1 = levels.Count > 0 ? levels[0] : Calculator; // the record is checked on opening, which shows level 1
+            Calculator.DesignSettings.HoldownList = HoldownListRecord.Make(ReferenceEquals(level1, Calculator) ? designResults : CheckWalls(level1),
+                designer.StandardList, Calculator.DesignSettings.HoldownsFromStandardList);
         }
 
         /// <summary>
@@ -2712,7 +2718,8 @@ namespace ShearWallVisualizer
                 ? new WindAnalysisResult(windLoadCalculator_CC, windLoadCalculator_MWFRS_Length, windLoadCalculator_MWFRS_Width)
                 : null;
             var info = new ReportInfo { Project = ProjectName, Program = "Shear Wall Calculator" };
-            var report = WindReport.Build(info, windVersion, windLoadParams, buildingData, analysis, ShearWallReport.Sections(Calculator, windLoadsLinked, designResults, designer));
+            var report = WindReport.Build(info, windVersion, windLoadParams, buildingData, analysis, ShearWallReport.Levels(levels.Count > 0 ? levels : new List<ShearWallCalculatorBase> { Calculator }, windLoadsLinked,
+                c => ReferenceEquals(c, Calculator) ? designResults : CheckWalls(c), designer, levelNotes));
             new ReportPreviewWindow(report, ProjectName) { Owner = this }.Show();
         }
         #endregion

@@ -33,6 +33,16 @@ namespace ShearWallCalculator
         /// </summary>
         public List<LateralLoadCase> LoadCases { get; set; } = new List<LateralLoadCase>();
 
+        /// <summary>
+        /// Multi-story: the reactions of the walls of the story above, per load case name (set by <see cref="StoryCascade"/> before
+        /// each calculation; empty for the top level or one story). Each case of this level gets the reactions of the same case above.
+        /// </summary>
+        [JsonIgnore]
+        public Dictionary<string, List<PointLoad>> LoadsFromAbove { get; set; } = new Dictionary<string, List<PointLoad>>();
+
+        /// <summary>Each analysed case's total shear per wall (kips, the wall's force on its diaphragm), by case name, from the last calculation.</summary>
+        public virtual IEnumerable<KeyValuePair<string, Dictionary<int, double>>> CaseWallTotals() => System.Linq.Enumerable.Empty<KeyValuePair<string, Dictionary<int, double>>>();
+
         /// <summary>Design method (ASD or LRFD) and SDPWS edition for the wall checks.</summary>
         public ShearWallCalculator.Design.DesignSettings DesignSettings { get; set; } = new ShearWallCalculator.Design.DesignSettings();
 
@@ -53,10 +63,13 @@ namespace ShearWallCalculator
         }
 
         /// <summary>The load cases to analyse: the design cases, or the single manual load.</summary>
-        protected List<LateralLoadCase> CasesToAnalyse() =>
-            LoadCases != null && LoadCases.Count > 0
+        public List<LateralLoadCase> CasesToAnalyse()
+        {
+            var own = LoadCases != null && LoadCases.Count > 0
                 ? LoadCases
                 : new List<LateralLoadCase> { new LateralLoadCase("Manual load", V_x, V_y, 0, applyMinimumEccentricity: true) };
+            return StoryCascade.WithLoadsFromAbove(own, LoadsFromAbove, _diaphragm_system?.CtrMass ?? new Point(double.NaN, double.NaN));
+        }
 
         /// <summary>
         /// Per wall, across all load cases: the most positive and the most negative total shear and the cases that give them.
