@@ -23,6 +23,11 @@ namespace ShearWallVisualizer.Controls
         /// <summary>A row was clicked: ("Wall" or "Diaphragm", id).</summary>
         public event Action<string, int> SelectionChanged;
 
+        /// <summary>The × on a row: ("Wall" or "Diaphragm", id).</summary>
+        public event Action<string, int> DeleteRequested;
+
+        private readonly SortState wallSort = new SortState(), diaphragmSort = new SortState();
+
         private readonly Grid wallsHost = new Grid();
         private readonly Grid diaphragmsHost = new Grid();
         private readonly TextBlock tbWallsTitle = Ui.Heading("Walls");
@@ -85,7 +90,7 @@ namespace ShearWallVisualizer.Controls
                 return;
             }
 
-            wallTable = new UiTable(
+            wallTable = new UiTable(wallSort,
                 ("#", 34, "Wall number (shown on the drawing)"),
                 ("Dir", 44, "E-W walls run left-right and resist loads in x; N-S walls run up-down and resist loads in y"),
                 ("Start x", 66, "Start point x (ft): the left end of an E-W wall, the bottom end of an N-S wall"),
@@ -114,11 +119,7 @@ namespace ShearWallVisualizer.Controls
                 wallTable.Text(r, c++, Ui.Num(w.End.X, "0.##"), id, Ui.InkSecondary);
                 wallTable.Text(r, c++, Ui.Num(w.End.Y, "0.##"), id, Ui.InkSecondary);
                 wallTable.Text(r, c++, Ui.Num(w.WallRigidity, "0.000"), id, Ui.InkSecondary);
-                wallTable.Put(r, c++, DeleteButton(() =>
-                {
-                    calc._wall_system.DeleteWall(id);
-                    Changed();
-                }, $"Delete wall {id}"));
+                wallTable.Put(r, c++, Ui.DeleteButton(() => Delete("Wall", id), $"Delete wall {id}"));
             }
             wallsHost.Children.Add(wallTable.InFrame());
         }
@@ -134,7 +135,7 @@ namespace ShearWallVisualizer.Controls
                 return;
             }
 
-            diaphragmTable = new UiTable(
+            diaphragmTable = new UiTable(diaphragmSort,
                 ("#", 34, "Diaphragm number (shown on the drawing)"),
                 ("x", 62, "Lower-left corner x (ft)"),
                 ("y", 62, "Lower-left corner y (ft)"),
@@ -157,11 +158,7 @@ namespace ShearWallVisualizer.Controls
                 diaphragmTable.Number(r, c++, wid, v => v > 0 && Resize(d, x, y, v, dep), id);
                 diaphragmTable.Number(r, c++, dep, v => v > 0 && Resize(d, x, y, wid, v), id);
                 diaphragmTable.Text(r, c++, Ui.Num(d.Area, "0"), id, Ui.InkSecondary);
-                diaphragmTable.Put(r, c++, DeleteButton(() =>
-                {
-                    calc._diaphragm_system.DeleteDiaphragm(id);
-                    Changed();
-                }, $"Delete diaphragm {id}"));
+                diaphragmTable.Put(r, c++, Ui.DeleteButton(() => Delete("Diaphragm", id), $"Delete diaphragm {id}"));
             }
             diaphragmsHost.Children.Add(diaphragmTable.InFrame());
         }
@@ -218,16 +215,8 @@ namespace ShearWallVisualizer.Controls
             Dispatcher.BeginInvoke(new Action(() => GeometryChanged?.Invoke(this, EventArgs.Empty)), DispatcherPriority.Background);
         }
 
-        private static Button DeleteButton(Action delete, string tip)
-        {
-            var b = new Button
-            {
-                Content = "×", ToolTip = tip, Width = 22, Height = 20, Padding = new Thickness(0), Margin = new Thickness(3, 0, 3, 0),
-                Foreground = Ui.FailInk, Background = Brushes.White, BorderBrush = Ui.Hairline, FontSize = 14, Cursor = System.Windows.Input.Cursors.Hand,
-                VerticalContentAlignment = VerticalAlignment.Center, Focusable = false,
-            };
-            b.Click += (s, e) => delete();
-            return b;
-        }
+        /// <summary>The host deletes (one place for delete, undo and the selection), after this click finishes.</summary>
+        private void Delete(string kind, int id) =>
+            Dispatcher.BeginInvoke(new Action(() => DeleteRequested?.Invoke(kind, id)), DispatcherPriority.Background);
     }
 }

@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
@@ -59,6 +61,19 @@ namespace ShearWallVisualizer.Controls
             return sp;
         }
 
+        /// <summary>The red × at the end of a table row.</summary>
+        public static Button DeleteButton(Action delete, string tip)
+        {
+            var b = new Button
+            {
+                Content = "×", ToolTip = tip + "  (Ctrl+Z brings it back)", Width = 22, Height = 20, Padding = new Thickness(0), Margin = new Thickness(3, 0, 3, 0),
+                Foreground = FailInk, Background = Brushes.White, BorderBrush = Hairline, FontSize = 14, Cursor = Cursors.Hand,
+                VerticalContentAlignment = VerticalAlignment.Center, Focusable = false, VerticalAlignment = VerticalAlignment.Center,
+            };
+            b.Click += (s, e) => delete();
+            return b;
+        }
+
         public static string Num(double v, string format = "0.00") =>
             double.IsNaN(v) || double.IsInfinity(v) ? "–" : v.ToString(format, CultureInfo.CurrentCulture);
     }
@@ -73,8 +88,14 @@ namespace ShearWallVisualizer.Controls
         public event Action<int> RowClicked;
         private int rows;
 
-        public UiTable(params (string header, double width, string tip)[] columns)
+        private readonly GridSorter sorter;
+
+        public UiTable(params (string header, double width, string tip)[] columns) : this(null, columns) { }
+
+        /// <param name="sort">The panel's sort for this table (kept across rebuilds); the headers are clickable.</param>
+        public UiTable(SortState sort, params (string header, double width, string tip)[] columns)
         {
+            sorter = new GridSorter(Grid, sort);
             Grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             for (int c = 0; c < columns.Length; c++)
             {
@@ -87,8 +108,12 @@ namespace ShearWallVisualizer.Controls
                 };
                 Grid.SetColumn(h, c);
                 Grid.Children.Add(h);
+                sorter.Header(c, h);
             }
         }
+
+        /// <summary>Sets what a cell sorts by when it is not its text (Text and Number cells sort by themselves).</summary>
+        public void SortKey(int row, int col, IComparable value) => sorter.Key(row, col, value);
 
         public int Columns => Grid.ColumnDefinitions.Count;
 
@@ -125,6 +150,7 @@ namespace ShearWallVisualizer.Controls
             };
             t.MouseLeftButtonDown += (s, e) => RowClicked?.Invoke(key);
             Put(row, col, t);
+            sorter.Key(row, col, GridSorter.FromText(text));
             return t;
         }
 
@@ -153,6 +179,7 @@ namespace ShearWallVisualizer.Controls
             tb.LostKeyboardFocus += (s, e) => Commit();
             tb.GotKeyboardFocus += (s, e) => { RowClicked?.Invoke(key); tb.SelectAll(); };
             Put(row, col, tb);
+            sorter.Key(row, col, value);
             return tb;
         }
 
@@ -163,12 +190,119 @@ namespace ShearWallVisualizer.Controls
             Grid.Children.Add(e);
         }
 
-        /// <summary>The table in a white bordered box that scrolls when it is taller than the space.</summary>
-        public ScrollViewer InFrame() => new ScrollViewer
+        /// <summary>The table (sorted) in a white bordered box that scrolls when it is taller than the space.</summary>
+        public ScrollViewer InFrame()
         {
-            Content = new Border { Background = Brushes.White, BorderBrush = Ui.Hairline, BorderThickness = new Thickness(1), Child = Grid, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top },
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-        };
+            sorter.Apply();
+            return new ScrollViewer
+            {
+                Content = new Border { Background = Brushes.White, BorderBrush = Ui.Hairline, BorderThickness = new Thickness(1), Child = Grid, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top },
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            };
+        }
+    }
+}
+
+namespace ShearWallVisualizer.Controls
+{
+    /// <summary>Which column a table is sorted by; kept by the panel so the order survives the table being rebuilt.</summary>
+    internal sealed class SortState
+    {
+        public int Column = -1;          // -1: the order the rows were added in
+        public bool Descending;
+    }
+
+    /// <summary>
+    /// Click-to-sort for a grid table built row by row: row 0 holds the column headers (borders with a text block), each
+    /// body row's cells sit in grid row 1, 2, ... A header click sorts by that column (again: reverses; a third time: the
+    /// original order). The values to sort by are given per cell (<see cref="Key"/>); numbers sort as numbers, blanks and
+    /// "–" last.
+    /// </summary>
+    internal sealed class GridSorter
+    {
+        private readonly Grid grid;
+        private readonly SortState state;
+        private readonly Dictionary<int, Dictionary<int, IComparable>> keys = new Dictionary<int, Dictionary<int, IComparable>>();
+        private readonly Dictionary<UIElement, int> rowOf = new Dictionary<UIElement, int>();
+        private readonly Dictionary<int, (Border border, TextBlock text, string title)> headers = new Dictionary<int, (Border, TextBlock, string)>();
+
+        public GridSorter(Grid grid, SortState state)
+        {
+            this.grid = grid;
+            this.state = state ?? new SortState();
+        }
+
+        /// <summary>Makes a column header clickable.</summary>
+        public void Header(int col, Border border)
+        {
+            if (!(border.Child is TextBlock text) || string.IsNullOrEmpty(text.Text)) return;
+            headers[col] = (border, text, text.Text);
+            border.Cursor = Cursors.Hand;
+            border.ToolTip = (border.ToolTip == null ? "" : border.ToolTip + "\n") + "Click to sort";
+            border.MouseLeftButtonDown += (s, e) =>
+            {
+                if (state.Column != col) { state.Column = col; state.Descending = false; }
+                else if (!state.Descending) state.Descending = true;
+                else state.Column = -1;
+                Apply();
+                e.Handled = true;
+            };
+        }
+
+        /// <summary>The value a cell sorts by: a number, text, or null (last).</summary>
+        public void Key(int row, int col, IComparable value)
+        {
+            if (!keys.TryGetValue(row, out var r)) keys[row] = r = new Dictionary<int, IComparable>();
+            r[col] = value;
+        }
+
+        /// <summary>Text shown in a cell, sorted as a number when it reads as one.</summary>
+        public static IComparable FromText(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text) || text == "–" || text == "-") return null;
+            string t = text.Trim();
+            int sp = t.IndexOf(' ');
+            string first = (sp > 0 ? t.Substring(0, sp) : t).TrimEnd('"'); // "3 (E-W)" sorts by 3, 6" by 6
+            if (double.TryParse(first.Replace('−', '-'), NumberStyles.Float, CultureInfo.CurrentCulture, out double v)) return v;
+            return t;
+        }
+
+        /// <summary>Sorts the rows by the current column (call after the rows are built, and on a header click).</summary>
+        public void Apply()
+        {
+            if (rowOf.Count == 0)
+                foreach (UIElement e in grid.Children)
+                {
+                    int r = Grid.GetRow(e);
+                    if (r > 0) rowOf[e] = r;
+                }
+            var rows = rowOf.Values.Distinct().OrderBy(r => r).ToList();
+            var order = state.Column < 0 ? rows : rows.OrderBy(r => r, Comparer<int>.Create(Compare)).ToList();
+            var place = new Dictionary<int, int>();
+            for (int i = 0; i < order.Count; i++) place[order[i]] = i + 1;
+            foreach (var kv in rowOf) Grid.SetRow(kv.Key, place[kv.Value]);
+            foreach (var h in headers)
+                h.Value.text.Text = h.Value.title + (h.Key != state.Column ? "" : state.Descending ? " ▼" : " ▲");
+        }
+
+        private IComparable KeyOf(int row) => keys.TryGetValue(row, out var r) && r.TryGetValue(state.Column, out var k) ? k : null;
+
+        private int Compare(int a, int b)
+        {
+            IComparable x = KeyOf(a), y = KeyOf(b);
+            if (x is double dx && double.IsNaN(dx)) x = null;
+            if (y is double dy && double.IsNaN(dy)) y = null;
+            int c;
+            if (x == null || y == null) c = x == null && y == null ? 0 : x == null ? 1 : -1; // blanks last either way
+            else
+            {
+                if (x is double != y is double) c = x is double ? -1 : 1;                  // numbers before text
+                else if (x is string sx) c = string.Compare(sx, (string)y, StringComparison.CurrentCultureIgnoreCase);
+                else c = x.CompareTo(y);
+                if (state.Descending) c = -c;
+            }
+            return c != 0 ? c : a.CompareTo(b); // ties keep the original order
+        }
     }
 }

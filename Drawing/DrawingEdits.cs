@@ -73,6 +73,14 @@ namespace ShearWallCalculator.Drawing
             return null;
         }
 
+        /// <summary>The middle of a wall, the centroid of a diaphragm; null when it does not exist.</summary>
+        public static Point? Center(ShearWallCalculatorBase calc, string kind, int id)
+        {
+            if (kind == "Wall" && calc?._wall_system?._walls.TryGetValue(id, out var w) == true) return new Point((w.Start.X + w.End.X) / 2, (w.Start.Y + w.End.Y) / 2);
+            if (kind == "Diaphragm" && calc?._diaphragm_system?._diaphragms.TryGetValue(id, out var d) == true) return new Point((d.P1.X + d.P3.X) / 2, (d.P1.Y + d.P3.Y) / 2);
+            return null;
+        }
+
         /// <summary>The box around every wall and diaphragm (and the plan, when given and shown); <see cref="Rect.Empty"/> when there is nothing.</summary>
         public static Rect Extents(ShearWallCalculatorBase calc, bool includePlan)
         {

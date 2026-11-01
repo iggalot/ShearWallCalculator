@@ -20,6 +20,11 @@ namespace ShearWallVisualizer.Controls
         /// <summary>A wall row was clicked (wall id).</summary>
         public event Action<int> WallSelected;
 
+        /// <summary>The × on a wall row (wall id); the host deletes it.</summary>
+        public event Action<int> WallDeleteRequested;
+
+        private readonly SortState envelopeSort = new SortState(), caseSort = new SortState(), flexSort = new SortState(), linesSort = new SortState();
+
         private readonly StackPanel top = new StackPanel();
         private readonly ComboBox cbCase = new ComboBox { Width = 260, Margin = new Thickness(0, 0, 12, 0) };
         private readonly TextBlock tbCaseInfo = new TextBlock { VerticalAlignment = VerticalAlignment.Center, Foreground = Ui.InkSecondary, TextWrapping = TextWrapping.Wrap };
@@ -133,9 +138,10 @@ namespace ShearWallVisualizer.Controls
             else if (calc is ShearWallCalculator_FlexibleDiaphragm f) FlexibleCase(f.CaseResults.First(c => c.Name == name));
         }
 
-        private UiTable NewWallTable(params (string, double, string)[] columns)
+        /// <summary>A wall table: click a row to select the wall, × to delete it (the last column is added here).</summary>
+        private UiTable NewWallTable(SortState sort, params (string, double, string)[] columns)
         {
-            var t = new UiTable(columns);
+            var t = new UiTable(sort, columns.Concat(new[] { ("", 30.0, "") }).ToArray());
             t.RowClicked += id =>
             {
                 selectedWall = id;
@@ -145,6 +151,10 @@ namespace ShearWallVisualizer.Controls
             return t;
         }
 
+        private void AddDelete(UiTable t, int row, int col, int id) =>
+            t.Put(row, col, Ui.DeleteButton(() => Dispatcher.BeginInvoke(new Action(() => WallDeleteRequested?.Invoke(id)),
+                System.Windows.Threading.DispatcherPriority.Background), $"Delete wall {id}"));
+
         private IEnumerable<KeyValuePair<int, WallData>> Walls() => calc._wall_system._walls.OrderBy(k => k.Key);
 
         private static string Dir(WallData w) => w.WallDir == WallDirs.EastWest ? "E-W" : "N-S";
@@ -153,7 +163,7 @@ namespace ShearWallVisualizer.Controls
         {
             tbCaseInfo.Text = "Per wall, the most positive and most negative shear over every case. The design shear is the larger magnitude. " +
                               "Signs: the wall's force on the diaphragm (x right, y up).";
-            wallTable = NewWallTable(
+            wallTable = NewWallTable(envelopeSort,
                 ("Wall", 44, ""), ("Dir", 40, ""), ("L (ft)", 52, "Wall length"), ("k", 54, "Relative rigidity"),
                 ("Most + (k)", 70, "Most positive shear over all cases"), ("Case", 150, ""),
                 ("Most − (k)", 70, "Most negative shear over all cases"), ("Case", 150, ""),
@@ -175,6 +185,7 @@ namespace ShearWallVisualizer.Controls
                 wallTable.Text(r, c++, range?.MaxNegativeCase ?? "", id, Ui.InkSecondary, right: false, tip: range?.MaxNegativeCase);
                 wallTable.Text(r, c++, range == null ? "–" : Ui.Num(range.Design), id, bold: true,
                     tip: range == null ? null : "Governing case: " + range.DesignCase);
+                AddDelete(wallTable, r, c, id);
             }
             Place(wallTable.InFrame(), 0);
         }
@@ -184,7 +195,7 @@ namespace ShearWallVisualizer.Controls
             tbCaseInfo.Text = $"Vx {Ui.Num(rc.Vx)} k,  Vy {Ui.Num(rc.Vy)} k,  Mt {Ui.Num(rc.Mt, "0.0")} k·ft,  e = ({Ui.Num(rc.EccX)}, {Ui.Num(rc.EccY)}) ft,  " +
                               $"Mt,comb = Vx·ey − Vy·ex + Mt = {Ui.Num(rc.MtComb, "0.0")} k·ft";
             var ws = calc._wall_system;
-            wallTable = NewWallTable(
+            wallTable = NewWallTable(caseSort,
                 ("Wall", 44, ""), ("Dir", 40, ""), ("k", 54, "Relative rigidity"),
                 ("x̄ (ft)", 58, "Wall center x − center of rigidity x"), ("ȳ (ft)", 58, "Wall center y − center of rigidity y"),
                 ("Direct (k)", 70, "−k·V / Σk"), ("Torsion (k)", 74, "E-W: +k·Mt,comb·ȳ / J;  N-S: −k·Mt,comb·x̄ / J"), ("Total (k)", 70, ""));
@@ -201,6 +212,7 @@ namespace ShearWallVisualizer.Controls
                 wallTable.Text(r, c++, rc.Direct != null && rc.Direct.TryGetValue(id, out var d) ? Ui.Num(d) : "–", id);
                 wallTable.Text(r, c++, rc.Torsional != null && rc.Torsional.TryGetValue(id, out var t) ? Ui.Num(t) : "–", id);
                 wallTable.Text(r, c++, rc.Total != null && rc.Total.TryGetValue(id, out var tot) ? Ui.Num(tot) : "–", id, bold: true);
+                AddDelete(wallTable, r, c, id);
             }
             Place(wallTable.InFrame(), 0);
         }
@@ -210,7 +222,7 @@ namespace ShearWallVisualizer.Controls
             tbCaseInfo.Text = $"Vx {Ui.Num(fc.Vx)} k,  Vy {Ui.Num(fc.Vy)} k,  Mt {Ui.Num(fc.Mt, "0.0")} k·ft" +
                               (fc.TorsionApplied ? $",  torsion center ({Ui.Num(fc.CenterX, "0.0")}, {Ui.Num(fc.CenterY, "0.0")}) ft,  J = Σ K·d² = {Ui.Num(fc.J, "0.0")} ft²" : "");
 
-            var lines = new UiTable(
+            var lines = new UiTable(linesSort,
                 ("Line", 40, ""), ("Dir", 40, ""), ("At (ft)", 56, "Line position across the load: y for E-W lines, x for N-S lines"),
                 ("Tributary (ft)", 104, "Half way to each neighbouring line"), ("w (k/ft)", 62, "V / plan dimension"),
                 ("Share (k)", 66, "−w × tributary width"), ("K", 50, "Tributary share (Σ K = 1 per direction)"),
@@ -236,7 +248,7 @@ namespace ShearWallVisualizer.Controls
             AddLines(fc.LinesX, "E-W");
             AddLines(fc.LinesY, "N-S");
 
-            wallTable = NewWallTable(
+            wallTable = NewWallTable(flexSort,
                 ("Wall", 44, ""), ("Dir", 40, ""), ("k", 54, "Relative rigidity (splits a line's force among its walls)"),
                 ("Direct (k)", 70, "The line's share × k / Σk of the line"), ("Torsion (k)", 74, ""), ("Total (k)", 70, ""));
             foreach (var kv in Walls())
@@ -252,6 +264,7 @@ namespace ShearWallVisualizer.Controls
                 wallTable.Text(r, c++, Ui.Num(total - tors), id);
                 wallTable.Text(r, c++, fc.TorsionApplied ? Ui.Num(tors) : "–", id);
                 wallTable.Text(r, c++, Ui.Num(total), id, bold: true);
+                AddDelete(wallTable, r, c, id);
             }
 
             var linesBlock = new DockPanel { Margin = new Thickness(0, 0, 0, 10) };

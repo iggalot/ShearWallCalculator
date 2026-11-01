@@ -128,6 +128,7 @@ namespace ShearWallVisualizer
             this.TextInput += RouteTypingToCommand;  // typing a number while drawing goes to the Point box
             m_layers.MouseLeave += (s, e) => RedrawDrawing(); // drop the crosshair and snap marker
             m_layers.PreviewMouseUp += PanMouseUp;             // the middle-button pan ends
+            dockpanel.SizeChanged += DrawingResized;           // the drawing fills the window height; the divider sets its width
             selectionCard.OpenDesign += SelectionCard_OpenDesign;
             selectionCard.EditGeometry += SelectionCard_EditGeometry;
             selectionCard.DeleteRequested += SelectionCard_Delete;
@@ -200,6 +201,7 @@ namespace ShearWallVisualizer
                 UpdateDesign();
                 LogModelChanges();
                 RecordHistory(); // an undo step when the drawing changed
+                DropMissingSelection();
 
                 ShowImageName();
 
@@ -278,15 +280,19 @@ namespace ShearWallVisualizer
             };
             geometryPanel = new GeometryPanel();
             geometryPanel.GeometryChanged += (s, e) => UpdateShearWallUI();
-            geometryPanel.SelectionChanged += (kind, id) => { selectedKind = kind; selectedId = id; RedrawDrawing(); };
+            geometryPanel.SelectionChanged += SelectFromTable;
+            geometryPanel.DeleteRequested += DeleteFromTable;
             tabDimensionsTabItem.Content = geometryPanel;
             resultsPanel = new ShearResultsPanel();
-            resultsPanel.WallSelected += id => { selectedKind = "Wall"; selectedId = id; RedrawDrawing(); };
+            resultsPanel.WallSelected += id => SelectFromTable("Wall", id);
+            resultsPanel.WallDeleteRequested += id => DeleteFromTable("Wall", id);
             tabCalculationsTabItem.Content = resultsPanel;
 
             designPanel = new WallDesignPanel();
             designPanel.DesignChanged += (s, e) => UpdateShearWallUI();
             designPanel.AutoSelectRequested += (s, e) => AutoSelectAllWalls();
+            designPanel.WallSelected += id => SelectFromTable("Wall", id);
+            designPanel.WallDeleteRequested += id => DeleteFromTable("Wall", id);
             tabDesignTabItem.Content = designPanel;
         }
 
@@ -310,6 +316,7 @@ namespace ShearWallVisualizer
                 if (designResults.Count == 0) message = "No wall shears yet: add loads (LOADS button) or link the wind loads.";
             }
             designPanel.Show(Calculator, designResults, designer, windLoadsLinked, message);
+            if (selectedKind == "Wall") designPanel.SelectWall(selectedId); // the same wall as on the drawing and the other tabs
             holdownCatalog?.SetDesign(designResults);
         }
 
@@ -1039,8 +1046,8 @@ namespace ShearWallVisualizer
                                new Size(m_layers.ActualWidth, m_layers.ActualHeight), VisualTreeHelper.GetDpi(this).PixelsPerDip);
         }
 
-        private static readonly Pen SelectionHalo =FrozenPen(Color.FromArgb(0x70, 0x2A, 0x78, 0xD6), 12);
-        private static readonly Pen SelectionOutline = FrozenPen(Color.FromRgb(0x2A, 0x78, 0xD6), 3);
+        private static readonly Pen SelectionHalo = FrozenPen(Color.FromArgb(0xB0, 0xFF, 0xB0, 0x20), 16); // picked on the drawing or in a table: a wide amber glow
+        private static readonly Pen SelectionOutline = FrozenPen(Color.FromArgb(0xD0, 0xFF, 0xA0, 0x00), 6);
 
         private static Pen FrozenPen(Color c, double thickness)
         {
@@ -2992,8 +2999,9 @@ namespace ShearWallVisualizer
             // The canvas is Hidden (not Collapsed) so it keeps its size: its zoom/pan math reads
             // ActualWidth/ActualHeight. The tab area simply stretches over it.
             dockpanel.Visibility = wind ? Visibility.Hidden : Visibility.Visible;
-            Grid.SetColumn(MainTabControl, wind ? 0 : 1);
-            Grid.SetColumnSpan(MainTabControl, wind ? 2 : 1);
+            drawingSplitter.Visibility = wind ? Visibility.Collapsed : Visibility.Visible;
+            Grid.SetColumn(MainTabControl, wind ? 0 : 2);
+            Grid.SetColumnSpan(MainTabControl, wind ? 3 : 1);
             spDrawingToolbar.Visibility = wind ? Visibility.Collapsed : Visibility.Visible;
 
             if (!(MainTabControl.SelectedItem is TabItem current) || current.Visibility != Visibility.Visible)

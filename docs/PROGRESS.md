@@ -2,6 +2,14 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-01 — Tables: delete and select on every tab, click-to-sort columns; the drawing fills the height (SWC)
+
+- **Delete from any table:** the × at the end of each wall row on Walls & diaphragms, Calculations (envelope, each load case, flexible walls) and Design deletes that wall (diaphragms on Walls & diaphragms). All go through the same delete as the drawing, so Ctrl+Z brings it back.
+- **Select from any table:** clicking a row on any of the three tabs highlights that wall or diaphragm on the drawing with a wide amber glow (stronger than before), and pans the view to it when it is off screen. The Design tab follows the wall picked elsewhere.
+- **Sorting:** every table on the three tabs sorts by clicking a column header (again: reverse; a third time: back to the wall order); ▲ / ▼ shows the column. Numbers sort as numbers ("3 (E-W)" by 3, 6" by 6), blanks last; the sort stays while the tables refresh. `GridSorter` in `Controls/Ui.cs`.
+- **Drawing area:** it now fills the window height under the toolbar (it was a fixed 750 × 600 with empty space below). Drag the bar between the drawing and the tabs to make it wider or narrower; the view keeps its place when the size changes. The details card sits at the drawing's top-right corner whatever its width.
+- **Tests:** SWC 140 (`DrawingEdits.Center` added to the drafting test). The three tabs rendered off-screen with a six-wall building: sorted by Length, Design V and Ratio, × on every row.
+
 ## 2026-11-01 — Drafting: undo / redo, delete, move, copy, measure, ortho, fit, pan (SWC)
 
 - **Undo / Redo** (Ctrl+Z, Ctrl+Y or Ctrl+Shift+Z; ↶ ↷ on the toolbar; Edit menu). Covers walls and diaphragms added, deleted, moved, copied or resized (drawing or tables), each wall's design inputs and the project design settings; up to 200 steps. The status line says what was undone ("Undone: wall 3 added"). Loads, wind inputs and the plan image are not part of it. A new or opened project starts a fresh history. In a text box Ctrl+Z keeps undoing the typing. Core: `Drawing/DrawingHistory.cs` (snapshot of the walls and diaphragms by id after every update).

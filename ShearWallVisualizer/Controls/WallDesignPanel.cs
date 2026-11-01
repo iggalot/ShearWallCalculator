@@ -24,6 +24,15 @@ namespace ShearWallVisualizer.Controls
         public event EventHandler DesignChanged;
         public event EventHandler AutoSelectRequested;
 
+        /// <summary>A wall row was clicked (wall id): the host highlights it on the drawing.</summary>
+        public event Action<int> WallSelected;
+
+        /// <summary>The × on a wall row (wall id); the host deletes it.</summary>
+        public event Action<int> WallDeleteRequested;
+
+        private readonly SortState sort = new SortState();
+        private GridSorter sorter;
+
         private static readonly Brush Ink = Frozen("#0B0B0B"), InkSecondary = Frozen("#52514E"), Hairline = Frozen("#D5DAE1"),
                                       HeaderFill = Frozen("#EEF1F5"), PassInk = Frozen("#1E6B33"), FailInk = Frozen("#B3261E"),
                                       PassFill = Frozen("#E7F4EA"), FailFill = Frozen("#FCE8E6"), SelectedFill = Frozen("#E4EDFA"),
@@ -176,10 +185,12 @@ namespace ShearWallVisualizer.Controls
             ("T (lb)", 50, "Hold-down tension at ASD"),
             ("Hold-down", 84, "Lightest Simpson model at or above T"),
             ("Status", 80, ""),
+            ("", 30, ""),
         };
 
         private void BuildTable()
         {
+            sorter = new GridSorter(table, sort);
             foreach (var c in Columns) table.ColumnDefinitions.Add(c.header == "Status"
                 ? new ColumnDefinition { Width = GridLength.Auto, MinWidth = c.width }   // the status text is never cut off
                 : new ColumnDefinition { Width = new GridLength(c.width) });
@@ -194,6 +205,7 @@ namespace ShearWallVisualizer.Controls
                 };
                 Grid.SetColumn(h, c);
                 table.Children.Add(h);
+                sorter.Header(c, h);
             }
 
             int row = 1;
@@ -263,20 +275,25 @@ namespace ShearWallVisualizer.Controls
                 };
                 status.MouseLeftButtonDown += (s, e) => Select((int)((Border)s).Tag);
                 Put(row, col++, status);
+                int del = id;
+                Put(row, col++, Ui.DeleteButton(() => Dispatcher.BeginInvoke(new Action(() => WallDeleteRequested?.Invoke(del)),
+                    System.Windows.Threading.DispatcherPriority.Background), $"Delete wall {id}"));
                 row++;
             }
+            sorter.Apply();
         }
 
         /// <summary>Selects a wall from outside (the drawing's card); ignored if the wall has no result.</summary>
         public void SelectWall(int id)
         {
-            if (results.ContainsKey(id)) Select(id);
+            if (results.ContainsKey(id)) Select(id, notify: false);
         }
 
-        private void Select(int id)
+        private void Select(int id, bool notify = true)
         {
             if (selectedWall == id) return;
             selectedWall = id;
+            if (notify) WallSelected?.Invoke(id);
             foreach (var b in table.Children.OfType<Border>().Where(b => Grid.GetColumnSpan(b) == Columns.Length && b.Tag is int))
                 b.Background = (int)b.Tag == id ? SelectedFill : Brushes.Transparent;
             ShowDetails();
@@ -293,8 +310,17 @@ namespace ShearWallVisualizer.Controls
             Put(row, col, t);
         }
 
+        /// <summary>What a cell sorts by: its text, the choice in a box, or the status text.</summary>
+        private static IComparable SortValue(UIElement e) =>
+            e is TextBlock t ? GridSorter.FromText(t.Text)
+            : e is TextBox tb ? GridSorter.FromText(tb.Text)
+            : e is ComboBox cb ? GridSorter.FromText(cb.SelectedItem?.ToString())
+            : e is Border b && b.Child is TextBlock bt ? GridSorter.FromText(bt.Text)
+            : null;
+
         private void Put(int row, int col, UIElement e)
         {
+            if (row > 0) sorter?.Key(row, col, SortValue(e));
             Grid.SetRow(e, row);
             Grid.SetColumn(e, col);
             table.Children.Add(e);

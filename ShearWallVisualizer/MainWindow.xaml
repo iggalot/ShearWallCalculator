@@ -204,12 +204,13 @@
             <!-- Main Drawing + Right-side Tabs -->
             <Grid Grid.Row="1" Margin="10">
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition x:Name="drawingColumn" Width="750" MinWidth="400"/>
                     <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*" MinWidth="480"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Drawing Area -->
-                <DockPanel x:Name="dockpanel" Grid.Column="0" VerticalAlignment="Top" LastChildFill="True" Width="750" Height="600">
+                <!-- Drawing Area: the full height under the toolbar; drag the bar on its right to widen it -->
+                <DockPanel x:Name="dockpanel" Grid.Column="0" LastChildFill="True" ClipToBounds="True" Background="White">
                     <local:LayerManager x:Name="m_layers" DockPanel.Dock="Left" 
                                 PreviewMouseDown="m_layers_PreviewMouseDown" 
                                 PreviewMouseMove="m_layers_PreviewMouseMove"
@@ -218,11 +219,15 @@
                 </DockPanel>
 
                 <!-- The picked wall or diaphragm (Select tool), over the top-right corner of the drawing -->
-                <ctrl:SelectionCard x:Name="selectionCard" Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="452,8,0,0" Visibility="Collapsed"/>
+                <ctrl:SelectionCard x:Name="selectionCard" Grid.Column="0" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0" Visibility="Collapsed"/>
+
+                <GridSplitter x:Name="drawingSplitter" Grid.Column="1" Width="8" HorizontalAlignment="Center" VerticalAlignment="Stretch"
+                              ResizeBehavior="PreviousAndNext" ResizeDirection="Columns" Background="Transparent" Cursor="SizeWE"
+                              ToolTip="Drag to make the drawing wider or narrower"/>
 
                 <!-- Dynamic Tabs -->
-                <TabControl x:Name="MainTabControl" Grid.Column="1"
-                            TabStripPlacement="Top" Margin="10 0 0 0"
+                <TabControl x:Name="MainTabControl" Grid.Column="2"
+                            TabStripPlacement="Top" Margin="2 0 0 0"
                             SelectionChanged="MainTabControl_SelectionChanged">
                     <!-- Building Data control -->
                     <!-- Guided wind input (Site, Building, Results); the classic BuildingData and WIND Input tabs stay in sync with it -->

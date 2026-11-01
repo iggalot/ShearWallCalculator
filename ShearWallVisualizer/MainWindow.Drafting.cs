@@ -57,6 +57,46 @@ namespace ShearWallVisualizer
                               $"   ({history.UndoSteps} to undo, {history.RedoSteps} to redo)");
         }
 
+        // ------------------------------------------------------------------ the tables (Walls & diaphragms, Calculations, Design)
+
+        /// <summary>A row picked in a table: the same wall or diaphragm is highlighted on the drawing (brought into view if it is off screen).</summary>
+        private void SelectFromTable(string kind, int id)
+        {
+            selectedKind = kind;
+            selectedId = id;
+            Point? c = DrawingEdits.Center(Calculator, kind, id);
+            if (c != null)
+            {
+                Point s = WorldToScreen(c.Value, m_layers);
+                if (s.X < 0 || s.Y < 0 || s.X > m_layers.ActualWidth || s.Y > m_layers.ActualHeight)
+                {
+                    // centre it: u = (x − panX)·zoom, v = (H − (y − panY))·zoom
+                    panOffsetX = c.Value.X - m_layers.ActualWidth / (2 * zoomFactorX);
+                    panOffsetY = c.Value.Y - m_layers.ActualHeight + m_layers.ActualHeight / (2 * zoomFactorY);
+                    InvalidateGrid();
+                }
+            }
+            SetButtonModes();
+            RedrawDrawing();
+        }
+
+        /// <summary>The × on a table row.</summary>
+        private void DeleteFromTable(string kind, int id)
+        {
+            selectedKind = kind;
+            selectedId = id;
+            DeleteSelected();
+        }
+
+        /// <summary>After an undo, a delete in a table or an edit, the selection may name something that is gone.</summary>
+        private void DropMissingSelection()
+        {
+            if (!HasSelection || DrawingEdits.Center(Calculator, selectedKind, selectedId) != null) return;
+            selectedKind = null;
+            selectedId = -1;
+            selectionCardOpen = false;
+        }
+
         // ------------------------------------------------------------------ delete
 
         private void Delete_Click(object sender, RoutedEventArgs e) => DeleteSelected();
@@ -229,6 +269,16 @@ namespace ShearWallVisualizer
             InvalidateGrid();
             ShowCursor(currentSnap.Point);
             RedrawDrawing();
+        }
+
+        /// <summary>The window or the divider changed the drawing's size: keep the top-left of the view where it was.</summary>
+        private void DrawingResized(object sender, SizeChangedEventArgs e)
+        {
+            if (!e.HeightChanged && !e.WidthChanged) return;
+            // v = (H − (y − panY))·zoom: a taller area would push the plan down; move the pan by the change so it stays put
+            if (e.PreviousSize.Height > 0) panOffsetY -= e.NewSize.Height - e.PreviousSize.Height;
+            InvalidateGrid();
+            if (IsLoaded) Draw(ChangeType.Redraw);
         }
 
         /// <summary>Middle button: drag to pan; double-click to zoom to the drawing.</summary>

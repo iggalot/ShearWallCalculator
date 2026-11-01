@@ -159,6 +159,10 @@ namespace ShearWallCalculator.Tests
             Assert.AreEqual(new Point(10, 2), DrawingEdits.Ortho(new Point(10, 3), new Point(0, 2)));
             Assert.AreEqual(new Point(0, -8), DrawingEdits.Ortho(new Point(1, -8), new Point(0, 2)));
             Assert.AreEqual(new Point(new Vector(3, 4).Length, 0).X, 5, 1e-12);
+
+            Assert.AreEqual(new Point(20, 15), DrawingEdits.Center(calc, "Diaphragm", 0));
+            Assert.AreEqual(new Point(0, 15), DrawingEdits.Center(calc, "Wall", 1));
+            Assert.IsNull(DrawingEdits.Center(calc, "Wall", 2), "deleted");
         }
     }
 }
