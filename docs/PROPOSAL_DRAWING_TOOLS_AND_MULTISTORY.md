@@ -133,7 +133,7 @@ _Branch `dev/wind-core-refactor`. Written 2026-10-31 in answer to the user's lis
 ## Suggested order
 1. W7 PSF labels (small).
 2. Logging and the error handler, then the clean-up of the legacy pages. Everything after builds on a tidy base.
-3. Drawing tools: typed input, object snaps, click to inspect.
+3. Drawing tools: typed input, object snaps, click to inspect. Done; later added undo / redo, delete, move, copy, measure, ortho, fit and pan (see PROGRESS.md).
 4. Sheathing types and capacities (after the 4.3.3.3 answer).
 5. The drawing shows the design, with hold-down marks.
 6. Image calibration and DXF import.

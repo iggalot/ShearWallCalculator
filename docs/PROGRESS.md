@@ -2,6 +2,18 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-01 — Drafting: undo / redo, delete, move, copy, measure, ortho, fit, pan (SWC)
+
+- **Undo / Redo** (Ctrl+Z, Ctrl+Y or Ctrl+Shift+Z; ↶ ↷ on the toolbar; Edit menu). Covers walls and diaphragms added, deleted, moved, copied or resized (drawing or tables), each wall's design inputs and the project design settings; up to 200 steps. The status line says what was undone ("Undone: wall 3 added"). Loads, wind inputs and the plan image are not part of it. A new or opened project starts a fresh history. In a text box Ctrl+Z keeps undoing the typing. Core: `Drawing/DrawingHistory.cs` (snapshot of the walls and diaphragms by id after every update).
+- **Delete** key (or Edit > Delete, or the card's Delete) removes the selected wall or diaphragm without a question; Ctrl+Z brings it back.
+- **Move (M) / Copy (C):** pick the wall or diaphragm (or select it first), click a base point, click the new place: snaps work, or type `@dx,dy`. Move keeps the id and design; Copy makes a new wall with the same height, type and design (its own copy), and stays on for more copies from the same base point until Esc. A dashed outline follows the cursor. Core: `Drawing/DrawingEdits.cs`.
+- **Measure (T):** two points (snaps work); the line and its length stay on the plan, and the status line shows the distance, Δx and Δy.
+- **Ortho (F8):** move, copy and measure go straight across or straight up. Walls are always square (unchanged).
+- **Walls chain:** after a wall, the next one starts at its end (like a CAD line command); Esc or a right-click ends the chain.
+- **Fit (Z):** zooms to the walls, diaphragms and the shown plan (it used to reset to a fixed 120 ft view). The wheel zooms at the cursor (as before); **drag with the middle button to pan; double-click it to fit.**
+- **Space or Enter** in Select repeats the last tool.
+- **Tests:** SWC 140 (6 new, `DrawingEditTests`): undo / redo of add, design edit and delete, with the steps named, redo dropped by a new change; undo restores the centre of rigidity exactly; the 200-step limit; move keeps id and design and updates centroid and centre of mass; copy gets a new id and its own design; delete, extents and ortho.
+
 ## 2026-11-01 — Plan import: DXF (true size) and PDF sheets; old image code removed (SWC)
 
 - **One command for every plan:** Edit > Import plan (DXF, PDF, image)..., or Image ▾. The file type picks the dialog. A DWG gets a message: save it as DXF in AutoCAD.

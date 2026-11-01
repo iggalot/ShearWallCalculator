@@ -92,7 +92,7 @@ namespace ShearWallVisualizer
 
         private double defaultWallHeight = 9.0;
 
-        private enum DrawMode { None, Line, Rectangle }
+        private enum DrawMode { None, Line, Rectangle, Move, Copy, Measure }
         private DrawMode currentMode = DrawMode.Line;
         private bool snapMode = true;                     // object snaps on (F3 / S)
         private SnapModes snapModes = SnapModes.Default;   // which snaps (the ▾ menu)
@@ -127,6 +127,7 @@ namespace ShearWallVisualizer
             Log.Written += OnLogWritten;      // warnings and errors show on the status line
             this.TextInput += RouteTypingToCommand;  // typing a number while drawing goes to the Point box
             m_layers.MouseLeave += (s, e) => RedrawDrawing(); // drop the crosshair and snap marker
+            m_layers.PreviewMouseUp += PanMouseUp;             // the middle-button pan ends
             selectionCard.OpenDesign += SelectionCard_OpenDesign;
             selectionCard.EditGeometry += SelectionCard_EditGeometry;
             selectionCard.DeleteRequested += SelectionCard_Delete;
@@ -198,6 +199,7 @@ namespace ShearWallVisualizer
                 Calculator.PerformCalculations();
                 UpdateDesign();
                 LogModelChanges();
+                RecordHistory(); // an undo step when the drawing changed
 
                 ShowImageName();
 
@@ -979,6 +981,8 @@ namespace ShearWallVisualizer
         /// <param name="ctx"></param>
         private void DrawPreview(DrawingContext ctx)
         {
+            if (DrawEditPreview(ctx)) return; // Move, Copy, Measure
+
             // Do we have a preview shape?
             if (previewShape == null)
             {
@@ -2017,6 +2021,7 @@ namespace ShearWallVisualizer
 
         private void m_layers_PreviewMouseDown(object sender, MouseButtonEventArgs e)
         {
+            if (PanMouseDown(e)) return; // middle button: pan, double-click: zoom to the drawing
             if (e.RightButton == MouseButtonState.Pressed)
             {
                 ResetInputMode(); // right-click cancels the shape in progress
@@ -2036,12 +2041,25 @@ namespace ShearWallVisualizer
                 PickAt(world);
                 return;
             }
+            if (IsEditMode)
+            {
+                EditPoint(FindSnap(world).Point, world);
+                return;
+            }
             ApplyPoint(FindSnap(world).Point);
         }
 
-        /// <summary>A clicked or typed point for the Wall or Diaphragm tool: the first point starts the shape, the second finishes it.</summary>
+        /// <summary>
+        /// A clicked or typed point for the Wall or Diaphragm tool: the first point starts the shape, the second finishes it.
+        /// Walls chain: the next wall starts at the end of the last one, until Esc or a right-click.
+        /// </summary>
         private void ApplyPoint(Point p)
         {
+            if (IsEditMode)
+            {
+                EditPoint(p, null);
+                return;
+            }
             if (startPoint_world == null)
             {
                 startPoint_world = p;
@@ -2070,6 +2088,8 @@ namespace ShearWallVisualizer
             }
 
             endPoint_world = p;
+            bool chain = currentMode == DrawMode.Line;
+            Point wallEnd = GetConstrainedPoint(p, start);
             try
             {
                 FinalizeShape(p);
@@ -2078,6 +2098,12 @@ namespace ShearWallVisualizer
             {
                 Log.Warning("The shape could not be added", ex);
                 ResetInputMode();
+                chain = false;
+            }
+            if (chain)
+            {
+                startPoint_world = wallEnd; // the next wall starts here
+                CreatePreviewShape();
             }
             UpdateShearWallUI();
         }
@@ -2110,12 +2136,10 @@ namespace ShearWallVisualizer
 
         private void SelectionCard_Delete(string kind, int id)
         {
-            string name = kind == "Wall" ? $"wall {id}" : $"diaphragm {id}";
-            if (MessageBox.Show(this, $"Delete {name}?", "Delete", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes)
-                return;
-            if (kind == "Wall") Calculator._wall_system.DeleteWall(id);
-            else Calculator._diaphragm_system.DeleteDiaphragm(id);
-            CloseSelectionCard();
+            // no question: Ctrl+Z brings it back
+            selectedKind = kind;
+            selectedId = id;
+            DeleteSelected();
         }
 
         // ------------------------------------------------------------------ typed points
@@ -2178,6 +2202,7 @@ namespace ShearWallVisualizer
 
         private void m_layers_PreviewMouseMove(object sender, MouseEventArgs e)
         {
+            PanMouseMove(e);
             currentMouseScreenPosition = e.GetPosition(m_layers);
             currentSnap = FindSnap(ScreenToWorld(currentMouseScreenPosition, m_layers));
             ShowCursor(currentSnap.Point);
@@ -2359,14 +2384,15 @@ namespace ShearWallVisualizer
             // (typing "d" in a wind input used to toggle debug mode with a message box).
             if (e.Handled || InWindWorkspace || Keyboard.Modifiers != ModifierKeys.None) return;
             if (e.OriginalSource is System.Windows.Controls.Primitives.TextBoxBase || e.OriginalSource is PasswordBox || (e.OriginalSource is ComboBox cb && cb.IsEditable)) return;
-            if (e.Key != Key.L && e.Key != Key.R && e.Key != Key.S && e.Key != Key.D && e.Key != Key.Z && e.Key != Key.Escape && e.Key != Key.F3) return;
+            if (DraftingKey(e.Key)) { e.Handled = true; return; } // Delete, M, C, T, F8, Z, Space / Enter
+            if (e.Key != Key.L && e.Key != Key.R && e.Key != Key.S && e.Key != Key.D && e.Key != Key.Escape && e.Key != Key.F3) return;
             Log.Debug($"Key pressed: {e.Key}");
 
-            // Esc: cancel the shape in progress; then close the card; then the Select tool
+            // Esc: cancel the shape in progress (or the wall chain); then the measured line; then close the card; then the Select tool
             if (e.Key == Key.Escape)
             {
                 if (imageTool.Active) { imageTool.Cancel(); RedrawDrawing(); }
-                else                 if (startPoint_world != null) { ResetInputMode(); RedrawDrawing(); }
+                else if (startPoint_world != null || lastMeasure != null) { ResetInputMode(); RedrawDrawing(); }
                 else if (selectionCardOpen) CloseSelectionCard();
                 else { currentMode = DrawMode.None; currentSnap = FindSnap(currentSnap.Point); SetButtonModes(); RedrawDrawing(); }
                 return;
@@ -2400,13 +2426,6 @@ namespace ShearWallVisualizer
             else if (e.Key == Key.D)
             {
                 SetDebugMode();
-            }
-            // reset view 
-            else if (e.Key == Key.Z)
-            {
-                ResetInputMode();
-                ResetView();
-                InvalidateGrid();
             }
 
             UpdateShearWallUI();
@@ -2502,6 +2521,8 @@ namespace ShearWallVisualizer
 
         private void FileShortcuts(object sender, KeyEventArgs e)
         {
+            if ((Keyboard.Modifiers & ModifierKeys.Control) == 0) return;
+            if ((e.Key == Key.Z || e.Key == Key.Y) && UndoShortcut(e)) { e.Handled = true; return; } // Ctrl+Z, Ctrl+Y, Ctrl+Shift+Z
             if (Keyboard.Modifiers != ModifierKeys.Control) return;
             switch (e.Key)
             {
@@ -2797,6 +2818,13 @@ namespace ShearWallVisualizer
             btnRigidityMode.Tag = currentMode == DrawMode.Line ? "on" : null;
             btnMassMode.Tag = currentMode == DrawMode.Rectangle ? "on" : null;
             btnSnapToNearest.Tag = snapMode ? "on" : null;
+            btnMove.Tag = currentMode == DrawMode.Move ? "on" : null;
+            btnCopy.Tag = currentMode == DrawMode.Copy ? "on" : null;
+            btnMeasure.Tag = currentMode == DrawMode.Measure ? "on" : null;
+            btnOrtho.Tag = orthoMode ? "on" : null;
+            btnUndo.IsEnabled = history.CanUndo;
+            btnRedo.IsEnabled = history.CanRedo;
+            if (currentMode != DrawMode.None) lastDrawMode = currentMode; // Space repeats it
             ShowStatusMode();
         }
 
@@ -2836,6 +2864,7 @@ namespace ShearWallVisualizer
             endPoint_world = null;
             previewShape = null;
             imageTool.Cancel();
+            lastMeasure = null;
         }
         #endregion
 
@@ -2855,6 +2884,11 @@ namespace ShearWallVisualizer
                 ? $"   L = {(GetConstrainedPoint(world, startPoint_world.Value) - startPoint_world.Value).Length:0.00} ft"
                 : startPoint_world.HasValue && currentMode == DrawMode.Rectangle
                     ? $"   {Math.Abs(world.X - startPoint_world.Value.X):0.##} × {Math.Abs(world.Y - startPoint_world.Value.Y):0.##} ft" : "";
+            if (startPoint_world.HasValue && IsEditMode)
+            {
+                Vector by = EditSecondPoint(world) - startPoint_world.Value;
+                len = $"   d = {by.Length:0.00} ft  (Δx {by.X:0.00}, Δy {by.Y:0.00})";
+            }
             tbWorldCoords.Text = $"x {world.X:0.00},  y {world.Y:0.00} ft{snap}{len}";
             tbZoom.Text = $"Zoom {zoomFactorX:0.##}×";
         }
@@ -2867,17 +2901,30 @@ namespace ShearWallVisualizer
                 tbStatusMode.Text = imageTool.Prompt;
                 return;
             }
-            string snap = snapMode ? "" : "   (snaps off)";
+            string snap = (snapMode ? "" : "   (snaps off)") + (orthoMode && IsEditMode ? "   (ortho)" : "");
+            string what = HasSelection ? $" {selectedKind.ToLowerInvariant()} {selectedId}" : "";
             switch (currentMode)
             {
                 case DrawMode.Line:
-                    tbStatusMode.Text = (startPoint_world == null ? "Wall: click or type the first end" : "Wall: click or type the second end  (Esc cancels)") + snap;
+                    tbStatusMode.Text = (startPoint_world == null ? "Wall: click or type the first end" : "Wall: click or type the next end  (Esc ends)") + snap;
+                    break;
+                case DrawMode.Move:
+                case DrawMode.Copy:
+                    string verb = currentMode == DrawMode.Move ? "Move" : "Copy";
+                    tbStatusMode.Text = (!HasSelection ? $"{verb}: click the wall or diaphragm"
+                        : startPoint_world == null ? $"{verb}{what}: click or type the base point"
+                        : $"{verb}{what}: click the new place, or type @dx,dy  (Esc cancels)") + snap;
+                    break;
+                case DrawMode.Measure:
+                    tbStatusMode.Text = (startPoint_world == null ? "Measure: click the first point" : "Measure: click the second point  (Esc cancels)") + snap;
                     break;
                 case DrawMode.Rectangle:
                     tbStatusMode.Text = (startPoint_world == null ? "Diaphragm: click or type a corner" : "Diaphragm: click or type the opposite corner  (Esc cancels)") + snap;
                     break;
                 default:
-                    tbStatusMode.Text = "Select: click a wall or diaphragm to see it.  Draw with Wall (L) or Diaphragm (R).";
+                    tbStatusMode.Text = HasSelection
+                        ? $"Selected{what}:  Move (M), Copy (C), Delete.  Ctrl+Z undoes."
+                        : "Select: click a wall or diaphragm to see it.  Draw with Wall (L) or Diaphragm (R).";
                     break;
             }
         }

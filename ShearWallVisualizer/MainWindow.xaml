@@ -32,6 +32,17 @@
                 <MenuItem Header="_Hold-down catalog (values used by the design)" Click="OpenHoldownCatalog_Click"/>
             </MenuItem>
             <MenuItem Header="_Edit">
+                <MenuItem Header="_Undo" Click="Undo_Click" InputGestureText="Ctrl+Z"/>
+                <MenuItem Header="_Redo" Click="Redo_Click" InputGestureText="Ctrl+Y"/>
+                <Separator/>
+                <MenuItem Header="_Move" Click="btnMove_Click" InputGestureText="M"/>
+                <MenuItem Header="_Copy" Click="btnCopy_Click" InputGestureText="C"/>
+                <MenuItem Header="_Delete" Click="Delete_Click" InputGestureText="Del"/>
+                <MenuItem Header="Mea_sure distance" Click="btnMeasure_Click" InputGestureText="T"/>
+                <Separator/>
+                <MenuItem Header="_Ortho (move, copy, measure)" Click="btnOrtho_Click" InputGestureText="F8"/>
+                <MenuItem Header="_Zoom to the drawing" Click="btnZoomExtents_Click" InputGestureText="Z"/>
+                <Separator/>
                 <MenuItem Header="Import plan (DXF, PDF, image)..." Click="ImportPlanImage_Click"/>
             </MenuItem>
             <MenuItem Header="_Help">
@@ -121,6 +132,9 @@
                                             <Setter Property="Foreground" Value="#0B4C9A"/>
                                             <Setter Property="FontWeight" Value="SemiBold"/>
                                         </Trigger>
+                                        <Trigger Property="IsEnabled" Value="False">
+                                            <Setter TargetName="bd" Property="Opacity" Value="0.4"/>
+                                        </Trigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>
                             </Setter.Value>
@@ -147,6 +161,22 @@
                                 ToolTip="Draw a shear wall: click both ends. Walls are horizontal (E-W) or vertical (N-S)."/>
                         <Button x:Name="btnMassMode" Style="{StaticResource Tool}" Content="Diaphragm  (R)" Click="btnRectangleMode_Click"
                                 ToolTip="Draw a rectangular diaphragm (floor or roof area): click two opposite corners."/>
+                        <Rectangle Style="{StaticResource ToolDivider}"/>
+                        <TextBlock Style="{StaticResource ToolGroup}" Text="EDIT"/>
+                        <Button x:Name="btnUndo" Style="{StaticResource Tool}" Content="↶" Padding="8,2" FontSize="15" Click="Undo_Click"
+                                ToolTip="Undo (Ctrl+Z): walls and diaphragms added, deleted, moved or resized, and design changes"/>
+                        <Button x:Name="btnRedo" Style="{StaticResource Tool}" Content="↷" Padding="8,2" FontSize="15" Click="Redo_Click"
+                                ToolTip="Redo (Ctrl+Y)"/>
+                        <Button x:Name="btnMove" Style="{StaticResource Tool}" Content="Move" Click="btnMove_Click"
+                                ToolTip="Move (M): move the selected wall or diaphragm: click a base point, then the new place (snaps work; or type @dx,dy)"/>
+                        <Button x:Name="btnCopy" Style="{StaticResource Tool}" Content="Copy" Click="btnCopy_Click"
+                                ToolTip="Copy (C): copy the selected wall (with its design) or diaphragm: click a base point, then each new place. Esc ends."/>
+                        <Button x:Name="btnMeasure" Style="{StaticResource Tool}" Content="Measure" Click="btnMeasure_Click"
+                                ToolTip="Measure (T): the distance between two points (snaps work)"/>
+                        <Button x:Name="btnOrtho" Style="{StaticResource Tool}" Content="Ortho" Click="btnOrtho_Click"
+                                ToolTip="Ortho (F8): move, copy and measure go straight across or straight up. Walls are always square."/>
+                        <Button x:Name="btnZoomExtents" Style="{StaticResource Tool}" Content="Fit" Click="btnZoomExtents_Click"
+                                ToolTip="Fit (Z): zoom to the walls, diaphragms and plan. Wheel zooms at the cursor; drag with the middle button to pan; double-click it to fit."/>
                         <Rectangle Style="{StaticResource ToolDivider}"/>
                         <Button x:Name="btnSnapToNearest" Style="{StaticResource Tool}" Content="Snap  (F3)" Click="btnSnapMode_Click"
                                 ToolTip="Object snaps: endpoint, midpoint, intersection, perpendicular, nearest. F3 or S turns them on and off; ▾ picks which."/>

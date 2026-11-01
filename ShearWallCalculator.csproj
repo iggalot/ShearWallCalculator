@@ -95,6 +95,8 @@
     <Compile Include="Drawing\CoordinateInput.cs" />
     <Compile Include="Drawing\ReferenceImage.cs" />
     <Compile Include="Drawing\DxfReader.cs" />
+    <Compile Include="Drawing\DrawingHistory.cs" />
+    <Compile Include="Drawing\DrawingEdits.cs" />
     <Compile Include="NDSProvisions\Table4_3C.cs" />
     <Compile Include="NDSProvisions\Table4_3B.cs" />
     <Compile Include="NDSProvisions\Table4_3A.cs" />
