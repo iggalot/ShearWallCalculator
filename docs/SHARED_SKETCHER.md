@@ -42,9 +42,9 @@ They are `ProjectReference`s of `ShearWallVisualizer.csproj` and are listed in `
   undo or a redo amends that step (`ModelHistory.Amend`), so it never costs the redo.
 - **Loads and plan images** stay with each story's calculator (by level ID, so they follow the level when another
   floor is added or deleted).
-- **Floors.** + Floor, ✕ Floor and Copy ↑ are model edits (Ctrl+Z undoes them, which it did not before). The number
-  of floors and the plate heights go both ways with Wind Setup: changed in the drawing, the building inputs follow;
-  changed in Wind Setup, the model's stories follow (asking before deleting a floor that has walls).
+- **Floors.** (2026-11-02) Floors are the building's geometry, so they are added, deleted and given plate heights only
+  in the Building Model editor; SWC's Floors… button opens it on the project (+ Floor and ✕ Floor were removed).
+  Copy ↑ (Edit menu) stays: it copies walls, diaphragms and notes, which SWC may draw, and Ctrl+Z undoes it.
 
 ## What the drawing does now
 

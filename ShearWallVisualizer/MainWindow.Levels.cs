@@ -19,8 +19,8 @@ namespace ShearWallVisualizer
     /// the ground is one designer story with its own calculator: the walls under that level and the diaphragm on it
     /// (the first story's walls and the floor over them; the top story's walls and the roof). The plan shows one level at
     /// a time, with the level below in gray to draw on; the analysis runs from the roof down, each story carrying the walls
-    /// above it (<see cref="StoryCascade"/>). The stories share one set of design settings. Adding, deleting or copying a
-    /// floor is a model edit, so Ctrl+Z undoes it; the wind inputs follow the model's floors and plate heights.
+    /// above it (<see cref="StoryCascade"/>). The stories share one set of design settings. Floors are added and deleted only in
+    /// the Building Model editor (Edit building); copying the level below is a model edit here, so Ctrl+Z undoes it.
     /// </summary>
     public partial class MainWindow
     {
@@ -81,13 +81,7 @@ namespace ShearWallVisualizer
                                                          (k == stories.Count - 1 ? "roof" : "floor") + " on them" : null;
             }
             miCopyFromBelow.IsEnabled = currentLevel > 0;
-            btnAddFloor.IsEnabled = stories.Count < FloorEdits.MaxFloors;
-            btnAddFloor.ToolTip = stories.Count < FloorEdits.MaxFloors
-                ? $"ADD FLOOR: a story on top. Asks for its plate height (which sets the floor elevations and the eave), and can start from a copy of {LevelName(stories.Count - 1)}."
-                : $"This app handles up to {FloorEdits.MaxFloors} floors.";
-            btnDeleteFloor.ToolTip = stories.Count > 1
-                ? $"DELETE FLOOR: removes {LevelName(currentLevel)} with its walls and diaphragms" + (currentLevel < stories.Count - 1 ? "; the floors above move down." : ".") + " You are told first what it does; Ctrl+Z undoes it."
-                : "The building keeps one floor: this clears it (Ctrl+Z undoes it).";
+            btnFloors.ToolTip = $"FLOORS: {stories.Count} in the model. Floors are added, deleted and given their plate heights in the Building Model editor (the building's geometry is edited only there); this opens it on the project.";
             UpdateLevelBanners();
         }
 
@@ -117,93 +111,6 @@ namespace ShearWallVisualizer
                 message += $"Split over {levels.Count} floors ({r.StoryHeight:0.#} ft stories), from W / from S: " +
                            string.Join(",  ", r.Levels.Select((l, i) => $"{LevelName(i)} {l.AlongLengthDesignKips:0.0} / {l.AlongWidthDesignKips:0.0} k")) + ". ";
             message += "Updated automatically. Per-wall results: 2 Shear walls, Calculations tab.";
-        }
-
-        // ------------------------------------------------------------------ add and delete floors
-
-        /// <summary>The plate height of each story, bottom first (ft), from the model's levels.</summary>
-        private List<double> PlateHeights() => stories.Select(s => s.PlateHeight).ToList();
-
-        /// <summary>The plate height of the level being drawn (ft).</summary>
-        private double CurrentPlateHeight()
-        {
-            var plates = PlateHeights();
-            double h = currentLevel < plates.Count ? plates[currentLevel] : defaultWallHeight;
-            return h > 0 ? h : defaultWallHeight;
-        }
-
-        /// <summary>ADD FLOOR: a new top story, after asking for its plate height (and whether to copy the story below).</summary>
-        private void AddFloor_Click(object sender, RoutedEventArgs e)
-        {
-            if (stories.Count >= FloorEdits.MaxFloors)
-            {
-                MessageBox.Show(this, $"This app handles up to {FloorEdits.MaxFloors} floors.", "Add floor", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-            var plates = PlateHeights();
-            var top = stories.LastOrDefault();
-            bool topHasContent = top != null && (top.Walls.Count + top.Diaphragms.Count > 0);
-            var dialog = new Dialogs.AddFloorDialog(stories.Count + 1, plates.Sum(), plates.Count > 0 ? plates[plates.Count - 1] : defaultWallHeight, topHasContent) { Owner = this };
-            if (dialog.ShowDialog() != true) return;
-
-            Level added = null;
-            Sketch.Edit($"Floor added: plate height {dialog.PlateHeight:0.##} ft.", b =>
-            {
-                added = BuildingEdits.AddStory(b, dialog.PlateHeight);
-                if (dialog.CopyBelow && top != null)
-                {
-                    var from = b.Level(top.Level.Id);
-                    BuildingEdits.CopyStory(b, from, added);
-                    ShearWallAdapter.CopyDesignUp(b, from, added);
-                }
-                BuildingEdits.NameStories(b);
-            });
-            if (added != null) Sketch.ShowLevel(added.Id);
-            ShowStatusMessage(LogLevel.Info, $"Added {added?.Name}: floor at {plates.Sum():0.##} ft, plate height {dialog.PlateHeight:0.##} ft, eave {plates.Sum() + dialog.PlateHeight:0.##} ft." +
-                                             (dialog.CopyBelow ? $" Started from a copy of {top?.Level.Name}." : " Draw its walls and diaphragm.") + " Ctrl+Z undoes it.");
-        }
-
-        /// <summary>
-        /// DELETE FLOOR: removes the story shown, after saying what it does (the levels above move down onto the one below,
-        /// which may leave walls without a wall under them). The only floor is cleared instead. Ctrl+Z undoes either.
-        /// </summary>
-        private void DeleteFloor_Click(object sender, RoutedEventArgs e)
-        {
-            var s = CurrentStory;
-            if (s == null) return;
-            if (stories.Count == 1)
-            {
-                var below = building.Below(s.Level);
-                int items = building.DiaphragmsOn(s.Level).Count() + building.Walls.Count(w => w.TopLevelId == s.Level.Id) + building.NotesOn(s.Level).Count();
-                if (items == 0) { ShowStatusMessage(LogLevel.Info, $"{s.Level.Name} is already empty."); return; }
-                if (MessageBox.Show(this, $"The building keeps at least one floor. Clear {s.Level.Name} instead ({items} walls, diaphragms and notes)?\n\nCtrl+Z can undo the clearing.",
-                        "Delete floor", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
-                imageTool.Cancel();
-                Sketch.ClearSelection();
-                Sketch.Edit($"{s.Level.Name} cleared.", b =>
-                {
-                    b.Diaphragms.RemoveAll(d => d.LevelId == s.Level.Id);
-                    b.Notes.RemoveAll(n => n.LevelId == s.Level.Id);
-                    b.Walls.RemoveAll(w => w.TopLevelId == s.Level.Id);
-                    b.Openings.RemoveAll(o => o.TopLevelId == s.Level.Id || o.BottomLevelId == below?.Id);
-                });
-                return;
-            }
-            var lines = BuildingEdits.DeleteStoryConsequences(building, s.Level);
-            if (MessageBox.Show(this, $"Delete {s.Level.Name}?\n\n" + string.Join("\n", lines.Select(l => "• " + l)) + "\n\nCtrl+Z undoes it.",
-                    "Delete floor", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
-
-            imageTool.Cancel();
-            Sketch.ClearSelection();
-            string name = s.Level.Name;
-            int k = currentLevel;
-            Sketch.Edit($"Deleted {name}.", b =>
-            {
-                BuildingEdits.DeleteStory(b, b.Level(s.Level.Id));
-                BuildingEdits.NameStories(b);
-            });
-            ShowLevel(Math.Min(k, stories.Count - 1));
-            ShowStatusMessage(LogLevel.Info, $"Deleted {name}. Now {stories.Count} floor{(stories.Count == 1 ? "" : "s")}, eave {PlateHeights().Sum():0.##} ft; showing {LevelName(currentLevel)}. Ctrl+Z undoes it.");
         }
 
         // ------------------------------------------------------------------ which level is shown

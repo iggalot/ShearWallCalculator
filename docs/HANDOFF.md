@@ -103,7 +103,7 @@ Expected: SWC 162 pass, BuildingModel 49 pass, Sketch 11 pass.
 1. **Run the app and check the new drawing by eye.** It has not been seen running yet. Check:
    - drawing walls and diaphragms;
    - undo and redo;
-   - floors (+ Floor, ✕ Floor, Copy ↑);
+   - floors: Floors… opens the Building Model editor; Copy ↑ copies the level below;
    - the issues button and its markers;
    - the plan image tools;
    - opening an older project file.

@@ -122,7 +122,7 @@ namespace ShearWallVisualizer.Controls
                 wallTable.Number(r, c++, w.Start.Y, v => MoveWall(w, w.Start.X, v, w.WallLength), id);
                 wallTable.Number(r, c++, w.WallLength, v => v > 0 && MoveWall(w, w.Start.X, w.Start.Y, v), id);
                 if (HeightsFromLevels)
-                    wallTable.Text(r, c++, Ui.Num(w.WallHeight, "0.##"), id, Ui.InkSecondary, tip: "From the levels: change the story height (Add floor, or the plate heights in Wind Setup)");
+                    wallTable.Text(r, c++, Ui.Num(w.WallHeight, "0.##"), id, Ui.InkSecondary, tip: "From the building model's levels: change the plate heights in the Building Model editor (Floors… or Edit building)");
                 else
                     wallTable.Number(r, c++, w.WallHeight, v => { if (v <= 0) return false; w.WallHeight = v; Changed(); return true; }, id);
                 wallTable.Text(r, c++, Ui.Num(w.End.X, "0.##"), id, Ui.InkSecondary);

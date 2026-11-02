@@ -42,8 +42,6 @@
                 <MenuItem Header="_Copy" Click="btnCopy_Click" InputGestureText="C"/>
                 <MenuItem Header="_Delete" Click="Delete_Click" InputGestureText="Del"/>
                 <Separator/>
-                <MenuItem Header="_Add floor..." Click="AddFloor_Click"/>
-                <MenuItem Header="Delete this _floor..." Click="DeleteFloor_Click"/>
                 <MenuItem x:Name="miCopyFromBelow" Header="Copy the level _below onto this level" Click="CopyFromBelow_Click"/>
                 <MenuItem Header="Mea_sure distance" Click="btnMeasure_Click" InputGestureText="T"/>
                 <MenuItem Header="_Note on the plan" Click="btnNote_Click" InputGestureText="N"/>
@@ -180,10 +178,9 @@
                             <Button x:Name="btnLevel1" Style="{StaticResource Tool}" Content="1" Padding="9,4" CommandParameter="1" Click="LevelButton_Click"/>
                             <Button x:Name="btnLevel2" Style="{StaticResource Tool}" Content="2" Padding="9,4" CommandParameter="2" Click="LevelButton_Click"/>
                             <Button x:Name="btnLevel3" Style="{StaticResource Tool}" Content="3" Padding="9,4" CommandParameter="3" Click="LevelButton_Click"/>
-                            <Button x:Name="btnAddFloor" Style="{StaticResource Tool}" Content="+ Floor" Click="AddFloor_Click"
-                                    ToolTip="ADD FLOOR: a new story on top (up to 3). Asks for its plate height (which sets the floor elevations and the eave), and can start from a copy of the floor below."/>
-                            <Button x:Name="btnDeleteFloor" Style="{StaticResource Tool}" Content="✕ Floor" Click="DeleteFloor_Click"
-                                    ToolTip="DELETE FLOOR: removes the level shown, with all its walls and diaphragms. The floors above move down one; you are told first what that does to the load path."/>
+                            <!-- floors are the building's geometry: added and deleted only in the Building Model editor -->
+                            <Button x:Name="btnFloors" Style="{StaticResource Tool}" Content="Floors…" Click="EditBuilding_Click"
+                                    ToolTip="FLOORS: added, deleted and given their plate heights in the Building Model editor; this opens it on the project."/>
                             <Rectangle Style="{StaticResource ToolDivider}"/>
                         </StackPanel>
                         

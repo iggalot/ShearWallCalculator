@@ -86,7 +86,6 @@
     <Compile Include="Controls\ImageTool.cs" />
     <Compile Include="Dialogs\ImportImageDialog.cs" />
     <Compile Include="Dialogs\ImportDxfDialog.cs" />
-    <Compile Include="Dialogs\AddFloorDialog.cs" />
     <Compile Include="Dialogs\ImportPdfDialog.cs" />
     <Compile Include="Helpers\PdfPages.cs" />
     <Compile Include="Controls\WallDesignControl.xaml.cs">
