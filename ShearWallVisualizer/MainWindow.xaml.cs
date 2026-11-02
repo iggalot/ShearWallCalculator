@@ -11,6 +11,9 @@ using ShearWallVisualizer.Dialogs;
 using ShearWallVisualizer.Helpers;
 using ShearWallCalculator.Diagnostics;
 using ShearWallCalculator.Drawing;
+using BuildingModel.Serialization;
+using BuildingModel.ShearWalls;
+using Building = BuildingModel.Model.Building;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -66,11 +69,6 @@ namespace ShearWallVisualizer
         private Dictionary<MenuTabs, string> menuTabNames = new Dictionary<MenuTabs, string>();
 
 
-        // grid stuff
-        bool gridNeedsUpdate = true;
-        DrawingVisual gridVisual = null;
-        private RenderTargetBitmap gridBitmap;
-
         // plan image: the decoded file (kept while the path is the same) and the two-point commands
         private BitmapSource planBitmap;
         private string planBitmapPath;
@@ -79,41 +77,17 @@ namespace ShearWallVisualizer
         private List<VectorPath> planVectorPaths; // the paths it was built from
         private readonly ImageTool imageTool = new ImageTool();
 
-        double majorGridSpacing = 5.0;  // Major grid lines in world units
-        double minorGridSpacing = 1.0;  // Minor grid lines in world units
-
         public EventHandler OnUpdated;  // the event that signals that the drawing has been updated -- controls will listen for this at the time they are created.
 
         bool hideImage = false;
-        bool hideGrid = false;
         bool showDesign = true; // schedule marks, hold-downs and the schedule on the plan
         bool imageDrawWarned = false;   // log a reference-image drawing failure once, not every frame
 
         private double defaultWallHeight = 9.0;
 
-        private enum DrawMode { None, Line, Rectangle, Move, Copy, Measure }
-        private DrawMode currentMode = DrawMode.Line;
-        private bool snapMode = true;                     // object snaps on (F3 / S)
-        private SnapModes snapModes = SnapModes.Default;   // which snaps (the ▾ menu)
-        private SnapResult currentSnap;                    // the snap under the cursor; Point is the cursor when none
-        private const double SnapPixels = 10;              // snap reach on screen
         private bool selectionCardOpen;                    // the card shows the picked wall or diaphragm
         private bool debugMode = false;
 
-        private Point? startPoint_world = null;  // the first click in world coordinates
-        private Point? endPoint_world = null;    // the second click in world coordinates
-
-        private double zoomFactorX = 1.0;
-        private double zoomFactorY = 1.0;
-        private double panOffsetX = -25.0;
-        private double panOffsetY = -25.0;
-
-        private Shape previewShape = null;
-
-        private double worldWidth = 120;
-        private double worldHeight = 120;
-
-        private Point currentMouseScreenPosition = new Point(0, 0);
 
         public MainWindow()
         {
@@ -125,9 +99,6 @@ namespace ShearWallVisualizer
             this.Closing += MainWindow_Closing; // asks to save unsaved changes
             Log.Written += OnLogWritten;      // warnings and errors show on the status line
             this.TextInput += RouteTypingToCommand;  // typing a number while drawing goes to the Point box
-            m_layers.MouseLeave += (s, e) => RedrawDrawing(); // drop the crosshair and snap marker
-            m_layers.PreviewMouseUp += PanMouseUp;             // the middle-button pan ends
-            dockpanel.SizeChanged += DrawingResized;           // the drawing fills the window height; the divider sets its width
             selectionCard.OpenDesign += SelectionCard_OpenDesign;
             selectionCard.EditGeometry += SelectionCard_EditGeometry;
             selectionCard.DeleteRequested += SelectionCard_Delete;
@@ -166,10 +137,9 @@ namespace ShearWallVisualizer
                 CreateAndAssignResultControls();
 
 
-                ResetView(); // reset the view so that origin 0,0 is at lower left of the corner screen and the model is zoomed to fill the entire window
+                InitSketch();
+                SetBuilding(ShearWallAdapter.NewBuilding(buildingData?.StoryPlateHeights), null);
                 LoadRecentFilesMenu();  // recent files menu
-                CreateGridVisual();
-                CreateLayers();
 
                 // load the Simpson catalog
                 simpsonCatalog = new SimpsonCatalog();
@@ -188,6 +158,7 @@ namespace ShearWallVisualizer
                 TabControlManager.ReAddTab(MainTabControl, "tabCalculationsTabItem");
                 TabControlManager.ReAddTab(MainTabControl, "tabDesignTabItem");
                 ApplyWorkspace();
+                StartHistory();
                 MarkSaved(); // a new, untitled project
             };
         }
@@ -199,7 +170,7 @@ namespace ShearWallVisualizer
                 AnalyzeLevels(); // every level, roof first (one level: the same as before)
                 UpdateDesign();
                 LogModelChanges();
-                RecordHistory(); // an undo step when the drawing changed
+                StoreDesignInModel(); // design changes become model changes: one undo history with the drawing
                 DropMissingSelection();
 
                 ShowImageName();
@@ -224,7 +195,9 @@ namespace ShearWallVisualizer
             SetButtonModes();
 
             // redraw the scene
-            Draw(ChangeType.Redraw);
+            UpdateIssues(); // errors and warnings on the plan and in the issue list
+            Update3D();
+            Draw();
             UpdateTitle();
         }
 
@@ -278,8 +251,8 @@ namespace ShearWallVisualizer
                 catch (Exception ex) { MessageBox.Show(this, "The standard hold-down list could not be saved:\n" + ex.Message, "Hold-down standard list"); }
                 UpdateShearWallUI();
             };
-            geometryPanel = new GeometryPanel();
-            geometryPanel.GeometryChanged += (s, e) => UpdateShearWallUI();
+            geometryPanel = new GeometryPanel { HeightsFromLevels = true }; // the building model sets them
+            geometryPanel.GeometryChanged += (s, e) => GeometryTyped(); // typed coordinates go to the model
             geometryPanel.SelectionChanged += SelectFromTable;
             geometryPanel.DeleteRequested += DeleteFromTable;
             tabDimensionsTabItem.Content = WithLevelBanner(geometryPanel);
@@ -392,78 +365,14 @@ namespace ShearWallVisualizer
             return todo;
         }
 
-        /// <summary>
-        /// Reset the view so that the full model scales to the drawing context area and the origin of the world coordinates is at the lower left corner
-        /// </summary>
-        private void ResetView()
-        {
-            // Set zoom factors based on the visible area and world dimensions
-            zoomFactorX = dockpanel.ActualWidth / worldWidth;
-            zoomFactorY = dockpanel.ActualHeight / worldHeight;
-
-            // Set the scale factors so both are the same -- for square grids
-            zoomFactorX = Math.Min(zoomFactorX, zoomFactorY);
-            zoomFactorY = zoomFactorX;
-
-            // Compute current screen position of world (0,0)
-            Point screenOrigin = WorldToScreen(new Point(0, 0), dockpanel);
-
-            // Adjust pan offset so (0,0) appears in bottom-left corner (screen X=0, Y=height)
-            panOffsetX += screenOrigin.X / zoomFactorX;
-            panOffsetY += (dockpanel.ActualHeight - screenOrigin.Y) / zoomFactorY;
-        }
-
 
         /// <summary>World length of a distance on screen (the drawing is square: one zoom factor).</summary>
-        private double PixelsToWorld(double pixels) => pixels / Math.Max(zoomFactorX, 1e-9);
+        private double PixelsToWorld(double pixels) => Sketch.PixelsToFeet(pixels);
 
-        /// <summary>The object snap at a world point, or the point itself when snaps are off or nothing is in reach.</summary>
-        private SnapResult FindSnap(Point world)
-        {
-            if (!(snapMode && Calculator != null && (currentMode != DrawMode.None || imageTool.WantsSnaps)))
-                return new SnapResult { Kind = SnapModes.None, Point = world };
-            double tolerance = PixelsToWorld(SnapPixels);
-            var segments = Snapper.SegmentsOf(Calculator);
-            if (LevelBelow != null) segments.AddRange(Snapper.SegmentsOf(LevelBelow)); // draw on top of the walls below
-            var img = Calculator.Image;
-            if (img != null && img.IsVector && img.Visible && !hideImage) segments.AddRange(img.SegmentsNear(world, tolerance)); // CAD plan lines
-            return Snapper.Find(world, tolerance, segments, snapModes, startPoint_world);
-        }
+        /// <summary>World (ft) to pixels on the drawing, through the sketch's view (<paramref name="element"/> is not used).</summary>
+        private Point WorldToScreen(Point p, FrameworkElement element) => Sketch.ToScreen(ToPoint2(p));
 
-        private Point WorldToScreen(Point p, FrameworkElement element)
-        {
-            // Convert world coordinates to screen coordinates
-            double u = (p.X - panOffsetX) * zoomFactorX;
-            double v = (element.ActualHeight - (p.Y - panOffsetY)) * zoomFactorY; // Invert Y for screen space
-
-            return new Point(u, v);
-        }
-
-        private Point ScreenToWorld(Point p, FrameworkElement element)
-        {
-            // Convert screen coordinates to world coordinates
-            double x = (p.X / zoomFactorX) + panOffsetX;
-            double y = ((element.ActualHeight - (p.Y / zoomFactorY)) + panOffsetY);
-
-            return new Point(x, y);
-        }
-
-        private Point GetConstrainedPoint(Point endPoint, Point startPoint)
-        {
-            double dx = Math.Abs(endPoint.X - startPoint.X);
-            double dy = Math.Abs(endPoint.Y - startPoint.Y);
-
-            if (dx > dy)
-            {
-                // Snap to horizontal
-                return new Point(endPoint.X, startPoint.Y);
-            }
-            else
-            {
-                // Snap to vertical
-                return new Point(startPoint.X, endPoint.Y);
-            }
-        }
+        private Point ScreenToWorld(Point p, FrameworkElement element) => ToPoint(Sketch.ToWorld(p));
 
         /// <summary>
         /// Helper function to determine if a point is within the bounds of a framework element (ActualWidth and ActualHeight)
@@ -503,77 +412,6 @@ namespace ShearWallVisualizer
                 temp.Y = element.ActualHeight;
             }
             return temp;
-        }
-
-        private void CreatePreviewShape()
-        {
-            if (currentMode == DrawMode.Line)
-                previewShape = new Line { Stroke = Brushes.DarkGreen, StrokeThickness = 5 };
-            else if (currentMode == DrawMode.Rectangle)
-                previewShape = new Rectangle { Stroke = Brushes.DarkGreen, StrokeThickness = 5, Fill = Brushes.Transparent };
-        }
-
-        // Create the layers
-        private void CreateLayers()
-        {
-            m_layers.AddLayer(0, DrawBackground, ChangeType.Resize);
-            m_layers.AddLayer(1, DrawGridInformation);
-            m_layers.AddLayer(2, DrawReferenceImage);
-            m_layers.AddLayer(3, DrawBoundingBox);
-            m_layers.AddLayer(4, DrawLoads);
-
-            m_layers.AddLayer(41, DrawShapes);
-            m_layers.AddLayer(42, DrawWallDesign);
-            m_layers.AddLayer(52, DrawCursor);
-            m_layers.AddLayer(51, DrawPreview);
-            m_layers.AddLayer(53, DrawImageTool);
-            m_layers.AddLayer(43, DrawSnapMarkers);
-            m_layers.AddLayer(50, DrawBracedWallLines);
-            m_layers.AddLayer(80, DrawCOMandCOR);
-            m_layers.AddLayer(100, DrawDebug);
-        }
-
-        private void FinalizeShape(Point worldPoint)
-        {
-            if (currentMode == DrawMode.Line)
-            {
-                // For the line to be horizontal or vertical only
-                worldPoint = GetConstrainedPoint(worldPoint, startPoint_world.Value); // Ensure alignment
-
-                // Create the line in world space and store it in the worldShapes list
-                Point startPoint = startPoint_world.Value;
-                Point endPoint = worldPoint;
-
-                if (Calculator._wall_system == null)
-                {
-                    Calculator._wall_system = new WallSystem();
-                }
-
-                // a new wall starts with the project's default sheathing, if one was set in the Design tab
-                Calculator._wall_system.AddWall(new WallData(CurrentPlateHeight(), startPoint.X, startPoint.Y, endPoint.X, endPoint.Y)
-                {
-                    Design = Calculator.DesignSettings?.NewWallDesign?.Clone(),
-                });
-            }
-            else if (currentMode == DrawMode.Rectangle)
-            {
-                if (Calculator._diaphragm_system == null)
-                {
-                    Calculator._diaphragm_system = new DiaphragmSystem();
-                }
-
-                Calculator._diaphragm_system.AddDiaphragm(new DiaphragmData_Rectangular(startPoint_world.Value, endPoint_world.Value));
-            } else
-            {
-                throw new NotImplementedException("Error: FinalizeShape() received an invalid DrawMode variable.");
-            }
-
-            Calculator.PerformCalculations();  // perform the calculations with the new windLoadCalculator_RidgeIsParallelToBuildingLength
-
-            // Clear the preview shape from the screen.
-            previewShape = null;
-            startPoint_world = null;
-            endPoint_world = null;
         }
 
         public void PrintList<T>(List<T> lst)
@@ -680,7 +518,6 @@ namespace ShearWallVisualizer
                 return;
             }
 
-            if (levels.Count == 0 || !levels.Contains(Calculator)) SetLevels(new[] { Calculator });
             SetWindLoadsPerLevel(new WindAnalysisResult(windLoadCalculator_CC, windLoadCalculator_MWFRS_Length, windLoadCalculator_MWFRS_Width),
                 windSetup?.OnlyCases1And3 ?? false, out string message); // one floor: the building's load cases, as before
             windSetup?.SetShearWallLink(true, message);
@@ -791,408 +628,19 @@ namespace ShearWallVisualizer
 
         #region Drawing functions
 
-        private void DrawBackground(DrawingContext ctx)
-        {
-            var pen = new Pen(Brushes.Black, 1);
-            var rect = new Rect(0, 0, m_layers.ActualWidth, m_layers.ActualHeight);
-            ctx.DrawRoundedRectangle(Brushes.White, pen, rect, 0, 0);
-        }
-
-        /// <summary>
-        /// Creates the grid in screen coordinates.  Called by CreateGridVisual which stores it in a bitmap.
-        /// </summary>
-        /// <param name="ctx"></param>
-        private void ConstructVisualGrid(DrawingContext ctx)
-        {
-            double major_gridline_thickness = 0.5;
-            double minor_gridline_thickness = 0.25;
-
-            if (hideGrid is true)
-            {
-                return;
-            }
-
-            // thickness of the minor gridlines
-            Pen pen;
-
-            double layerWidth = dockpanel.ActualWidth;
-            double layerHeight = dockpanel.ActualHeight;
-
-            // Draw vertical grid lines (major and minor) in world coordinates
-            for (double x = 0; x <= layerWidth; x += minorGridSpacing)
-            {
-                Point p1 = WorldToScreen(new Point(x, 0), m_layers);
-                Point p2 = WorldToScreen(new Point(x, layerHeight), m_layers);
-
-                if (p1.X < 0 || p1.X > layerWidth || p2.X < 0 || p2.X > layerWidth)
-                {
-                    continue;  // if we are outside of the view box, no need to draw the grid
-                }
-
-                // If its a major grid line, make it thicker
-                if (x % majorGridSpacing == 0)
-                {
-                    pen = new Pen(Brushes.Black, 1.0);
-                    pen.Thickness = major_gridline_thickness;
-                    pen.DashStyle = new DashStyle(new double[] { 5, 5 }, 0);
-                }
-                else
-                {
-                    pen = new Pen(Brushes.Black, 0.3);
-                    pen.Thickness = minor_gridline_thickness;
-                    pen.DashStyle = new DashStyle(new double[] { 5, 5 }, 0);
-
-                }
-
-
-                // Check if line is outside of viewbox
-                if (p1.X < 0 || p1.X > layerWidth || p2.X < 0 || p2.X > layerWidth)
-                {
-                    continue;
-                }
-
-                // check if p1 point is outside of viewbox
-                if (p1.Y < 0)
-                {
-                    p1.Y = 0;
-                }
-                if (p1.Y > layerHeight)
-                {
-                    p1.Y = layerHeight;
-                }
-                if (p2.Y < 0)
-                {
-                    p2.Y = 0;
-                }
-                if (p2.Y > layerHeight)
-                {
-                    p2.Y = layerHeight;
-                }
-
-                ctx.DrawLine(pen, p1, p2);
-
-                if (x % (2 * majorGridSpacing) == 0)
-                {
-                    // Add a marker at every two major gridlines
-                    // display the com as a text
-                    FormattedText idLabel = new FormattedText(
-                        $"{x}",
-                        CultureInfo.GetCultureInfo("en-us"),
-                        FlowDirection.LeftToRight,
-                        new Typeface("Consolas"),
-                        9,
-                        Brushes.Gray,
-                        VisualTreeHelper.GetDpi(this).PixelsPerDip);
-
-
-                    ctx.DrawText(idLabel, new Point(p1.X - 5, p1.Y));
-                }
-            }
-
-            // Draw horizontal grid lines (major and minor)
-            for (double y = 0; y <= layerHeight; y += minorGridSpacing)
-            {
-                Point p1 = WorldToScreen(new Point(0, y), m_layers);
-                Point p2 = WorldToScreen(new Point(layerWidth, y), m_layers);
-
-                if (p1.Y < 0 || p1.Y > layerHeight || p2.Y < 0 || p2.Y > layerHeight)
-                {
-                    continue;  // if we are outside of the view box, no need to draw the grid
-                }
-
-                // If its a major grid line, make it thicker
-                if (y % majorGridSpacing == 0)
-                {
-                    pen = new Pen(Brushes.Black, 1.0);
-                    pen.Thickness = major_gridline_thickness;
-                    pen.DashStyle = new DashStyle(new double[] { 5, 5 }, 0);
-                }
-                else
-                {
-                    pen = new Pen(Brushes.Black, 0.3);
-                    pen.Thickness = minor_gridline_thickness;
-                    pen.DashStyle = new DashStyle(new double[] { 5, 5 }, 0);
-
-                }
-
-
-                // Check if line is outside of viewbox
-                if (p1.Y < 0 || p1.Y > layerHeight || p2.Y < 0 || p2.Y > layerHeight)
-                {
-                    continue;
-                }
-
-                // check if p1 point is outside of viewbox
-                if (p1.X < 0)
-                {
-                    p1.X = 0;
-                }
-                if (p1.X > layerWidth)
-                {
-                    p1.X = layerWidth;
-                }
-                if (p2.X < 0)
-                {
-                    p2.X = 0;
-                }
-                if (p2.X > layerWidth)
-                {
-                    p2.X = layerWidth;
-                }
-
-                ctx.DrawLine(pen, p1, p2);
-
-                if (y % (2 * majorGridSpacing) == 0)
-                {
-                    // Add a marker at every two major gridlines
-                    // display the com as a text
-                    FormattedText idLabel = new FormattedText(
-                        $"{y}",
-                        CultureInfo.GetCultureInfo("en-us"),
-                        FlowDirection.LeftToRight,
-                        new Typeface("Consolas"),
-                        9,
-                        Brushes.Gray,
-                        VisualTreeHelper.GetDpi(this).PixelsPerDip);
-
-                    ctx.DrawText(idLabel, new Point(p1.X - 12, p1.Y - 5));
-                }
-            }
-
-            // Draw an origin marker
-            DrawMarkers(ctx, WorldToScreen(new Point(0, 0), m_layers), 5, new Pen(Brushes.Black, 1), Brushes.DarkRed);
-        }
-
-        private void DrawMarkers(DrawingContext ctx, Point p, double dia, Pen pen, Brush fill)
-        {
-            ctx.DrawEllipse(fill, pen, p, dia, dia);
-
-            return;
-        }
-
-        private static readonly Pen CrosshairPen = FrozenPen(Color.FromArgb(0x90, 0x52, 0x51, 0x4E), 1);
-        private static readonly Pen SnapGlyphPen = FrozenPen(Color.FromRgb(0xE0, 0x8A, 0x00), 2);
-
-        private void DrawCursor(DrawingContext ctx)
-        {
-            if (!m_layers.IsMouseOver) return;
-            Point c = currentMouseScreenPosition;
-            ctx.DrawLine(CrosshairPen, new Point(0, c.Y), new Point(dockpanel.ActualWidth, c.Y));
-            ctx.DrawLine(CrosshairPen, new Point(c.X, 0), new Point(c.X, dockpanel.ActualHeight));
-            if (currentMode == DrawMode.None)
-                ctx.DrawRectangle(null, CrosshairPen, new Rect(c.X - 5, c.Y - 5, 10, 10)); // pick box
-        }
-
-        private void DrawLoads(DrawingContext ctx)
-        {
-
-        }
-
-        private void DrawBoundingBox(DrawingContext ctx)
-        {
-            if (Calculator is null) return;
-
-            Rect rect = Calculator.BoundingBoxWorld;
-
-            var p1 = WorldToScreen(rect.BottomLeft, m_layers);
-            var p2 = WorldToScreen(rect.BottomRight, m_layers);
-            var p3 = WorldToScreen(rect.TopRight, m_layers);
-            var p4 = WorldToScreen(rect.TopLeft, m_layers);
-
-            ctx.DrawLine(new Pen(Brushes.Green, 1), p1, p2);
-            ctx.DrawLine(new Pen(Brushes.Green, 1), p2, p3);
-            ctx.DrawLine(new Pen(Brushes.Green, 1), p3, p4);
-            ctx.DrawLine(new Pen(Brushes.Green, 1), p4, p1);
-        }
-
-        /// <summary>
-        /// Draws the preview shapes which constructing walls or diaphragms
-        /// </summary>
-        /// <param name="ctx"></param>
-        private void DrawPreview(DrawingContext ctx)
-        {
-            if (DrawEditPreview(ctx)) return; // Move, Copy, Measure
-
-            // Do we have a preview shape?
-            if (previewShape == null)
-            {
-                return;
-            }
-
-            Point preview_endPoint_world;
-            if (endPoint_world == null)  // true if second point hasnt been selected
-            {
-                preview_endPoint_world = currentSnap.Point; // the cursor, or the snap under it
-            }
-            else
-            {
-                preview_endPoint_world = endPoint_world.Value;
-            }
-
-            if (previewShape is Line line)
-            {
-                // For the line to be horizontal or vertical only
-                preview_endPoint_world = GetConstrainedPoint(preview_endPoint_world, startPoint_world.Value); // Ensure alignment
-
-                SolidColorBrush lineStrokeBrush = new SolidColorBrush(Colors.Green);
-                lineStrokeBrush.Opacity = 0.5;
-                Pen pen = new Pen(lineStrokeBrush, 4);
-                Point p1 = WorldToScreen(startPoint_world.Value, m_layers);
-                Point p2 = WorldToScreen(preview_endPoint_world, m_layers);
-                ctx.DrawLine(pen, p1, p2);
-            }
-            else if (previewShape is Rectangle rect)
-            {
-                SolidColorBrush rectFillBrush = new SolidColorBrush(Colors.Green);
-                rectFillBrush.Opacity = 0.5;
-                Pen pen = new Pen(rectFillBrush, 4);
-                Point p1 = WorldToScreen(startPoint_world.Value, m_layers);
-                Point p2 = WorldToScreen(preview_endPoint_world, m_layers);
-
-                // find lower left corner point of rectangle bounded by startPoint_world and endPoint_world
-                Point insertPoint_screen = new Point(Math.Min(p1.X, p2.X), Math.Min(p1.Y, p2.Y));
-
-                double width = Math.Abs(p2.X - p1.X);
-                double height = Math.Abs(p2.Y - p1.Y);
-                ctx.DrawRectangle(rectFillBrush, pen, new Rect(insertPoint_screen.X, insertPoint_screen.Y, width, height));
-            }
-        }
-
-        /// <summary>
-        /// The primary routine to draw all the world shapes
-        /// </summary>
         /// <summary>Schedule marks, hold-downs and the schedule over the plan (SHOW Design).</summary>
         private void DrawWallDesign(DrawingContext ctx)
         {
-            if (!showDesign || hideWalls || Calculator?._wall_system == null) return;
+            if (!showDesign || Calculator?._wall_system == null) return;
             DesignOverlay.Draw(ctx, Calculator._wall_system._walls, designResults, p => WorldToScreen(p, m_layers),
                                new Size(m_layers.ActualWidth, m_layers.ActualHeight), VisualTreeHelper.GetDpi(this).PixelsPerDip);
         }
-
-        private static readonly Pen SelectionHalo = FrozenPen(Color.FromArgb(0xB0, 0xFF, 0xB0, 0x20), 16); // picked on the drawing or in a table: a wide amber glow
-        private static readonly Pen SelectionOutline = FrozenPen(Color.FromArgb(0xD0, 0xFF, 0xA0, 0x00), 6);
-        private static readonly Pen DiaphragmEdge = FrozenPen(Color.FromRgb(0x9A, 0x1B, 0x1B), 2);       // a diaphragm: the red of its fill, darker
-        private static readonly Pen DiaphragmSelected = FrozenPen(Color.FromRgb(0x6E, 0x0A, 0x0A), 5);   // a picked diaphragm: darker and wider still
 
         private static Pen FrozenPen(Color c, double thickness)
         {
             var p = new Pen(new SolidColorBrush(c), thickness) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round };
             p.Freeze();
             return p;
-        }
-
-        private void DrawShapes(DrawingContext ctx)
-        {
-            DrawLevelBelow(ctx); // multi-story: the level below in gray
-            double center_pt_dia = 5;
-
-            if (!hideWalls && (Calculator != null) && (Calculator._wall_system != null))
-            {
-                // Redraw all the shapes in world coordinates
-                foreach (var wall in Calculator._wall_system._walls)
-                {
-                    FormattedText idLabel = null;
-
-                    Point p1_world = wall.Value.Start;
-                    Point p2_world = wall.Value.End;
-                    Point p1_screen = GetConstrainedScreenPoint(WorldToScreen(p1_world, m_layers), m_layers);
-                    Point p2_screen = GetConstrainedScreenPoint(WorldToScreen(p2_world, m_layers), m_layers);
-
-                    // If the points are the same, then the object was out of bounds and doesn't need to be drawn.
-                    if (p1_screen == p2_screen)
-                        continue;
-
-                    // Draw the line object
-                    // Blue; on the Shear walls side, green or red once the wall has been checked (Design tab).
-                    SolidColorBrush lineStrokeBrush = new SolidColorBrush(
-                        designResults.TryGetValue(wall.Key, out var check) ? (check.Pass ? Color.FromRgb(0x1E, 0x8E, 0x3E) : Color.FromRgb(0xC6, 0x28, 0x28)) : Colors.Blue);
-                    Pen pen = new Pen(lineStrokeBrush, 4);
-                    if (selectedKind == "Wall" && selectedId == wall.Key)
-                        ctx.DrawLine(SelectionHalo, p1_screen, p2_screen); // picked in a table
-                    ctx.DrawLine(pen, p1_screen, p2_screen);
-
-                    Point center_world = new Point((wall.Value.Start.X + wall.Value.End.X) / 2, (wall.Value.Start.Y + wall.Value.End.Y) / 2);
-                    Point center_screen = WorldToScreen(center_world, m_layers);
-
-                    // draw the center point and label
-                    if (PointIsWithinBounds(center_screen, dockpanel) is false)
-                    {
-                        continue;
-                    }
-                    else
-                    {
-                        Point centerPoint = new Point(center_screen.X,
-                                center_screen.Y);
-
-                        ctx.DrawEllipse(lineStrokeBrush, pen, centerPoint, center_pt_dia, center_pt_dia); // center point marker
-
-                        idLabel = new FormattedText(
-                            wall.Key.ToString(),
-                            CultureInfo.GetCultureInfo("en-us"),
-                            FlowDirection.LeftToRight,
-                            new Typeface("Consolas"),
-                            14,
-                            Brushes.Black,
-                            VisualTreeHelper.GetDpi(this).PixelsPerDip);
-                        ctx.DrawText(idLabel, center_screen);  // id label
-                    }
-                }
-            }
-
-            // Redraw all the shapes in world coordinates
-            if (!hideDiaphragms && (Calculator != null) && (Calculator._diaphragm_system != null))
-            {
-                foreach (var rect in Calculator._diaphragm_system._diaphragms)
-                {
-                    FormattedText idLabel = null;
-
-                    Point p1_world = rect.Value.P1;
-                    Point p3_world = rect.Value.P3;
-                    Point p1_screen = GetConstrainedScreenPoint(WorldToScreen(p1_world, m_layers), m_layers);
-                    Point p3_screen = GetConstrainedScreenPoint(WorldToScreen(p3_world, m_layers), m_layers);
-
-                    // If the points are the same, then the object was out of bounds and doesn't need to be drawn.
-                    if (p1_screen == p3_screen)
-                        continue;
-
-                    SolidColorBrush rectFillBrush = new SolidColorBrush(Colors.Red);
-                    rectFillBrush.Opacity = 0.5;
-                    Pen pen = DiaphragmEdge; // the fill's red, darker, so the outline reads over the fill
-
-                    Point insertPoint_screen = new Point(p1_screen.X, p3_screen.Y);  // TODO: Need a better way to get P4 point of rectangle
-
-                    double width = Math.Abs(p3_screen.X - p1_screen.X);
-                    double height = Math.Abs(p3_screen.Y - p1_screen.Y);
-                    ctx.DrawRectangle(rectFillBrush, pen, new Rect(insertPoint_screen.X, insertPoint_screen.Y, width, height));
-                    if (selectedKind == "Diaphragm" && selectedId == rect.Key)
-                        ctx.DrawRectangle(null, DiaphragmSelected, new Rect(insertPoint_screen.X, insertPoint_screen.Y, width, height));
-
-                    Point center_world = new Point((rect.Value.P1.X + rect.Value.P3.X) / 2, (rect.Value.P1.Y + rect.Value.P3.Y) / 2);
-                    Point center_screen = WorldToScreen(center_world, m_layers);
-
-                    // draw the center point and label
-                    if (PointIsWithinBounds(center_screen, dockpanel) is false)
-                        continue;
-                    else
-                    {
-                        Point centerPoint = new Point(center_screen.X,
-                            center_screen.Y);
-
-                        ctx.DrawEllipse(rectFillBrush, pen, centerPoint, center_pt_dia, center_pt_dia); // center point marker
-
-                        idLabel = new FormattedText(
-                            rect.Key.ToString(),
-                            CultureInfo.GetCultureInfo("en-us"),
-                            FlowDirection.LeftToRight,
-                            new Typeface("Consolas"),
-                            14,
-                            Brushes.Black,
-                            VisualTreeHelper.GetDpi(this).PixelsPerDip);
-                        ctx.DrawText(idLabel, centerPoint);  // id label
-                    }
-                }
-            }
-            DrawLevelTag(ctx); // which level is shown, top left
         }
 
         private void DrawDebug(DrawingContext ctx)
@@ -1214,7 +662,7 @@ namespace ShearWallVisualizer
                     Point p2_screen = WorldToScreen(p2_world, m_layers);
 
                     // START POINT
-                    if (PointIsWithinBounds(p1_screen, dockpanel) is true)
+                    if (PointIsWithinBounds(p1_screen, m_layers) is true)
                     {
                         ctx.DrawEllipse(Brushes.MediumBlue, new Pen(Brushes.Black, 1), p1_screen, 5, 5);
                         idLabel = new FormattedText(
@@ -1230,7 +678,7 @@ namespace ShearWallVisualizer
                     }
 
                     // END POINT
-                    if (PointIsWithinBounds(p2_screen, dockpanel) is true)
+                    if (PointIsWithinBounds(p2_screen, m_layers) is true)
                     {
                         ctx.DrawEllipse(Brushes.MediumBlue, new Pen(Brushes.Black, 1), p2_screen, 5, 5);
                         idLabel = new FormattedText(
@@ -1262,7 +710,7 @@ namespace ShearWallVisualizer
                     Point p4_screen = WorldToScreen(p4_world, m_layers);
 
                     // P1
-                    if (PointIsWithinBounds(p1_screen, dockpanel) is true)
+                    if (PointIsWithinBounds(p1_screen, m_layers) is true)
                     {
 
                         ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 1), p1_screen, 5, 5);
@@ -1279,7 +727,7 @@ namespace ShearWallVisualizer
                     }
 
                     // P2
-                    if (PointIsWithinBounds(p2_screen, dockpanel) is true)
+                    if (PointIsWithinBounds(p2_screen, m_layers) is true)
                     {
                         ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 1), p2_screen, 5, 5);
                         idLabel = new FormattedText(
@@ -1294,7 +742,7 @@ namespace ShearWallVisualizer
                     }
 
                     // P3
-                    if (PointIsWithinBounds(p3_screen, dockpanel) is true)
+                    if (PointIsWithinBounds(p3_screen, m_layers) is true)
                     {
                         ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 1), p3_screen, 5, 5);
                         idLabel = new FormattedText(
@@ -1309,7 +757,7 @@ namespace ShearWallVisualizer
                     }
 
                     // P4
-                    if (PointIsWithinBounds(p4_screen, dockpanel) is true)
+                    if (PointIsWithinBounds(p4_screen, m_layers) is true)
                     {
                         ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 1), p4_screen, 5, 5);
                         idLabel = new FormattedText(
@@ -1349,10 +797,10 @@ namespace ShearWallVisualizer
                 {
                     double center = bwl.Center.Y;
 
-                    Point p1_world = new Point(-10, center);
-                    Point p1_screen = GetConstrainedScreenPoint(WorldToScreen(p1_world, dockpanel), dockpanel); ;
-                    Point p2_world = new Point(dockpanel.ActualWidth, center);
-                    Point p2_screen = GetConstrainedScreenPoint(WorldToScreen(p2_world, dockpanel), dockpanel); ;
+                    Point p1_world = new Point(ScreenToWorld(new Point(44, 0), m_layers).X, center); // across the view, the label at its left
+                    Point p1_screen = GetConstrainedScreenPoint(WorldToScreen(p1_world, m_layers), m_layers); ;
+                    Point p2_world = new Point(ScreenToWorld(new Point(m_layers.ActualWidth, 0), m_layers).X, center);
+                    Point p2_screen = GetConstrainedScreenPoint(WorldToScreen(p2_world, m_layers), m_layers); ;
 
                     Pen pen = new Pen(Brushes.Black, 2);
                     pen.DashStyle = new DashStyle(new double[] { 3, 1, 3 }, 0);
@@ -1376,10 +824,10 @@ namespace ShearWallVisualizer
                 {
                     double center = bwl.Center.X;
 
-                    Point p1_world = new Point(center, -10);
-                    Point p1_screen = GetConstrainedScreenPoint(WorldToScreen(p1_world, dockpanel), dockpanel); ;
-                    Point p2_world = new Point(center, dockpanel.ActualHeight);
-                    Point p2_screen = GetConstrainedScreenPoint(WorldToScreen(p2_world, dockpanel), dockpanel); ;
+                    Point p1_world = new Point(center, ScreenToWorld(new Point(0, m_layers.ActualHeight - 60), m_layers).Y); // up the view, the label at its foot
+                    Point p1_screen = GetConstrainedScreenPoint(WorldToScreen(p1_world, m_layers), m_layers); ;
+                    Point p2_world = new Point(center, ScreenToWorld(new Point(0, 0), m_layers).Y);
+                    Point p2_screen = GetConstrainedScreenPoint(WorldToScreen(p2_world, m_layers), m_layers); ;
 
                     Pen pen = new Pen(Brushes.Black, 2);
                     pen.DashStyle = new DashStyle(new double[] { 3, 1, 3 }, 0);
@@ -1400,50 +848,6 @@ namespace ShearWallVisualizer
                     ctx.Pop();  // remember to pop the transform after its been used.
                 }
             }
-        }
-        /// <summary>The active object snap: an AutoCAD-style glyph at the snapped point and its name.</summary>
-        private void DrawSnapMarkers(DrawingContext ctx)
-        {
-            if (!currentSnap.Found || !m_layers.IsMouseOver) return;
-            Point p = WorldToScreen(currentSnap.Point, m_layers);
-            const double h = 6;
-            switch (currentSnap.Kind)
-            {
-                case SnapModes.Endpoint:
-                    ctx.DrawRectangle(null, SnapGlyphPen, new Rect(p.X - h, p.Y - h, 2 * h, 2 * h));
-                    break;
-                case SnapModes.Midpoint:
-                    var tri = new StreamGeometry();
-                    using (var g = tri.Open())
-                    {
-                        g.BeginFigure(new Point(p.X, p.Y - h - 1), false, true);
-                        g.LineTo(new Point(p.X + h + 1, p.Y + h), true, false);
-                        g.LineTo(new Point(p.X - h - 1, p.Y + h), true, false);
-                    }
-                    ctx.DrawGeometry(null, SnapGlyphPen, tri);
-                    break;
-                case SnapModes.Intersection:
-                    ctx.DrawLine(SnapGlyphPen, new Point(p.X - h, p.Y - h), new Point(p.X + h, p.Y + h));
-                    ctx.DrawLine(SnapGlyphPen, new Point(p.X - h, p.Y + h), new Point(p.X + h, p.Y - h));
-                    break;
-                case SnapModes.Perpendicular:
-                    ctx.DrawLine(SnapGlyphPen, new Point(p.X - h, p.Y + h), new Point(p.X + h, p.Y + h));
-                    ctx.DrawLine(SnapGlyphPen, new Point(p.X - h, p.Y + h), new Point(p.X - h, p.Y - h));
-                    ctx.DrawLine(SnapGlyphPen, new Point(p.X - h, p.Y), new Point(p.X, p.Y));
-                    ctx.DrawLine(SnapGlyphPen, new Point(p.X, p.Y), new Point(p.X, p.Y + h));
-                    break;
-                case SnapModes.Nearest:
-                    ctx.DrawLine(SnapGlyphPen, new Point(p.X - h, p.Y - h), new Point(p.X + h, p.Y - h));
-                    ctx.DrawLine(SnapGlyphPen, new Point(p.X - h, p.Y + h), new Point(p.X + h, p.Y + h));
-                    ctx.DrawLine(SnapGlyphPen, new Point(p.X - h, p.Y - h), new Point(p.X + h, p.Y + h));
-                    ctx.DrawLine(SnapGlyphPen, new Point(p.X + h, p.Y - h), new Point(p.X - h, p.Y + h));
-                    break;
-            }
-            var label = new FormattedText(SnapResult.Describe(currentSnap.Kind), CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
-                new Typeface("Segoe UI"), 11, Brushes.White, VisualTreeHelper.GetDpi(this).PixelsPerDip);
-            var box = new Rect(p.X + 10, p.Y + 8, label.Width + 8, label.Height + 2);
-            ctx.DrawRoundedRectangle(new SolidColorBrush(Color.FromArgb(0xE6, 0x30, 0x30, 0x30)), null, box, 3, 3);
-            ctx.DrawText(label, new Point(box.X + 4, box.Y + 1));
         }
 
         private void DrawCOMandCOR(DrawingContext ctx)
@@ -1470,8 +874,8 @@ namespace ShearWallVisualizer
 
                     ctx.DrawText(idLabel, new Point(5, 5));
 
-                    double x_screen = WorldToScreen(com, dockpanel).X;
-                    double y_screen = WorldToScreen(com, dockpanel).Y;
+                    double x_screen = WorldToScreen(com, m_layers).X;
+                    double y_screen = WorldToScreen(com, m_layers).Y;
 
                     // draw a vertical line since the Y is valid
                     if ((double.IsNaN(com.X) is false) && (double.IsNaN(com.Y) is true))
@@ -1480,7 +884,7 @@ namespace ShearWallVisualizer
                         pen.DashStyle = new DashStyle(new double[] { 3, 3 }, 0);
 
                         x_screen = 10; // draw it justbelow the top
-                        ctx.DrawLine(pen, new Point(x_screen, 0), new Point(x_screen, dockpanel.ActualHeight));
+                        ctx.DrawLine(pen, new Point(x_screen, 0), new Point(x_screen, m_layers.ActualHeight));
                     }
 
                     // draw a vertical line since if the X is valid
@@ -1489,9 +893,9 @@ namespace ShearWallVisualizer
                         Pen pen = new Pen(Brushes.Red, 2);
                         pen.DashStyle = new DashStyle(new double[] { 3, 3 }, 0);
 
-                        y_screen = dockpanel.ActualHeight - 10;
+                        y_screen = m_layers.ActualHeight - 10;
 
-                        ctx.DrawLine(pen, new Point(0, y_screen), new Point(dockpanel.ActualHeight, y_screen));
+                        ctx.DrawLine(pen, new Point(0, y_screen), new Point(m_layers.ActualHeight, y_screen));
                     }
 
                     // draw two lines since neither value is valid
@@ -1500,17 +904,17 @@ namespace ShearWallVisualizer
                         Pen pen = new Pen(Brushes.Red, 2);
                         pen.DashStyle = new DashStyle(new double[] { 3, 3 }, 0);
 
-                        y_screen = dockpanel.ActualHeight - 10;
+                        y_screen = m_layers.ActualHeight - 10;
                         x_screen = 10;
 
-                        ctx.DrawLine(pen, new Point(0, y_screen), new Point(dockpanel.ActualWidth, y_screen));
-                        ctx.DrawLine(pen, new Point(x_screen, 0), new Point(x_screen, dockpanel.ActualHeight));
+                        ctx.DrawLine(pen, new Point(0, y_screen), new Point(m_layers.ActualWidth, y_screen));
+                        ctx.DrawLine(pen, new Point(x_screen, 0), new Point(x_screen, m_layers.ActualHeight));
                     }
 
                     // Draw a marker
                     Point pt = new Point(x_screen, y_screen);
 
-                    if (PointIsWithinBounds(pt, dockpanel))
+                    if (PointIsWithinBounds(pt, m_layers))
                     {
                         ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 2), pt, 8, 8);
                         ctx.DrawEllipse(Brushes.Red, new Pen(Brushes.Black, 2), pt, 5, 5);
@@ -1548,8 +952,8 @@ namespace ShearWallVisualizer
                     VisualTreeHelper.GetDpi(this).PixelsPerDip);
 
                 ctx.DrawText(idLabel, new Point(5, 19));
-                double x_screen = WorldToScreen(cor, dockpanel).X;
-                double y_screen = WorldToScreen(cor, dockpanel).Y;
+                double x_screen = WorldToScreen(cor, m_layers).X;
+                double y_screen = WorldToScreen(cor, m_layers).Y;
 
                 // draw a vertical line since the Y is valid
                 if ((double.IsNaN(cor.X) is false) && (double.IsNaN(cor.Y) is true))
@@ -1559,7 +963,7 @@ namespace ShearWallVisualizer
                     pen.DashStyle = new DashStyle(new double[] { 3, 3 }, 0);
 
                     y_screen = 10; // draw it justbelow the top
-                    ctx.DrawLine(pen, new Point(x_screen, 0), new Point(x_screen, dockpanel.ActualHeight));
+                    ctx.DrawLine(pen, new Point(x_screen, 0), new Point(x_screen, m_layers.ActualHeight));
                 }
 
                 // draw a horizontal line since if the X is valid
@@ -1568,9 +972,9 @@ namespace ShearWallVisualizer
                     Pen pen = new Pen(Brushes.MediumBlue, 2);
                     pen.DashStyle = new DashStyle(new double[] { 3, 3 }, 0);
 
-                    x_screen = dockpanel.ActualWidth - 10;
+                    x_screen = m_layers.ActualWidth - 10;
 
-                    ctx.DrawLine(pen, new Point(0, y_screen), new Point(dockpanel.ActualWidth, y_screen));
+                    ctx.DrawLine(pen, new Point(0, y_screen), new Point(m_layers.ActualWidth, y_screen));
                 }
 
                 // draw two lines since neither value is valid
@@ -1580,16 +984,16 @@ namespace ShearWallVisualizer
                     pen.DashStyle = new DashStyle(new double[] { 3, 3 }, 0);
 
                     y_screen = 10;
-                    x_screen = dockpanel.ActualWidth - 10;
+                    x_screen = m_layers.ActualWidth - 10;
 
-                    ctx.DrawLine(pen, new Point(x_screen, 0), new Point(x_screen, dockpanel.ActualHeight));
-                    ctx.DrawLine(pen, new Point(0, y_screen), new Point(dockpanel.ActualWidth, y_screen));
+                    ctx.DrawLine(pen, new Point(x_screen, 0), new Point(x_screen, m_layers.ActualHeight));
+                    ctx.DrawLine(pen, new Point(0, y_screen), new Point(m_layers.ActualWidth, y_screen));
                 }
 
                 // Draw a marker
                 Point pt = new Point(x_screen, y_screen);
 
-                if (PointIsWithinBounds(pt, dockpanel))
+                if (PointIsWithinBounds(pt, m_layers))
                 {
                     ctx.DrawEllipse(Brushes.MediumBlue, new Pen(Brushes.Black, 2), pt, 8, 8);
                     ctx.DrawEllipse(Brushes.MediumBlue, new Pen(Brushes.Black, 2), pt, 5, 5);
@@ -1859,27 +1263,23 @@ namespace ShearWallVisualizer
                 return;
             }
             ResetInputMode();
-            currentMode = DrawMode.None;
+            Sketch.SetTool(BuildingModel.Sketch.SketchTool.Select);
             if (selectionCardOpen) CloseSelectionCard();
-            SetButtonModes();
             imageTool.Begin(command);
             hideImage = false;
             Calculator.Image.Visible = true;
             btnHideImage.Tag = "on";
+            ShowStatusMessage(LogLevel.Info, imageTool.Prompt);
             RedrawDrawing();
         }
 
         /// <summary>A click while an image command is active.</summary>
-        private void ImageToolClick(Point world)
+        private void ImageToolClick(Point p)
         {
-            Point p = imageTool.WantsSnaps ? FindSnap(world).Point : world;
             string message = imageTool.Click(Calculator.Image, p, out bool warning);
             if (message != null) ShowStatusMessage(warning ? LogLevel.Warning : LogLevel.Info, message);
-            if (imageTool.WaitingForDistance)
-            {
-                tbCommand.Clear();
-                tbCommand.Focus();
-            }
+            if (imageTool.WaitingForDistance) sketchView.FocusCommand();
+            else if (imageTool.Active) ShowStatusMessage(LogLevel.Info, imageTool.Prompt);
             ImageChanged();
         }
 
@@ -1898,7 +1298,7 @@ namespace ShearWallVisualizer
                 last = s;
             }
             if (last != null && !imageTool.WaitingForDistance)
-                ctx.DrawLine(pen, last.Value, WorldToScreen(currentSnap.Point, m_layers));
+                ctx.DrawLine(pen, last.Value, WorldToScreen(ToPoint(Sketch.CursorPoint), m_layers));
         }
 
         private void ImageChanged()
@@ -1935,21 +1335,14 @@ namespace ShearWallVisualizer
 
         private static Point Center(Rect r) => new Point(r.X + r.Width / 2, r.Y + r.Height / 2);
 
-        /// <summary>Zooms and pans so the whole image shows, with a margin.</summary>
+        /// <summary>Zooms so the whole image shows, with a margin.</summary>
         private void ZoomToImage()
         {
             var img = Calculator?.Image;
-            if (img == null || img.PixelWidth <= 0 || m_layers.ActualWidth <= 0) return;
+            if (img == null || img.PixelWidth <= 0) return;
             Rect b = img.WorldBounds();
             if (b.Width <= 0 || b.Height <= 0) return;
-            double W = m_layers.ActualWidth, H = m_layers.ActualHeight;
-            double z = 0.92 * Math.Min(W / b.Width, H / b.Height);
-            zoomFactorX = zoomFactorY = z;
-            Point c = Center(b);
-            panOffsetX = c.X - W / (2 * z);
-            panOffsetY = H / (2 * z) - H + c.Y;
-            InvalidateGrid();
-            RedrawDrawing();
+            Sketch.ZoomTo(b);
         }
 
         /// <summary>After New or Open: the project's image (older projects moved over), shown as it was saved.</summary>
@@ -1991,162 +1384,10 @@ namespace ShearWallVisualizer
             btnHideImage.Tag = hideImage ? null : "on";
         }
 
-        private void DrawGridInformation(DrawingContext ctx)
-        {
-            if (hideGrid)
-            {
-                return;  // Skip drawing if the grid is hidden
-            }
-
-            // Check if zoom or pan has changed
-            if (gridNeedsUpdate || gridVisual == null || gridBitmap == null)
-            {
-                // Recreate the grid visual when necessary (zoom or pan has changed)
-                CreateGridVisual();
-                gridNeedsUpdate = false;
-            }
-
-            // Draw the cached grid bitmap
-            ctx.DrawImage(gridBitmap, new Rect(0, 0, dockpanel.ActualWidth, dockpanel.ActualHeight));
-        }
-
-        private void CreateGridVisual()
-        {
-            // Define the size of the render target bitmap (same size as your drawing area)
-            // While a wind tab hides the drawing area it has no actual size; use its fixed design size instead.
-            double width = dockpanel.ActualWidth > 0 ? dockpanel.ActualWidth : dockpanel.Width;
-            double height = dockpanel.ActualHeight > 0 ? dockpanel.ActualHeight : dockpanel.Height;
-            if (!(width >= 1 && height >= 1)) return;
-
-            // Create a new RenderTargetBitmap with the same size as the drawing area
-            gridBitmap = new RenderTargetBitmap((int)width, (int)height, 96, 96, PixelFormats.Pbgra32);
-
-            // Create a DrawingVisual to draw the grid
-            gridVisual = new DrawingVisual();
-
-            using (DrawingContext ctx = gridVisual.RenderOpen())
-            {
-                ConstructVisualGrid(ctx);  // This is the method that draws the grid
-            }
-
-            // Render the DrawingVisual to the RenderTargetBitmap
-            gridBitmap.Render(gridVisual);
-        }
-
-        private void InvalidateGrid()
-        {
-            // Mark the grid as needing an update (this should be called when zoom or pan changes)
-            gridNeedsUpdate = true;
-        }
 
 
-        private void Draw(ChangeType change)
-        {
-            m_layers.Draw(change);
-        }
 
         #endregion
-
-        #region Drawing Layer Events
-
-        private void m_layers_PreviewMouseDown(object sender, MouseButtonEventArgs e)
-        {
-            if (PanMouseDown(e)) return; // middle button: pan, double-click: zoom to the drawing
-            if (e.RightButton == MouseButtonState.Pressed)
-            {
-                ResetInputMode(); // right-click cancels the shape in progress
-                RedrawDrawing();
-                return;
-            }
-            if (e.ChangedButton != MouseButton.Left || Calculator == null) return;
-
-            Point world = ScreenToWorld(e.GetPosition(m_layers), m_layers);
-            if (imageTool.Active)
-            {
-                ImageToolClick(world);
-                return;
-            }
-            if (currentMode == DrawMode.None)
-            {
-                PickAt(world);
-                return;
-            }
-            if (IsEditMode)
-            {
-                EditPoint(FindSnap(world).Point, world);
-                return;
-            }
-            ApplyPoint(FindSnap(world).Point);
-        }
-
-        /// <summary>
-        /// A clicked or typed point for the Wall or Diaphragm tool: the first point starts the shape, the second finishes it.
-        /// Walls chain: the next wall starts at the end of the last one, until Esc or a right-click.
-        /// </summary>
-        private void ApplyPoint(Point p)
-        {
-            if (IsEditMode)
-            {
-                EditPoint(p, null);
-                return;
-            }
-            if (startPoint_world == null)
-            {
-                startPoint_world = p;
-                CreatePreviewShape();
-                currentSnap = FindSnap(currentSnap.Point); // perpendicular now has a start point
-                RedrawDrawing();
-                return;
-            }
-
-            Point start = startPoint_world.Value;
-            if (currentMode == DrawMode.Line)
-            {
-                Point squared = GetConstrainedPoint(p, start);
-                if ((squared - start).Length < 1e-6)
-                {
-                    ShowStatusMessage(LogLevel.Warning, "A wall needs two different ends.");
-                    return;
-                }
-                if ((squared - p).Length > 1e-6)
-                    ShowStatusMessage(LogLevel.Info, $"Walls run E-W or N-S: the end was squared to ({squared.X:0.##}, {squared.Y:0.##}).");
-            }
-            else if (Math.Abs(p.X - start.X) < 1e-6 || Math.Abs(p.Y - start.Y) < 1e-6)
-            {
-                ShowStatusMessage(LogLevel.Warning, "A diaphragm needs two opposite corners (different x and y).");
-                return;
-            }
-
-            endPoint_world = p;
-            bool chain = currentMode == DrawMode.Line;
-            Point wallEnd = GetConstrainedPoint(p, start);
-            try
-            {
-                FinalizeShape(p);
-            }
-            catch (Exception ex) when (!(ex is OutOfMemoryException))
-            {
-                Log.Warning("The shape could not be added", ex);
-                ResetInputMode();
-                chain = false;
-            }
-            if (chain)
-            {
-                startPoint_world = wallEnd; // the next wall starts here
-                CreatePreviewShape();
-            }
-            UpdateShearWallUI();
-        }
-
-        /// <summary>Select tool: picks the wall or diaphragm under the point and shows its card.</summary>
-        private void PickAt(Point world)
-        {
-            var (kind, id) = Snapper.Pick(Calculator, world, PixelsToWorld(6));
-            selectedKind = kind;
-            selectedId = id;
-            selectionCardOpen = kind != null;
-            UpdateShearWallUI(); // the tables follow the selection
-        }
 
         private void CloseSelectionCard()
         {
@@ -2174,110 +1415,16 @@ namespace ShearWallVisualizer
 
         // ------------------------------------------------------------------ typed points
 
-        /// <summary>Typing a number, @, - or . while drawing (and not in a box) goes to the Point box.</summary>
+        /// <summary>Typing a number, @, - or . while drawing (and not in a box) goes to the sketch's point box.</summary>
         private void RouteTypingToCommand(object sender, TextCompositionEventArgs e)
         {
-            if (InWindWorkspace || currentMode == DrawMode.None || string.IsNullOrEmpty(e.Text)) return;
+            if (InWindWorkspace || string.IsNullOrEmpty(e.Text)) return;
+            if (Sketch.Tool == BuildingModel.Sketch.SketchTool.Select && !imageTool.WaitingForDistance) return;
             if (e.OriginalSource is System.Windows.Controls.Primitives.TextBoxBase) return;
             if ("0123456789.-@".IndexOf(e.Text[0]) < 0) return;
-            tbCommand.Focus();
-            tbCommand.Text += e.Text;
-            tbCommand.CaretIndex = tbCommand.Text.Length;
+            sketchView.FocusCommand(e.Text);
             e.Handled = true;
         }
-
-        private void Command_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.Key == Key.Escape)
-            {
-                tbCommand.Clear();
-                ResetInputMode();
-                RedrawDrawing();
-                Keyboard.ClearFocus();
-                e.Handled = true;
-                return;
-            }
-            if (e.Key != Key.Enter) return;
-            e.Handled = true;
-            if (imageTool.WaitingForDistance)
-            {
-                if (imageTool.EnterDistance(Calculator?.Image, tbCommand.Text, out string done))
-                {
-                    tbCommand.Clear();
-                    Keyboard.ClearFocus();
-                    ShowStatusMessage(LogLevel.Info, done);
-                    ImageChanged();
-                }
-                else
-                {
-                    ShowStatusMessage(LogLevel.Warning, done);
-                    tbCommand.SelectAll();
-                }
-                return;
-            }
-            if (currentMode == DrawMode.None)
-            {
-                ShowStatusMessage(LogLevel.Warning, "Pick Wall (L) or Diaphragm (R) first, then type its points.");
-                return;
-            }
-            if (!CoordinateInput.TryParse(tbCommand.Text, startPoint_world, currentSnap.Point, out Point p, out string error))
-            {
-                ShowStatusMessage(LogLevel.Warning, error);
-                tbCommand.SelectAll();
-                return;
-            }
-            tbCommand.Clear();
-            ApplyPoint(p);
-        }
-
-        private void m_layers_PreviewMouseMove(object sender, MouseEventArgs e)
-        {
-            PanMouseMove(e);
-            currentMouseScreenPosition = e.GetPosition(m_layers);
-            currentSnap = FindSnap(ScreenToWorld(currentMouseScreenPosition, m_layers));
-            ShowCursor(currentSnap.Point);
-            RedrawDrawing();
-        }
-
-        private void m_layers_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
-        {
-            // Determine the zoom factor
-            double zoomFactor = (e.Delta > 0) ? 1.2 : 0.8;
-
-            // Get the mouse position_screen relative to the canvas
-            Point mousePosition_screen = e.GetPosition(m_layers);
-
-            // Transform the mouse position_screen to world coordinates before zooming
-            Point beforeZoom = ScreenToWorld(mousePosition_screen, m_layers);
-
-            // Apply zoom
-            zoomFactorX *= zoomFactor;
-            zoomFactorY *= zoomFactor;
-
-            // Transform the mouse position_screen to world coordinates after zooming
-            Point afterZoom = ScreenToWorld(mousePosition_screen, m_layers);
-
-            // Adjust pan offset to keep the mouse position_screen centered
-            panOffsetX -= (afterZoom.X - beforeZoom.X);
-            panOffsetY -= (afterZoom.Y - beforeZoom.Y);
-
-            ShowCursor(afterZoom);
-            InvalidateGrid();               // signal that the grid needs updating
-            RedrawDrawing();
-        }
-
-        private void m_layers_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            // Right button click to CANCEL
-            if (e.RightButton == MouseButtonState.Pressed)
-            {
-                ResetInputMode();
-                UpdateShearWallUI();
-                return;
-            }
-        }
-
-        #endregion
 
         #region UI Events
         private void btnShowDesign_Click(object sender, RoutedEventArgs e)
@@ -2294,65 +1441,6 @@ namespace ShearWallVisualizer
             btnHideImage.Tag = hideImage ? null : "on";
             RedrawDrawing();
         }
-
-        private void btnHideGrid_Click(object sender, RoutedEventArgs e)
-        {
-            hideGrid = !hideGrid;
-            UpdateShearWallUI();
-            btnHideGrid.Tag = hideGrid ? null : "on";
-        }
-
-        private void btnLineMode_Click(object sender, RoutedEventArgs e)
-        {
-            currentMode = DrawMode.Line;
-            ResetInputMode();
-            SetButtonModes();
-        }
-
-        private void btnRectangleMode_Click(object sender, RoutedEventArgs e)
-        {
-            currentMode = DrawMode.Rectangle;
-            ResetInputMode();
-            SetButtonModes();
-        }
-
-        private void btnSnapMode_Click(object sender, RoutedEventArgs e)
-        {
-            SetSnapMode();
-        }
-
-        private void btnSelectMode_Click(object sender, RoutedEventArgs e)
-        {
-            currentMode = DrawMode.None;
-            ResetInputMode();
-            SetButtonModes();
-            RedrawDrawing();
-        }
-
-        /// <summary>The ▾ next to Snap: tick the object snaps to use.</summary>
-        private void btnSnapOptions_Click(object sender, RoutedEventArgs e)
-        {
-            var menu = new ContextMenu { PlacementTarget = btnSnapOptions, Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom };
-            var on = new MenuItem { Header = "Snaps on  (F3)", IsCheckable = true, IsChecked = snapMode, StaysOpenOnClick = true };
-            on.Click += (s, a) => SetSnapMode();
-            menu.Items.Add(on);
-            menu.Items.Add(new Separator());
-            foreach (var kind in new[] { SnapModes.Endpoint, SnapModes.Midpoint, SnapModes.Intersection, SnapModes.Perpendicular, SnapModes.Nearest })
-            {
-                var k = kind;
-                var item = new MenuItem { Header = SnapResult.Describe(k) + "   " + SnapGlyphHint(k), IsCheckable = true, IsChecked = (snapModes & k) != 0, StaysOpenOnClick = true };
-                item.Click += (s, a) =>
-                {
-                    snapModes = item.IsChecked ? snapModes | k : snapModes & ~k;
-                    if (snapModes != SnapModes.None && !snapMode) { snapMode = true; on.IsChecked = true; SetButtonModes(); }
-                };
-                menu.Items.Add(item);
-            }
-            menu.IsOpen = true;
-        }
-
-        private static string SnapGlyphHint(SnapModes k) =>
-            k == SnapModes.Endpoint ? "□" : k == SnapModes.Midpoint ? "△" : k == SnapModes.Intersection ? "×" : k == SnapModes.Perpendicular ? "⊥" : "⧗";
 
         private void btnOpenLoadDialog_Click(object sender, RoutedEventArgs e)
         {
@@ -2400,57 +1488,28 @@ namespace ShearWallVisualizer
         #endregion
 
         #region Menu and Key Events
+        /// <summary>
+        /// The drawing keys go to the sketch (W wall, D diaphragm, O opening, N note, M move, C copy, I mirror, T measure,
+        /// X split, J join, Z fit, Del, Esc, F3 snaps, F8 ortho), with the designer's keys from before: L wall, R diaphragm,
+        /// S snaps; F12 debug drawing. Never a key typed into a box, and only in the Shear walls workspace.
+        /// </summary>
         private void MainWindow_KeyDown(object sender, KeyEventArgs e)
         {
-            // The drawing shortcuts belong to the Shear walls workspace, and never to a key typed into a box
-            // (typing "d" in a wind input used to toggle debug mode with a message box).
-            if (e.Handled || InWindWorkspace || Keyboard.Modifiers != ModifierKeys.None) return;
+            if (e.Handled || InWindWorkspace) return;
             if (e.OriginalSource is System.Windows.Controls.Primitives.TextBoxBase || e.OriginalSource is PasswordBox || (e.OriginalSource is ComboBox cb && cb.IsEditable)) return;
-            if (DraftingKey(e.Key)) { e.Handled = true; return; } // Delete, M, C, T, F8, Z, Space / Enter
-            if (e.Key != Key.L && e.Key != Key.R && e.Key != Key.S && e.Key != Key.D && e.Key != Key.Escape && e.Key != Key.F3) return;
-            Log.Debug($"Key pressed: {e.Key}");
-
-            // Esc: cancel the shape in progress (or the wall chain); then the measured line; then close the card; then the Select tool
-            if (e.Key == Key.Escape)
+            var mods = Keyboard.Modifiers;
+            Key key = e.Key == Key.System ? e.SystemKey : e.Key;
+            if (mods == ModifierKeys.None)
             {
-                if (imageTool.Active) { imageTool.Cancel(); RedrawDrawing(); }
-                else if (startPoint_world != null || lastMeasure != null) { ResetInputMode(); RedrawDrawing(); }
-                else if (selectionCardOpen) CloseSelectionCard();
-                else { currentMode = DrawMode.None; currentSnap = FindSnap(currentSnap.Point); SetButtonModes(); RedrawDrawing(); }
-                return;
+                switch (key)
+                {
+                    case Key.L: key = Key.W; break;
+                    case Key.R: key = Key.D; break;
+                    case Key.S: key = Key.F3; break;
+                    case Key.F12: SetDebugMode(); Draw(); e.Handled = true; return;
+                }
             }
-            if (e.Key == Key.F3)
-            {
-                SetSnapMode();
-                RedrawDrawing();
-                return;
-            }
-
-            // line (wall) mode
-            if (e.Key == Key.L)
-            {
-                ResetInputMode();
-                currentMode = DrawMode.Line;
-            }
-
-            // rectangle (diaphragm) mode
-            else if (e.Key == Key.R)
-            {
-                ResetInputMode();
-                currentMode = DrawMode.Rectangle;
-            }
-            // snap mode
-            else if (e.Key == Key.S)
-            {
-                SetSnapMode();
-            }
-            // debug mode
-            else if (e.Key == Key.D)
-            {
-                SetDebugMode();
-            }
-
-            UpdateShearWallUI();
+            e.Handled = Sketch.HandleKey(key, mods);
         }
 
         private void Exit_Click(object sender, RoutedEventArgs e)
@@ -2503,8 +1562,9 @@ namespace ShearWallVisualizer
             : WindInputs.From(windSetup.Version, windSetup.Parameters, windSetup.Building, windSetup.OnlyCases1And3,
                               windSetup.RoofComponent, windSetup.WallComponent);
 
-        private string CurrentProjectJson() => levels.Count == 0 ? ProjectSerializer.ToJson(Calculator, CurrentWindInputs(), windLoadsLinked)
-            : ProjectSerializer.ToJson(levels[0], CurrentWindInputs(), windLoadsLinked, levels.Skip(1));
+        /// <summary>The project file text: the wind inputs, each story's calculator (loads, plan image) and the building model.</summary>
+        private string CurrentProjectJson() => levels.Count == 0 ? ProjectSerializer.ToJson(Calculator, CurrentWindInputs(), windLoadsLinked, null, ModelFile.BuildingToJson(building))
+            : ProjectSerializer.ToJson(levels[0], CurrentWindInputs(), windLoadsLinked, levels.Skip(1), ModelFile.BuildingToJson(building));
 
         private bool HasUnsavedChanges => savedProjectJson != null && Calculator != null && CurrentProjectJson() != savedProjectJson;
 
@@ -2561,10 +1621,7 @@ namespace ShearWallVisualizer
         private void MenuItem_New_Click(object sender, RoutedEventArgs e)
         {
             if (!ConfirmDiscardOrSave()) return;
-            SetLevels(new[] { new ShearWallCalculator_RigidDiaphragm() });
-            Calculator.DesignSettings.HoldownsFromStandardList = designer != null && designer.StandardList.Count > 0;
             currentProjectPath = null;
-            ImageForNewProject();
             Log.Info("New project");
             windSetup.SetInputs(null, ASCE7_Versions.ASCE_VER_7_22, null);
             windSetup.SetOnlyCases1And3(false);
@@ -2572,8 +1629,12 @@ namespace ShearWallVisualizer
             windLoadParams = windSetup.Parameters.Clone();
             windVersion = windSetup.Version;
             windLoadsLinked = true;
+            SetBuilding(ShearWallAdapter.NewBuilding(buildingData.StoryPlateHeights), null);
+            Calculator.DesignSettings.HoldownsFromStandardList = designer != null && designer.StandardList.Count > 0;
+            ImageForNewProject();
             RecalculateWind();
             UpdateShearWallUI();
+            StartHistory();
             MarkSaved();
         }
 
@@ -2603,7 +1664,8 @@ namespace ShearWallVisualizer
             try
             {
                 RecordHoldowns();
-                ProjectSerializer.Save(path, levels[0], CurrentWindInputs(), windLoadsLinked, levels.Skip(1));
+                ProjectSerializer.Save(path, levels[0], CurrentWindInputs(), windLoadsLinked, levels.Skip(1), ModelFile.BuildingToJson(building));
+                baseModelJson = ModelFile.BuildingToJson(building); // Model > Export changes: since this save
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
@@ -2643,7 +1705,22 @@ namespace ShearWallVisualizer
                 return;
             }
 
-            SetLevels(new[] { contents.Calculator }.Concat(contents.UpperLevels ?? new List<ShearWallCalculatorBase>()));
+            // The building model is the source of truth; an older file (no model) becomes one from its calculators. The
+            // calculators stay with the stories in order: their loads and plan images.
+            var calcs = new[] { contents.Calculator }.Concat(contents.UpperLevels ?? new List<ShearWallCalculatorBase>()).ToList();
+            Building opened = null;
+            if (contents.Model != null)
+            {
+                try { opened = ModelFile.BuildingFromJson(contents.Model); }
+                catch (Exception ex) when (ex is System.Runtime.Serialization.SerializationException || ex is InvalidDataException)
+                {
+                    Log.Warning("The building model in the project could not be read; it is made again from the walls and diaphragms", ex);
+                }
+            }
+            bool migrated = opened == null;
+            if (migrated)
+                opened = ShearWallAdapter.FromCalculators(calcs, contents.Wind?.ToBuilding().StoryPlateHeights);
+            SetBuilding(opened, calcs);
             currentProjectPath = path;
             ImageForNewProject();
             Log.Info("Project opened: " + path);
@@ -2671,7 +1748,7 @@ namespace ShearWallVisualizer
                 buildingData = windSetup.Building.Clone();
                 windLoadParams = windSetup.Parameters.Clone();
                 windVersion = windSetup.Version;
-                MatchLevelsToStories(buildingData.NumberOfStories);
+                FloorsToBuildingData(); // the model's floors and plate heights
 
                 var saved = contents.Loads ?? new LoadsInfo();
                 windLoadsLinked = saved.LinkedToWind;
@@ -2688,6 +1765,9 @@ namespace ShearWallVisualizer
 
             AddToRecentFiles(path);
             UpdateShearWallUI();
+            StartHistory();
+            if (migrated && calcs.Any(c => c._wall_system._walls.Count + c._diaphragm_system._diaphragms.Count > 0))
+                Log.Info("The project's walls and diaphragms were put into a building model (saved with the project from now on).");
             string holdownNote = HoldownChangesSinceSave();
             if (holdownNote != null) note = note == null ? holdownNote : note + "\n\n" + holdownNote;
             // An older file, or loads or hold-downs that changed, count as unsaved so the user is asked before closing.
@@ -2846,120 +1926,26 @@ namespace ShearWallVisualizer
         #region MODE setters
         public void SetButtonModes()
         {
-            btnSelectMode.Tag = currentMode == DrawMode.None ? "on" : null;
-            btnRigidityMode.Tag = currentMode == DrawMode.Line ? "on" : null;
-            btnMassMode.Tag = currentMode == DrawMode.Rectangle ? "on" : null;
-            btnSnapToNearest.Tag = snapMode ? "on" : null;
-            btnMove.Tag = currentMode == DrawMode.Move ? "on" : null;
-            btnCopy.Tag = currentMode == DrawMode.Copy ? "on" : null;
-            btnMeasure.Tag = currentMode == DrawMode.Measure ? "on" : null;
-            btnOrtho.Tag = orthoMode ? "on" : null;
-            btnUndo.IsEnabled = history.CanUndo;
-            btnRedo.IsEnabled = history.CanRedo;
-            if (currentMode != DrawMode.None) lastDrawMode = currentMode; // Space repeats it
-            ShowStatusMode();
-        }
-
-        private void SetLineMode()
-        {
-            currentMode = DrawMode.Line;
-            SetButtonModes();
-        }
-
-        private void SetRectangleMode()
-        {
-            currentMode = DrawMode.Rectangle;
-            SetButtonModes();
+            btnShowDesign.Tag = showDesign ? "on" : null;
+            btnHideImage.Tag = hideImage ? null : "on";
         }
 
         private void SetDebugMode()
         {
             debugMode = !debugMode;
-            ShowStatusMessage(LogLevel.Info, $"Debug drawing {(debugMode ? "on" : "off")} (D)");
+            ShowStatusMessage(LogLevel.Info, $"Debug drawing {(debugMode ? "on" : "off")} (F12)");
             Log.Info($"Debug mode: {(debugMode ? "Enabled" : "Disabled")}");
         }
 
-        private void SetSnapMode()
-        {
-            snapMode = !snapMode;
-            SetButtonModes();
-            Log.Info($"Snap mode: {(snapMode ? "Enabled" : "Disabled")}");
-        }
-
-        /// <summary>
-        /// Cancels input mode and clears the previews
-        /// </summary>
+        /// <summary>Cancels the plan-image command and the sketch's command in progress.</summary>
         private void ResetInputMode()
         {
-            // cancel the input by setting the start point to null
-            startPoint_world = null;
-            endPoint_world = null;
-            previewShape = null;
             imageTool.Cancel();
-            lastMeasure = null;
+            Sketch.ResetCommand();
         }
         #endregion
 
         // ------------------------------------------------------------------ status line
-
-        /// <summary>Redraws the drawing only (cursor moves, zoom, preview); the calculations and panels are not rebuilt.</summary>
-        private void RedrawDrawing()
-        {
-            ShowStatusMode();
-            Draw(ChangeType.Redraw);
-        }
-
-        private void ShowCursor(Point world)
-        {
-            string snap = currentSnap.Found ? "   " + SnapResult.Describe(currentSnap.Kind).ToLowerInvariant() : "";
-            string len = startPoint_world.HasValue && currentMode == DrawMode.Line
-                ? $"   L = {(GetConstrainedPoint(world, startPoint_world.Value) - startPoint_world.Value).Length:0.00} ft"
-                : startPoint_world.HasValue && currentMode == DrawMode.Rectangle
-                    ? $"   {Math.Abs(world.X - startPoint_world.Value.X):0.##} × {Math.Abs(world.Y - startPoint_world.Value.Y):0.##} ft" : "";
-            if (startPoint_world.HasValue && IsEditMode)
-            {
-                Vector by = EditSecondPoint(world) - startPoint_world.Value;
-                len = $"   d = {by.Length:0.00} ft  (Δx {by.X:0.00}, Δy {by.Y:0.00})";
-            }
-            tbWorldCoords.Text = $"x {world.X:0.00},  y {world.Y:0.00} ft{snap}{len}";
-            tbZoom.Text = $"Zoom {zoomFactorX:0.##}×";
-        }
-
-        /// <summary>What the drawing tool expects next.</summary>
-        private void ShowStatusMode()
-        {
-            if (imageTool.Active)
-            {
-                tbStatusMode.Text = imageTool.Prompt;
-                return;
-            }
-            string snap = (snapMode ? "" : "   (snaps off)") + (orthoMode && IsEditMode ? "   (ortho)" : "");
-            string what = HasSelection ? $" {selectedKind.ToLowerInvariant()} {selectedId}" : "";
-            switch (currentMode)
-            {
-                case DrawMode.Line:
-                    tbStatusMode.Text = (startPoint_world == null ? "Wall: click or type the first end" : "Wall: click or type the next end  (Esc ends)") + snap;
-                    break;
-                case DrawMode.Move:
-                case DrawMode.Copy:
-                    string verb = currentMode == DrawMode.Move ? "Move" : "Copy";
-                    tbStatusMode.Text = (!HasSelection ? $"{verb}: click the wall or diaphragm"
-                        : startPoint_world == null ? $"{verb}{what}: click or type the base point"
-                        : $"{verb}{what}: click the new place, or type @dx,dy  (Esc cancels)") + snap;
-                    break;
-                case DrawMode.Measure:
-                    tbStatusMode.Text = (startPoint_world == null ? "Measure: click the first point" : "Measure: click the second point  (Esc cancels)") + snap;
-                    break;
-                case DrawMode.Rectangle:
-                    tbStatusMode.Text = (startPoint_world == null ? "Diaphragm: click or type a corner" : "Diaphragm: click or type the opposite corner  (Esc cancels)") + snap;
-                    break;
-                default:
-                    tbStatusMode.Text = HasSelection
-                        ? $"Selected{what}:  Move (M), Copy (C), Delete.  Ctrl+Z undoes."
-                        : "Select: click a wall or diaphragm to see it.  Draw with Wall (L) or Diaphragm (R).";
-                    break;
-            }
-        }
 
         private static readonly Brush StatusWarnInk = new SolidColorBrush(Color.FromRgb(0x9A, 0x5B, 0x00));
         private static readonly Brush StatusErrorInk = new SolidColorBrush(Color.FromRgb(0xB4, 0x23, 0x18));
@@ -3031,7 +2017,7 @@ namespace ShearWallVisualizer
 
             if (!(MainTabControl.SelectedItem is TabItem current) || current.Visibility != Visibility.Visible)
                 MainTabControl.SelectedItem = wind ? tabWindSetupTabItem : (TabItem)tabCalculationsTabItem;
-            if (!wind) Draw(ChangeType.Redraw);
+            if (!wind) Draw();
         }
 
         private void MainTabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)

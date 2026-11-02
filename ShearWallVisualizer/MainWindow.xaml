@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ShearWallVisualizer"
         xmlns:ctrl="clr-namespace:ShearWallVisualizer.Controls"
+        xmlns:sketch="clr-namespace:BuildingModel.Sketch;assembly=BuildingModel.Sketch"
         mc:Ignorable="d"
         Title="Rigid Diaphragm Shear Wall Calculator v0.1" Height="900" Width="1600" MinHeight="600" MinWidth="1000" WindowState="Maximized" WindowStartupLocation="CenterScreen"
         Background="#F7F8FA" FontFamily="Segoe UI"
@@ -43,11 +44,25 @@
                 <MenuItem Header="Delete this _floor..." Click="DeleteFloor_Click"/>
                 <MenuItem x:Name="miCopyFromBelow" Header="Copy the level _below onto this level" Click="CopyFromBelow_Click"/>
                 <MenuItem Header="Mea_sure distance" Click="btnMeasure_Click" InputGestureText="T"/>
+                <MenuItem Header="_Note on the plan" Click="btnNote_Click" InputGestureText="N"/>
                 <Separator/>
                 <MenuItem Header="_Ortho (move, copy, measure)" Click="btnOrtho_Click" InputGestureText="F8"/>
                 <MenuItem Header="_Zoom to the drawing" Click="btnZoomExtents_Click" InputGestureText="Z"/>
                 <Separator/>
                 <MenuItem Header="Import plan (DXF, PDF, image)..." Click="ImportPlanImage_Click"/>
+            </MenuItem>
+            <MenuItem Header="_Model">
+                <MenuItem Header="_3D view of the building" Click="Show3D_Click"/>
+                <MenuItem Header="_Check the model (errors and warnings)" Click="CheckModel_Click"/>
+                <Separator/>
+                <MenuItem Header="_Open a building model (.bldg.json)..." Click="ImportModel_Click"
+                          ToolTip="Replace the walls, diaphragms and openings with a building drawn in the Building Model app (design inputs kept where IDs match)"/>
+                <MenuItem Header="_Save the building model as..." Click="ExportModel_Click"
+                          ToolTip="The building (levels, walls, diaphragms, openings, notes) for the Building Model app and the other analysis programs"/>
+                <Separator/>
+                <MenuItem Header="_Export changes since opened..." Click="ExportChanges_Click"
+                          ToolTip="What was added, moved or deleted since the project was opened or saved, as a change set another copy of the model can apply"/>
+                <MenuItem Header="_Apply a change set..." Click="ApplyChanges_Click"/>
             </MenuItem>
             <MenuItem Header="_Help">
                 <MenuItem Header="Open _log folder" Click="OpenLogFolder_Click"/>
@@ -170,46 +185,17 @@
                                     ToolTip="DELETE FLOOR: removes the level shown, with all its walls and diaphragms. The floors above move down one; you are told first what that does to the load path."/>
                             <Rectangle Style="{StaticResource ToolDivider}"/>
                         </StackPanel>
-                        <TextBlock Style="{StaticResource ToolGroup}" Text="DRAW"/>
-                        <Button x:Name="btnSelectMode" Style="{StaticResource Tool}" Content="Select  (Esc)" Click="btnSelectMode_Click"
-                                ToolTip="Click a wall or diaphragm on the drawing to see its size and design"/>
-                        <Button x:Name="btnRigidityMode" Style="{StaticResource Tool}" Content="Wall  (L)" Click="btnLineMode_Click"
-                                ToolTip="Draw a shear wall: click both ends. Walls are horizontal (E-W) or vertical (N-S)."/>
-                        <Button x:Name="btnMassMode" Style="{StaticResource Tool}" Content="Diaphragm  (R)" Click="btnRectangleMode_Click"
-                                ToolTip="Draw a rectangular diaphragm (floor or roof area): click two opposite corners."/>
-                        <Rectangle Style="{StaticResource ToolDivider}"/>
-                        <TextBlock Style="{StaticResource ToolGroup}" Text="EDIT"/>
-                        <Button x:Name="btnUndo" Style="{StaticResource Tool}" Content="↶" Padding="8,2" FontSize="15" Click="Undo_Click"
-                                ToolTip="Undo (Ctrl+Z): walls and diaphragms added, deleted, moved or resized, and design changes"/>
-                        <Button x:Name="btnRedo" Style="{StaticResource Tool}" Content="↷" Padding="8,2" FontSize="15" Click="Redo_Click"
-                                ToolTip="Redo (Ctrl+Y)"/>
-                        <Button x:Name="btnMove" Style="{StaticResource Tool}" Content="Move" Click="btnMove_Click"
-                                ToolTip="Move (M): move the selected wall or diaphragm: click a base point, then the new place (snaps work; or type @dx,dy)"/>
-                        <Button x:Name="btnCopy" Style="{StaticResource Tool}" Content="Copy" Click="btnCopy_Click"
-                                ToolTip="Copy (C): copy the selected wall (with its design) or diaphragm: click a base point, then each new place. Esc ends."/>
-                        <Button x:Name="btnMeasure" Style="{StaticResource Tool}" Content="Measure" Click="btnMeasure_Click"
-                                ToolTip="Measure (T): the distance between two points (snaps work)"/>
-                        <Button x:Name="btnOrtho" Style="{StaticResource Tool}" Content="Ortho" Click="btnOrtho_Click"
-                                ToolTip="Ortho (F8): move, copy and measure go straight across or straight up. Walls are always square."/>
-                        <Button x:Name="btnZoomExtents" Style="{StaticResource Tool}" Content="Fit" Click="btnZoomExtents_Click"
-                                ToolTip="Fit (Z): zoom to the walls, diaphragms and plan. Wheel zooms at the cursor; drag with the middle button to pan; double-click it to fit."/>
-                        <Rectangle Style="{StaticResource ToolDivider}"/>
-                        <Button x:Name="btnSnapToNearest" Style="{StaticResource Tool}" Content="Snap  (F3)" Click="btnSnapMode_Click"
-                                ToolTip="Object snaps: endpoint, midpoint, intersection, perpendicular, nearest. F3 or S turns them on and off; ▾ picks which."/>
-                        <Button x:Name="btnSnapOptions" Style="{StaticResource Tool}" Content="▾" Padding="6,4" Click="btnSnapOptions_Click" ToolTip="Choose the object snaps"/>
-                        <Rectangle Style="{StaticResource ToolDivider}"/>
                         <TextBlock Style="{StaticResource ToolGroup}" Text="SHOW"/>
-                        <Button x:Name="btnHideGrid" Style="{StaticResource Tool}" Content="Grid" Tag="on" Click="btnHideGrid_Click"/>
                         <Button x:Name="btnHideImage" Style="{StaticResource Tool}" Content="Image" Tag="on" Click="btnHideImage_Click"
                                 ToolTip="Show or hide the plan image layer (under the drawing, never selectable; the image is stored in the project file)"/>
                         <Button x:Name="btnImageOptions" Style="{StaticResource Tool}" Content="▾" Padding="6,4" Click="btnImageOptions_Click"
                                 ToolTip="Plan image: import, set the scale with two points, straighten, move, opacity, lock"/>
-                        <Button x:Name="btnHideWalls" Style="{StaticResource Tool}" Content="Walls" Tag="on" Click="btnHideWalls_Click"
-                                ToolTip="Show or hide the shear walls (and their design marks)"/>
-                        <Button x:Name="btnHideDiaphragms" Style="{StaticResource Tool}" Content="Diaphragms" Tag="on" Click="btnHideDiaphragms_Click"
-                                ToolTip="Show or hide the diaphragms (floor and roof areas)"/>
                         <Button x:Name="btnShowDesign" Style="{StaticResource Tool}" Content="Design" Tag="on" Click="btnShowDesign_Click"
                                 ToolTip="Shear wall marks (SW1, SW2, ...) with each wall's hold-down, the hold-downs at the wall ends, and the shear wall schedule"/>
+                        <Button x:Name="btn3D" Style="{StaticResource Tool}" Content="3D" Click="Show3D_Click"
+                                ToolTip="The building in 3D from the model: every level's diaphragm and the walls (shear walls blue); the level shown is stronger"/>
+                        <Button x:Name="btnIssues" Style="{StaticResource Tool}" Content="✓" Click="Issues_Click"
+                                ToolTip="Errors and warnings in the model and the design (also marked on the plan)"/>
                         <Rectangle Style="{StaticResource ToolDivider}"/>
                         <Button x:Name="btnLoadEntry" Style="{StaticResource Tool}" Content="Loads..." Click="btnOpenLoadDialog_Click"
                                 ToolTip="Use the wind loads (automatic) or enter loads by hand"/>
@@ -230,11 +216,8 @@
 
                 <!-- Drawing Area: the full height under the toolbar; drag the bar on its right to widen it -->
                 <DockPanel x:Name="dockpanel" Grid.Column="0" LastChildFill="True" ClipToBounds="True" Background="White">
-                    <local:LayerManager x:Name="m_layers" DockPanel.Dock="Left" 
-                                PreviewMouseDown="m_layers_PreviewMouseDown" 
-                                PreviewMouseMove="m_layers_PreviewMouseMove"
-                                PreviewMouseWheel="m_layers_PreviewMouseWheel"
-                                PreviewMouseRightButtonDown="m_layers_PreviewMouseRightButtonDown"/>
+                    <!-- The shared sketcher (BuildingModel.Sketch): its own tools, snaps, undo and status line; the building model is the source of truth -->
+                    <sketch:SketchView x:Name="sketchView"/>
                 </DockPanel>
 
                 <!-- The picked wall or diaphragm (Select tool), over the top-right corner of the drawing -->
@@ -287,15 +270,6 @@
             <!-- Status line: what the drawing tool expects next, cursor position, zoom; the latest warning or error from the log on the right -->
             <Border Grid.Row="2" Background="#FCFCFB" BorderBrush="#E1E0D9" BorderThickness="0,1,0,0" Padding="10,3">
                 <DockPanel>
-                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
-                        <TextBlock Text="Point" VerticalAlignment="Center" Foreground="#7A7974" Margin="0,0,6,0"/>
-                        <TextBox x:Name="tbCommand" Width="150" Margin="0,0,14,0" Padding="3,0" VerticalContentAlignment="Center" BorderBrush="#C3C2B7"
-                                 KeyDown="Command_KeyDown"
-                                 ToolTip="Type a point instead of clicking, then Enter:&#10;  12,30  absolute x,y (ft)&#10;  @5,0  relative to the last point&#10;  @20&lt;90  length and angle (degrees from +x)&#10;  20  a length toward the cursor&#10;Feet and inches work too: 12'6&quot;"/>
-                        <TextBlock x:Name="tbStatusMode" MinWidth="330" VerticalAlignment="Center" Foreground="#0B0B0B"/>
-                        <TextBlock x:Name="tbWorldCoords" MinWidth="230" VerticalAlignment="Center" Foreground="#52514E"/>
-                        <TextBlock x:Name="tbZoom" MinWidth="90" VerticalAlignment="Center" Foreground="#52514E"/>
-                    </StackPanel>
                     <TextBlock x:Name="tbStatusMessage" HorizontalAlignment="Right" TextTrimming="CharacterEllipsis" Cursor="Hand"
                                MouseLeftButtonUp="StatusMessage_Click" ToolTip="Click to open the log folder"/>
                 </DockPanel>

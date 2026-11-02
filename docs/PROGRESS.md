@@ -2,6 +2,17 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-01 — The plan is drawn in the shared sketcher; the building model is the source of truth (SWC + BuildingModel)
+
+_Branch `dev/shared-sketcher`. Details: `SHARED_SKETCHER.md`._
+
+- **Drawing:** the shared sketcher (`F:ProgrammingBuildingModel`, `BuildingModel.Sketch`) replaces the old canvas and its DRAW / EDIT / snap buttons. New: openings between levels, notes on the plan, mirror, split and join walls, grips to stretch, window selection. L, R and S still work; debug drawing is F12.
+- **Model:** walls, diaphragms, openings and notes live in a building model (`BuildingModel.Core`); the calculators (one per story) are filled from it after every change (`BuildingModel.ShearWalls`). Design inputs are stored in the model, so one undo covers drawing, design and floors (+ Floor, ✕ Floor and Copy ↑ can now be undone).
+- **Errors on the plan:** model checks, failing walls and stories that cannot be calculated are marked on the plan (red / amber) and listed under the issues button.
+- **Model menu:** 3D view, check the model, open / save a `.bldg.json`, export and apply change sets.
+- **Project file:** an optional `Model` field; older files open and are converted.
+- **Tests:** SWC 162; BuildingModel 49 + 11 sketch tests.
+
 ## 2026-11-01 — Multi-story, 1 to 3 floors: wind per floor, analysed from the roof down (SWC + W7)
 
 - **Floors** in the building inputs (Wind setup, next to the size): 1, 2 or 3 (3 is the maximum for now). The story height is the eave height ÷ floors (shown beside it). Each floor is a **level**: the walls of that story and the diaphragm over them; the top level is the roof.

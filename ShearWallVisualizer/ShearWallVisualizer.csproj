@@ -124,8 +124,6 @@
     <Compile Include="Helpers\MathHelpers.cs" />
     <Compile Include="Helpers\ShearWallReport.cs" />
     <Compile Include="Helpers\TabControlManager.cs" />
-    <Compile Include="LayerData.cs" />
-    <Compile Include="LayerManager.cs" />
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
@@ -179,6 +177,16 @@
     <ProjectReference Include="..\ShearWallCalculator.csproj">
       <Project>{482e885f-e3a1-45d1-8d5b-29faa85bf317}</Project>
       <Name>ShearWallCalculator</Name>
+    </ProjectReference>
+    <!-- The shared building model and sketcher (F:\Programming\BuildingModel): the plan is drawn there and is the source of truth. -->
+    <ProjectReference Include="..\..\BuildingModel\BuildingModel.Core\BuildingModel.Core.csproj">
+      <Name>BuildingModel.Core</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\BuildingModel\BuildingModel.Sketch\BuildingModel.Sketch.csproj">
+      <Name>BuildingModel.Sketch</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\BuildingModel\BuildingModel.ShearWalls\BuildingModel.ShearWalls.csproj">
+      <Name>BuildingModel.ShearWalls</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup />

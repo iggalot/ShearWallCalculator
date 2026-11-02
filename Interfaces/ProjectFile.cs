@@ -33,6 +33,15 @@ namespace ShearWallCalculator.Interfaces
         /// <summary>Levels 2 and 3 (same JSON as <see cref="Walls"/>), bottom to top; none for one story.</summary>
         public List<JObject> UpperLevels { get; set; }
 
+        /// <summary>
+        /// The building model (BuildingModel.Core JSON): levels, walls, diaphragms, openings and notes with the designer's data in
+        /// their bags. When present it is the source of truth for the geometry and the calculators above are filled from it on
+        /// opening (they still carry each story's loads and plan image, and let an older build of the program read the file).
+        /// Absent in older files: the model is made from the calculators.
+        /// </summary>
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public JObject Model { get; set; }
+
         public LoadsInfo Loads { get; set; }
     }
 
@@ -165,6 +174,9 @@ namespace ShearWallCalculator.Interfaces
         /// <summary>Null for an older drawing-only file.</summary>
         public WindInputs Wind { get; set; }
 
+        /// <summary>The building model JSON, or null (an older file).</summary>
+        public string Model { get; set; }
+
         public LoadsInfo Loads { get; set; }
 
         public bool IsOlderDrawingFile => Wind == null;
@@ -181,7 +193,7 @@ namespace ShearWallCalculator.Interfaces
 
         /// <summary>The file text for this project (also used to tell whether there are unsaved changes).</summary>
         /// <param name="upperLevels">Levels 2 and 3, bottom to top (none for one story).</param>
-        public static string ToJson(ShearWallCalculatorBase calculator, WindInputs wind, bool linkedToWind, IEnumerable<ShearWallCalculatorBase> upperLevels = null)
+        public static string ToJson(ShearWallCalculatorBase calculator, WindInputs wind, bool linkedToWind, IEnumerable<ShearWallCalculatorBase> upperLevels = null, string model = null)
         {
             var settings = Settings();
             var upper = upperLevels?.Where(c => c != null).Select(c => JObject.Parse(JsonConvert.SerializeObject(c, settings))).ToList();
@@ -190,13 +202,14 @@ namespace ShearWallCalculator.Interfaces
                 Wind = wind,
                 Walls = calculator == null ? null : JObject.Parse(JsonConvert.SerializeObject(calculator, settings)),
                 UpperLevels = upper != null && upper.Count > 0 ? upper : null,
+                Model = string.IsNullOrEmpty(model) ? null : JObject.Parse(model),
                 Loads = new LoadsInfo { LinkedToWind = linkedToWind, Vx = calculator?.V_x ?? 0, Vy = calculator?.V_y ?? 0 },
             };
             return JsonConvert.SerializeObject(file, settings);
         }
 
-        public static void Save(string path, ShearWallCalculatorBase calculator, WindInputs wind, bool linkedToWind, IEnumerable<ShearWallCalculatorBase> upperLevels = null) =>
-            File.WriteAllText(path, ToJson(calculator, wind, linkedToWind, upperLevels));
+        public static void Save(string path, ShearWallCalculatorBase calculator, WindInputs wind, bool linkedToWind, IEnumerable<ShearWallCalculatorBase> upperLevels = null, string model = null) =>
+            File.WriteAllText(path, ToJson(calculator, wind, linkedToWind, upperLevels, model));
 
         public static ProjectContents Load(string path) => Read(File.ReadAllText(path));
 
@@ -229,6 +242,7 @@ namespace ShearWallCalculator.Interfaces
                 UpperLevels = (file.UpperLevels ?? new List<JObject>()).Select(o => ReadCalculator(o, settings)).ToList(),
                 Wind = file.Wind,
                 Loads = file.Loads,
+                Model = file.Model?.ToString(Formatting.None),
             };
         }
 

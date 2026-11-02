@@ -26,6 +26,12 @@ namespace ShearWallVisualizer.Controls
         /// <summary>The × on a row: ("Wall" or "Diaphragm", id).</summary>
         public event Action<string, int> DeleteRequested;
 
+        /// <summary>
+        /// True when the wall heights come from the building model's levels (the story height, or from the level that braces a
+        /// taller wall): the column is shown but not edited here.
+        /// </summary>
+        public bool HeightsFromLevels { get; set; }
+
         private readonly SortState wallSort = new SortState(), diaphragmSort = new SortState();
 
         private readonly Grid wallsHost = new Grid();
@@ -115,7 +121,10 @@ namespace ShearWallVisualizer.Controls
                 wallTable.Number(r, c++, w.Start.X, v => MoveWall(w, v, w.Start.Y, w.WallLength), id);
                 wallTable.Number(r, c++, w.Start.Y, v => MoveWall(w, w.Start.X, v, w.WallLength), id);
                 wallTable.Number(r, c++, w.WallLength, v => v > 0 && MoveWall(w, w.Start.X, w.Start.Y, v), id);
-                wallTable.Number(r, c++, w.WallHeight, v => { if (v <= 0) return false; w.WallHeight = v; Changed(); return true; }, id);
+                if (HeightsFromLevels)
+                    wallTable.Text(r, c++, Ui.Num(w.WallHeight, "0.##"), id, Ui.InkSecondary, tip: "From the levels: change the story height (Add floor, or the plate heights in Wind Setup)");
+                else
+                    wallTable.Number(r, c++, w.WallHeight, v => { if (v <= 0) return false; w.WallHeight = v; Changed(); return true; }, id);
                 wallTable.Text(r, c++, Ui.Num(w.End.X, "0.##"), id, Ui.InkSecondary);
                 wallTable.Text(r, c++, Ui.Num(w.End.Y, "0.##"), id, Ui.InkSecondary);
                 wallTable.Text(r, c++, Ui.Num(w.WallRigidity, "0.000"), id, Ui.InkSecondary);

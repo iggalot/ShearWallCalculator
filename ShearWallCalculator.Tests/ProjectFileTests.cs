@@ -107,6 +107,21 @@ namespace ShearWallCalculator.Tests
             Assert.AreNotEqual(ProjectSerializer.ToJson(Drawing(), Wind(), true), ProjectSerializer.ToJson(Drawing(), changed, true));
         }
 
+        /// <summary>The building model rides in the project as JSON (the source of truth for the plan); the text is the same after a round trip.</summary>
+        [TestMethod]
+        public void BuildingModel_RoundTrips_AndCountsAsAChange()
+        {
+            const string model = "{\"Id\":\"B\",\"Name\":\"Shop\",\"Levels\":[{\"Id\":\"L1\",\"Name\":\"Ground\",\"Elevation\":0},{\"Id\":\"L2\",\"Name\":\"Level 2\",\"Elevation\":9.5}],\"Walls\":[]}";
+            string json = ProjectSerializer.ToJson(Drawing(), Wind(), true, null, model);
+            var read = ProjectSerializer.Read(json);
+            Assert.IsNotNull(read.Model);
+            Assert.AreEqual(model, read.Model, "the same JSON (compact)");
+            Assert.AreEqual(json, ProjectSerializer.ToJson(read.Calculator, read.Wind, true, null, read.Model), "saved again unchanged");
+            Assert.AreNotEqual(json, ProjectSerializer.ToJson(Drawing(), Wind(), true, null, model.Replace("9.5", "10")), "a model edit is an unsaved change");
+            Assert.IsNull(ProjectSerializer.Read(ProjectSerializer.ToJson(Drawing(), Wind(), true)).Model, "no model: made from the calculators on opening");
+            Assert.IsFalse(ProjectSerializer.ToJson(Drawing(), Wind(), true).Contains("\"Model\""), "no empty Model in files without one");
+        }
+
         [TestMethod]
         public void OlderDrawingFile_StillOpens_WithoutWindInputs()
         {
