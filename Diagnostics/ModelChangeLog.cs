@@ -52,6 +52,8 @@ namespace ShearWallCalculator.Diagnostics
             s.Settings["SDPWS edition"] = SdpwsSource.EditionName(ds.Edition);
             s.Settings["hold-down pool"] = ds.HoldownsFromStandardList ? "company standard list" : "full catalog";
             s.Settings["sheathing for new walls"] = ds.NewWallDesign == null ? "default" : string.Join("; ", Describe(ds.NewWallDesign, designer).Select(kv => kv.Key + " " + kv.Value));
+            if (ds.NewInteriorWallDesign != null)
+                s.Settings["sheathing for new interior walls"] = string.Join("; ", Describe(ds.NewInteriorWallDesign, designer).Select(kv => kv.Key + " " + kv.Value));
 
             if (calc.LoadCases != null && calc.LoadCases.Count > 0)
                 foreach (var c in calc.LoadCases)

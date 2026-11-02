@@ -33,10 +33,22 @@ namespace ShearWallVisualizer.Controls
         private readonly SortState sort = new SortState();
         private GridSorter sorter;
 
-        private static readonly Brush Ink = Frozen("#0B0B0B"), InkSecondary = Frozen("#52514E"), Hairline = Frozen("#D5DAE1"),
-                                      HeaderFill = Frozen("#EEF1F5"), PassInk = Frozen("#1E6B33"), FailInk = Frozen("#B3261E"),
-                                      PassFill = Frozen("#E7F4EA"), FailFill = Frozen("#FCE8E6"), SelectedFill = Frozen("#E4EDFA"),
-                                      Surface = Frozen("#F7F8FA");
+        private static readonly Brush Ink = Ui.Ink, InkSecondary = Ui.InkSecondary, Hairline = Ui.Hairline, HeaderFill = Ui.HeaderFill,
+                                      PassInk = Ui.PassInk, FailInk = Ui.FailInk, FailFill = Ui.FailFill, SelectedFill = Ui.SelectedFill, Surface = Ui.Surface;
+
+        /// <summary>The row fill of each wall when it is not selected (a light tint for a failing wall).</summary>
+        private readonly Dictionary<int, Brush> rowFill = new Dictionary<int, Brush>();
+
+        /// <summary>How many columns fit: every column, or fewer (the hidden numbers are in the details below the table).</summary>
+        internal enum Density { Full, Medium, Narrow }
+        private Density density = Density.Full;
+        private readonly CheckBox cbAllColumns = new CheckBox
+        {
+            Content = "All columns", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(16, 0, 0, 0),
+            ToolTip = "Show every column even when the panel is narrow (the table then scrolls sideways). Unticked, the table drops " +
+                      "the columns it has no room for; their numbers are in the details of the selected wall.",
+        };
+        private readonly ScrollViewer tableScroll;
 
         private readonly RadioButton rbAsd = new RadioButton { Content = "ASD (0.6W)", Margin = new Thickness(0, 0, 12, 0), VerticalAlignment = VerticalAlignment.Center };
         private readonly RadioButton rbLrfd = new RadioButton { Content = "LRFD (1.0W)", Margin = new Thickness(0, 0, 20, 0), VerticalAlignment = VerticalAlignment.Center };
@@ -90,6 +102,8 @@ namespace ShearWallVisualizer.Controls
             bar.Children.Add(tbTwoFaces);
             bar.Children.Add(btnAuto);
             bar.Children.Add(tbSummary);
+            bar.Children.Add(cbAllColumns);
+            cbAllColumns.Click += (s, e) => UpdateDensity(force: true);
 
             detailsCard = new Border
             {
@@ -104,13 +118,52 @@ namespace ShearWallVisualizer.Controls
             root.Children.Add(bar);
             root.Children.Add(tbNote);
             root.Children.Add(detailsCard);
-            root.Children.Add(new ScrollViewer
+            tableScroll = new ScrollViewer
             {
                 Content = new Border { Background = Brushes.White, BorderBrush = Hairline, BorderThickness = new Thickness(1), Child = table, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top },
                 HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
                 VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            });
+            };
+            tableScroll.SizeChanged += (s, e) => { if (e.WidthChanged) UpdateDensity(force: false); };
+            root.Children.Add(tableScroll);
             Content = root;
+        }
+
+        /// <summary>
+        /// The columns that fit the width the table has (any monitor, any scaling): all of them when there is room, or the
+        /// medium or narrow set. The wall, its check mark and the edit boxes always stay; the numbers dropped are in the details.
+        /// </summary>
+        private void UpdateDensity(bool force)
+        {
+            double room = tableScroll.ActualWidth - SystemParameters.VerticalScrollBarWidth - 4;
+            var d = cbAllColumns.IsChecked == true || room <= 0 ? Density.Full : DensityFor(room);
+            if (d == density && !force) return;
+            density = d;
+            if (calc != null && designer != null && results.Count > 0)
+            {
+                ClearTable();
+                BuildTable();
+            }
+        }
+
+        /// <summary>The fullest set of columns that fits in <paramref name="room"/> (DIPs).</summary>
+        internal static Density DensityFor(double room) =>
+            room >= TableWidth(Density.Full) ? Density.Full : room >= TableWidth(Density.Medium) ? Density.Medium : Density.Narrow;
+
+        /// <summary>The width of the table's columns in a density (the status column at its least).</summary>
+        internal static double TableWidth(Density d) => Columns.Where(c => Shows(c.level, d)).Sum(c => WidthIn(c, d));
+
+        private static bool Shows(int level, Density d) => level <= (d == Density.Full ? 2 : d == Density.Medium ? 1 : 0);
+
+        private static double WidthIn((string header, double width, string tip, int level) c, Density d) =>
+            d == Density.Narrow && c.header.StartsWith("Face") ? 112 : c.width;
+
+        private void ClearTable()
+        {
+            table.Children.Clear();
+            table.RowDefinitions.Clear();
+            table.ColumnDefinitions.Clear();
+            rowFill.Clear();
         }
 
         /// <summary>Shows the walls and results. <paramref name="message"/> replaces the table when there is nothing to design.</summary>
@@ -138,9 +191,7 @@ namespace ShearWallVisualizer.Controls
                               ? "Flexible diaphragm: each wall line takes its tributary load, plus the case torsion by equivalent tributary weights, split among its walls by rigidity. "
                               : "Rigid diaphragm: load shared by wall rigidity, plus torsion. ") + SdpwsSource.TableSource;
 
-            table.Children.Clear();
-            table.RowDefinitions.Clear();
-            table.ColumnDefinitions.Clear();
+            ClearTable();
             details.Children.Clear();
 
             if (message != null || calc == null || designer == null)
@@ -154,7 +205,9 @@ namespace ShearWallVisualizer.Controls
 
             btnAuto.IsEnabled = true;
             int pass = results.Values.Count(r => r.Pass);
-            tbSummary.Text = $"{pass} of {results.Count} walls pass";
+            int close = results.Values.Count(r => r.State == DesignState.Close);
+            tbSummary.Text = $"{pass} of {results.Count} walls pass" + (close > 0 ? $"  ·  {Ui.Mark(DesignState.Close)} {close} close to the limit" : "") +
+                             (pass < results.Count ? $"  ·  {Ui.Mark(DesignState.Fail)} {results.Count - pass} fail" : "");
             tbSummary.Foreground = pass == results.Count ? PassInk : FailInk;
             BuildTable();
             if (!results.ContainsKey(selectedWall) && results.Count > 0) // start on the first wall that fails
@@ -167,33 +220,54 @@ namespace ShearWallVisualizer.Controls
 
         // ------------------------------------------------------------------ table
 
-        private static readonly (string header, double width, string tip)[] Columns =
+        /// <summary>
+        /// The table's columns. Level: 0 always shown, 1 dropped when the panel is narrow, 2 shown only when every column
+        /// fits (the numbers dropped are in the details of the selected wall).
+        /// </summary>
+        private static readonly (string header, double width, string tip, int level)[] Columns =
         {
-            ("Wall", 50, "Wall number and direction"),
-            ("L (ft)", 42, "Wall length"),
-            ("V (k)", 44, "Largest shear on the wall over all load cases, strength level"),
-            ("Face 1", 134, "Sheathing on one face: any row of SDPWS Table 4.3A (wood panels), 4.3B (wood over gypsum) or 4.3C (gypsum, plaster)"),
-            ("Nails", 46, "Edge fastener spacing (Tables 4.3A/B); Table 4.3C rows carry their own spacing"),
-            ("Face 2", 134, "The other face: none, the same as face 1, or another material (two-face rule in the details below)"),
-            ("Nails", 46, "Edge fastener spacing of face 2"),
-            ("Framing", 64, "Framing species group (Table 4.3A footnote)"),
-            ("Dead (plf)", 46, "Dead load on the wall that resists overturning (0 = none)"),
-            ("Hold-down type", 70, "HDU or HTT anchors the wall end to the foundation; a strap ties it to the wall below"),
-            ("v (plf)", 48, "Unit shear demand"),
-            ("Allowed", 56, "Design unit shear capacity"),
-            ("Ratio", 44, "Demand / capacity"),
-            ("T (lb)", 50, "Hold-down tension at ASD"),
-            ("Hold-down", 84, "Lightest Simpson model at or above T"),
-            ("Status", 80, ""),
-            ("", 30, ""),
+            ("Wall", 50, "Wall number and direction", 0),
+            ("Check", 62, "✓ passes · ▲ passes at 90 % or more of its shear capacity · ✗ fails. The number is the shear ratio (demand / capacity); " +
+                          "h/b: the wall is too slender; HD: no hold-down is strong enough. Why it fails is in the Status column.", 0),
+            ("L (ft)", 42, "Wall length", 2),
+            ("V (k)", 44, "Largest shear on the wall over all load cases, strength level", 2),
+            ("Face 1", 134, "Sheathing on one face: any row of SDPWS Table 4.3A (wood panels), 4.3B (wood over gypsum) or 4.3C (gypsum, plaster). " +
+                            "New walls start with Structural I on an exterior wall, gypsum wallboard on an interior wall.", 0),
+            ("Nails", 46, "Edge fastener spacing (Tables 4.3A/B); Table 4.3C rows carry their own spacing", 0),
+            ("Face 2", 134, "The other face: none, the same as face 1, or another material (two-face rule in the details below)", 0),
+            ("Nails", 46, "Edge fastener spacing of face 2", 0),
+            ("Framing", 64, "Framing species group (Table 4.3A footnote)", 1),
+            ("Dead (plf)", 46, "Dead load on the wall that resists overturning (0 = none)", 1),
+            ("Hold-down type", 70, "HDU or HTT anchors the wall end to the foundation; a strap ties it to the wall below", 1),
+            ("v (plf)", 48, "Unit shear demand", 2),
+            ("Allowed", 56, "Design unit shear capacity", 2),
+            ("Ratio", 44, "Demand / capacity", 1),
+            ("T (lb)", 50, "Hold-down tension at ASD", 2),
+            ("Hold-down", 84, "Lightest Simpson model at or above T", 0),
+            ("Status", 80, "", 0),
+            ("", 30, "", 0),
         };
+
+        /// <summary>The short text of the check column: the mark and the shear ratio, or what fails when it is not the shear.</summary>
+        internal static string CheckText(WallDesignResult r)
+        {
+            string mark = Ui.Mark(r.State);
+            if (!r.AspectOk) return mark + " h/b";
+            if (double.IsNaN(r.Capacity) || double.IsInfinity(r.ShearRatio)) return mark + " –";
+            if (r.ShearOk && !r.HoldownOk) return mark + " HD";
+            return $"{mark} {r.ShearRatio:0.00}";
+        }
 
         private void BuildTable()
         {
             sorter = new GridSorter(table, sort);
-            foreach (var c in Columns) table.ColumnDefinitions.Add(c.header == "Status"
-                ? new ColumnDefinition { Width = GridLength.Auto, MinWidth = c.width }   // the status text is never cut off
-                : new ColumnDefinition { Width = new GridLength(c.width) });
+            foreach (var c in Columns)
+            {
+                if (!Shows(c.level, density)) table.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0) });
+                else if (c.header == "Status") // the status text is not cut off, except when the panel is narrow (then its tooltip has it)
+                    table.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto, MinWidth = c.width, MaxWidth = density == Density.Narrow ? 200 : double.PositiveInfinity });
+                else table.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(WidthIn(c, density)) });
+            }
             table.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             for (int c = 0; c < Columns.Length; c++)
             {
@@ -202,6 +276,7 @@ namespace ShearWallVisualizer.Controls
                     Background = HeaderFill, BorderBrush = Hairline, BorderThickness = new Thickness(0, 0, 0, 1), Padding = new Thickness(4, 5, 4, 5),
                     Child = new TextBlock { Text = Columns[c].header, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap },
                     ToolTip = string.IsNullOrEmpty(Columns[c].tip) ? null : Columns[c].tip,
+                    Visibility = Shows(Columns[c].level, density) ? Visibility.Visible : Visibility.Collapsed,
                 };
                 Grid.SetColumn(h, c);
                 table.Children.Add(h);
@@ -213,16 +288,33 @@ namespace ShearWallVisualizer.Controls
             {
                 var r = results[id];
                 var wall = calc._wall_system._walls[id];
+                var state = r.State;
                 table.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-                var back = new Border { Background = id == selectedWall ? SelectedFill : Brushes.Transparent, BorderBrush = Hairline, BorderThickness = new Thickness(0, 0, 0, 1), Tag = id };
+                rowFill[id] = state == DesignState.Fail ? Ui.FailRowFill : Brushes.Transparent;
+                var back = new Border { Background = id == selectedWall ? SelectedFill : rowFill[id], BorderBrush = Hairline, BorderThickness = new Thickness(0, 0, 0, 1), Tag = id };
                 Grid.SetRow(back, row);
                 Grid.SetColumnSpan(back, Columns.Length);
                 back.MouseLeftButtonDown += (s, e) => Select((int)((Border)s).Tag);
                 table.Children.Add(back);
 
+                // the stripe at the row's left edge: vermilion (fail) or amber (close); not hit-testable, it moves with the row when sorted
+                var stripe = new Border { Width = 4, HorizontalAlignment = HorizontalAlignment.Left, Background = Ui.StateStripe(state), IsHitTestVisible = false, Margin = new Thickness(0, 0, 0, 1) };
+                Grid.SetRow(stripe, row);
+                table.Children.Add(stripe);
+
                 int col = 0;
                 Cell(row, col++, $"{id} ({(wall.WallDir == WallDirs.EastWest ? "E-W" : "N-S")})", id);
+                var badge = new Border
+                {
+                    Background = Ui.StateFill(state), CornerRadius = new CornerRadius(4), Margin = new Thickness(3, 3, 3, 3), Padding = new Thickness(5, 1, 5, 1),
+                    Child = new TextBlock { Text = CheckText(r), Foreground = Ui.StateInk(state), FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis },
+                    ToolTip = state == DesignState.Fail ? r.Status : state == DesignState.Close ? $"Passes, at {r.ShearRatio:0.00} of the shear capacity (close to the limit)" : "Passes",
+                    Tag = id,
+                };
+                badge.MouseLeftButtonDown += (s, e) => Select((int)((Border)s).Tag);
+                Put(row, col, badge);
+                sorter.Key(row, col++, (int)state * 100 + (double.IsNaN(r.ShearRatio) || double.IsInfinity(r.ShearRatio) ? 99 : Math.Min(99, r.ShearRatio))); // sorts fails, then close, by ratio
                 Cell(row, col++, r.Length.ToString("0.00"), id);
                 Cell(row, col++, r.V.ToString("0.00"), id);
 
@@ -264,13 +356,15 @@ namespace ShearWallVisualizer.Controls
 
                 Cell(row, col++, double.IsInfinity(r.Demand) ? "-" : r.Demand.ToString("0"), id);
                 Cell(row, col++, double.IsNaN(r.Capacity) ? "-" : r.Capacity.ToString("0"), id);
+                if (!r.ShearOk) Tint(row, col, FailFill);
                 Cell(row, col++, double.IsNaN(r.Capacity) || double.IsInfinity(r.ShearRatio) ? "-" : r.ShearRatio.ToString("0.00"), id, r.ShearOk ? Ink : FailInk, bold: !r.ShearOk);
                 Cell(row, col++, r.TensionAsd.ToString("0"), id);
-                Cell(row, col++, !r.HoldownNeeded ? "no uplift" : r.Holdown?.Model ?? "none fits", id, r.HoldownOk ? Ink : FailInk);
+                if (!r.HoldownOk) Tint(row, col, FailFill);
+                Cell(row, col++, !r.HoldownNeeded ? "no uplift" : r.Holdown?.Model ?? "✗ none fits", id, r.HoldownOk ? Ink : FailInk, bold: !r.HoldownOk);
                 var status = new Border
                 {
-                    Background = r.Pass ? PassFill : FailFill, CornerRadius = new CornerRadius(4), Margin = new Thickness(3, 3, 3, 3), Padding = new Thickness(6, 2, 6, 2),
-                    Child = new TextBlock { Text = (r.Pass ? "✓ " : "✗ ") + r.Status, Foreground = r.Pass ? PassInk : FailInk, FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis },
+                    Background = Ui.StateFill(state), CornerRadius = new CornerRadius(4), Margin = new Thickness(3, 3, 3, 3), Padding = new Thickness(6, 2, 6, 2),
+                    Child = new TextBlock { Text = Ui.Mark(state) + " " + r.Status, Foreground = Ui.StateInk(state), FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis },
                     ToolTip = r.Status, Tag = id,
                 };
                 status.MouseLeftButtonDown += (s, e) => Select((int)((Border)s).Tag);
@@ -295,11 +389,11 @@ namespace ShearWallVisualizer.Controls
             selectedWall = id;
             if (notify) WallSelected?.Invoke(id);
             foreach (var b in table.Children.OfType<Border>().Where(b => Grid.GetColumnSpan(b) == Columns.Length && b.Tag is int))
-                b.Background = (int)b.Tag == id ? SelectedFill : Brushes.Transparent;
+                b.Background = (int)b.Tag == id ? SelectedFill : rowFill.TryGetValue((int)b.Tag, out var fill) ? fill : Brushes.Transparent;
             ShowDetails();
         }
 
-        private void Cell(int row, int col, string text, int id, Brush brush = null, bool bold = false)
+        private TextBlock Cell(int row, int col, string text, int id, Brush brush = null, bool bold = false)
         {
             var t = new TextBlock
             {
@@ -308,6 +402,18 @@ namespace ShearWallVisualizer.Controls
             };
             t.MouseLeftButtonDown += (s, e) => Select(id);
             Put(row, col, t);
+            return t;
+        }
+
+        /// <summary>Tints a whole cell (a failing value): a fill under the cell's content, over the row's own fill.</summary>
+        private void Tint(int row, int col, Brush fill)
+        {
+            var b = new Border { Background = fill, IsHitTestVisible = false, Margin = new Thickness(0, 0, 0, 1),
+                                 Visibility = Shows(Columns[col].level, density) ? Visibility.Visible : Visibility.Collapsed };
+            Grid.SetRow(b, row);
+            Grid.SetColumn(b, col);
+            var back = table.Children.OfType<Border>().First(x => Grid.GetRow(x) == row && Grid.GetColumnSpan(x) == Columns.Length);
+            table.Children.Insert(table.Children.IndexOf(back) + 1, b);
         }
 
         /// <summary>What a cell sorts by: its text, the choice in a box, or the status text.</summary>
@@ -321,6 +427,7 @@ namespace ShearWallVisualizer.Controls
         private void Put(int row, int col, UIElement e)
         {
             if (row > 0) sorter?.Key(row, col, SortValue(e));
+            if (!Shows(Columns[col].level, density)) e.Visibility = Visibility.Collapsed; // a column with no room at this width
             Grid.SetRow(e, row);
             Grid.SetColumn(e, col);
             table.Children.Add(e);
@@ -423,14 +530,26 @@ namespace ShearWallVisualizer.Controls
             }
             detailsCard.Visibility = Visibility.Visible;
             var tools = new WrapPanel { Margin = new Thickness(0, 0, 0, 4) };
-            var useForNew = new Button { Content = "Use this sheathing for new walls", Padding = new Thickness(8, 2, 8, 2), Margin = new Thickness(0, 0, 6, 0),
-                                         ToolTip = "Walls drawn from now on start with this wall's faces, nailing, framing and hold-down type (saved with the project)." };
-            useForNew.Click += (s, e) =>
+            Button UseForNew(bool exterior)
             {
-                calc.DesignSettings.NewWallDesign = r.Inputs.Clone();
-                calc.DesignSettings.NewWallDesign.DeadLoad = 0;
-                DesignChanged?.Invoke(this, EventArgs.Empty);
-            };
+                string which = exterior ? "exterior" : "interior";
+                var b = new Button
+                {
+                    Content = $"Use for new {which} walls", Padding = new Thickness(8, 2, 8, 2), Margin = new Thickness(0, 0, 6, 0),
+                    ToolTip = $"{(exterior ? "Exterior" : "Interior")} walls drawn from now on start with this wall's faces, nailing, framing and hold-down type " +
+                              $"(saved with the project). An exterior wall has any part of its length on the building's outside edge. " +
+                              $"Program default: {(exterior ? "15/32\" Structural I, 8d at 6\", one face" : "1/2\" gypsum wallboard both faces, 7\" edges, blocked")}.",
+                };
+                b.Click += (s, e) =>
+                {
+                    var d = r.Inputs.Clone();
+                    d.DeadLoad = 0;
+                    if (exterior) calc.DesignSettings.NewWallDesign = d;
+                    else calc.DesignSettings.NewInteriorWallDesign = d;
+                    DesignChanged?.Invoke(this, EventArgs.Empty);
+                };
+                return b;
+            }
             var applyAll = new Button { Content = "Same sheathing on every wall", Padding = new Thickness(8, 2, 8, 2),
                                         ToolTip = "Copies this wall's faces, nailing and framing to every wall (dead loads and hold-down types stay)." };
             applyAll.Click += (s, e) =>
@@ -445,7 +564,8 @@ namespace ShearWallVisualizer.Controls
                 }
                 DesignChanged?.Invoke(this, EventArgs.Empty);
             };
-            tools.Children.Add(useForNew);
+            tools.Children.Add(UseForNew(exterior: true));
+            tools.Children.Add(UseForNew(exterior: false));
             tools.Children.Add(applyAll);
             details.Children.Add(tools);
             foreach (var line in Explain(r))

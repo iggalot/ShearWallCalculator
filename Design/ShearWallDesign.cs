@@ -26,8 +26,21 @@ namespace ShearWallCalculator.Design
         /// <summary>The hold-downs and list version when the project was last saved (null in older projects).</summary>
         public HoldownListRecord HoldownList { get; set; }
 
-        /// <summary>The sheathing, nailing and hold-down type given to a newly drawn wall (null: the program default).</summary>
+        /// <summary>
+        /// The sheathing, nailing and hold-down type given to a newly drawn EXTERIOR wall (null: the program default,
+        /// <see cref="WallDesignInputs.ExteriorDefault"/>). Projects saved before interior defaults used it for every new wall.
+        /// </summary>
         public WallDesignInputs NewWallDesign { get; set; }
+
+        /// <summary>The design given to a newly drawn INTERIOR wall (null: the program default, <see cref="WallDesignInputs.InteriorDefault"/>).</summary>
+        public WallDesignInputs NewInteriorWallDesign { get; set; }
+
+        /// <summary>
+        /// A new wall's design (a copy): the project's exterior or interior default, else the program's. An exterior wall is
+        /// one with any part of its length on the building's outside edge.
+        /// </summary>
+        public WallDesignInputs NewWallDesignFor(bool exterior) =>
+            (exterior ? NewWallDesign ?? WallDesignInputs.ExteriorDefault() : NewInteriorWallDesign ?? WallDesignInputs.InteriorDefault()).Clone();
     }
 
     /// <summary>The design choices for one wall (saved with the wall). Defaults: 15/32" Structural I, 8d at 6" o.c., one side.</summary>
@@ -78,6 +91,33 @@ namespace ShearWallCalculator.Design
                 Sheathing = Face1.Material; Thickness = Face1.Thickness; Nail = Face1.Nail; EdgeSpacing = Face1.EdgeSpacing;
             }
             Sides = Face2 == null ? 1 : 2;
+        }
+
+        /// <summary>SDPWS Table 4.3C row of the interior default: 1/2" gypsum wallboard, 7" edge fastening, studs at 16" o.c., blocked (v_w 250 plf).</summary>
+        public const int InteriorGypsumRow = 6;
+
+        /// <summary>The program's default for an exterior wall: 15/32" Structural I, 8d common at 6" edges, one face.</summary>
+        public static WallDesignInputs ExteriorDefault()
+        {
+            var d = new WallDesignInputs();
+            d.SetFaces(new FaceSheathing(), null);
+            return d;
+        }
+
+        /// <summary>
+        /// The program's default for an interior wall: 1/2" gypsum wallboard on both faces (SDPWS Table 4.3C row
+        /// <see cref="InteriorGypsumRow"/>), the same species and hold-down type as the exterior default.
+        /// </summary>
+        public static WallDesignInputs InteriorDefault()
+        {
+            var gyp = new FaceSheathing
+            {
+                Table = SheathingTable.GypsumAndPlaster, Material = SheathingMaterials.SHEATH_MAT_GYPSUM_WALLBOARD,
+                Thickness = NominalPanelThicknesses.THICKNESS_1_2IN, Row = InteriorGypsumRow, EdgeSpacing = 0,
+            };
+            var d = new WallDesignInputs();
+            d.SetFaces(gyp, gyp);
+            return d;
         }
 
         public WallDesignInputs Clone()
@@ -372,6 +412,9 @@ namespace ShearWallCalculator.Design
         public string From { get; set; }
     }
 
+    /// <summary>How a wall's check reads at a glance.</summary>
+    public enum DesignState { Pass, Close, Fail }
+
     /// <summary>All the numbers for one wall, with the code reference for each step.</summary>
     public class WallDesignResult
     {
@@ -429,6 +472,12 @@ namespace ShearWallCalculator.Design
         public bool ShearOk => !double.IsNaN(Capacity) && ShearRatio <= 1.0 + 1e-9;
         public bool HoldownOk => !HoldownNeeded || Holdown != null;
         public bool Pass => AspectOk && ShearOk && HoldownOk;
+
+        /// <summary>A passing wall at or above this shear ratio is shown as close to its limit.</summary>
+        public const double CloseRatio = 0.90;
+
+        /// <summary>Pass, close (passes at a shear ratio of <see cref="CloseRatio"/> or more) or fail: the colour and mark the wall is shown with.</summary>
+        public DesignState State => !Pass ? DesignState.Fail : ShearRatio >= CloseRatio - 1e-9 ? DesignState.Close : DesignState.Pass;
 
         /// <summary>Short reason when the wall does not pass.</summary>
         public string Status =>

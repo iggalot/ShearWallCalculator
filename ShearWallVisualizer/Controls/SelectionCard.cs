@@ -71,9 +71,10 @@ namespace ShearWallVisualizer.Controls
                     ink: r.HoldownOk ? Ui.Ink : Ui.FailInk);
                 body.Children.Add(new Border
                 {
-                    Background = r.Pass ? Ui.Frozen("#E7F4EA") : Ui.Frozen("#FCE8E6"), CornerRadius = new CornerRadius(4), Padding = new Thickness(8, 3, 8, 3),
+                    Background = Ui.StateFill(r.State), CornerRadius = new CornerRadius(4), Padding = new Thickness(8, 3, 8, 3),
                     Margin = new Thickness(0, 6, 0, 0), HorizontalAlignment = HorizontalAlignment.Left,
-                    Child = new TextBlock { Text = (r.Pass ? "✓ " : "✗ ") + r.Status, Foreground = r.Pass ? Ui.PassInk : Ui.FailInk, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap },
+                    Child = new TextBlock { Text = Ui.Mark(r.State) + " " + (r.State == ShearWallCalculator.Design.DesignState.Close ? $"OK, shear ratio {r.ShearRatio:0.00} (close to the limit)" : r.Status),
+                                            Foreground = Ui.StateInk(r.State), FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap },
                 });
             }
             Buttons(("Design", () => OpenDesign?.Invoke(kind, id)), ("Edit", () => EditGeometry?.Invoke(kind, id)), ("Delete", () => DeleteRequested?.Invoke(kind, id)));

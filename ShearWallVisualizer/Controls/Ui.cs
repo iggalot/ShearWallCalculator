@@ -15,10 +15,28 @@ namespace ShearWallVisualizer.Controls
     /// </summary>
     internal static class Ui
     {
+        // Status colours are colour-blind safe (Okabe-Ito based) and never green/red: pass is a quiet slate blue, close to the
+        // limit amber, fail vermilion. Each also has a mark (✓ ▲ ✗), so a status never depends on colour alone.
         public static readonly Brush Ink = Frozen("#0B0B0B"), InkSecondary = Frozen("#52514E"), InkMuted = Frozen("#7A7974"),
                                      Hairline = Frozen("#D5DAE1"), HeaderFill = Frozen("#EEF1F5"), Surface = Frozen("#F7F8FA"),
-                                     SelectedFill = Frozen("#E4EDFA"), PassInk = Frozen("#1E6B33"), FailInk = Frozen("#B3261E"),
+                                     SelectedFill = Frozen("#E4EDFA"), PassInk = Frozen("#2B4C7E"), FailInk = Frozen("#B54708"),
+                                     PassFill = Frozen("#EEF2F8"), FailFill = Frozen("#FBE3D3"), CloseInk = Frozen("#8A5A00"), CloseFill = Frozen("#FDF0CC"),
+                                     FailStripe = Frozen("#D55E00"), CloseStripe = Frozen("#E69F00"), FailRowFill = Frozen("#FEF5EF"),
                                      WarnInk = Frozen("#8A5300"), WarnFill = Frozen("#FDF3E1"), InfoFill = Frozen("#EEF4FC"), InfoLine = Frozen("#2A78D6");
+
+        /// <summary>The mark of a design state: ✓ pass, ▲ close to the limit, ✗ fail.</summary>
+        public static string Mark(ShearWallCalculator.Design.DesignState s) =>
+            s == ShearWallCalculator.Design.DesignState.Fail ? "✗" : s == ShearWallCalculator.Design.DesignState.Close ? "▲" : "✓";
+
+        public static Brush StateInk(ShearWallCalculator.Design.DesignState s) =>
+            s == ShearWallCalculator.Design.DesignState.Fail ? FailInk : s == ShearWallCalculator.Design.DesignState.Close ? CloseInk : PassInk;
+
+        public static Brush StateFill(ShearWallCalculator.Design.DesignState s) =>
+            s == ShearWallCalculator.Design.DesignState.Fail ? FailFill : s == ShearWallCalculator.Design.DesignState.Close ? CloseFill : PassFill;
+
+        /// <summary>The edge stripe of a table row: vermilion for a fail, amber when close, none when it passes.</summary>
+        public static Brush StateStripe(ShearWallCalculator.Design.DesignState s) =>
+            s == ShearWallCalculator.Design.DesignState.Fail ? FailStripe : s == ShearWallCalculator.Design.DesignState.Close ? CloseStripe : Brushes.Transparent;
 
         public static Brush Frozen(string hex)
         {

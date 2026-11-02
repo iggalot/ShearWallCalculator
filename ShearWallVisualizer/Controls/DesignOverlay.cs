@@ -20,7 +20,7 @@ namespace ShearWallVisualizer.Controls
         private static readonly Typeface FaceBold = new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
         private static readonly Brush TagFill = Ui.Frozen("#FFFFFF"), LegendFill = Ui.Frozen("#F2FFFFFF");
         private static readonly Brush HoldownFill = Ui.Frozen("#1F2933");
-        private static readonly Pen TagPass = Frozen(Ui.PassInk, 1.2), TagFail = Frozen(Ui.FailInk, 1.6), HairlinePen = Frozen(Ui.Hairline, 1),
+        private static readonly Pen TagPass = Frozen(Ui.PassInk, 1.2), TagFail = Dashed(Ui.FailStripe, 1.8), TagClose = Frozen(Ui.CloseStripe, 1.6), HairlinePen = Frozen(Ui.Hairline, 1),
                                     HoldownEdge = Frozen(Brushes.White, 1), HoldownMissing = Frozen(Ui.FailInk, 2);
 
         private const double TagOffset = 15;   // px from the wall line to the tag center
@@ -30,6 +30,13 @@ namespace ShearWallVisualizer.Controls
         private static Pen Frozen(Brush b, double t)
         {
             var p = new Pen(b, t);
+            p.Freeze();
+            return p;
+        }
+
+        private static Pen Dashed(Brush b, double t)
+        {
+            var p = new Pen(b, t) { DashStyle = new DashStyle(new double[] { 2.5, 1.5 }, 0) };
             p.Freeze();
             return p;
         }
@@ -73,7 +80,7 @@ namespace ShearWallVisualizer.Controls
                 Rect box = TagBox(mid, n, tag.size, vertical);
                 if (!bounds.Contains(box)) box = TagBox(mid, -n, tag.size, vertical);
                 if (!bounds.Contains(box)) continue;
-                DrawTag(ctx, box, tag, r.Pass);
+                DrawTag(ctx, box, tag, r.State);
                 drawn.Union(box);
             }
 
@@ -122,10 +129,10 @@ namespace ShearWallVisualizer.Controls
             return new Rect(mid.X - s.Width / 2, mid.Y + n.Y * TagOffset - s.Height / 2, s.Width, s.Height);
         }
 
-        /// <summary>"SW2 | HDU2" in a rounded box, outlined green (passes) or red.</summary>
-        private static void DrawTag(DrawingContext ctx, Rect box, TagText t, bool pass)
+        /// <summary>"SW2 | HDU2" in a rounded box, outlined slate blue (passes), amber (close to the limit) or dashed vermilion (fails).</summary>
+        private static void DrawTag(DrawingContext ctx, Rect box, TagText t, ShearWallCalculator.Design.DesignState state)
         {
-            ctx.DrawRoundedRectangle(TagFill, pass ? TagPass : TagFail, box, 4, 4);
+            ctx.DrawRoundedRectangle(TagFill, state == ShearWallCalculator.Design.DesignState.Fail ? TagFail : state == ShearWallCalculator.Design.DesignState.Close ? TagClose : TagPass, box, 4, 4);
             ctx.DrawText(t.Mark, new Point(box.X + 5, box.Y + (box.Height - t.Mark.Height) / 2));
             if (t.Holdown != null)
             {

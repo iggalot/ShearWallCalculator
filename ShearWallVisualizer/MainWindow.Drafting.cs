@@ -301,15 +301,27 @@ namespace ShearWallVisualizer
 
         // ------------------------------------------------------------------ design colours, level caption
 
-        private static readonly Pen PassPen = FrozenPen(Color.FromRgb(0x1E, 0x8E, 0x3E), 4);
-        private static readonly Pen FailPen = FrozenPen(Color.FromRgb(0xC6, 0x28, 0x28), 4);
+        private static readonly Pen ClosePen = FrozenPen(Color.FromRgb(0xE6, 0x9F, 0x00), 4);
+        private static readonly Pen FailPen = DashedPen(Color.FromRgb(0xD5, 0x5E, 0x00), 5);
 
-        /// <summary>A shear wall of the level shown: green when its design check passes, red when it fails, the usual blue before a check.</summary>
+        private static Pen DashedPen(Color c, double thickness)
+        {
+            var b = new SolidColorBrush(c);
+            b.Freeze();
+            var p = new Pen(b, thickness) { DashStyle = new DashStyle(new double[] { 2.2, 0.8 }, 0), DashCap = PenLineCap.Flat };
+            p.Freeze();
+            return p;
+        }
+
+        /// <summary>
+        /// A shear wall of the level shown, by its design check: the usual blue when it passes (or before a check), amber when
+        /// close to its limit, vermilion and dashed when it fails. No green or red: the dash tells a fail without colour.
+        /// </summary>
         private Pen DesignPen(Wall w)
         {
             var key = CurrentStory?.Key(w.Id);
             if (key == null || !designResults.TryGetValue(key.Value, out var check)) return null;
-            return check.Pass ? PassPen : FailPen;
+            return check.State == DesignState.Fail ? FailPen : check.State == DesignState.Close ? ClosePen : null;
         }
 
         private string LevelCaption(Level l)
