@@ -106,6 +106,7 @@
     <Compile Include="ShearWallCalculator_Envelope.cs" />
     <Compile Include="LateralLoadCase.cs" />
     <Compile Include="StoryCascade.cs" />
+    <Compile Include="LoadPath.cs" />
     <Compile Include="FloorEdits.cs" />
     <Compile Include="ShearWallSelector.cs" />
     <Compile Include="NDSProvisions\SimpsonCatalog\BaseConnectorManager.cs" />

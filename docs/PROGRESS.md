@@ -2,6 +2,38 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-02 — The hold-down load path: beams, columns, and what each hold-down type can anchor to
+
+- **Building model** (BuildingModel dae5aff, 9174418):
+  - **Beam (B):** two ends, in the framing of a level above the ground.
+  - **Column (P):** one click. It runs down through the floors until a wall, beam or column carries it, or to the foundation, so it can be a multistory column (`BuildingEdits.ColumnBase`).
+  - Both are saved in the model (file version 4), moved, copied, copied to another level, mirrored, deleted with their story, and checked.
+  - Shown in plan (a brown dash-dot beam, a filled square column) and in 3D (boxes; a column stops under the beam it carries).
+  - Both apps draw them: SWC uses the same editor, so one drawn there is saved to the model.
+- **Core `HoldownRules`** (what a family can anchor to):
+  - **STHD:** the foundation only (cast into concrete).
+  - **Straps:** a wall or a column below, or wrapped around a beam; never the foundation.
+  - **HDUE / DTT / HDU:** the foundation, or a rod into the post of a wall or column directly below; never a beam.
+  - **LTT / HTT:** taken like HDUE (see "Needs your engineering confirmation").
+- **Core `LoadPathTrace`**, run top down with the design. Each hold-down point goes to one of:
+  - **A wall below.** A wall on the same line is already in that wall's design. A beam end or column base on a wall is added to that wall's forces from above, for both wind directions (conservative).
+  - **A column.** The load goes down to the column's base, which is traced again; at the ground it is a foundation anchor.
+  - **A beam.** Simple-span reactions, R_start = ΣT(L−a)/L and R_end = ΣT·a/L, per wind direction, with the worse one taken. Each beam end is a new hold-down point, sized for its reaction and traced to the wall or column under it.
+  - **The foundation.**
+  - **Nothing:** an error.
+- **Sizing and flags:**
+  - Where a wall's hold-down type cannot anchor to what is under it, the connection is sized as the type that can, and flagged (warning `HoldownTypeReplaced`).
+  - New connections (beam ends, column bases) are sized from the project's catalog: a strap onto wood, the chosen anchored hold-down at the foundation.
+- **SWC plan:**
+  - Beams that carry hold-downs show their reactions.
+  - Beam ends and column bases are brown squares with their reaction, support and model.
+  - A replaced type shows in yellow.
+  - The foundation view lists the column-base anchors too.
+- **Tests:** `LoadPathTests` (4), `BeamColumnTests` (5), `View3D_ShowsBeamsAndColumns`. Totals: SWC 180, BuildingModel 70, Sketch 53.
+- **Next:**
+  - The beam/column detail when one is selected (loads, reactions, attachments).
+  - The wall elevation view with its hold-downs and those from above, and the same drawing in the report.
+
 ## 2026-11-02 — Where the hold-downs land: on the wall below, on nothing, on the foundation (SWC)
 
 - **Core** `StoryCascade.Landings`:
@@ -735,6 +767,10 @@ against your printed standard.
    concept; wind torsion comes from the Fig. 27.3-8 load cases (roadmap M6).
 10. **Base shear scope.** Base shear uses wall pressures only. Horizontal roof components, the 16 psf
     minimum and the torsional load cases come with M6.
+11. **Hold-down families, floor to floor** (`HoldownRules`). LTT / HTT is taken like HDUE: the foundation,
+    or a rod into a post directly below. Confirm the catalog's floor-to-floor installations for LTT / HTT.
+    Beam ends and column bases on a wall add their reaction to that wall's overturning for both wind
+    directions, which is conservative.
 
 ## Next
 

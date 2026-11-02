@@ -307,10 +307,53 @@ namespace ShearWallVisualizer
         private List<Dictionary<int, WallDesignResult>> CheckAllLevels(IList<ShearWallCalculatorBase> calcs)
         {
             var all = new Dictionary<int, WallDesignResult>[calcs.Count];
-            Dictionary<int, WallDesignResult> above = null;
-            for (int k = calcs.Count - 1; k >= 0; k--)
-                all[k] = above = CheckLevel(calcs[k], k + 1 < calcs.Count ? calcs[k + 1] : null, above, k + 2);
+            loadPath = DesignTopDown(calcs, 0, all);
             return all.ToList();
+        }
+
+        /// <summary>The last load-path trace of the hold-downs (beams, columns, the foundation), from <see cref="CheckAllLevels"/>.</summary>
+        private LoadPathTrace loadPath;
+
+        /// <summary>
+        /// The stories from the top down to <paramref name="down"/>: each is checked with the forces from above (the walls on
+        /// the same line, plus the beam ends and column bases standing on it), then its hold-downs are traced to what carries them.
+        /// </summary>
+        private LoadPathTrace DesignTopDown(IList<ShearWallCalculatorBase> calcs, int down, Dictionary<int, WallDesignResult>[] all)
+        {
+            var trace = NewLoadPath(calcs);
+            Dictionary<int, WallDesignResult> above = null;
+            for (int k = calcs.Count - 1; k >= down; k--)
+            {
+                all[k] = above = CheckLevel(calcs[k], k + 1 < calcs.Count ? calcs[k + 1] : null, above, k + 2, trace.ExtraOn(k));
+                trace.Land(k, calcs[k]?._wall_system?._walls, above, k > 0 ? calcs[k - 1]?._wall_system?._walls : null);
+            }
+            return trace;
+        }
+
+        /// <summary>A trace with the model's beams and columns by story, sizing new connections from the project's catalog.</summary>
+        private LoadPathTrace NewLoadPath(IList<ShearWallCalculatorBase> calcs)
+        {
+            var beams = new List<FramingBeam>();
+            var columns = new List<FramingColumn>();
+            if (building != null && stories.Count > 0)
+            {
+                int StoryOf(string levelId) => stories.FindIndex(s => s.Level.Id == levelId);
+                foreach (var bm in building.Beams)
+                {
+                    int i = StoryOf(bm.LevelId);
+                    if (i >= 0) beams.Add(new FramingBeam { Id = bm.Id, Start = new Point(bm.Start.X, bm.Start.Y), End = new Point(bm.End.X, bm.End.Y), OnStory = i });
+                }
+                foreach (var c in building.Columns)
+                {
+                    int top = StoryOf(c.TopLevelId);
+                    int below = StoryOf(c.BaseLevelId);
+                    int bas = building.Ground != null && c.BaseLevelId == building.Ground.Id ? 0 : below < 0 ? -1 : below + 1;
+                    if (top >= 0 && bas >= 0 && bas <= top) columns.Add(new FramingColumn { Id = c.Id, At = new Point(c.At.X, c.At.Y), BaseStory = bas, TopStory = top });
+                }
+            }
+            var settings = calcs.FirstOrDefault(c => c != null)?.DesignSettings ?? new DesignSettings();
+            return new LoadPathTrace(beams, columns, (f, species, t) =>
+                designer?.SelectHoldown(f, species, t, settings.HoldownsFromStandardList, settings.StrapHoldownsOrDefault()));
         }
 
         /// <summary>
@@ -321,14 +364,13 @@ namespace ShearWallVisualizer
         {
             int i = levels.IndexOf(calc);
             if (i < 0) return CheckLevel(calc, null, null, 0);
-            Dictionary<int, WallDesignResult> above = null;
-            for (int k = levels.Count - 1; k >= i; k--)
-                above = CheckLevel(levels[k], k + 1 < levels.Count ? levels[k + 1] : null, above, k + 2);
-            return above;
+            var all = new Dictionary<int, WallDesignResult>[levels.Count];
+            DesignTopDown(levels, i, all);
+            return all[i];
         }
 
         private Dictionary<int, WallDesignResult> CheckLevel(ShearWallCalculatorBase calc, ShearWallCalculatorBase upper,
-            Dictionary<int, WallDesignResult> upperDesign, int upperLevel)
+            Dictionary<int, WallDesignResult> upperDesign, int upperLevel, Dictionary<int, List<StackedForce>> extra = null)
         {
             var results = new Dictionary<int, WallDesignResult>();
             if (calc == null || designer == null || !calc.IsValidForCalculation) return results;
@@ -337,6 +379,7 @@ namespace ShearWallVisualizer
                 if (!calc.TotalWallShear.TryGetValue(kv.Key, out double v)) continue;
                 calc.GoverningLoadCase.TryGetValue(kv.Key, out string governing);
                 var above = upper == null ? null : StoryCascade.HoldownForcesOn(kv.Value, upper._wall_system._walls, upperDesign, upperLevel);
+                if (extra != null && extra.TryGetValue(kv.Key, out var more)) (above = above ?? new List<StackedForce>()).AddRange(more);
                 results[kv.Key] = designer.Check(kv.Key, kv.Value, v, governing, calc.DesignSettings, null, above);
             }
             return results;

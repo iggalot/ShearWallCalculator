@@ -269,6 +269,28 @@ namespace ShearWallCalculator
         /// <summary>A first-story hold-down: it anchors to the foundation.</summary>
         public bool OnFoundation { get; set; }
 
-        public bool Supported => OnFoundation || LowerWallId != null;
+        public bool Supported => OnFoundation || LowerWallId != null || Support != SupportKind.None;
+
+        // ---- from the load-path trace (LoadPathTrace)
+
+        public double TensionLrfd { get; set; }
+        public PathPointKind Kind { get; set; }
+
+        /// <summary>"wall 3", "beam BM1 end", "column C2 base".</summary>
+        public string From { get; set; }
+
+        /// <summary>The wind direction (true: the low ends of the walls lift); null: both (a beam end or column base).</summary>
+        public bool? LowEndUp { get; set; }
+
+        /// <summary>What it anchors to, and its id ("wall 2", "beam BM1", "column C1").</summary>
+        public SupportKind Support { get; set; }
+        public string SupportId { get; set; }
+
+        /// <summary>The family of the connection (the wall's own, or the one that can anchor there) and the option sized.</summary>
+        public Design.HoldownFamilies Family { get; set; }
+        public Design.HoldownChoice Choice { get; set; }
+
+        /// <summary>Why the wall's hold-down type was replaced here (null: it was not).</summary>
+        public string Note { get; set; }
     }
 }

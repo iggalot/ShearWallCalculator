@@ -38,12 +38,10 @@ namespace ShearWallVisualizer
         {
             landingsOnto = new Dictionary<int, List<HoldownLanding>>();
             foundationAnchors = new List<HoldownLanding>();
-            if (levels.Count == 0 || allDesignResults.Count != levels.Count) return;
-            for (int i = 1; i < levels.Count; i++)
-                if (levels[i]?._wall_system != null && levels[i - 1]?._wall_system != null)
-                    landingsOnto[i - 1] = StoryCascade.Landings(levels[i]._wall_system._walls, allDesignResults[i], levels[i - 1]._wall_system._walls, i + 1);
-            if (levels[0]?._wall_system != null)
-                foundationAnchors = StoryCascade.Landings(levels[0]._wall_system._walls, allDesignResults[0], null, 1);
+            if (levels.Count == 0 || allDesignResults.Count != levels.Count || loadPath == null) return;
+            foreach (var kv in loadPath.ByLevel)
+                if (kv.Key < 0) foundationAnchors = kv.Value;
+                else landingsOnto[kv.Key] = kv.Value;
             int open = landingsOnto.Values.Sum(l => l.Count(x => !x.Supported));
             if (open > 0) Log.Info("Hold-downs", $"{open} hold-down{(open == 1 ? "" : "s")} from an upper story land where there is no wall below.");
         }
@@ -51,26 +49,41 @@ namespace ShearWallVisualizer
         /// <summary>The issues: an upper hold-down with no wall under it, on the level where the support is missing.</summary>
         private void AddLandingIssues(List<ModelIssue> list)
         {
-            foreach (var kv in landingsOnto)
+            var all = landingsOnto.Select(kv => (level: kv.Key, list: kv.Value)).ToList();
+            all.Add((-1, foundationAnchors));
+            foreach (var (k, landings) in all)
             {
-                if (kv.Key >= stories.Count) continue;
-                var lower = stories[kv.Key];
-                var upper = kv.Key + 1 < stories.Count ? stories[kv.Key + 1] : null;
-                foreach (var l in kv.Value.Where(x => !x.Supported))
+                if (k >= stories.Count) continue;
+                string levelId = k < 0 ? building?.Ground?.Id : stories[k].Level.Id;
+                string levelName = k < 0 ? "the foundation" : stories[k].Level.Name;
+                foreach (var l in landings)
                 {
-                    string wallId = upper != null && upper.Walls.TryGetValue(l.WallId, out var id) ? id : $"wall {l.WallId}";
-                    list.Add(new ModelIssue
-                    {
-                        Severity = Severity.Error, Code = "HoldownUnsupported", LevelId = lower.Level.Id,
-                        At = new BuildingModel.Geometry.Point2(l.At.X, l.At.Y),
-                        Message = $"A hold-down of {wallId} ({upper?.Level.Name}, {l.Model ?? "no model"}, {l.TensionAsd:N0} lb) lands on {lower.Level.Name} " +
-                                  $"at ({l.At.X:0.##}, {l.At.Y:0.##}) with no wall under it: add a beam or a post to carry it down.",
-                    });
+                    var from = l.UpperStory - 1 >= 0 && l.UpperStory - 1 < stories.Count ? stories[l.UpperStory - 1] : null;
+                    string wallId = from != null && from.Walls.TryGetValue(l.WallId, out var id) ? id : $"wall {l.WallId}";
+                    string what = l.Kind == PathPointKind.WallHoldown ? $"A hold-down of {wallId} ({from?.Level.Name})"
+                                : l.Kind == PathPointKind.BeamEnd ? $"The {l.From} (carrying {wallId}'s hold-down)" : $"The {l.From} (carrying {wallId}'s hold-down)";
+                    var at = new BuildingModel.Geometry.Point2(l.At.X, l.At.Y);
+                    if (!l.Supported)
+                        list.Add(new ModelIssue
+                        {
+                            Severity = Severity.Error, Code = "HoldownUnsupported", LevelId = levelId, At = at,
+                            Message = $"{what}, {l.TensionAsd:N0} lb up, lands on {levelName} at ({l.At.X:0.##}, {l.At.Y:0.##}) with nothing under it: " +
+                                      (l.Kind == PathPointKind.BeamEnd ? "the beam end needs a wall or a column under it." : "draw a beam (B) or a column (P) to carry it down."),
+                        });
+                    else if (l.Note != null)
+                        list.Add(new ModelIssue { Severity = Severity.Warning, Code = "HoldownTypeReplaced", LevelId = levelId, At = at, Message = $"{what} on {l.SupportId ?? levelName}: {l.Note}" });
+                    else if (l.Choice == null && l.Kind != PathPointKind.WallHoldown)
+                        list.Add(new ModelIssue
+                        {
+                            Severity = Severity.Error, Code = "HoldownTooWeak", LevelId = levelId, At = at,
+                            Message = $"{what}: no {HoldownRules.Name(l.Family).Substring(HoldownRules.Name(l.Family).IndexOf(' ') + 1)} is strong enough for {l.TensionAsd:N0} lb on {l.SupportId ?? levelName}.",
+                        });
                 }
             }
         }
 
         private static readonly Brush LandFill = Controls.Ui.Frozen("#1F2933"), LandText = Controls.Ui.InkSecondary, LabelBack = Controls.Ui.Frozen("#E6FFFFFF");
+        private static readonly Brush BeamInk = Controls.Ui.Frozen("#8B4A14");
         private static readonly Pen LandEdge = FrozenPen(Colors.White, 1), MissingEdge = MakePen(Controls.Ui.FailInk, 2);
 
         private static Pen MakePen(Brush b, double t) { var p = new Pen(b, t); p.Freeze(); return p; }
@@ -87,14 +100,32 @@ namespace ShearWallVisualizer
                     var p = WorldToScreen(a.At, m_layers);
                     var box = new Rect(p.X - 4.5, p.Y - 4.5, 9, 9);
                     ctx.DrawRectangle(a.Model != null ? LandFill : Brushes.White, a.Model != null ? LandEdge : MissingEdge, box);
-                    string wallId = stories.Count > 0 && stories[0].Walls.TryGetValue(a.WallId, out var id) ? id : $"W{a.WallId}";
-                    Label(ctx, $"{wallId}  {a.Model ?? "no HD"}  {a.TensionAsd:N0} lb", new Point(p.X + 7, p.Y - 16), a.Model != null ? LandText : Controls.Ui.FailInk, dip);
+                    string wallId = a.Kind != PathPointKind.WallHoldown ? a.From
+                                  : stories.Count > 0 && stories[0].Walls.TryGetValue(a.WallId, out var id) ? id : $"W{a.WallId}";
+                    Label(ctx, $"{wallId}  {a.Model ?? "no HD"}  {a.TensionAsd:N0} lb", new Point(p.X + 7, p.Y - 16), a.Model == null ? Controls.Ui.FailInk : a.Note != null ? Controls.Ui.CloseInk : LandText, dip);
                 }
                 return;
             }
             if (!landingsOnto.TryGetValue(currentLevel, out var onto)) return;
+            // the beams that carry hold-downs: their loads and the reactions at the ends
+            foreach (var br in loadPath?.Beams.Where(x => x.Beam.OnStory == currentLevel) ?? Enumerable.Empty<BeamReactions>())
+            {
+                var mid = WorldToScreen(new Point((br.Beam.Start.X + br.Beam.End.X) / 2, (br.Beam.Start.Y + br.Beam.End.Y) / 2), m_layers);
+                Label(ctx, $"{br.Beam.Id}: {br.Loads.Count} hold-down{(br.Loads.Count == 1 ? "" : "s")}, R {br.StartAsd / 1000:0.0}k / {br.EndAsd / 1000:0.0}k", new Point(mid.X + 6, mid.Y + 6), BeamInk, dip);
+            }
             foreach (var l in onto)
             {
+                if (l.Kind != PathPointKind.WallHoldown)
+                {
+                    // a beam end or a column base: a new hold-down point, sized for its reaction
+                    var q = WorldToScreen(l.At, m_layers);
+                    var r = new Rect(q.X - 5, q.Y - 5, 10, 10);
+                    ctx.DrawRectangle(l.Supported ? BeamInk : Controls.Ui.FailFill, l.Supported ? LandEdge : MissingEdge, r);
+                    string t = l.Supported ? $"{l.From}: ↑ {l.TensionAsd / 1000:0.0}k → {l.SupportId}, {l.Model ?? "none strong enough"}"
+                                           : $"{l.From}: ↑ {l.TensionAsd / 1000:0.0}k, nothing under it";
+                    Label(ctx, t, new Point(q.X + 8, q.Y + 4), l.Supported && l.Choice != null ? (l.Note != null ? Controls.Ui.CloseInk : LandText) : Controls.Ui.FailInk, dip);
+                    continue;
+                }
                 var p = WorldToScreen(l.At, m_layers);
                 // a triangle pointing down: a load coming down onto this story
                 var tri = new StreamGeometry();
@@ -105,8 +136,10 @@ namespace ShearWallVisualizer
                 }
                 tri.Freeze();
                 ctx.DrawGeometry(l.Supported ? LandFill : Controls.Ui.FailFill, l.Supported ? LandEdge : MissingEdge, tri);
-                string text = l.Supported ? $"↓ {l.TensionAsd / 1000:0.0}k" : $"↓ {l.TensionAsd / 1000:0.0}k  no wall below: beam or post";
-                Label(ctx, text, new Point(p.X + 8, p.Y - 20), l.Supported ? LandText : Controls.Ui.FailInk, dip);
+                string text = !l.Supported ? $"↓ {l.TensionAsd / 1000:0.0}k  nothing below: draw a beam (B) or a column (P)"
+                            : l.Support == SupportKind.Wall ? $"↓ {l.TensionAsd / 1000:0.0}k" : $"↓ {l.TensionAsd / 1000:0.0}k on {l.SupportId}";
+                if (l.Note != null) text += $"  · {l.Model ?? "none"} ({HoldownRules.Name(l.Family)} here)";
+                Label(ctx, text, new Point(p.X + 8, p.Y - 20), !l.Supported ? Controls.Ui.FailInk : l.Note != null ? Controls.Ui.CloseInk : LandText, dip);
             }
         }
 
