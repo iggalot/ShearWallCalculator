@@ -1,6 +1,6 @@
 using BuildingModel.Edits;
 using BuildingModel.Model;
-using BuildingModel.ShearWalls;
+using ShearWallCalculator.ModelAdapter;
 using calculator;
 using ShearWallCalculator;
 using ShearWallCalculator.Diagnostics;

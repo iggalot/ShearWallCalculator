@@ -3,7 +3,7 @@ using BuildingModel.Edits;
 using BuildingModel.Geometry;
 using BuildingModel.Model;
 using BuildingModel.Serialization;
-using BuildingModel.ShearWalls;
+using ShearWallCalculator.ModelAdapter;
 using BuildingModel.Sketch;
 using calculator;
 using Microsoft.Win32;

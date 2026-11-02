@@ -12,7 +12,7 @@ using ShearWallVisualizer.Helpers;
 using ShearWallCalculator.Diagnostics;
 using ShearWallCalculator.Drawing;
 using BuildingModel.Serialization;
-using BuildingModel.ShearWalls;
+using ShearWallCalculator.ModelAdapter;
 using Building = BuildingModel.Model.Building;
 using System;
 using System.Collections.Generic;

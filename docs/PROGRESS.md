@@ -7,7 +7,7 @@ _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`
 _Branch `dev/shared-sketcher`. Details: `SHARED_SKETCHER.md`._
 
 - **Drawing:** the shared sketcher (`F:ProgrammingBuildingModel`, `BuildingModel.Sketch`) replaces the old canvas and its DRAW / EDIT / snap buttons. New: openings between levels, notes on the plan, mirror, split and join walls, grips to stretch, window selection. L, R and S still work; debug drawing is F12.
-- **Model:** walls, diaphragms, openings and notes live in a building model (`BuildingModel.Core`); the calculators (one per story) are filled from it after every change (`BuildingModel.ShearWalls`). Design inputs are stored in the model, so one undo covers drawing, design and floors (+ Floor, ✕ Floor and Copy ↑ can now be undone).
+- **Model:** walls, diaphragms, openings and notes live in a building model (`BuildingModel.Core`); the calculators (one per story) are filled from it after every change (`ShearWallCalculator.ModelAdapter`, in this repo). Design inputs are stored in the model, so one undo covers drawing, design and floors (+ Floor, ✕ Floor and Copy ↑ can now be undone).
 - **Errors on the plan:** model checks, failing walls and stories that cannot be calculated are marked on the plan (red / amber) and listed under the issues button.
 - **Model menu:** 3D view, check the model, open / save a `.bldg.json`, export and apply change sets.
 - **Project file:** an optional `Model` field; older files open and are converted.

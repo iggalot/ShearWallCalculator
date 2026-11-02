@@ -17,8 +17,15 @@
   <ItemGroup>
     <ProjectReference Include="..\ShearWallCalculator.csproj" />
     <ProjectReference Include="..\..\ASCE7-Wind-Load-Calculator\ASCE7Wind.Core\ASCE7Wind.Core.csproj" />
+    <!-- the adapter to the shared building model, and the model it reads and writes -->
+    <ProjectReference Include="..\ShearWallCalculator.ModelAdapter\ShearWallCalculator.ModelAdapter.csproj" />
+    <ProjectReference Include="..\..\BuildingModel\BuildingModel.Core\BuildingModel.Core.csproj" />
     <!-- The shear-wall library still uses System.Windows.Point (WindowsBase). -->
     <Reference Include="WindowsBase" />
+    <Reference Include="PresentationCore" />
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>

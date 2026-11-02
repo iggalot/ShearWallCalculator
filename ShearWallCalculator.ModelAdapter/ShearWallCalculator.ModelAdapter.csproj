@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The shared building model <-> the Shear Wall Designer's per-level calculators. The designer reads the model and
+    writes what it draws (walls, diaphragms) and designs back into it; the model knows nothing of shear walls.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>ShearWallCalculator.ModelAdapter</RootNamespace>
+    <AssemblyName>ShearWallCalculator.ModelAdapter</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\BuildingModel\BuildingModel.Core\BuildingModel.Core.csproj" />
+    <ProjectReference Include="..\ShearWallCalculator.csproj" />
+    <Reference Include="PresentationCore" />
+    <Reference Include="WindowsBase" />
+    <!-- the designer's own copy (no download) -->
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>

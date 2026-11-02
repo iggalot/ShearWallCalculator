@@ -13,7 +13,7 @@ loads and report work as before; they are filled from the model after every chan
 |---|---|---|
 | `BuildingModel.Core` | `F:\Programming\BuildingModel` | the model, checks, edits, undo history, change sets, typed points |
 | `BuildingModel.Sketch` | same | the drawing canvas, its toolbar and status line, error markers, issue list, 3D |
-| `BuildingModel.ShearWalls` | same | `ShearWallAdapter`: model ↔ the calculators (one per story) |
+| `ShearWallCalculator.ModelAdapter` | this repo | `ShearWallAdapter`: model ↔ the calculators (one per story); BuildingModel references no analysis app |
 
 They are `ProjectReference`s of `ShearWallVisualizer.csproj` and are listed in `ShearWallCalculator.sln` (folder
 `BuildingModel`), so the solution builds them. Nothing else changed in the core library except the project file

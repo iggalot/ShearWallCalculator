@@ -185,8 +185,8 @@
     <ProjectReference Include="..\..\BuildingModel\BuildingModel.Sketch\BuildingModel.Sketch.csproj">
       <Name>BuildingModel.Sketch</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\BuildingModel\BuildingModel.ShearWalls\BuildingModel.ShearWalls.csproj">
-      <Name>BuildingModel.ShearWalls</Name>
+    <ProjectReference Include="..\ShearWallCalculator.ModelAdapter\ShearWallCalculator.ModelAdapter.csproj">
+      <Name>ShearWallCalculator.ModelAdapter</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup />
