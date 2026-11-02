@@ -288,8 +288,8 @@ namespace ShearWallVisualizer
 
         // ------------------------------------------------------------------ design colours, level caption
 
-        private static readonly Pen ClosePen = FrozenPen(Color.FromRgb(0xE6, 0x9F, 0x00), 4);
-        private static readonly Pen FailPen = DashedPen(Color.FromRgb(0xD5, 0x5E, 0x00), 5);
+        private static readonly Pen ClosePen = FrozenPen(((SolidColorBrush)Controls.Ui.CloseStripe).Color, 4);
+        private static readonly Pen FailPen = DashedPen(((SolidColorBrush)Controls.Ui.FailStripe).Color, 5);
 
         private static Pen DashedPen(Color c, double thickness)
         {
@@ -301,8 +301,8 @@ namespace ShearWallVisualizer
         }
 
         /// <summary>
-        /// A shear wall of the level shown, by its design check: the usual blue when it passes (or before a check), amber when
-        /// close to its limit, vermilion and dashed when it fails. No green or red: the dash tells a fail without colour.
+        /// A shear wall of the level shown, by its design check: the usual blue when it passes (or before a check), yellow when
+        /// close to its limit, crimson and dashed when it fails. The dash tells a fail without colour (colours in Ui).
         /// </summary>
         private Pen DesignPen(Wall w)
         {

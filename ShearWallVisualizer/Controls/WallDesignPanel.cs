@@ -404,7 +404,7 @@ namespace ShearWallVisualizer.Controls
                 back.MouseLeftButtonDown += (s, e) => Select((int)((Border)s).Tag);
                 table.Children.Add(back);
 
-                // the stripe at the row's left edge: vermilion (fail) or amber (close); not hit-testable, it moves with the row when sorted
+                // the stripe at the row's left edge: crimson (fail) or yellow (close); not hit-testable, it moves with the row when sorted
                 var stripe = new Border { Width = 4, HorizontalAlignment = HorizontalAlignment.Left, Background = Ui.StateStripe(state), IsHitTestVisible = false, Margin = new Thickness(0, 0, 0, 1) };
                 Grid.SetRow(stripe, row);
                 table.Children.Add(stripe);

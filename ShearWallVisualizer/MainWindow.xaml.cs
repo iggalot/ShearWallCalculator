@@ -1427,7 +1427,7 @@ namespace ShearWallVisualizer
         // ------------------------------------------------------------------ status line
 
         private static readonly Brush StatusWarnInk = new SolidColorBrush(Color.FromRgb(0x9A, 0x5B, 0x00));
-        private static readonly Brush StatusErrorInk = new SolidColorBrush(Color.FromRgb(0xB5, 0x47, 0x08));
+        private static readonly Brush StatusErrorInk = Controls.Ui.FailInk;
 
         /// <summary>Shows a message on the right of the status line; warnings and errors from the log arrive here too.</summary>
         private void ShowStatusMessage(LogLevel level, string message)

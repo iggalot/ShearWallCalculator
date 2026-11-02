@@ -129,7 +129,7 @@ namespace ShearWallVisualizer.Controls
             return new Rect(mid.X - s.Width / 2, mid.Y + n.Y * TagOffset - s.Height / 2, s.Width, s.Height);
         }
 
-        /// <summary>"SW2 | HDU2" in a rounded box, outlined slate blue (passes), amber (close to the limit) or dashed vermilion (fails).</summary>
+        /// <summary>"SW2 | HDU2" in a rounded box, outlined slate blue (passes), yellow (close to the limit) or dashed crimson (fails).</summary>
         private static void DrawTag(DrawingContext ctx, Rect box, TagText t, ShearWallCalculator.Design.DesignState state)
         {
             ctx.DrawRoundedRectangle(TagFill, state == ShearWallCalculator.Design.DesignState.Fail ? TagFail : state == ShearWallCalculator.Design.DesignState.Close ? TagClose : TagPass, box, 4, 4);
