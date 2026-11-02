@@ -162,7 +162,7 @@ namespace ShearWallCalculator.Tests
             // saved with the project, at its place
             img.Move(new Point(0, 0), new Point(5, 5));
             var calc = new ShearWallCalculator_RigidDiaphragm { Image = img };
-            var read = ProjectSerializer.Read(ProjectSerializer.ToJson(calc, null, false)).Calculator.Image;
+            var read = TestProject.RoundTrip(calc).Image;
             Assert.IsTrue(read.IsVector);
             Assert.AreEqual("DXF, inches", read.Source);
             Near(new Point(45, 35), read.PixelToWorld(new Point(read.Paths[0].Xy[4], read.Paths[0].Xy[5])), 1e-3);

@@ -107,7 +107,7 @@ namespace ShearWallCalculator.Tests
                     Opacity = 0.4, Locked = true, Visible = false, PixelWidth = 3300, PixelHeight = 2550, Calibrated = true,
                 },
             };
-            var read = ProjectSerializer.Read(ProjectSerializer.ToJson(calc, null, false)).Calculator.Image;
+            var read = TestProject.RoundTrip(calc).Image;
             Assert.AreEqual(calc.Image.Path, read.Path);
             Assert.AreEqual(0.0266, read.FeetPerPixel, Tol);
             Assert.AreEqual(-2.5, read.RotationDegrees, Tol);
@@ -152,9 +152,8 @@ namespace ShearWallCalculator.Tests
                 Assert.IsTrue(img.Embed(file));
 
                 var calc = new ShearWallCalculator_RigidDiaphragm { Image = img };
-                string json = ProjectSerializer.ToJson(calc, null, false);
                 System.IO.File.Delete(file); // the original is gone: the project still has the image
-                var read = ProjectSerializer.Read(json).Calculator.Image;
+                var read = TestProject.RoundTrip(calc).Image;
 
                 CollectionAssert.AreEqual(bytes, read.Data);
                 Assert.AreEqual(0.1, read.FeetPerPixel, Tol, "the final (calibrated) scale");

@@ -16,10 +16,12 @@
         <!-- Menu Bar at the very top -->
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="_File">
-                <MenuItem Header="_New project" Click="MenuItem_New_Click" InputGestureText="Ctrl+N"/>
-                <MenuItem Header="_Open..." Click="MenuItem_Load_Click" InputGestureText="Ctrl+O"/>
+                <MenuItem Header="_New project..." Click="MenuItem_New_Click" InputGestureText="Ctrl+N"
+                          ToolTip="Pick a folder for the project, then the building's size; the model, reports and logs are kept in that folder"/>
+                <MenuItem Header="_Open project..." Click="MenuItem_Load_Click" InputGestureText="Ctrl+O"
+                          ToolTip="A building model (.bldg.json); its folder becomes the project folder"/>
                 <MenuItem Header="_Save" Click="MenuItem_Save_Click" InputGestureText="Ctrl+S"/>
-                <MenuItem Header="Save _As..." Click="MenuItem_SaveAs_Click"/>
+                <MenuItem Header="Save _As (a copy in another folder)..." Click="MenuItem_SaveAs_Click"/>
                 <Separator/>
                 <MenuItem Header="Open _Recent" x:Name="RecentFilesMenu"/>
                 <Separator/>
@@ -56,10 +58,8 @@
                 <MenuItem Header="_3D view of the building" Click="Show3D_Click"/>
                 <MenuItem Header="_Check the model (errors and warnings)" Click="CheckModel_Click"/>
                 <Separator/>
-                <MenuItem Header="_Open a building model (.bldg.json)..." Click="ImportModel_Click"
-                          ToolTip="Replace the walls, diaphragms and openings with a building drawn in the Building Model app (design inputs kept where IDs match)"/>
-                <MenuItem Header="_Save the building model as..." Click="ExportModel_Click"
-                          ToolTip="The building (levels, walls, diaphragms, openings, notes) for the Building Model app and the other analysis programs"/>
+                <MenuItem Header="_Edit building in the Building Model editor..." Click="EditBuilding_Click"
+                          ToolTip="Saves the project and opens it in the Building Model editor: the levels, size and roof are edited there. This window updates each time the editor saves."/>
                 <Separator/>
                 <MenuItem Header="_Export changes since opened..." Click="ExportChanges_Click"
                           ToolTip="What was added, moved or deleted since the project was opened or saved, as a change set another copy of the model can apply"/>

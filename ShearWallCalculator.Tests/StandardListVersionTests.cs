@@ -150,7 +150,7 @@ namespace ShearWallCalculator.Tests
             var calc = new ShearWallCalculator_RigidDiaphragm();
             calc.DesignSettings = settings;
             calc.DesignSettings.HoldownList = HoldownListRecord.Make(before, designer.StandardList, true);
-            var read = ProjectSerializer.Read(ProjectSerializer.ToJson(calc, null, false)).Calculator.DesignSettings.HoldownList;
+            var read = TestProject.RoundTrip(calc).DesignSettings.HoldownList;
             Assert.AreEqual(2, read.CompanyVersion);
             Assert.AreEqual("2026-11-02", read.CompanyDate);
             Assert.IsFalse(read.Customized);
@@ -171,7 +171,7 @@ namespace ShearWallCalculator.Tests
         public void OlderProject_HasNoRecord()
         {
             var calc = new ShearWallCalculator_RigidDiaphragm();
-            var read = ProjectSerializer.Read(ProjectSerializer.ToJson(calc, null, false)).Calculator.DesignSettings;
+            var read = TestProject.RoundTrip(calc).DesignSettings;
             Assert.IsNull(read.HoldownList);
             Assert.IsFalse(read.HoldownsFromStandardList);
         }

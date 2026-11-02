@@ -2,6 +2,42 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-02 — One project file, in a project folder; the model's geometry drives the wind (SWC + BuildingModel + W7)
+
+_Branch `dev/ui-pass-2` in all three repositories._
+
+- **The project is the building model file.** `<project folder>\<folder name>.bldg.json` is the only project file of all three apps. The old `*.swc.json` format (`Interfaces/ProjectFile.cs`, `ProjectSerializer`, `WindInputs`, `WindBuildingInputs`) is gone, without migration (no files in use).
+- **Who owns which part of the file:**
+  - The building: levels, walls, diaphragms, openings, roof and defaults. Only the Building Model editor changes the levels, size and roof. SWC draws walls and diaphragms into it, and the wall design goes in their bags.
+  - `"Wind"` (`ASCE7Wind.ModelAdapter.WindSection`): the site, enclosure, components, edition and cases. It is written only when the project takes the wind loads.
+  - `"ShearWall.Project"` (`ShearWallCalculator.ModelAdapter.ShearWallProject`): manual loads per level, and the loads at the last save (you are told on opening when they differ).
+  - `"ShearWall.Image"` on each level: that level's plan image.
+- **Save and open:**
+  - At save, these sections go into a copy of the building (`ShearWallProject.Save`). On opening they are taken out of the building being edited (`ShearWallProject.Open`), so they are not in the undo history.
+  - A model that has no SWC section yet (made in the editor) opens as a new design that takes the wind loads.
+- **Project folder** (`BuildingModel.Diagnostics.ProjectFolder`, `BuildingModel.Sketch.ProjectDialogs`):
+  - New project asks for a folder, then the building's size (the editor's New from size). The model is saved there at once.
+  - Logs go in `<project>\logs`: `bldg-*.log`, `swc-*.log`, one file per app per day. Every file dialog starts in the project folder.
+- **Nothing without a project:**
+  - At start, SWC shows a start screen: New project, Open, recent projects, Exit. A `.bldg.json` given on the command line opens directly.
+  - While the model has errors (ModelChecks), the design and the report are blocked and the reason is shown.
+- **Wind geometry from the model:**
+  - Wind Setup shows L, B, the stories, plate heights, roof, overhang and parapet from the model, read-only (`WindSetupControl.SetModelGeometry`). Its "Edit building…" button opens the editor.
+  - The enclosure, parapet envelope and components are still set there.
+  - The retired BuildingData and WIND input tabs and the floors-from-wind code (`MatchLevelsToStories`, `FloorsToBuildingData`) are removed.
+- **Manual loads:** used only in a project without wind inputs. Entering one in a wind project asks first; the wind section is then left out at save.
+- **Model > Edit building in the Building Model editor:**
+  - It saves the project and starts `BuildingModel.exe` on it; the build copies the exe next to the app.
+  - SWC waits behind a notice until the editor closes, and reloads the project after each save made there.
+- **Logging:**
+  - One logger for the three apps (`BuildingModel.Diagnostics.Log`).
+  - Logged: every sketch edit, undo and redo; model opens and saves, with revision, counts and sections; failed opens and saves; wind inputs and loads; new, open, save and reload of projects; reports; crashes.
+- **Tests:**
+  - SWC 180. New: `ShearWallProjectTests`. The old round trips now go through `TestProject.RoundTrip`, the real save and open path.
+  - BuildingModel 70. New: `ProjectFolderTests`.
+  - W7 278 + 2 opt-in.
+  - W7 UI 57 of 58. New: `ModelGeometry_IsShownNotEdited_EnclosureStaysHere`. `EveryStep_FitsWithoutScrolling (70)` already failed before these changes.
+
 ## 2026-11-01 — The plan is drawn in the shared sketcher; the building model is the source of truth (SWC + BuildingModel)
 
 _Branch `dev/shared-sketcher`. Details: `SHARED_SKETCHER.md`._

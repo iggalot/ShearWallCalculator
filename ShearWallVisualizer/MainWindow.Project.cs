@@ -1,0 +1,529 @@
+using ASCE7WindLoadCalculator;
+using ASCE7WindLoadCalculator.ModelAdapter;
+using BuildingModel.Checks;
+using BuildingModel.Diagnostics;
+using BuildingModel.Edits;
+using BuildingModel.Model;
+using BuildingModel.Serialization;
+using BuildingModel.Sketch;
+using calculator;
+using ShearWallCalculator;
+using ShearWallCalculator.ModelAdapter;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Threading;
+
+namespace ShearWallVisualizer
+{
+    /// <summary>
+    /// The project is one file, the building model (&lt;project folder&gt;\&lt;name&gt;.bldg.json), in a folder the user picks
+    /// (<see cref="ProjectFolder"/>): the outputs and the logs go next to it. The file holds:
+    /// <list type="bullet">
+    /// <item>the building (levels, walls, diaphragms, openings, roof, defaults), with the designer's data in the bags of its walls and diaphragms;</item>
+    /// <item>the wind inputs (<see cref="WindSection"/>, the wind app's section); none when the project uses manual loads;</item>
+    /// <item>the designer's section (<see cref="ShearWallProject"/>: manual loads, the loads when saved) and each level's plan image.</item>
+    /// </list>
+    /// The size, stories and roof the wind calculation uses are the model's. Nothing is designed without a project, and the
+    /// design and reports wait while the model has errors.
+    /// </summary>
+    public partial class MainWindow
+    {
+        /// <summary>The project's model file, or null before a project is opened or made.</summary>
+        private string currentProjectPath;
+
+        /// <summary>The document as opened or last saved (its revision goes up on each save).</summary>
+        private ModelDocument projectDoc;
+
+        /// <summary>The file text when last opened or saved; any difference means unsaved changes.</summary>
+        private string savedProjectJson;
+
+        private bool HasProject => currentProjectPath != null;
+
+        private string ProjectName => currentProjectPath == null ? "No project"
+            : Path.GetFileName(currentProjectPath).Replace(ProjectFolder.ModelExtension, "");
+
+        // ------------------------------------------------------------------ the file's contents
+
+        /// <summary>
+        /// The building as it is saved: a copy of the one being edited with the wind section (when the project uses the wind
+        /// loads), the designer's section and the plan images written into it.
+        /// </summary>
+        private Building BuildingToSave()
+        {
+            var b = ModelFile.Clone(building);
+            if (windLoadsLinked && windSetup != null)
+                WindSection.From(windSetup.Version, windSetup.Parameters, windSetup.Building.EnclosureType, windSetup.Building.ParapetEnclosure,
+                                 windSetup.OnlyCases1And3, windSetup.RoofComponent, windSetup.WallComponent).Write(b);
+            else
+                b.SetData(WindSection.Key, null);
+            ShearWallProject.Save(b, stories, manualLoads: !windLoadsLinked);
+            return b;
+        }
+
+        private string CurrentProjectJson() => HasProject ? ModelFile.BuildingToJson(BuildingToSave()) : null;
+
+        private bool HasUnsavedChanges => HasProject && savedProjectJson != null && CurrentProjectJson() != savedProjectJson;
+
+        /// <summary>Title bar: the project name, with * when there are unsaved changes.</summary>
+        private void UpdateTitle()
+        {
+            if (windSetup == null) return;
+            Title = $"{ProjectName}{(HasUnsavedChanges ? " *" : "")} - Shear Wall Calculator";
+        }
+
+        /// <summary>Remembers the current state as saved (after New, Open and Save).</summary>
+        private void MarkSaved()
+        {
+            savedProjectJson = CurrentProjectJson();
+            UpdateTitle();
+        }
+
+        /// <summary>Asks to save unsaved changes. False means the user cancelled.</summary>
+        private bool ConfirmDiscardOrSave()
+        {
+            if (!HasUnsavedChanges) return true;
+            var answer = MessageBox.Show(this, $"Save the changes to {ProjectName}?", "Shear Wall Calculator",
+                                         MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+            if (answer == MessageBoxResult.Cancel) return false;
+            if (answer == MessageBoxResult.Yes) return SaveProject(saveAs: false);
+            return true;
+        }
+
+        private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            if (editorProcess != null && !editorProcess.HasExited)
+            {
+                MessageBox.Show(this, "The building is open in the Building Model editor. Save and close it there first.", "Shear Wall Calculator",
+                                MessageBoxButton.OK, MessageBoxImage.Information);
+                e.Cancel = true;
+                return;
+            }
+            if (!ConfirmDiscardOrSave()) e.Cancel = true;
+        }
+
+        // ------------------------------------------------------------------ New, Open, Save
+
+        /// <summary>
+        /// New project: the user picks (or makes) its folder, then the building's size (length, width, stories, story heights,
+        /// shear walls on the outside); the model is saved there at once and the wind loads use the engine's starting inputs.
+        /// </summary>
+        private void MenuItem_New_Click(object sender, RoutedEventArgs e) => NewProject();
+
+        private bool NewProject()
+        {
+            if (!ConfirmDiscardOrSave()) return false;
+            string path = ProjectDialogs.NewProjectPath(this, out bool existing);
+            if (path == null) return false;
+            if (existing) return OpenProject(path);
+
+            string name = Path.GetFileName(Path.GetDirectoryName(path));
+            var b = Building.New(name);
+            var q = QuickBuildingDialog.Ask(b, FloorEdits.MaxFloors, this);
+            if (q == null) return false;
+            BuildingEdits.BuildFromSize(b, q);
+
+            ProjectFolder.OpenFor(path);
+            Log.Info("Project", $"New project {path}: {q.Length:0.##} × {q.Width:0.##} ft, {q.StoryHeights.Count} stor{(q.StoryHeights.Count == 1 ? "y" : "ies")} " +
+                                $"({string.Join(", ", q.StoryHeights.Select(h => h.ToString("0.##")))} ft).");
+            projectDoc = new ModelDocument { Building = b };
+            currentProjectPath = path;
+            var wind = WindSection.New();
+            LoadProject(b, new List<ShearWallCalculatorBase>(), wind, new ShearWallProject());
+            Calculator.DesignSettings.HoldownsFromStandardList = designer != null && designer.StandardList.Count > 0;
+            if (!SaveProject(saveAs: false)) return false;
+            AddToRecentFiles(path);
+            return true;
+        }
+
+        private void MenuItem_Load_Click(object sender, RoutedEventArgs e)
+        {
+            if (!ConfirmDiscardOrSave()) return;
+            string path = ProjectDialogs.OpenModelPath(this);
+            if (path != null) OpenProject(path);
+        }
+
+        /// <summary>
+        /// Opens a project (its building model file). A model without the designer's sections is a new design of that
+        /// building: the wind starts from the engine's inputs and the walls take the wind loads.
+        /// </summary>
+        private bool OpenProject(string path, bool reload = false)
+        {
+            ModelDocument doc;
+            try
+            {
+                ProjectFolder.OpenFor(path); // first, so the opening is in the project's log
+                doc = ModelFile.Load(path);
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is InvalidDataException ||
+                                       ex is System.Runtime.Serialization.SerializationException || ex is ArgumentException)
+            {
+                MessageBox.Show(this, "The project could not be opened:\n" + ex.Message, "Open", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return false;
+            }
+            var b = doc.Building;
+            var wind = WindSection.Read(b);
+            // each story's calculator: its plan image and, without wind, its manual load (kept there and in the wind screen
+            // while the project is open; written back at save)
+            var calcs = ShearWallProject.Open(b, manualLoads: wind == null, out var section);
+            bool designed = section != null;
+            section = section ?? new ShearWallProject();
+            if (!designed && wind == null) wind = WindSection.New(); // a model from the editor: designed with the wind loads
+            b.SetData(WindSection.Key, null);
+
+            int keepLevel = reload ? currentLevel : 0;
+            projectDoc = doc;
+            currentProjectPath = path;
+            string note = LoadProject(b, calcs, wind, section, keepLevel);
+            if (!reload) AddToRecentFiles(path);
+            Log.Info("Project", (reload ? "Reloaded " : "Opened ") + path + (designed ? "" : " (a new design: no shear wall data yet)") +
+                                (wind == null ? "; manual loads." : $"; wind {wind.WindSpeed:0} mph, exposure {wind.Exposure}, {wind.Edition}."));
+
+            string holdownNote = HoldownChangesSinceSave();
+            if (holdownNote != null) note = note == null ? holdownNote : note + "\n\n" + holdownNote;
+            // loads or hold-downs that changed count as unsaved so the user is asked before closing
+            savedProjectJson = note == null ? CurrentProjectJson() : string.Empty;
+            UpdateTitle();
+            if (note != null && !reload)
+                MessageBox.Show(this, note, "Open", MessageBoxButton.OK, MessageBoxImage.Information);
+            return true;
+        }
+
+        /// <summary>Puts an opened or new project into the window. Returns a note for the user (loads that changed), or null.</summary>
+        private string LoadProject(Building b, IList<ShearWallCalculatorBase> calcs, WindSection wind, ShearWallProject section, int active = 0)
+        {
+            imageTool.Cancel();
+            windLoadsLinked = wind != null;
+            var w = wind ?? WindSection.New();
+            windSetup.SetInputs(new BuildingData { EnclosureType = w.Enclosure, ParapetEnclosure = w.ParapetEnclosure }, w.Edition, w.ToParameters());
+            windSetup.SetComponents(w.RoofComponent, w.WallComponent);
+            windSetup.SetOnlyCases1And3(w.OnlyCases1And3);
+            windVersion = windSetup.Version;
+            windLoadParams = windSetup.Parameters.Clone();
+            buildingData = null;
+            modelWindKey = null;
+
+            SetBuilding(b, calcs, active); // the model's geometry goes to the wind screen (ModelToWind)
+            ImageForNewProject();
+            HideStartScreen();
+            if (!windLoadsLinked)
+                UnlinkWindLoads("This project uses manual loads (it has no wind inputs). Click the button below to use the wind loads instead.");
+            RecalculateWind(); // when linked, this sends the wind load cases to every story
+            UpdateShearWallUI();
+            StartHistory();
+            LogWindInputs();
+
+            if (!windLoadsLinked) return null;
+            var changed = stories.Where(s => section.LoadsWhenSaved.TryGetValue(s.Level.Id, out var was) &&
+                                             (Changed(was.Vx, s.Calculator.V_x) || Changed(was.Vy, s.Calculator.V_y)))
+                                 .Select(s => { var was = section.LoadsWhenSaved[s.Level.Id]; return $"{s.Level.Name}: X {was.Vx:0.00} → {s.Calculator.V_x:0.00} k, Y {was.Vy:0.00} → {s.Calculator.V_y:0.00} k"; })
+                                 .ToList();
+            if (changed.Count == 0) return null;
+            Log.Warning("Project", "The wind loads differ from when the project was saved: " + string.Join("; ", changed), null);
+            return "The wind loads differ from when this project was saved:\n" + string.Join("\n", changed) +
+                   "\n\nThe walls now use the new loads (usually a correction in the wind calculation since then). Save to keep them.";
+        }
+
+        private void MenuItem_Save_Click(object sender, RoutedEventArgs e) => SaveProject(saveAs: false);
+
+        private void MenuItem_SaveAs_Click(object sender, RoutedEventArgs e) => SaveProject(saveAs: true);
+
+        /// <summary>Saves the project file. Save as: a copy of the project in another folder (the user picks it), which becomes the open project.</summary>
+        private bool SaveProject(bool saveAs)
+        {
+            if (!HasProject) return false;
+            windSetup?.FlushPendingChange(); // a value still being typed counts
+            string path = currentProjectPath;
+            if (saveAs)
+            {
+                string file = ProjectDialogs.NewProjectPath(this, out bool existing);
+                if (file == null) return false;
+                if (existing && MessageBox.Show(this, $"Replace {Path.GetFileName(file)} in that folder with this project?", "Save as",
+                                                MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return false;
+                path = file;
+            }
+            try
+            {
+                RecordHoldowns();
+                var doc = projectDoc ?? new ModelDocument();
+                doc.Building = BuildingToSave();
+                doc.Version = ModelDocument.CurrentVersion;
+                ModelFile.Save(path, doc);
+                projectDoc = doc;
+                baseModelJson = ModelFile.BuildingToJson(building); // Model > Export changes: since this save
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                MessageBox.Show(this, "The project could not be saved:\n" + ex.Message, "Save", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return false;
+            }
+            if (path != currentProjectPath) { ProjectFolder.OpenFor(path); AddToRecentFiles(path); }
+            currentProjectPath = path;
+            Log.Info("Project", $"Saved {path} (revision {projectDoc.Revision}; {(windLoadsLinked ? "wind loads" : "manual loads")}).");
+            MarkSaved();
+            return true;
+        }
+
+        // ------------------------------------------------------------------ the model's geometry → the wind calculation
+
+        /// <summary>The model's wind geometry when last sent to the wind screen (to send it again only when it changed).</summary>
+        private string modelWindKey;
+
+        /// <summary>
+        /// The wind calculation's building is the model's: its size, stories, plate heights and roof (the wind screen shows
+        /// them, not editable), with the wind screen's enclosure. Recalculates when they changed.
+        /// </summary>
+        private void ModelToWind()
+        {
+            if (windSetup == null) return;
+            BuildingData geometry;
+            string note;
+            try
+            {
+                var input = WindAdapter.From(building, new WindOptions { Enclosure = windSetup.Building.EnclosureType, ParapetEnclosure = windSetup.Building.ParapetEnclosure });
+                geometry = input.Building;
+                note = input.Notes.Count > 0 ? string.Join(" ", input.Notes) : null;
+            }
+            catch (InvalidOperationException ex)
+            {
+                geometry = null;
+                note = ex.Message;
+            }
+            string key = geometry == null ? "none:" + note
+                : string.Join("|", geometry.BuildingLength, geometry.BuildingWidth, geometry.NumberOfStories, string.Join(",", geometry.StoryPlateHeights),
+                              geometry.RoofType, geometry.RoofPitch, geometry.RidgeDirection, geometry.OverhangWidth, geometry.ParapetHeight);
+            if (key == modelWindKey) return;
+            modelWindKey = key;
+            if (geometry == null)
+            {
+                Log.Warning("Wind", "No wind geometry from the model: " + note, null);
+                buildingData = null;
+                windLoadCalculator_CC = windLoadCalculator_MWFRS_Length = windLoadCalculator_MWFRS_Width = null;
+                CreateAndAssignResultControls();
+                ApplyLinkedWindLoads();
+                return;
+            }
+            windSetup.SetModelGeometry(geometry, note);
+            buildingData = windSetup.Building.Clone();
+            Log.Info("Wind", $"Building from the model: L {geometry.BuildingLength:0.##} ft, B {geometry.BuildingWidth:0.##} ft, {geometry.NumberOfStories} stor{(geometry.NumberOfStories == 1 ? "y" : "ies")} " +
+                             $"(plates {string.Join(", ", geometry.StoryPlateHeights.Select(h => h.ToString("0.##")))} ft), roof {geometry.RoofType} {geometry.RoofPitch:0.#}°, " +
+                             $"h {geometry.MeanRoofHeight:0.##} ft" + (note == null ? "." : ". " + note));
+            RecalculateWind();
+        }
+
+        /// <summary>The wind inputs and the loads they give, in the project's log.</summary>
+        private void LogWindInputs()
+        {
+            if (!windLoadsLinked || windLoadParams == null) { Log.Info("Wind", "Manual loads: " + string.Join("; ", stories.Select(s => $"{s.Level.Name} X {s.Calculator.V_x:0.##} k, Y {s.Calculator.V_y:0.##} k"))); return; }
+            var p = windLoadParams;
+            Log.Info("Wind", $"{windVersion}, risk {p.RiskCategory}, V {p.WindSpeed:0} mph, exposure {p.ExposureCategory}, Kzt {p.Kzt:0.00}, G {p.GustFactor:0.00}, " +
+                             $"{p.LateralProcedure}, enclosure {buildingData?.EnclosureType}" + (windSetup?.OnlyCases1And3 == true ? ", cases 1 and 3 only" : "") + ". Loads: " +
+                             (windLoadCalculator_MWFRS_Length == null ? "cannot be calculated with these inputs." : string.Join("; ", stories.Select(s => $"{s.Level.Name} X {s.Calculator.V_x:0.##} k, Y {s.Calculator.V_y:0.##} k"))));
+        }
+
+        // ------------------------------------------------------------------ the model's errors stop the design
+
+        /// <summary>The model's errors (not warnings): while there are any, nothing is designed or reported.</summary>
+        private List<ModelIssue> ModelErrors() => ModelChecks.Run(building).Where(i => i.Severity == Severity.Error).ToList();
+
+        private string ModelErrorTodo()
+        {
+            if (!HasProject) return "Open or make a project first (File > New project or Open).";
+            var errors = ModelErrors();
+            if (errors.Count == 0) return null;
+            return $"The building model has {errors.Count} error{(errors.Count == 1 ? "" : "s")}; fix {(errors.Count == 1 ? "it" : "them")} before the design " +
+                   $"(the ✗ button lists them). First: {errors[0].Message}";
+        }
+
+        // ------------------------------------------------------------------ Edit building: the Building Model editor
+
+        private Process editorProcess;
+        private FileSystemWatcher editorWatcher;
+        private DispatcherTimer editorReload;
+        private Border editorOverlay;
+
+        /// <summary>The Building Model editor, next to this program (copied there by the build).</summary>
+        private static string EditorPath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "BuildingModel.exe");
+
+        private void EditBuilding_Click(object sender, RoutedEventArgs e) => EditBuilding();
+
+        /// <summary>
+        /// Saves the project and opens it in the Building Model editor, the one place the building's levels, size and roof are
+        /// edited. While it is open this window waits (so the two never change the file at once) and reloads the project each
+        /// time the editor saves it.
+        /// </summary>
+        private void EditBuilding()
+        {
+            if (!HasProject) return;
+            if (editorProcess != null && !editorProcess.HasExited) return;
+            if (!File.Exists(EditorPath))
+            {
+                Log.Error("Project", "The Building Model editor was not found: " + EditorPath, null);
+                MessageBox.Show(this, "The Building Model editor (BuildingModel.exe) is not next to this program:\n" + EditorPath, "Edit building", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            if (HasUnsavedChanges && !SaveProject(saveAs: false)) return;
+            try
+            {
+                editorProcess = Process.Start(new ProcessStartInfo(EditorPath, "\"" + currentProjectPath + "\"") { UseShellExecute = false });
+            }
+            catch (Exception ex) when (ex is System.ComponentModel.Win32Exception || ex is InvalidOperationException)
+            {
+                Log.Error("Project", "Could not start the Building Model editor", ex);
+                MessageBox.Show(this, "The Building Model editor could not be started:\n" + ex.Message, "Edit building", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            Log.Info("Project", "Building Model editor opened on " + currentProjectPath);
+            editorProcess.EnableRaisingEvents = true;
+            editorProcess.Exited += (s, a) => Dispatcher.BeginInvoke(new Action(EditorClosed));
+
+            editorReload = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
+            editorReload.Tick += (s, a) => { editorReload.Stop(); ReloadFromEditor(); };
+            editorWatcher = new FileSystemWatcher(Path.GetDirectoryName(currentProjectPath), Path.GetFileName(currentProjectPath))
+            {
+                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.FileName,
+            };
+            FileSystemEventHandler changed = (s, a) => Dispatcher.BeginInvoke(new Action(() => { editorReload.Stop(); editorReload.Start(); }));
+            editorWatcher.Changed += changed;
+            editorWatcher.Created += changed;
+            editorWatcher.Renamed += (s, a) => changed(s, a);
+            editorWatcher.EnableRaisingEvents = true;
+            ShowEditorOverlay(true);
+        }
+
+        private DateTime lastReloaded;
+
+        private void ReloadFromEditor()
+        {
+            if (!HasProject || !File.Exists(currentProjectPath)) return;
+            var stamp = File.GetLastWriteTimeUtc(currentProjectPath);
+            if (stamp == lastReloaded) return;
+            lastReloaded = stamp;
+            OpenProject(currentProjectPath, reload: true);
+            ShowStatusMessage(LogLevel.Info, "The building was updated from the Building Model editor.");
+        }
+
+        private void EditorClosed()
+        {
+            editorWatcher?.Dispose();
+            editorWatcher = null;
+            editorReload?.Stop();
+            Log.Info("Project", "Building Model editor closed.");
+            editorProcess = null;
+            ReloadFromEditor(); // a save just before closing
+            ShowEditorOverlay(false);
+        }
+
+        private void ShowEditorOverlay(bool show)
+        {
+            if (editorOverlay == null)
+            {
+                var text = new TextBlock
+                {
+                    Text = "The building is open in the Building Model editor.\n\nEdit the levels, size, roof, walls and diaphragms there and save: " +
+                           "this window updates each time. Close the editor to work here again.",
+                    TextWrapping = TextWrapping.Wrap, FontSize = 15, MaxWidth = 520, TextAlignment = TextAlignment.Center,
+                };
+                editorOverlay = new Border
+                {
+                    Background = new SolidColorBrush(Color.FromArgb(0xD8, 0xF7, 0xF8, 0xFA)),
+                    Child = new Border
+                    {
+                        Background = Brushes.White, BorderBrush = new SolidColorBrush(Color.FromRgb(0x9C, 0xC0, 0xEC)), BorderThickness = new Thickness(1),
+                        CornerRadius = new CornerRadius(8), Padding = new Thickness(28, 22, 28, 22), Child = text,
+                        HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
+                    },
+                };
+                AddOverlay(editorOverlay);
+            }
+            editorOverlay.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        // ------------------------------------------------------------------ the start screen: nothing without a project
+
+        private Grid windowRoot;
+        private Border startScreen;
+
+        /// <summary>The window's content goes into a grid so the start screen and the editor notice can lie over it.</summary>
+        private void AddOverlay(UIElement overlay)
+        {
+            if (windowRoot == null)
+            {
+                var content = (UIElement)Content;
+                Content = null;
+                windowRoot = new Grid();
+                windowRoot.Children.Add(content);
+                Content = windowRoot;
+            }
+            windowRoot.Children.Add(overlay);
+        }
+
+        /// <summary>Until a project is open the window shows only this: make a project, open one (or a recent one), or exit.</summary>
+        private void ShowStartScreen()
+        {
+            if (startScreen == null)
+            {
+                var panel = new StackPanel { Width = 460 };
+                panel.Children.Add(new TextBlock { Text = "Shear Wall Calculator", FontSize = 24, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 6) });
+                panel.Children.Add(new TextBlock
+                {
+                    Text = "Each design project is a folder: the building model, the reports and the logs are kept there together. " +
+                           "Start a project from the building's size, or open a building model.",
+                    TextWrapping = TextWrapping.Wrap, Foreground = new SolidColorBrush(Color.FromRgb(0x52, 0x51, 0x4E)), Margin = new Thickness(0, 0, 0, 16),
+                });
+                panel.Children.Add(StartButton("New project…", "Pick a folder, then the building's length, width and stories", () => NewProject()));
+                panel.Children.Add(StartButton("Open a project…", "A building model (.bldg.json)", () => { string p = ProjectDialogs.OpenModelPath(this); if (p != null) OpenProject(p); }));
+                var recent = (Properties.Settings.Default.RecentFiles ?? new System.Collections.Specialized.StringCollection()).Cast<string>()
+                             .Where(f => f.EndsWith(ProjectFolder.ModelExtension, StringComparison.OrdinalIgnoreCase) && File.Exists(f)).Take(6).ToList();
+                if (recent.Count > 0)
+                {
+                    panel.Children.Add(new TextBlock { Text = "RECENT", FontSize = 11, FontWeight = FontWeights.SemiBold, Foreground = Brushes.Gray, Margin = new Thickness(0, 14, 0, 4) });
+                    foreach (string f in recent)
+                    {
+                        string file = f;
+                        panel.Children.Add(StartButton(Path.GetFileName(file).Replace(ProjectFolder.ModelExtension, ""), Path.GetDirectoryName(file), () => OpenProject(file)));
+                    }
+                }
+                panel.Children.Add(StartButton("Exit", null, Close));
+                startScreen = new Border
+                {
+                    Background = new SolidColorBrush(Color.FromRgb(0xF7, 0xF8, 0xFA)),
+                    Child = new Border
+                    {
+                        Background = Brushes.White, BorderBrush = new SolidColorBrush(Color.FromRgb(0xE1, 0xE0, 0xD9)), BorderThickness = new Thickness(1),
+                        CornerRadius = new CornerRadius(10), Padding = new Thickness(30, 26, 30, 26), Child = panel,
+                        HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
+                    },
+                };
+                AddOverlay(startScreen);
+            }
+            startScreen.Visibility = Visibility.Visible;
+            Title = "Shear Wall Calculator";
+        }
+
+        private void HideStartScreen()
+        {
+            if (startScreen != null) startScreen.Visibility = Visibility.Collapsed;
+        }
+
+        private static Button StartButton(string title, string detail, Action click)
+        {
+            var sp = new StackPanel();
+            sp.Children.Add(new TextBlock { Text = title, FontSize = 14, FontWeight = FontWeights.SemiBold });
+            if (!string.IsNullOrEmpty(detail))
+                sp.Children.Add(new TextBlock { Text = detail, FontSize = 11.5, Foreground = Brushes.Gray, TextTrimming = TextTrimming.CharacterEllipsis });
+            var b = new Button
+            {
+                Content = sp, HorizontalContentAlignment = HorizontalAlignment.Left, Padding = new Thickness(12, 7, 12, 7), Margin = new Thickness(0, 0, 0, 6),
+                Background = Brushes.White, BorderBrush = new SolidColorBrush(Color.FromRgb(0xC3, 0xC2, 0xB7)), ToolTip = detail,
+            };
+            b.Click += (s, e) => click();
+            return b;
+        }
+    }
+}

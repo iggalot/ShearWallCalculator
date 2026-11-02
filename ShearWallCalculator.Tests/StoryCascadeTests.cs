@@ -200,27 +200,12 @@ namespace ShearWallCalculator.Tests
         {
             var floor = Level(Box);
             var roof = Level((0, 0, 40, 0), (0, 30, 40, 30), (0, 0, 0, 30), (40, 0, 40, 30), (20, 0, 20, 30));
-            var json = ShearWallCalculator.Interfaces.ProjectSerializer.ToJson(floor, null, true, new[] { roof });
-            StringAssert.Contains(json, "\"FormatVersion\": 3");
-            var read = ShearWallCalculator.Interfaces.ProjectSerializer.Read(json);
-            Assert.AreEqual(4, read.Calculator._wall_system._walls.Count);
-            Assert.AreEqual(1, read.UpperLevels.Count);
-            Assert.AreEqual(5, read.UpperLevels[0]._wall_system._walls.Count);
-            Assert.AreEqual(1, read.UpperLevels[0]._diaphragm_system._diaphragms.Count);
-            Assert.AreEqual(0, ShearWallCalculator.Interfaces.ProjectSerializer.Read(ShearWallCalculator.Interfaces.ProjectSerializer.ToJson(floor, null, true)).UpperLevels.Count, "one story: no upper levels");
-        }
-
-        /// <summary>The story plate heights are saved with the building and come back (the eave is their sum).</summary>
-        [TestMethod]
-        public void ProjectFile_KeepsThePlateHeights()
-        {
-            var b = new ASCE7WindLoadCalculator.BuildingData { BuildingLength = 40, BuildingWidth = 30, NumberOfStories = 2, PlateHeights = new List<double> { 10, 9 } };
-            var wind = ShearWallCalculator.Interfaces.WindInputs.From(ASCE7WindLoadCalculator.ASCE7_Versions.ASCE_VER_7_22, new ASCE7WindLoadCalculator.WindParameters_Base(), b, false, null, null);
-            var read = ShearWallCalculator.Interfaces.ProjectSerializer.Read(ShearWallCalculator.Interfaces.ProjectSerializer.ToJson(Level(Box), wind, true, new[] { Level(Box) }));
-            var back = read.Wind.ToBuilding();
-            Assert.AreEqual(2, back.NumberOfStories);
-            CollectionAssert.AreEqual(new[] { 10.0, 9.0 }, back.StoryPlateHeights);
-            Assert.AreEqual(19, back.BuildingHeight, 1e-12);
+            var read = TestProject.RoundTrip(new ShearWallCalculatorBase[] { floor, roof });
+            Assert.AreEqual(2, read.Count);
+            Assert.AreEqual(4, read[0]._wall_system._walls.Count);
+            Assert.AreEqual(5, read[1]._wall_system._walls.Count);
+            Assert.AreEqual(1, read[1]._diaphragm_system._diaphragms.Count);
+            Assert.AreEqual(1, TestProject.RoundTrip(new ShearWallCalculatorBase[] { Level(Box) }).Count, "one story: no upper levels");
         }
 
         [TestMethod]

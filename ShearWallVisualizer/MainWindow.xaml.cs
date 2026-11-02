@@ -120,27 +120,18 @@ namespace ShearWallVisualizer
                 windSetup.InputsChanged += WindSetup_InputsChanged;
                 windSetup.SendLoadsRequested += WindSetup_SendLoadsRequested;
                 windSetup.ShearWallsRequested += (s2, e2) => rbWorkspaceWalls.IsChecked = true;
+                windSetup.EditBuildingRequested += (s2, e2) => EditBuilding(); // the size and roof are edited in the Building Model editor
                 tabWindSetupTabItem.Content = windSetup;
-                buildingData = windSetup.Building.Clone();
                 windLoadParams = windSetup.Parameters.Clone();
                 windVersion = windSetup.Version;
-
-                var ctrol_bldg_input = new BuildingDataInputControl(buildingData);
-                ctrol_bldg_input.BuildingDataInputComplete += BuildingDataInputControl_BuildingDataInputComplete;
-                ctrol_bldg_input.PreviewKeyDown += RunBuildingDataInputCalculations;
-                tabBuildingDataControlTabItem.Content = ctrol_bldg_input;
-
-                // create the wind load input control
-                var ctrol_wind_input = new WindLoadInputControl(buildingData, windVersion, windLoadParams);
-                ctrol_wind_input.WindInputComplete += WindLoadInputControl_WindInputComplete;
-                tabWindInputControlTabItem.Content = ctrol_wind_input;
+                // (the building's size, stories and roof come from the model only: the old BuildingData and WIND input tabs are gone)
 
                 // create the wind load results controls
                 CreateAndAssignResultControls();
 
 
                 InitSketch();
-                SetBuilding(ShearWallAdapter.NewBuilding(buildingData?.StoryPlateHeights), null);
+                SetBuilding(ShearWallAdapter.NewBuilding(null), null); // behind the start screen until a project is open
                 LoadRecentFilesMenu();  // recent files menu
 
                 // load the Simpson catalog
@@ -161,7 +152,11 @@ namespace ShearWallVisualizer
                 TabControlManager.ReAddTab(MainTabControl, "tabDesignTabItem");
                 ApplyWorkspace();
                 StartHistory();
-                MarkSaved(); // a new, untitled project
+
+                // nothing is designed without a project: open the one given (BuildingModel.exe's "Design shear walls", a file
+                // opened from Explorer), else the start screen
+                string arg = Environment.GetCommandLineArgs().Skip(1).FirstOrDefault(a => a.EndsWith(".json", StringComparison.OrdinalIgnoreCase));
+                if (arg == null || !File.Exists(arg) || !OpenProject(arg)) ShowStartScreen();
             };
         }
 
@@ -293,13 +288,15 @@ namespace ShearWallVisualizer
             if (designPanel == null) return;
 
             var calcs = levels.Count > 0 ? levels : new List<ShearWallCalculatorBase> { Calculator };
-            allDesignResults = CheckAllLevels(calcs);
+            string blocked = ModelErrorTodo(); // no project, or the model has errors: no design
+            allDesignResults = blocked != null ? calcs.Select(_ => new Dictionary<int, WallDesignResult>()).ToList() : CheckAllLevels(calcs);
             var list = new List<WallDesignPanel.DesignStory>();
             for (int i = 0; i < calcs.Count; i++)
             {
                 var c = calcs[i];
                 string message = null;
-                if (c == null || !c.IsValidForCalculation) message = "draw a diaphragm and walls in both directions first (see the Calculations tab).";
+                if (blocked != null) message = blocked;
+                else if (c == null || !c.IsValidForCalculation) message = "draw a diaphragm and walls in both directions first (see the Calculations tab).";
                 else if (allDesignResults[i].Count == 0) message = "no wall shears yet: add loads (LOADS button) or link the wind loads.";
                 list.Add(new WallDesignPanel.DesignStory { Index = i, Name = LevelName(i), Calculator = c, Results = allDesignResults[i], Message = message });
                 if (ReferenceEquals(c, Calculator)) designResults = allDesignResults[i];
@@ -398,8 +395,9 @@ namespace ShearWallVisualizer
             int diaphragms = Calculator._diaphragm_system?._diaphragms?.Count ?? 0;
             int xWalls = Calculator._wall_system?._walls?.Values.Count(w => Math.Abs(w.End.Y - w.Start.Y) < 1e-9) ?? 0;
             int yWalls = walls - xWalls;
-            string todo = null;
-            if (diaphragms == 0)
+            string todo = ModelErrorTodo(); // no project, or a model with errors: nothing is designed
+            if (todo != null) { }
+            else if (diaphragms == 0)
                 todo = "Draw the floor or roof (diaphragm): click Diaphragm, then click two opposite corners on the drawing.";
             else if (xWalls == 0 || yWalls == 0)
                 todo = $"Draw the shear walls: click Wall, then click each wall's start and end. You need walls in both directions, usually two or more each way " +
@@ -470,44 +468,19 @@ namespace ShearWallVisualizer
         }
 
         #region UI Control Related Events
-        private void BuildingDataInputControl_BuildingDataInputComplete(object sender, BuildingDataInputControl.OnBuildingDataInputCompleteEventArgs e)
-        {
-            buildingData = e._bldg_data;
-            buildingData.ValidateRidgeDirection();  // check that the ridge direction is valid
-
-            // Add the tabWindInputControlTabItem
-            TabControlManager.ReAddTab(MainTabControl, "tabWindInputControlTabItem");
-            WindLoadInputControl temp = tabWindInputControlTabItem.Content as WindLoadInputControl;
-            tabWindInputControlTabItem.Content = new WindLoadInputControl(buildingData, temp.Version, temp.Parameters);
-
-
-            // reset the building data control to use saved values
-            var ctrol_bldg_input = new BuildingDataInputControl(buildingData);
-            ctrol_bldg_input.BuildingDataInputComplete += BuildingDataInputControl_BuildingDataInputComplete;
-            tabBuildingDataControlTabItem.Content = ctrol_bldg_input;
-
-            // create the wind load input control
-            var ctrol_wind_input = new WindLoadInputControl(buildingData, windVersion, windLoadParams);
-            ctrol_wind_input.WindInputComplete += WindLoadInputControl_WindInputComplete;
-            tabWindInputControlTabItem.Content = ctrol_wind_input;
-            
-            // Recalculate wind for the changed building. (Previously the old calculators were re-sent, so
-            // the results tabs and 3D view kept showing the previous building.)
-            RecalculateWind();
-            SyncWindSetup();
-
-            UpdateShearWallUI();
-        }
-
         private WindSetupControl windSetup;
 
-        /// <summary>The guided wind screen changed: it now holds the inputs for every other tab.</summary>
+        /// <summary>
+        /// The guided wind screen changed (the site, the enclosure, the components: the wind app's own inputs). The building's
+        /// size, stories and roof there are the model's (<see cref="ModelToWind"/>), so nothing here changes the model.
+        /// </summary>
         private void WindSetup_InputsChanged(object sender, EventArgs e)
         {
-            // Unusable input (e.g. a blank width): clear the results everywhere rather than leave old numbers
-            // showing; the setup screen says what to fix. The last good inputs are kept.
-            if (WindInputValidator.HasErrors(windSetup.Issues) || windSetup.Analysis == null)
+            // Unusable input (e.g. a blank wind speed), or no building to calculate (no diaphragm yet): clear the results
+            // everywhere rather than leave old numbers showing; the setup screen says what to fix.
+            if (!windSetup.GeometryFromModel || WindInputValidator.HasErrors(windSetup.Issues) || windSetup.Analysis == null)
             {
+                Log.Warning("Wind", "The wind inputs cannot be calculated: " + string.Join("; ", windSetup.Issues.Select(i => i.Message).DefaultIfEmpty("no building geometry from the model")), null);
                 windLoadCalculator_CC = windLoadCalculator_MWFRS_Length = windLoadCalculator_MWFRS_Width = null;
                 CreateAndAssignResultControls();
                 ApplyLinkedWindLoads();
@@ -518,17 +491,11 @@ namespace ShearWallVisualizer
             buildingData = windSetup.Building.Clone();
             windLoadParams = windSetup.Parameters.Clone();
             windVersion = windSetup.Version;
-            MatchLevelsToStories(buildingData.NumberOfStories); // Floors: 1 to 3 levels
+            modelWindKey = null; // the enclosure is part of the wind geometry: send it again on the next model change
 
             RecalculateWind();
             UpdateShearWallUI();
-        }
-
-        /// <summary>Puts edits made on the classic tabs back into the guided screen (without echoing an event).</summary>
-        private void SyncWindSetup()
-        {
-            if (windSetup == null || buildingData == null || windLoadParams == null) return;
-            windSetup.SetInputs(buildingData, windVersion, windLoadParams);
+            LogWindInputs();
         }
 
         /// <summary>"Send loads to shear walls": every Fig. 27.3-8 load case goes to the calculator.</summary>
@@ -573,37 +540,6 @@ namespace ShearWallVisualizer
             windLoadsLinked = false;
             windSetup?.SetShearWallLink(false, reason);
         }
-        /// <summary>
-        /// Event listener for when input of the wind loads as been completed -- to save our wind calculators and update the UI
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void WindLoadInputControl_WindInputComplete(object sender, WindLoadInputControl.OnWindInputCompleteEventArgs e)
-        {
-            if(e._windLoadCalculator_CC != null)
-            {
-                windLoadCalculator_CC = e._windLoadCalculator_CC;
-                windVersion = e._windLoadCalculator_CC.ASCEVersion;
-                windLoadParams = e._windLoadCalculator_CC.Parameters;
-            }
-
-            if(e._windLoadCalculator_MWFRS_Length != null)
-            {
-                windLoadCalculator_MWFRS_Length = e._windLoadCalculator_MWFRS_Length;
-            }
-
-            if(e._windLoadCalculator_MWFRS_Width != null)
-            {
-                windLoadCalculator_MWFRS_Width = e._windLoadCalculator_MWFRS_Width;
-            }
-
-            CreateAndAssignResultControls();
-            SyncWindSetup();
-            ApplyLinkedWindLoads();
-
-            UpdateShearWallUI();
-        }
-
         /// <summary>
         /// Assigns the three calculators to the appropriate tabs.
         /// Since CC is the same for both, only the CC calculator is used on that tab.
@@ -1521,9 +1457,17 @@ namespace ShearWallVisualizer
                 }
                 else
                 {
+                    // Manual loads only in a project without wind inputs: a project that has them always takes the wind loads.
+                    if (windLoadsLinked && MessageBox.Show(this,
+                            "This project takes its loads from its wind inputs, so manual loads are not used.\n\n" +
+                            "Use manual loads instead? The wind inputs are then left out of the project when it is saved " +
+                            "(the button on the Wind Setup screen brings them back while the project is open).",
+                            "Manual loads", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes)
+                        return;
                     // A manual load is the user's own number; never overwrite it, but say so on the wind screen.
                     Calculator.AddLoads(dialog.MagnitudeX, dialog.MagnitudeY);
-                    UnlinkWindLoads($"They use your manual load (X = {dialog.MagnitudeX:0.##} k, Y = {dialog.MagnitudeY:0.##} k). " +
+                    Log.Info("Loads", $"Manual load on {LevelName(currentLevel)}: X {dialog.MagnitudeX:0.##} k, Y {dialog.MagnitudeY:0.##} k (the project has no wind inputs now).");
+                    UnlinkWindLoads($"They use your manual load (X = {dialog.MagnitudeX:0.##} k, Y = {dialog.MagnitudeY:0.##} k); the project has no wind inputs. " +
                                     "Click the button below to use the wind loads instead.");
                 }
                 UpdateShearWallUI();  // update the calculator
@@ -1593,60 +1537,6 @@ namespace ShearWallVisualizer
                 "About", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
-        // ------------------------------------------------------------------ project files
-
-        private const string ProjectFilter = "Shear wall project (*.swc.json)|*.swc.json|Older drawing (*.json)|*.json|All files (*.*)|*.*";
-
-        /// <summary>The open project file, or null for a new project that has not been saved.</summary>
-        private string currentProjectPath;
-
-        /// <summary>The project text when last opened or saved; any difference means unsaved changes.</summary>
-        private string savedProjectJson;
-
-        private WindInputs CurrentWindInputs() => windSetup == null ? null
-            : WindInputs.From(windSetup.Version, windSetup.Parameters, windSetup.Building, windSetup.OnlyCases1And3,
-                              windSetup.RoofComponent, windSetup.WallComponent);
-
-        /// <summary>The project file text: the wind inputs, each story's calculator (loads, plan image) and the building model.</summary>
-        private string CurrentProjectJson() => levels.Count == 0 ? ProjectSerializer.ToJson(Calculator, CurrentWindInputs(), windLoadsLinked, null, ModelFile.BuildingToJson(building))
-            : ProjectSerializer.ToJson(levels[0], CurrentWindInputs(), windLoadsLinked, levels.Skip(1), ModelFile.BuildingToJson(building));
-
-        private bool HasUnsavedChanges => savedProjectJson != null && Calculator != null && CurrentProjectJson() != savedProjectJson;
-
-        private string ProjectName => currentProjectPath == null
-            ? "Untitled"
-            : System.IO.Path.GetFileName(currentProjectPath).Replace(".swc.json", "");
-
-        /// <summary>Title bar: the project name, with * when there are unsaved changes.</summary>
-        private void UpdateTitle()
-        {
-            if (windSetup == null) return;
-            Title = $"{ProjectName}{(HasUnsavedChanges ? " *" : "")} - Shear Wall Calculator";
-        }
-
-        /// <summary>Remembers the current state as saved (after New, Open and Save).</summary>
-        private void MarkSaved()
-        {
-            savedProjectJson = CurrentProjectJson();
-            UpdateTitle();
-        }
-
-        /// <summary>Asks to save unsaved changes. False means the user cancelled.</summary>
-        private bool ConfirmDiscardOrSave()
-        {
-            if (!HasUnsavedChanges) return true;
-            var answer = MessageBox.Show(this, $"Save the changes to {ProjectName}?", "Shear Wall Calculator",
-                                         MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
-            if (answer == MessageBoxResult.Cancel) return false;
-            if (answer == MessageBoxResult.Yes) return SaveProject(saveAs: false);
-            return true;
-        }
-
-        private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
-        {
-            if (!ConfirmDiscardOrSave()) e.Cancel = true;
-        }
-
         private void FileShortcuts(object sender, KeyEventArgs e)
         {
             if ((Keyboard.Modifiers & ModifierKeys.Control) == 0) return;
@@ -1661,169 +1551,6 @@ namespace ShearWallVisualizer
                 default: return;
             }
             e.Handled = true;
-        }
-
-        private void MenuItem_New_Click(object sender, RoutedEventArgs e)
-        {
-            if (!ConfirmDiscardOrSave()) return;
-            currentProjectPath = null;
-            ProjectFolder.Close(); // no project folder until the new project is saved
-            Log.Info("New project");
-            windSetup.SetInputs(null, ASCE7_Versions.ASCE_VER_7_22, null);
-            windSetup.SetOnlyCases1And3(false);
-            buildingData = windSetup.Building.Clone();
-            windLoadParams = windSetup.Parameters.Clone();
-            windVersion = windSetup.Version;
-            windLoadsLinked = true;
-            SetBuilding(ShearWallAdapter.NewBuilding(buildingData.StoryPlateHeights), null);
-            Calculator.DesignSettings.HoldownsFromStandardList = designer != null && designer.StandardList.Count > 0;
-            ImageForNewProject();
-            RecalculateWind();
-            UpdateShearWallUI();
-            StartHistory();
-            MarkSaved();
-        }
-
-        private void MenuItem_Save_Click(object sender, RoutedEventArgs e) => SaveProject(saveAs: false);
-
-        private void MenuItem_SaveAs_Click(object sender, RoutedEventArgs e) => SaveProject(saveAs: true);
-
-        /// <summary>Saves the wind inputs, the drawing and the loads in one file. False if cancelled or failed.</summary>
-        private bool SaveProject(bool saveAs)
-        {
-            windSetup?.FlushPendingChange(); // a value still being typed counts
-            string path = currentProjectPath;
-            // An older drawing file is saved as a new project file rather than overwritten in the new format.
-            if (saveAs || path == null || !path.EndsWith(".swc.json", StringComparison.OrdinalIgnoreCase))
-            {
-                var dialog = new SaveFileDialog
-                {
-                    Filter = ProjectFilter,
-                    InitialDirectory = ProjectFolder.DialogFolder,
-                    FileName = (currentProjectPath == null ? "project" : System.IO.Path.GetFileNameWithoutExtension(ProjectName)) + ".swc.json",
-                    AddExtension = false,
-                };
-                if (dialog.ShowDialog(this) != true) return false;
-                path = dialog.FileName;
-                if (!path.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) path += ".swc.json";
-            }
-
-            try
-            {
-                RecordHoldowns();
-                ProjectSerializer.Save(path, levels[0], CurrentWindInputs(), windLoadsLinked, levels.Skip(1), ModelFile.BuildingToJson(building));
-                baseModelJson = ModelFile.BuildingToJson(building); // Model > Export changes: since this save
-            }
-            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
-            {
-                MessageBox.Show(this, "The project could not be saved:\n" + ex.Message, "Save", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return false;
-            }
-            ProjectFolder.OpenFor(path); // outputs and the log go in the project's folder (its logs subfolder)
-            currentProjectPath = path;
-            AddToRecentFiles(path);
-            Log.Info("Project saved: " + path);
-            MarkSaved();
-            return true;
-        }
-
-        private void MenuItem_Load_Click(object sender, RoutedEventArgs e)
-        {
-            if (!ConfirmDiscardOrSave()) return;
-            var dialog = new OpenFileDialog { InitialDirectory = ProjectFolder.DialogFolder, Filter = "Shear wall files (*.json)|*.json|All files (*.*)|*.*" };
-            if (dialog.ShowDialog(this) == true)
-                OpenProject(dialog.FileName);
-        }
-
-        /// <summary>
-        /// Opens a project file (wind inputs, drawing, loads) or an older drawing-only file. A project whose walls
-        /// followed the wind loads is re-linked; if the wind calculation now gives different loads (for example
-        /// after a program correction), the user is told.
-        /// </summary>
-        private void OpenProject(string path)
-        {
-            ProjectContents contents;
-            try
-            {
-                contents = ProjectSerializer.Load(path);
-            }
-            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is InvalidDataException || ex is JsonException)
-            {
-                MessageBox.Show(this, "The file could not be opened:\n" + ex.Message, "Open", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            // The building model is the source of truth; an older file (no model) becomes one from its calculators. The
-            // calculators stay with the stories in order: their loads and plan images.
-            var calcs = new[] { contents.Calculator }.Concat(contents.UpperLevels ?? new List<ShearWallCalculatorBase>()).ToList();
-            Building opened = null;
-            if (contents.Model != null)
-            {
-                try { opened = ModelFile.BuildingFromJson(contents.Model); }
-                catch (Exception ex) when (ex is System.Runtime.Serialization.SerializationException || ex is InvalidDataException)
-                {
-                    Log.Warning("The building model in the project could not be read; it is made again from the walls and diaphragms", ex);
-                }
-            }
-            bool migrated = opened == null;
-            if (migrated)
-                opened = ShearWallAdapter.FromCalculators(calcs, contents.Wind?.ToBuilding().StoryPlateHeights);
-            SetBuilding(opened, calcs);
-            ProjectFolder.OpenFor(path); // outputs and the log go in the project's folder (its logs subfolder)
-            currentProjectPath = path;
-            ImageForNewProject();
-            Log.Info("Project opened: " + path);
-            string note = null;
-
-            if (contents.IsOlderDrawingFile)
-            {
-                // Older files have no wind inputs: keep the walls on the loads saved in the file.
-                UnlinkWindLoads("They use the loads saved in this older drawing file, which has no wind inputs. " +
-                                "Enter the wind inputs here and click the button below to use the wind loads instead.");
-                note = "This is an older drawing file: it has the walls and loads but no wind inputs. " +
-                       "Saving it creates a project file that keeps both.";
-                if (buildingData != null && buildingData.NumberOfStories != levels.Count)
-                {
-                    buildingData.NumberOfStories = levels.Count; // one story
-                    SyncWindSetup();
-                }
-            }
-            else
-            {
-                var wind = contents.Wind;
-                windSetup.SetInputs(wind.ToBuilding(), wind.Edition, wind.ToParameters());
-                windSetup.SetComponents(wind.RoofComponent, wind.WallComponent);
-                windSetup.SetOnlyCases1And3(wind.OnlyCases1And3);
-                buildingData = windSetup.Building.Clone();
-                windLoadParams = windSetup.Parameters.Clone();
-                windVersion = windSetup.Version;
-                FloorsToBuildingData(); // the model's floors and plate heights
-
-                var saved = contents.Loads ?? new LoadsInfo();
-                windLoadsLinked = saved.LinkedToWind;
-                if (!windLoadsLinked)
-                    UnlinkWindLoads($"They use the manual load saved in this project (X = {Calculator.V_x:0.##} k, Y = {Calculator.V_y:0.##} k). " +
-                                    "Click the button below to use the wind loads instead.");
-                RecalculateWind(); // when linked, this re-sends the wind load cases
-
-                if (windLoadsLinked && (Changed(saved.Vx, Calculator.V_x) || Changed(saved.Vy, Calculator.V_y)))
-                    note = $"The wind loads differ from when this project was saved: X {saved.Vx:0.00} → {Calculator.V_x:0.00} k, " +
-                           $"Y {saved.Vy:0.00} → {Calculator.V_y:0.00} k. The walls now use the new loads " +
-                           "(usually a correction in the wind calculation since then). Save to keep them.";
-            }
-
-            AddToRecentFiles(path);
-            UpdateShearWallUI();
-            StartHistory();
-            if (migrated && calcs.Any(c => c._wall_system._walls.Count + c._diaphragm_system._diaphragms.Count > 0))
-                Log.Info("The project's walls and diaphragms were put into a building model (saved with the project from now on).");
-            string holdownNote = HoldownChangesSinceSave();
-            if (holdownNote != null) note = note == null ? holdownNote : note + "\n\n" + holdownNote;
-            // An older file, or loads or hold-downs that changed, count as unsaved so the user is asked before closing.
-            savedProjectJson = note == null ? CurrentProjectJson() : string.Empty;
-            UpdateTitle();
-            if (note != null)
-                MessageBox.Show(this, note, "Open", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         /// <summary>Stores in the project which hold-down list (version) the design used and each wall's hold-down.</summary>
@@ -1860,6 +1587,12 @@ namespace ShearWallVisualizer
 
         private void MenuItem_PrintReport_Click(object sender, RoutedEventArgs e)
         {
+            string blocked = ModelErrorTodo();
+            if (blocked != null)
+            {
+                MessageBox.Show(this, blocked, "Print report", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
             windSetup?.FlushPendingChange();
             var analysis = windLoadCalculator_MWFRS_Length != null && windLoadCalculator_MWFRS_Width != null
                 ? new WindAnalysisResult(windLoadCalculator_CC, windLoadCalculator_MWFRS_Length, windLoadCalculator_MWFRS_Width)
@@ -1867,6 +1600,7 @@ namespace ShearWallVisualizer
             var info = new ReportInfo { Project = ProjectName, Program = "Shear Wall Calculator" };
             var report = WindReport.Build(info, windVersion, windLoadParams, buildingData, analysis, ShearWallReport.Levels(levels.Count > 0 ? levels : new List<ShearWallCalculatorBase> { Calculator }, windLoadsLinked,
                 c => ReferenceEquals(c, Calculator) ? designResults : CheckWalls(c), designer, levelNotes));
+            Log.Info("Report", $"Report previewed for {ProjectName}: {levels.Count} stor{(levels.Count == 1 ? "y" : "ies")}, {(windLoadsLinked ? "wind" : "manual")} loads.");
             new ReportPreviewWindow(report, ProjectName) { Owner = this }.Show();
         }
         #endregion
@@ -2018,17 +1752,6 @@ namespace ShearWallVisualizer
         }
 
         private void StatusMessage_Click(object sender, MouseButtonEventArgs e) => OpenLogFolder_Click(sender, e);
-
-        // Add an effect where you can press enter or spacebar to commit the building data
-        private void RunBuildingDataInputCalculations(object sender, KeyEventArgs e)
-        {
-            if (e.Key == Key.Enter || e.Key == Key.Space)
-            {
-                BuildingDataInputControl ctrl = tabBuildingDataControlTabItem.Content as BuildingDataInputControl;
-                ctrl.ParseBuildingData();
-                ctrl.OnBuildingDataInputComplete(ctrl.buildingData);
-            }
-        }
 
         private bool InWindWorkspace => rbWorkspaceWind.IsChecked == true;
 

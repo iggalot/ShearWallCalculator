@@ -171,7 +171,7 @@ namespace ShearWallVisualizer
             currentLevel = i >= 0 ? i : Math.Max(0, Math.Min(currentLevel, levels.Count - 1));
             if (i < 0 && stories.Count > 0) { storing = true; try { Sketch.ShowLevel(stories[currentLevel].Level.Id); } finally { storing = false; } }
             Calculator = levels.Count > 0 ? levels[currentLevel] : new ShearWallCalculator_RigidDiaphragm();
-            FloorsToBuildingData();
+            ModelToWind(); // the wind calculation's building is the model's
             UpdateLevelButtons();
             UpdateFromSketch();
         }
@@ -443,48 +443,7 @@ namespace ShearWallVisualizer
 
         // ------------------------------------------------------------------ Model menu: the building for the other apps
 
-        private const string ModelFilter = "Building model (*.bldg.json)|*.bldg.json|JSON (*.json)|*.json|All files (*.*)|*.*";
         private const string ChangesFilter = "Change set (*.changes.json)|*.changes.json|JSON (*.json)|*.json|All files (*.*)|*.*";
-
-        /// <summary>Replaces the plan with a building from the Building Model app; the design inputs of walls with the same IDs stay.</summary>
-        private void ImportModel_Click(object sender, RoutedEventArgs e)
-        {
-            var open = new OpenFileDialog { InitialDirectory = ProjectFolder.DialogFolder, Title = "Open a building model", Filter = ModelFilter };
-            if (open.ShowDialog(this) != true) return;
-            Building b;
-            try { b = ModelFile.Load(open.FileName).Building; }
-            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is InvalidDataException || ex is System.Runtime.Serialization.SerializationException)
-            {
-                MessageBox.Show(this, "The building model could not be read:\n" + ex.Message, "Open a building model", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-            if (b == null) return;
-            if (MessageBox.Show(this, $"Replace the walls, diaphragms and openings of this project with {Path.GetFileName(open.FileName)} " +
-                                      $"({ShearWallAdapter.Stories(b).Count} stories, {b.Walls.Count} walls)?\n\nWalls keep their design where the model has their design data. Ctrl+Z undoes it.",
-                                "Open a building model", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
-            Sketch.Edit($"Building model {Path.GetFileName(open.FileName)} opened.", target =>
-            {
-                string settings = target.GetData(ShearWallAdapter.SettingsKey);
-                ModelHistory.Assign(target, b);
-                if (target.GetData(ShearWallAdapter.SettingsKey) == null) target.SetData(ShearWallAdapter.SettingsKey, settings); // keep the project's design settings
-            });
-            Sketch.ZoomExtents();
-            Log.Info("Building model opened: " + open.FileName);
-        }
-
-        private void ExportModel_Click(object sender, RoutedEventArgs e)
-        {
-            var save = new SaveFileDialog { InitialDirectory = ProjectFolder.DialogFolder, Title = "Save the building model", Filter = ModelFilter, FileName = Path.GetFileNameWithoutExtension(ProjectName) + ".bldg.json" };
-            if (save.ShowDialog(this) != true) return;
-            try { ModelFile.Save(save.FileName, new ModelDocument { Building = ModelFile.Clone(building) }); }
-            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
-            {
-                MessageBox.Show(this, "The building model could not be saved:\n" + ex.Message, "Save the building model", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-            Log.Info("Building model saved: " + save.FileName);
-            ShowStatusMessage(LogLevel.Info, "Building model saved: " + save.FileName);
-        }
 
         private void ExportChanges_Click(object sender, RoutedEventArgs e)
         {

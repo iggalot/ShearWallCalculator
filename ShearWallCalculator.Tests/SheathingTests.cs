@@ -184,8 +184,7 @@ namespace ShearWallCalculator.Tests
             calc.DesignSettings.NewWallDesign = new WallDesignInputs();
             calc.DesignSettings.NewWallDesign.SetFaces(Gyp(4), Gyp(4));
 
-            var read = ShearWallCalculator.Interfaces.ProjectSerializer.Read(
-                ShearWallCalculator.Interfaces.ProjectSerializer.ToJson(calc, null, linkedToWind: false)).Calculator;
+            var read = TestProject.RoundTrip(calc);
             var d = read._wall_system._walls.Values.Single().Design;
             Assert.IsTrue(d.EffectiveFace1().SameConstructionAs(SI_15_32_8d_6));
             Assert.IsTrue(d.EffectiveFace2().SameConstructionAs(Gyp(16)));
@@ -199,10 +198,13 @@ namespace ShearWallCalculator.Tests
             var wall = new WallData(8, 0, 0, 8, 0) { Design = new WallDesignInputs { HoldownOnInsideFace = false } };
             wall.Design.SetFaces(SI_15_32_8d_6, Gyp(4));
             calc._wall_system.AddWall(wall);
-            string json = ShearWallCalculator.Interfaces.ProjectSerializer.ToJson(calc, null, linkedToWind: false);
-            Assert.IsTrue(json.Contains("\"HoldownsFromStandardList\":"));
-            json = json.Replace("\"HoldownsFromStandardList\":", "\"SumWindFaces\": true, \"HoldownsFromStandardList\":");
-            var read = ShearWallCalculator.Interfaces.ProjectSerializer.Read(json).Calculator;
+            bool hadIt = false;
+            var read = TestProject.RoundTrip(calc, editSettingsJson: json =>
+            {
+                hadIt = json.Contains("\"HoldownsFromStandardList\":");
+                return json.Replace("\"HoldownsFromStandardList\":", "\"SumWindFaces\": true, \"HoldownsFromStandardList\":");
+            });
+            Assert.IsTrue(hadIt);
             var r = Designer.Check(0, read._wall_system._walls.Values.Single(), 1.0, "t", read.DesignSettings, read._wall_system._walls.Values.Single().Design);
             Assert.AreEqual(785, r.CombinedNominal, Tol);
         }

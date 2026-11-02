@@ -78,8 +78,9 @@ Expected: SWC 162 pass, BuildingModel 49 pass, Sketch 11 pass.
   host hooks, the app and the adapter.
 - SWC code:
   - `MainWindow.Drafting.cs`: the sketch hookup, model ↔ calculators, issues, 3D and the Model menu.
-  - `MainWindow.Levels.cs`: floors as model edits and the sync with Wind Setup.
-  - `Interfaces/ProjectFile.cs`: the optional `Model` field.
+  - `MainWindow.Levels.cs`: floors as model edits and the wind per level.
+  - `MainWindow.Project.cs`: the project (one `.bldg.json` in a project folder): New, Open, Save, the start screen, the model geometry for the wind, the model-error gate and Edit building (the editor exe).
+  - `ShearWallCalculator.ModelAdapter/ShearWallProject.cs`: the SWC section of the file (manual loads, loads when saved, plan images).
 
 ## How it works (in short)
 
@@ -122,7 +123,6 @@ Expected: SWC 162 pass, BuildingModel 49 pass, Sketch 11 pass.
   - Commits end with a `Co-Authored-By:` line.
 - **Line endings.**
   - `MainWindow.xaml.cs` uses LF line endings.
-  - `Interfaces/ProjectFile.cs` mixes CRLF and LF, so edit it carefully.
 - **Shell.**
   - No Python is used.
   - Bash heredocs that contain `'` break. Write scripts to a file and run them with perl.

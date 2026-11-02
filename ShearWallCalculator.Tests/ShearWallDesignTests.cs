@@ -164,7 +164,7 @@ namespace ShearWallCalculator.Tests
             w.Design.Holdown = HoldownFamilies.Strap_ToWallBelow;
             calc._wall_system.AddWall(w);
             calc.DesignSettings.Method = DesignMethods.LRFD;
-            var read = Interfaces.ProjectSerializer.Read(Interfaces.ProjectSerializer.ToJson(calc, null, false)).Calculator;
+            var read = TestProject.RoundTrip(calc);
             foreach (var wall in read._wall_system._walls.Values)
             {
                 Assert.AreEqual(3, wall.Design.EdgeSpacing);
@@ -321,8 +321,8 @@ namespace ShearWallCalculator.Tests
         {
             var calc = new ShearWallCalculator_RigidDiaphragm();
             calc.DesignSettings.HoldownsFromStandardList = true;
-            var read = ShearWallCalculator.Interfaces.ProjectSerializer.Read(ShearWallCalculator.Interfaces.ProjectSerializer.ToJson(calc, null, false));
-            Assert.IsTrue(read.Calculator.DesignSettings.HoldownsFromStandardList);
+            var read = TestProject.RoundTrip(calc);
+            Assert.IsTrue(read.DesignSettings.HoldownsFromStandardList);
         }
     }
 }

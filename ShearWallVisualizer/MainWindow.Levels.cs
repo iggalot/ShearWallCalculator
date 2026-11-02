@@ -41,63 +41,6 @@ namespace ShearWallVisualizer
             foreach (var l in levels) l.DesignSettings = settings;
         }
 
-        /// <summary>
-        /// The building inputs say how many floors (and their plate heights): adds stories on top, or removes the top ones
-        /// (asking first when they have walls or diaphragms; No puts the number of floors back), and sets each story height.
-        /// </summary>
-        private void MatchLevelsToStories(int count)
-        {
-            if (Sketch?.Building == null) return; // still loading
-            count = Math.Max(1, Math.Min(ASCE7WindLoadCalculator.BuildingData.MaxStories, count));
-            var plates = buildingData?.StoryPlateHeights ?? new double[0];
-            var up = ShearWallAdapter.Stories(building);
-            if (count < up.Count)
-            {
-                var drop = up.Skip(count).ToList();
-                int items = drop.Sum(l => building.DiaphragmsOn(l).Count() + building.Walls.Count(w => w.TopLevelId == l.Id));
-                if (items > 0 && MessageBox.Show(this,
-                        $"{(count == 1 ? "One floor" : count + " floors")}: delete {string.Join(" and ", drop.Select(l => l.Name))}, " +
-                        $"with {items} wall{(items == 1 ? "" : "s")} and diaphragm{(items == 1 ? "" : "s")}? (Ctrl+Z undoes it.)",
-                        "Number of floors", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
-                {
-                    if (buildingData != null) buildingData.NumberOfStories = up.Count;
-                    SyncWindSetup(); // the floors go back to the levels there are
-                    return;
-                }
-            }
-            bool sameHeights = up.Count == count && up.Select((l, i) => i >= plates.Length || Math.Abs(building.StoryHeight(l) - plates[i]) < 0.01).All(x => x);
-            if (sameHeights) return;
-            Sketch.Edit($"{count} floor{(count == 1 ? "" : "s")} from the building inputs.", b =>
-            {
-                var have = ShearWallAdapter.Stories(b);
-                for (int i = have.Count - 1; i >= count; i--) BuildingEdits.DeleteStory(b, have[i]);
-                while (ShearWallAdapter.Stories(b).Count < count)
-                {
-                    int k = ShearWallAdapter.Stories(b).Count;
-                    BuildingEdits.AddStory(b, k < plates.Length && plates[k] > 0 ? plates[k] : defaultWallHeight);
-                }
-                var now = ShearWallAdapter.Stories(b);
-                for (int i = 0; i < now.Count && i < plates.Length; i++)
-                    if (plates[i] > 0 && Math.Abs(b.StoryHeight(now[i]) - plates[i]) >= 0.01) BuildingEdits.SetStoryHeight(b, now[i], plates[i]);
-                BuildingEdits.NameStories(b);
-            });
-            if (count > up.Count) Log.Info($"{count} levels: draw each one with the LEVEL buttons (Copy ↑ starts a level from the one below).");
-        }
-
-        /// <summary>The model's floors and plate heights go to the building inputs (and the wind is shared again) when they differ.</summary>
-        private void FloorsToBuildingData()
-        {
-            if (buildingData == null || stories.Count == 0) return;
-            int n = Math.Min(stories.Count, ASCE7WindLoadCalculator.BuildingData.MaxStories);
-            var plates = stories.Take(n).Select(s => s.PlateHeight).ToList();
-            var now = buildingData.StoryPlateHeights;
-            if (buildingData.NumberOfStories == n && now.Length == n && now.Zip(plates, (a, b) => Math.Abs(a - b) < 0.01).All(x => x)) return;
-            buildingData.NumberOfStories = n;
-            buildingData.PlateHeights = plates;
-            SyncWindSetup();
-            RecalculateWind(); // re-sends the linked wind loads, one set per level
-        }
-
         /// <summary>Shows and edits story <paramref name="i"/> (0 = the first story).</summary>
         private void ShowLevel(int i)
         {
