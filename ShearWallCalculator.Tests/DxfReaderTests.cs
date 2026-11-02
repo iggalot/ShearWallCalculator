@@ -174,5 +174,22 @@ namespace ShearWallCalculator.Tests
             var d = Read(2, "", "0|LINE|8|A|10|0|20|0|11|1|21|0");
             Assert.Throws<ArgumentException>(() => ReferenceImage.FromDxf("x.dxf", d, new string[0], 1, "DXF"));
         }
+
+        /// <summary>samplesDefault_60x40_plan.dxf: in feet, the default wind building's 60 x 40 ft outline, imports at true size.</summary>
+        [TestMethod]
+        public void SamplePlan_IsTheDefaultWindBuilding()
+        {
+            string path = Path.Combine(Path.GetDirectoryName(SourceFile()), "..", "samples", "Default_60x40_plan.dxf");
+            var d = DxfReader.ReadFile(path);
+            Assert.AreEqual(2, d.InsUnits, "feet");
+            var b = d.Bounds();
+            Assert.AreEqual(60, b.Width, 1e-9);
+            Assert.AreEqual(40, b.Height, 1e-9);
+            CollectionAssert.AreEquivalent(new[] { "EXT_WALLS", "INT_WALLS" }, d.Layers().Select(l => l.layer).ToArray());
+            var img = ReferenceImage.FromDxf("Default_60x40_plan.dxf", d, new[] { "EXT_WALLS", "INT_WALLS" }, DxfReader.FeetPerUnit(2), "DXF, feet");
+            Assert.AreEqual(60, img.WorldBounds().Width, 0.01);
+        }
+
+        private static string SourceFile([System.Runtime.CompilerServices.CallerFilePath] string path = "") => path;
     }
 }
