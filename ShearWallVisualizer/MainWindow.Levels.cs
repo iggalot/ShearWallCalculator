@@ -78,7 +78,7 @@ namespace ShearWallVisualizer
                 var now = ShearWallAdapter.Stories(b);
                 for (int i = 0; i < now.Count && i < plates.Length; i++)
                     if (plates[i] > 0 && Math.Abs(b.StoryHeight(now[i]) - plates[i]) >= 0.01) BuildingEdits.SetStoryHeight(b, now[i], plates[i]);
-                ShearWallAdapter.NameStories(b);
+                BuildingEdits.NameStories(b);
             });
             if (count > up.Count) Log.Info($"{count} levels: draw each one with the LEVEL buttons (Copy ↑ starts a level from the one below).");
         }
@@ -212,7 +212,7 @@ namespace ShearWallVisualizer
                     BuildingEdits.CopyStory(b, from, added);
                     ShearWallAdapter.CopyDesignUp(b, from, added);
                 }
-                ShearWallAdapter.NameStories(b);
+                BuildingEdits.NameStories(b);
             });
             if (added != null) Sketch.ShowLevel(added.Id);
             ShowStatusMessage(LogLevel.Info, $"Added {added?.Name}: floor at {plates.Sum():0.##} ft, plate height {dialog.PlateHeight:0.##} ft, eave {plates.Sum() + dialog.PlateHeight:0.##} ft." +
@@ -256,7 +256,7 @@ namespace ShearWallVisualizer
             Sketch.Edit($"Deleted {name}.", b =>
             {
                 BuildingEdits.DeleteStory(b, b.Level(s.Level.Id));
-                ShearWallAdapter.NameStories(b);
+                BuildingEdits.NameStories(b);
             });
             ShowLevel(Math.Min(k, stories.Count - 1));
             ShowStatusMessage(LogLevel.Info, $"Deleted {name}. Now {stories.Count} floor{(stories.Count == 1 ? "" : "s")}, eave {PlateHeights().Sum():0.##} ft; showing {LevelName(currentLevel)}. Ctrl+Z undoes it.");

@@ -271,11 +271,11 @@ namespace ShearWallCalculator.Tests
         {
             var b = ShearWallAdapter.NewBuilding(new[] { 10.0, 9.0 });
             var mezz = BuildingEdits.AddStory(b, 8);
-            ShearWallAdapter.NameStories(b);
+            BuildingEdits.NameStories(b);
             CollectionAssert.AreEqual(new[] { "Level 2", "Level 3", "Roof" }, ShearWallAdapter.Stories(b).Select(l => l.Name).ToArray(), "the old roof is a floor now");
             ShearWallAdapter.Stories(b)[0].Name = "Podium";
             BuildingEdits.DeleteStory(b, mezz);
-            ShearWallAdapter.NameStories(b);
+            BuildingEdits.NameStories(b);
             CollectionAssert.AreEqual(new[] { "Podium", "Roof" }, ShearWallAdapter.Stories(b).Select(l => l.Name).ToArray());
         }
 

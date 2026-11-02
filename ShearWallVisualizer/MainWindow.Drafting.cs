@@ -71,6 +71,7 @@ namespace ShearWallVisualizer
         private void InitSketch()
         {
             sketchView.ShowLevelBar = false;    // the LEVEL buttons above choose the level
+            sketchView.MaxStories = FloorEdits.MaxFloors; // New from size: the designer handles up to this many floors
             sketchView.ShowPlanButton = false;  // Image ▾ above imports the plan (PDF, DXF, picture) per level
             sketchView.HideTool(SketchTool.Calibrate);
             var s = Sketch;

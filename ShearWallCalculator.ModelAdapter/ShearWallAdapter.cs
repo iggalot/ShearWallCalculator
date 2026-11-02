@@ -314,31 +314,17 @@ namespace ShearWallCalculator.ModelAdapter
 
         // ------------------------------------------------------------------ stories
 
-        /// <summary>A new building with one story per plate height (bottom first; the default story height when none or not more than 0), named by <see cref="NameStories"/>.</summary>
+        /// <summary>A new building with one story per plate height (bottom first; the default story height when none or not more than 0), named by <see cref="BuildingEdits.NameStories"/>.</summary>
         public static Building NewBuilding(IList<double> plateHeights, double? fallbackHeight = null)
         {
             var b = Building.New();
             double fallback = fallbackHeight ?? b.Defaults.StoryHeight;
             var heights = plateHeights != null && plateHeights.Count > 0 ? plateHeights : new[] { fallback };
             foreach (double h in heights) BuildingEdits.AddStory(b, h > 0 ? h : fallback);
-            NameStories(b);
+            BuildingEdits.NameStories(b);
             return b;
         }
 
-        /// <summary>
-        /// Default story names follow the stories: Level 2, Level 3... and the top one Roof (one story: Level 2). Names the
-        /// user gave (anything but "Level n" and "Roof") stay.
-        /// </summary>
-        public static void NameStories(Building b)
-        {
-            var up = Stories(b);
-            for (int i = 0; i < up.Count; i++)
-            {
-                string name = up[i].Name ?? "";
-                bool standard = name == "Roof" || (name.StartsWith("Level ", StringComparison.Ordinal) && int.TryParse(name.Substring(6), out _));
-                if (standard) up[i].Name = i == up.Count - 1 && up.Count > 1 ? "Roof" : $"Level {i + 2}";
-            }
-        }
 
         /// <summary>
         /// After <see cref="BuildingEdits.CopyStory"/>: a copied wall's design was kept for the level it came from; it becomes
