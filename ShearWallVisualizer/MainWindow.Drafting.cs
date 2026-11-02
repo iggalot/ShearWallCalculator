@@ -361,7 +361,7 @@ namespace ShearWallVisualizer
             Sketch.Issues = list;
             int errors = list.Count(i => i.Severity == Severity.Error), warnings = list.Count - errors;
             btnIssues.Content = errors > 0 ? $"✗ {errors}" + (warnings > 0 ? $"  ⚠ {warnings}" : "") : warnings > 0 ? $"⚠ {warnings}" : "✓";
-            btnIssues.Foreground = errors > 0 ? StatusErrorInk : warnings > 0 ? StatusWarnInk : Brushes.DarkGreen;
+            btnIssues.Foreground = errors > 0 ? StatusErrorInk : warnings > 0 ? StatusWarnInk : Controls.Ui.PassInk;
             btnIssues.ToolTip = list.Count == 0 ? "No errors or warnings in the model or the design." : $"{errors} errors, {warnings} warnings: click for the list (click one to find it on the plan).";
         }
 

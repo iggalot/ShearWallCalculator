@@ -188,7 +188,7 @@ namespace ShearWallVisualizer
                 tbWorkspaceLoads.Text = windLoadsLinked
                     ? $"Shear walls use the wind loads (X {Calculator.V_x:0.0} k, Y {Calculator.V_y:0.0} k), updated automatically."
                     : $"Shear walls use MANUAL loads (X {Calculator.V_x:0.0} k, Y {Calculator.V_y:0.0} k), not the wind loads.";
-                tbWorkspaceLoads.Foreground = windLoadsLinked ? Brushes.DarkGreen : Brushes.DarkOrange;
+                tbWorkspaceLoads.Foreground = windLoadsLinked ? Controls.Ui.PassInk : Controls.Ui.WarnInk;
             }
 
             // UpdateShearWallUI the button appearances
@@ -263,29 +263,59 @@ namespace ShearWallVisualizer
 
             designPanel = new WallDesignPanel();
             designPanel.DesignChanged += (s, e) => UpdateShearWallUI();
-            designPanel.AutoSelectRequested += (s, e) => AutoSelectAllWalls();
-            designPanel.WallSelected += id => SelectFromTable("Wall", id);
-            designPanel.WallDeleteRequested += id => DeleteFromTable("Wall", id);
+            designPanel.AutoSelectRequested += AutoSelectWalls;
+            designPanel.WallSelected += (story, id) => SelectOnLevel(story, "Wall", id);
+            designPanel.WallDeleteRequested += (story, id) => { SelectOnLevel(story, "Wall", id); DeleteFromTable("Wall", id); };
             tabDesignTabItem.Content = WithLevelBanner(designPanel);
         }
 
-        /// <summary>Checks every wall for its governing shear (called after the wall calculations).</summary>
+        /// <summary>A wall picked in a table of every floor: shows its floor first when it is another one.</summary>
+        private void SelectOnLevel(int story, string kind, int id)
+        {
+            if (story != currentLevel && story >= 0 && story < stories.Count)
+            {
+                ShowLevel(story);
+                selectedKind = kind;
+                selectedId = id;
+            }
+            SelectFromTable(kind, id);
+        }
+
+        /// <summary>The check of every wall on every floor (the table lists them all); index = story.</summary>
+        private List<Dictionary<int, WallDesignResult>> allDesignResults = new List<Dictionary<int, WallDesignResult>>();
+
+        /// <summary>Checks every wall of every floor for its governing shear (called after the wall calculations).</summary>
         private void UpdateDesign()
         {
             designResults = new Dictionary<int, WallDesignResult>();
             if (designPanel == null) return;
 
-            string message = null;
-            if (Calculator == null || !Calculator.IsValidForCalculation)
-                message = "Draw a diaphragm and walls in both directions first (see the Calculations tab).";
-            else
+            var calcs = levels.Count > 0 ? levels : new List<ShearWallCalculatorBase> { Calculator };
+            allDesignResults = CheckAllLevels(calcs);
+            var list = new List<WallDesignPanel.DesignStory>();
+            for (int i = 0; i < calcs.Count; i++)
             {
-                designResults = CheckWalls(Calculator);
-                if (designResults.Count == 0) message = "No wall shears yet: add loads (LOADS button) or link the wind loads.";
+                var c = calcs[i];
+                string message = null;
+                if (c == null || !c.IsValidForCalculation) message = "draw a diaphragm and walls in both directions first (see the Calculations tab).";
+                else if (allDesignResults[i].Count == 0) message = "no wall shears yet: add loads (LOADS button) or link the wind loads.";
+                list.Add(new WallDesignPanel.DesignStory { Index = i, Name = LevelName(i), Calculator = c, Results = allDesignResults[i], Message = message });
+                if (ReferenceEquals(c, Calculator)) designResults = allDesignResults[i];
             }
-            designPanel.Show(Calculator, designResults, designer, windLoadsLinked, message);
-            if (selectedKind == "Wall") designPanel.SelectWall(selectedId); // the same wall as on the drawing and the other tabs
-            holdownCatalog?.SetDesign(designResults);
+            if (list.Count == 1 && list[0].Message != null) list[0].Message = char.ToUpper(list[0].Message[0]) + list[0].Message.Substring(1);
+            designPanel.Show(list, Math.Max(0, levels.IndexOf(Calculator)), designer, windLoadsLinked);
+            if (selectedKind == "Wall") designPanel.SelectWall(Math.Max(0, levels.IndexOf(Calculator)), selectedId); // the same wall as on the drawing and the other tabs
+            holdownCatalog?.SetDesign(DesignByFloor());
+        }
+
+        /// <summary>Every floor's checks, roof down, so each hold-down carries the walls stacked on it; index = story.</summary>
+        private List<Dictionary<int, WallDesignResult>> CheckAllLevels(IList<ShearWallCalculatorBase> calcs)
+        {
+            var all = new Dictionary<int, WallDesignResult>[calcs.Count];
+            Dictionary<int, WallDesignResult> above = null;
+            for (int k = calcs.Count - 1; k >= 0; k--)
+                all[k] = above = CheckLevel(calcs[k], k + 1 < calcs.Count ? calcs[k + 1] : null, above, k + 2);
+            return all.ToList();
         }
 
         /// <summary>
@@ -319,6 +349,12 @@ namespace ShearWallVisualizer
 
         private Dialogs.HoldownCatalogWindow holdownCatalog;
 
+        /// <summary>Every floor's wall checks by floor name, bottom up (for the catalog's "Used on walls").</summary>
+        private List<KeyValuePair<string, IReadOnlyDictionary<int, WallDesignResult>>> DesignByFloor() =>
+            allDesignResults.Count == 0
+                ? new List<KeyValuePair<string, IReadOnlyDictionary<int, WallDesignResult>>> { new KeyValuePair<string, IReadOnlyDictionary<int, WallDesignResult>>("", designResults) }
+                : allDesignResults.Select((r, i) => new KeyValuePair<string, IReadOnlyDictionary<int, WallDesignResult>>(LevelName(i), r)).ToList();
+
         /// <summary>The hold-down catalog the design selects from, with the walls using each option (kept current).</summary>
         private void OpenHoldownCatalog_Click(object sender, RoutedEventArgs e)
         {
@@ -326,20 +362,26 @@ namespace ShearWallVisualizer
             if (holdownCatalog == null)
             {
                 holdownCatalog = new Dialogs.HoldownCatalogWindow(designer) { Owner = this };
+                holdownCatalog.ProjectName = () => ProjectName;
                 holdownCatalog.Closed += (s, a) => holdownCatalog = null;
             }
-            holdownCatalog.SetDesign(designResults);
+            holdownCatalog.SetDesign(DesignByFloor());
             holdownCatalog.Show();
             holdownCatalog.Activate();
         }
 
-        /// <summary>The lightest passing edge nailing (then both sides) for every wall, keeping its panel and hold-down type.</summary>
-        private void AutoSelectAllWalls()
+        /// <summary>The lightest passing edge nailing (then both sides) for every wall of these floors, keeping its panel and hold-down type.</summary>
+        private void AutoSelectWalls(IList<int> storyIndexes)
         {
-            if (Calculator == null) return;
-            foreach (var kv in Calculator._wall_system._walls)
-                if (Calculator.TotalWallShear.TryGetValue(kv.Key, out double v))
-                    kv.Value.Design = designer.AutoSelect(kv.Value, v, Calculator.DesignSettings);
+            var calcs = levels.Count > 0 ? levels : new List<ShearWallCalculatorBase> { Calculator };
+            foreach (int i in storyIndexes ?? Enumerable.Range(0, calcs.Count).ToList())
+            {
+                var c = i >= 0 && i < calcs.Count ? calcs[i] : null;
+                if (c == null) continue;
+                foreach (var kv in c._wall_system._walls)
+                    if (c.TotalWallShear.TryGetValue(kv.Key, out double v))
+                        kv.Value.Design = designer.AutoSelect(kv.Value, v, c.DesignSettings);
+            }
             UpdateShearWallUI();
         }
 
@@ -1400,7 +1442,7 @@ namespace ShearWallVisualizer
         private void SelectionCard_OpenDesign(string kind, int id)
         {
             MainTabControl.SelectedItem = tabDesignTabItem;
-            designPanel?.SelectWall(id);
+            designPanel?.SelectWall(Math.Max(0, levels.IndexOf(Calculator)), id);
         }
 
         private void SelectionCard_EditGeometry(string kind, int id) => MainTabControl.SelectedItem = tabDimensionsTabItem;
@@ -1948,7 +1990,7 @@ namespace ShearWallVisualizer
         // ------------------------------------------------------------------ status line
 
         private static readonly Brush StatusWarnInk = new SolidColorBrush(Color.FromRgb(0x9A, 0x5B, 0x00));
-        private static readonly Brush StatusErrorInk = new SolidColorBrush(Color.FromRgb(0xB4, 0x23, 0x18));
+        private static readonly Brush StatusErrorInk = new SolidColorBrush(Color.FromRgb(0xB5, 0x47, 0x08));
 
         /// <summary>Shows a message on the right of the status line; warnings and errors from the log arrive here too.</summary>
         private void ShowStatusMessage(LogLevel level, string message)

@@ -21,14 +21,45 @@ namespace ShearWallVisualizer.Controls
     /// </summary>
     public class WallDesignPanel : UserControl
     {
+        /// <summary>One story's walls for the table: its calculator, the check of each wall, or why it cannot be designed yet.</summary>
+        public sealed class DesignStory
+        {
+            /// <summary>0 = the first story (the host's level index).</summary>
+            public int Index { get; set; }
+            public string Name { get; set; }
+            public ShearWallCalculatorBase Calculator { get; set; }
+            public IReadOnlyDictionary<int, WallDesignResult> Results { get; set; } = new Dictionary<int, WallDesignResult>();
+            /// <summary>Why this story has nothing to design yet (null when it has).</summary>
+            public string Message { get; set; }
+        }
+
         public event EventHandler DesignChanged;
-        public event EventHandler AutoSelectRequested;
 
-        /// <summary>A wall row was clicked (wall id): the host highlights it on the drawing.</summary>
-        public event Action<int> WallSelected;
+        /// <summary>Auto-select for the stories shown (their indexes).</summary>
+        public event Action<IList<int>> AutoSelectRequested;
 
-        /// <summary>The × on a wall row (wall id); the host deletes it.</summary>
-        public event Action<int> WallDeleteRequested;
+        /// <summary>A wall row was clicked (story index, wall id): the host shows that story and highlights the wall.</summary>
+        public event Action<int, int> WallSelected;
+
+        /// <summary>The × on a wall row (story index, wall id); the host deletes it.</summary>
+        public event Action<int, int> WallDeleteRequested;
+
+        /// <summary>A row's key: the story and the wall (wall ids repeat from story to story: a tall wall is in each).</summary>
+        private const int KeyStride = 1000000;
+        internal static int RowKey(int story, int wall) => story * KeyStride + wall;
+        private static int StoryOf(int key) => key / KeyStride;
+        private static int WallOf(int key) => key % KeyStride;
+
+        private List<DesignStory> stories = new List<DesignStory>();
+        private int currentStory;
+
+        /// <summary>The story shown (index), or -1 for every floor (the default).</summary>
+        private int floorFilter = -1;
+        private readonly ComboBox cbFloors = new ComboBox
+        {
+            MinWidth = 110, Margin = new Thickness(0, 0, 20, 0),
+            ToolTip = "Which floors the table lists: every floor (the default) or one. The drawing shows the floor you are editing.",
+        };
 
         private readonly SortState sort = new SortState();
         private GridSorter sorter;
@@ -67,11 +98,24 @@ namespace ShearWallVisualizer.Controls
         private readonly StackPanel details = new StackPanel();
         private readonly Border detailsCard;
 
-        private ShearWallCalculatorBase calc;
-        private IReadOnlyDictionary<int, WallDesignResult> results = new Dictionary<int, WallDesignResult>();
+        /// <summary>The stories listed (all, or the one picked in Floors).</summary>
+        private List<DesignStory> shown = new List<DesignStory>();
+
+        /// <summary>Every wall listed, by row key.</summary>
+        private Dictionary<int, WallDesignResult> results = new Dictionary<int, WallDesignResult>();
         private ShearWallDesigner designer;
-        private int selectedWall = -1;
+        private int selectedWall = -1; // a row key
         private bool loading;
+
+        /// <summary>The Level column is shown when more than one story is listed.</summary>
+        private bool showLevel;
+
+        private DesignStory Story(int key) => stories.FirstOrDefault(s => s.Index == StoryOf(key));
+
+        private ShearWallCalculatorBase CalcOf(int key) => Story(key)?.Calculator;
+
+        /// <summary>The settings shown in the bar (one set for the project, shared by every story).</summary>
+        private ShearWallCalculatorBase SettingsCalc => stories.FirstOrDefault(s => s.Index == currentStory)?.Calculator ?? stories.FirstOrDefault()?.Calculator;
 
         public WallDesignPanel()
         {
@@ -89,9 +133,17 @@ namespace ShearWallVisualizer.Controls
             cbPool.Items.Add("Full catalog");
             cbPool.Items.Add("Standard list");
             cbPool.SelectionChanged += (s, e) => SettingsChanged();
-            btnAuto.Click += (s, e) => AutoSelectRequested?.Invoke(this, EventArgs.Empty);
+            btnAuto.Click += (s, e) => AutoSelectRequested?.Invoke(shown.Select(x => x.Index).ToList());
+            cbFloors.SelectionChanged += (s, e) =>
+            {
+                if (loading || !(cbFloors.SelectedItem is ComboBoxItem item)) return;
+                floorFilter = (int)item.Tag;
+                Rebuild();
+            };
 
             var bar = new WrapPanel { Margin = new Thickness(0, 0, 0, 2) };
+            bar.Children.Add(Label("Floors:"));
+            bar.Children.Add(cbFloors);
             bar.Children.Add(Label("Design method:"));
             bar.Children.Add(rbAsd);
             bar.Children.Add(rbLrfd);
@@ -136,10 +188,10 @@ namespace ShearWallVisualizer.Controls
         private void UpdateDensity(bool force)
         {
             double room = tableScroll.ActualWidth - SystemParameters.VerticalScrollBarWidth - 4;
-            var d = cbAllColumns.IsChecked == true || room <= 0 ? Density.Full : DensityFor(room);
+            var d = cbAllColumns.IsChecked == true || room <= 0 ? Density.Full : DensityFor(room, showLevel);
             if (d == density && !force) return;
             density = d;
-            if (calc != null && designer != null && results.Count > 0)
+            if (designer != null && results.Count > 0)
             {
                 ClearTable();
                 BuildTable();
@@ -147,13 +199,17 @@ namespace ShearWallVisualizer.Controls
         }
 
         /// <summary>The fullest set of columns that fits in <paramref name="room"/> (DIPs).</summary>
-        internal static Density DensityFor(double room) =>
-            room >= TableWidth(Density.Full) ? Density.Full : room >= TableWidth(Density.Medium) ? Density.Medium : Density.Narrow;
+        internal static Density DensityFor(double room, bool withLevel) =>
+            room >= TableWidth(Density.Full, withLevel) ? Density.Full : room >= TableWidth(Density.Medium, withLevel) ? Density.Medium : Density.Narrow;
 
         /// <summary>The width of the table's columns in a density (the status column at its least).</summary>
-        internal static double TableWidth(Density d) => Columns.Where(c => Shows(c.level, d)).Sum(c => WidthIn(c, d));
+        internal static double TableWidth(Density d, bool withLevel) =>
+            Columns.Select((c, i) => (c, i)).Where(x => (x.i != LevelColumn || withLevel) && Shows(x.c.level, d)).Sum(x => WidthIn(x.c, d));
 
         private static bool Shows(int level, Density d) => level <= (d == Density.Full ? 2 : d == Density.Medium ? 1 : 0);
+
+        /// <summary>A column shown at this width (the Level column only when several stories are listed).</summary>
+        private bool Visible(int col) => (col != LevelColumn || showLevel) && Shows(Columns[col].level, density);
 
         private static double WidthIn((string header, double width, string tip, int level) c, Density d) =>
             d == Density.Narrow && c.header.StartsWith("Face") ? 112 : c.width;
@@ -166,13 +222,46 @@ namespace ShearWallVisualizer.Controls
             rowFill.Clear();
         }
 
-        /// <summary>Shows the walls and results. <paramref name="message"/> replaces the table when there is nothing to design.</summary>
-        public void Show(ShearWallCalculatorBase calculator, IReadOnlyDictionary<int, WallDesignResult> designResults, ShearWallDesigner shearWallDesigner,
-                         bool loadsFromWind, string message)
+        /// <summary>
+        /// Shows the walls and results of every story (bottom up); <paramref name="current"/> is the story being drawn. A
+        /// story's message says why it has nothing to design yet.
+        /// </summary>
+        public void Show(IList<DesignStory> designStories, int current, ShearWallDesigner shearWallDesigner, bool loadsFromWind)
         {
-            calc = calculator;
-            results = designResults ?? new Dictionary<int, WallDesignResult>();
+            stories = (designStories ?? new List<DesignStory>()).OrderBy(s => s.Index).ToList();
+            currentStory = current;
             designer = shearWallDesigner;
+            if (floorFilter >= 0 && !stories.Any(s => s.Index == floorFilter)) floorFilter = -1; // the floor picked is gone
+
+            loading = true;
+            cbFloors.Items.Clear();
+            cbFloors.Items.Add(new ComboBoxItem { Content = "All floors", Tag = -1 });
+            foreach (var s in stories) cbFloors.Items.Add(new ComboBoxItem { Content = s.Name, Tag = s.Index });
+            cbFloors.SelectedItem = cbFloors.Items.OfType<ComboBoxItem>().First(i => (int)i.Tag == floorFilter);
+            cbFloors.IsEnabled = stories.Count > 1;
+            loading = false;
+
+            this.loadsFromWind = loadsFromWind;
+            Rebuild();
+        }
+
+        private bool loadsFromWind;
+
+        /// <summary>The table again for the floors picked (after Show or a change of Floors).</summary>
+        private void Rebuild()
+        {
+            shown = stories.Where(s => floorFilter < 0 || s.Index == floorFilter).ToList();
+            showLevel = shown.Count > 1;
+            results = new Dictionary<int, WallDesignResult>();
+            foreach (var s in shown)
+                foreach (var kv in s.Results ?? new Dictionary<int, WallDesignResult>())
+                    results[RowKey(s.Index, kv.Key)] = kv.Value;
+            var calc = SettingsCalc;
+            string message = shown.Count == 0 ? null
+                           : string.Join("\n", shown.Where(s => s.Message != null).Select(s => (showLevel ? s.Name + ": " : "") + s.Message));
+            if (string.IsNullOrEmpty(message)) message = null;
+            density = cbAllColumns.IsChecked == true || !(tableScroll.ActualWidth > 0) ? Density.Full
+                    : DensityFor(tableScroll.ActualWidth - SystemParameters.VerticalScrollBarWidth - 4, showLevel);
 
             loading = true;
             var settings = calc?.DesignSettings ?? new DesignSettings();
@@ -187,14 +276,14 @@ namespace ShearWallVisualizer.Controls
                           (settings.Method == DesignMethods.ASD ? "ASD: walls get 0.6W, capacity = nominal / 2.0. " : "LRFD: walls get 1.0W, capacity = 0.80 × nominal. ") +
                           "Hold-downs are always checked at ASD (0.6W) against Simpson allowable loads. Sheathing from SDPWS Tables 4.3A, 4.3B and 4.3C, " +
                           "one or two faces (different materials: the larger of the stronger face and 2 × the weaker, never added); each drawn wall is one full-height segment. " +
-                          (calculator is ShearWallCalculator_FlexibleDiaphragm
+                          (shown.Any(s => s.Calculator is ShearWallCalculator_FlexibleDiaphragm)
                               ? "Flexible diaphragm: each wall line takes its tributary load, plus the case torsion by equivalent tributary weights, split among its walls by rigidity. "
                               : "Rigid diaphragm: load shared by wall rigidity, plus torsion. ") + SdpwsSource.TableSource;
 
             ClearTable();
             details.Children.Clear();
 
-            if (message != null || calc == null || designer == null)
+            if (results.Count == 0 || calc == null || designer == null)
             {
                 tbSummary.Text = string.Empty;
                 btnAuto.IsEnabled = false;
@@ -202,6 +291,8 @@ namespace ShearWallVisualizer.Controls
                 detailsCard.Visibility = Visibility.Collapsed;
                 return;
             }
+            // floors that cannot be designed yet are named above the table; the others are listed
+            if (message != null) tbNote.Inlines.Add(new Run("\n" + message) { Foreground = Ui.WarnInk, FontWeight = FontWeights.SemiBold });
 
             btnAuto.IsEnabled = true;
             int pass = results.Values.Count(r => r.Pass);
@@ -226,6 +317,7 @@ namespace ShearWallVisualizer.Controls
         /// </summary>
         private static readonly (string header, double width, string tip, int level)[] Columns =
         {
+            ("Level", 64, "The floor or roof the wall holds up (its story). Pick one floor in Floors to list only its walls.", 0),
             ("Wall", 50, "Wall number and direction", 0),
             ("Check", 62, "✓ passes · ▲ passes at 90 % or more of its shear capacity · ✗ fails. The number is the shear ratio (demand / capacity); " +
                           "h/b: the wall is too slender; HD: no hold-down is strong enough. Why it fails is in the Status column.", 0),
@@ -258,12 +350,15 @@ namespace ShearWallVisualizer.Controls
             return $"{mark} {r.ShearRatio:0.00}";
         }
 
+        private const int LevelColumn = 0;
+
         private void BuildTable()
         {
             sorter = new GridSorter(table, sort);
-            foreach (var c in Columns)
+            for (int i = 0; i < Columns.Length; i++)
             {
-                if (!Shows(c.level, density)) table.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0) });
+                var c = Columns[i];
+                if (!Visible(i)) table.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0) });
                 else if (c.header == "Status") // the status text is not cut off, except when the panel is narrow (then its tooltip has it)
                     table.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto, MinWidth = c.width, MaxWidth = density == Density.Narrow ? 200 : double.PositiveInfinity });
                 else table.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(WidthIn(c, density)) });
@@ -276,7 +371,7 @@ namespace ShearWallVisualizer.Controls
                     Background = HeaderFill, BorderBrush = Hairline, BorderThickness = new Thickness(0, 0, 0, 1), Padding = new Thickness(4, 5, 4, 5),
                     Child = new TextBlock { Text = Columns[c].header, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap },
                     ToolTip = string.IsNullOrEmpty(Columns[c].tip) ? null : Columns[c].tip,
-                    Visibility = Shows(Columns[c].level, density) ? Visibility.Visible : Visibility.Collapsed,
+                    Visibility = Visible(c) ? Visibility.Visible : Visibility.Collapsed,
                 };
                 Grid.SetColumn(h, c);
                 table.Children.Add(h);
@@ -284,10 +379,13 @@ namespace ShearWallVisualizer.Controls
             }
 
             int row = 1;
-            foreach (var id in results.Keys.OrderBy(k => k))
+            foreach (var id in results.Keys.OrderBy(k => k)) // bottom story first, then by wall number
             {
                 var r = results[id];
-                var wall = calc._wall_system._walls[id];
+                var story = Story(id);
+                var calc = story.Calculator;
+                int wallId = WallOf(id);
+                if (!calc._wall_system._walls.TryGetValue(wallId, out var wall)) continue;
                 var state = r.State;
                 table.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
@@ -304,7 +402,9 @@ namespace ShearWallVisualizer.Controls
                 table.Children.Add(stripe);
 
                 int col = 0;
-                Cell(row, col++, $"{id} ({(wall.WallDir == WallDirs.EastWest ? "E-W" : "N-S")})", id);
+                Cell(row, col, story.Name, id, story.Index == currentStory ? Ink : InkSecondary, bold: story.Index == currentStory);
+                sorter.Key(row, col++, story.Index); // sorts by story, not by name
+                Cell(row, col++, $"{wallId} ({(wall.WallDir == WallDirs.EastWest ? "E-W" : "N-S")})", id);
                 var badge = new Border
                 {
                     Background = Ui.StateFill(state), CornerRadius = new CornerRadius(4), Margin = new Thickness(3, 3, 3, 3), Padding = new Thickness(5, 1, 5, 1),
@@ -369,25 +469,26 @@ namespace ShearWallVisualizer.Controls
                 };
                 status.MouseLeftButtonDown += (s, e) => Select((int)((Border)s).Tag);
                 Put(row, col++, status);
-                int del = id;
-                Put(row, col++, Ui.DeleteButton(() => Dispatcher.BeginInvoke(new Action(() => WallDeleteRequested?.Invoke(del)),
-                    System.Windows.Threading.DispatcherPriority.Background), $"Delete wall {id}"));
+                int delStory = story.Index, delWall = wallId;
+                Put(row, col++, Ui.DeleteButton(() => Dispatcher.BeginInvoke(new Action(() => WallDeleteRequested?.Invoke(delStory, delWall)),
+                    System.Windows.Threading.DispatcherPriority.Background), $"Delete wall {wallId}" + (showLevel ? $" ({story.Name})" : "")));
                 row++;
             }
             sorter.Apply();
         }
 
         /// <summary>Selects a wall from outside (the drawing's card); ignored if the wall has no result.</summary>
-        public void SelectWall(int id)
+        public void SelectWall(int story, int id)
         {
-            if (results.ContainsKey(id)) Select(id, notify: false);
+            int key = RowKey(story, id);
+            if (results.ContainsKey(key)) Select(key, notify: false);
         }
 
         private void Select(int id, bool notify = true)
         {
             if (selectedWall == id) return;
             selectedWall = id;
-            if (notify) WallSelected?.Invoke(id);
+            if (notify) WallSelected?.Invoke(StoryOf(id), WallOf(id));
             foreach (var b in table.Children.OfType<Border>().Where(b => Grid.GetColumnSpan(b) == Columns.Length && b.Tag is int))
                 b.Background = (int)b.Tag == id ? SelectedFill : rowFill.TryGetValue((int)b.Tag, out var fill) ? fill : Brushes.Transparent;
             ShowDetails();
@@ -409,7 +510,7 @@ namespace ShearWallVisualizer.Controls
         private void Tint(int row, int col, Brush fill)
         {
             var b = new Border { Background = fill, IsHitTestVisible = false, Margin = new Thickness(0, 0, 0, 1),
-                                 Visibility = Shows(Columns[col].level, density) ? Visibility.Visible : Visibility.Collapsed };
+                                 Visibility = Visible(col) ? Visibility.Visible : Visibility.Collapsed };
             Grid.SetRow(b, row);
             Grid.SetColumn(b, col);
             var back = table.Children.OfType<Border>().First(x => Grid.GetRow(x) == row && Grid.GetColumnSpan(x) == Columns.Length);
@@ -427,7 +528,7 @@ namespace ShearWallVisualizer.Controls
         private void Put(int row, int col, UIElement e)
         {
             if (row > 0) sorter?.Key(row, col, SortValue(e));
-            if (!Shows(Columns[col].level, density)) e.Visibility = Visibility.Collapsed; // a column with no room at this width
+            if (!Visible(col)) e.Visibility = Visibility.Collapsed; // a column with no room at this width
             Grid.SetRow(e, row);
             Grid.SetColumn(e, col);
             table.Children.Add(e);
@@ -502,11 +603,14 @@ namespace ShearWallVisualizer.Controls
 
         private void SettingsChanged()
         {
-            if (loading || calc == null) return;
-            calc.DesignSettings = calc.DesignSettings ?? new DesignSettings();
-            calc.DesignSettings.Method = rbLrfd.IsChecked == true ? DesignMethods.LRFD : DesignMethods.ASD;
-            if (cbEdition.SelectedItem is ComboBoxItem item) calc.DesignSettings.Edition = (SdpwsEditions)item.Tag;
-            calc.DesignSettings.HoldownsFromStandardList = cbPool.SelectedIndex == 1;
+            if (loading || stories.Count == 0) return;
+            foreach (var calc in stories.Select(s => s.Calculator).Where(c => c != null)) // one set for the project: every story
+            {
+                calc.DesignSettings = calc.DesignSettings ?? new DesignSettings();
+                calc.DesignSettings.Method = rbLrfd.IsChecked == true ? DesignMethods.LRFD : DesignMethods.ASD;
+                if (cbEdition.SelectedItem is ComboBoxItem item) calc.DesignSettings.Edition = (SdpwsEditions)item.Tag;
+                calc.DesignSettings.HoldownsFromStandardList = cbPool.SelectedIndex == 1;
+            }
             DesignChanged?.Invoke(this, EventArgs.Empty);
         }
 
@@ -544,19 +648,24 @@ namespace ShearWallVisualizer.Controls
                 {
                     var d = r.Inputs.Clone();
                     d.DeadLoad = 0;
-                    if (exterior) calc.DesignSettings.NewWallDesign = d;
-                    else calc.DesignSettings.NewInteriorWallDesign = d;
+                    foreach (var calc in stories.Select(x => x.Calculator).Where(c => c?.DesignSettings != null))
+                    {
+                        if (exterior) calc.DesignSettings.NewWallDesign = d.Clone();
+                        else calc.DesignSettings.NewInteriorWallDesign = d.Clone();
+                    }
                     DesignChanged?.Invoke(this, EventArgs.Empty);
                 };
                 return b;
             }
-            var applyAll = new Button { Content = "Same sheathing on every wall", Padding = new Thickness(8, 2, 8, 2),
-                                        ToolTip = "Copies this wall's faces, nailing and framing to every wall (dead loads and hold-down types stay)." };
+            string listed = showLevel ? "every wall listed" : "every wall of " + (Story(selectedWall)?.Name ?? "this floor");
+            var applyAll = new Button { Content = "Same sheathing on every wall listed", Padding = new Thickness(8, 2, 8, 2),
+                                        ToolTip = $"Copies this wall's faces, nailing and framing to {listed} (dead loads and hold-down types stay). " +
+                                                  "Pick one floor in Floors to change only its walls." };
             applyAll.Click += (s, e) =>
             {
-                if (MessageBox.Show(Window.GetWindow(this), $"Give every wall the sheathing of wall {r.WallId}?\n{r.Panel}", "Same sheathing on every wall",
+                if (MessageBox.Show(Window.GetWindow(this), $"Give {listed} the sheathing of wall {r.WallId}?\n{r.Panel}", "Same sheathing on every wall listed",
                                     MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) return;
-                foreach (var w in calc._wall_system._walls.Values)
+                foreach (var w in shown.SelectMany(x => x.Calculator._wall_system._walls.Values))
                 {
                     w.Design = w.Design ?? new WallDesignInputs();
                     w.Design.SetFaces(r.Inputs.EffectiveFace1(), r.Inputs.EffectiveFace2());
@@ -568,6 +677,7 @@ namespace ShearWallVisualizer.Controls
             tools.Children.Add(UseForNew(exterior: false));
             tools.Children.Add(applyAll);
             details.Children.Add(tools);
+            if (showLevel) details.Children.Add(new TextBlock { Text = Story(selectedWall)?.Name, Foreground = InkSecondary, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 2, 0, 0) });
             foreach (var line in Explain(r))
                 details.Children.Add(new TextBlock { Text = line, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 1, 0, 1), FontWeight = line.StartsWith("Wall ") ? FontWeights.SemiBold : FontWeights.Normal });
         }

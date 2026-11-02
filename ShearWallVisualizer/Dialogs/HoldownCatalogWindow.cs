@@ -29,7 +29,6 @@ namespace ShearWallVisualizer.Dialogs
         private readonly TextBlock count = new TextBlock { Foreground = Brushes.DimGray, Margin = new Thickness(0, 6, 0, 0), TextWrapping = TextWrapping.Wrap };
         private readonly List<Row> rows;
         private readonly ICollectionView view;
-        private IReadOnlyDictionary<int, WallDesignResult> design = new Dictionary<int, WallDesignResult>();
 
         private static readonly (string label, HoldownFamilies? value)[] Families =
         {
@@ -77,12 +76,21 @@ namespace ShearWallVisualizer.Dialogs
             var footer = new DockPanel { Margin = new Thickness(0, 6, 0, 0) };
             var restore = new Button { Content = "Restore company default", Padding = new Thickness(10, 3, 10, 3), Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Top };
             var saveCompany = new Button { Content = "Save as company default...", Padding = new Thickness(10, 3, 10, 3), Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Top };
+            var print = new Button
+            {
+                Content = "Print / save as PDF...", Padding = new Thickness(10, 3, 10, 3), Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Top,
+                ToolTip = "The options shown (the filters above apply) on printable pages, for review. In the preview, Print (Ctrl+P) and choose " +
+                          "\"Microsoft Print to PDF\" to save a PDF.",
+            };
+            print.Click += (s, e) => PrintCatalog();
             restore.Click += (s, e) => RestoreCompanyDefault();
             saveCompany.Click += (s, e) => SaveAsCompanyDefault();
             DockPanel.SetDock(saveCompany, Dock.Right);
             DockPanel.SetDock(restore, Dock.Right);
+            DockPanel.SetDock(print, Dock.Right);
             footer.Children.Add(saveCompany);
             footer.Children.Add(restore);
+            footer.Children.Add(print);
             count.Margin = new Thickness(0);
             footer.Children.Add(count);
             DockPanel.SetDock(footer, Dock.Bottom);
@@ -147,14 +155,73 @@ namespace ShearWallVisualizer.Dialogs
 
         private static readonly DependencyProperty ToggleButton_IsChecked = System.Windows.Controls.Primitives.ToggleButton.IsCheckedProperty;
 
-        /// <summary>Marks the options the current design uses (the rows stay in place, so the scroll position is kept).</summary>
-        public void SetDesign(IReadOnlyDictionary<int, WallDesignResult> designResults)
+        /// <summary>Marks the options one floor's design uses (the rows stay in place, so the scroll position is kept).</summary>
+        public void SetDesign(IReadOnlyDictionary<int, WallDesignResult> designResults) =>
+            SetDesign(new[] { new KeyValuePair<string, IReadOnlyDictionary<int, WallDesignResult>>("", designResults) });
+
+        /// <summary>
+        /// Marks the options the design of every floor uses: "Level 2: 1, 3 · Roof: 2" (wall numbers by floor; the floor's
+        /// name is left out when there is one floor).
+        /// </summary>
+        public void SetDesign(IEnumerable<KeyValuePair<string, IReadOnlyDictionary<int, WallDesignResult>>> byFloor)
         {
-            design = designResults ?? new Dictionary<int, WallDesignResult>();
+            var floors = (byFloor ?? Enumerable.Empty<KeyValuePair<string, IReadOnlyDictionary<int, WallDesignResult>>>())
+                         .Where(f => f.Value != null).ToList();
+            bool named = floors.Count > 1;
             foreach (var r in rows)
-                r.Used = string.Join(", ", design.Where(kv => kv.Value.Holdown != null && kv.Value.Holdown.Key == r.Key).Select(kv => kv.Key).OrderBy(k => k));
+                r.Used = string.Join("  ·  ", floors
+                    .Select(f => (f.Key, walls: f.Value.Where(kv => kv.Value.Holdown != null && kv.Value.Holdown.Key == r.Key).Select(kv => kv.Key).OrderBy(k => k).ToList()))
+                    .Where(f => f.walls.Count > 0)
+                    .Select(f => (named ? f.Key + ": " : "") + string.Join(", ", f.walls)));
             if (usedOnly.IsChecked == true) view.Refresh();
             UpdateCount();
+        }
+
+        /// <summary>
+        /// The rows shown (the filters apply) as printable pages: a note of what is listed, then the catalog table, with the
+        /// same columns as the window. Printed from the preview (choose "Microsoft Print to PDF" for a PDF).
+        /// </summary>
+        public System.Windows.Documents.FixedDocument BuildDocument(string project)
+        {
+            var shownRows = view.Cast<Row>().ToList();
+            var filters = new List<string>();
+            if (family.SelectedIndex > 0) filters.Add(Families[family.SelectedIndex].label);
+            if (!string.IsNullOrWhiteSpace(search.Text)) filters.Add($"model contains \"{search.Text.Trim()}\"");
+            if (standardOnly.IsChecked == true) filters.Add("only the standard list");
+            if (usedOnly.IsChecked == true) filters.Add("only options used by the design");
+
+            var blocks = new List<FrameworkElement>
+            {
+                ASCE7WindLoadCalculator.WindReport.Heading("Hold-down catalog"),
+                ASCE7WindLoadCalculator.WindReport.Para(
+                    $"{shownRows.Count} fastener option{(shownRows.Count == 1 ? "" : "s")} " +
+                    (filters.Count == 0 ? "(the whole catalog)" : "(" + string.Join("; ", filters) + ")") + ". " +
+                    "Values read from the app's catalog data, the same objects the wall design selects hold-downs from. Allowable tension " +
+                    "loads are ASD (lb) for each framing species; dimensions and fastener lengths in inches; minimum wood member h × w (in); " +
+                    "deflection at the allowable load (in). Std: in your standard list. Co.: in the company default. Used on walls: wall " +
+                    "numbers by floor in the current design."),
+                ASCE7WindLoadCalculator.WindReport.Para(count.Text),
+            };
+            string[] headers = { "Std", "Co.", "Family", "Model", "Ga.", "W", "H or L", "B", "CL", "SO", "Bolt dia.", "Fasteners", "Length",
+                                 "Min. wood", "DF/SP (lb)", "SPF/HF (lb)", "Defl. (in)", "Code", "Used on walls" };
+            var data = shownRows.Select(r => new[]
+            {
+                r.Standard ? "✓" : "", r.Company, r.Family, r.Model, r.Gauge, r.W, r.HL, r.B, r.CL, r.SO, r.Bolt, r.Fasteners, r.Length,
+                r.Wood, r.DF, r.SPF, r.Defl, r.Code, r.Used,
+            }).ToList();
+            blocks.AddRange(ASCE7WindLoadCalculator.WindReport.Tables(headers, data, rowsPerTable: 24));
+            var info = new ASCE7WindLoadCalculator.ReportInfo { Project = string.IsNullOrWhiteSpace(project) ? "Untitled project" : project, Program = "Shear Wall Calculator" };
+            return ASCE7WindLoadCalculator.WindReport.Document(info, "Simpson Strong-Tie hold-downs (catalog data in the app)",
+                new[] { new ASCE7WindLoadCalculator.ReportSection("Hold-down catalog", blocks) });
+        }
+
+        /// <summary>The host's project name for the printed pages.</summary>
+        public Func<string> ProjectName { get; set; }
+
+        private void PrintCatalog()
+        {
+            var doc = BuildDocument(ProjectName?.Invoke());
+            new ASCE7WindLoadCalculator.ReportPreviewWindow(doc, "Hold-down catalog") { Owner = this }.Show();
         }
 
         private void OnStandardListChanged(object sender, EventArgs e)
