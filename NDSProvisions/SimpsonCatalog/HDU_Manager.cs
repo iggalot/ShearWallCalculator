@@ -3,9 +3,17 @@ using System.Collections.Generic;
 
 namespace ShearWallCalculator
 {
+    /// <summary>
+    /// HDUE / DTT hold-downs anchored to the foundation.
+    /// Source: Simpson Strong-Tie, Wood Construction Connectors C-C-2026, pp. 60–61, "HDUE/DTT Holdowns"; values from the
+    /// p. 61 table "Holdowns (cont.)" (ASD, (160)). DTT also pp. 326–327 (deck tension ties). Copy: docs/references/C-C-2026.pdf.
+    /// C-C-2026 replaces the HDU-SDS2.5 line (HDU2 … HDU14, C-C-2021 p. 53) with the HDUE line; the HDU models are no longer listed.
+    /// Minimum wood member is "thickness x width" (the first figure is the post dimension along the wall).
+    /// Table footnotes not modelled: 3 (some loads exceed ASTM F1554 Grade 36 anchor bolts: the designer specifies the anchor),
+    /// 4 (HDUE13 needs the heavy-hex nut supplied), 5 (alternate shorter screws: letter L-C-HDUESDS).
+    /// </summary>
     public class HDU_Manager : BaseSimpsonConnectorManager<HDU_Data>
     {
-        /// <summary>HDU / DTT hold-downs. Source: Simpson Strong-Tie, Wood Construction Connectors C-C-2021, p. 53, "HDU/DTT Holdowns (cont.)" table (DTT also p. 295, "DTT Deck Tension Ties"). All values checked against it 2026-11-02.</summary>
         public Dictionary<string, HDU_Data> HDU_Dict = new Dictionary<string, HDU_Data>();
 
         public HDU_Manager()
@@ -13,498 +21,94 @@ namespace ShearWallCalculator
             LoadHDUData();
         }
 
+        private static HDU_FastenerConfig Opt(int qty, string type, string size, double length, double thick, double width, double df, double spf, double defl) =>
+            new HDU_FastenerConfig
+            {
+                Screws_Quantity = qty, Screws_Type = type, ScrewSize = size, Length = length, WoodMinHeight = thick, WoodMinWidth = width,
+                AllowableTensionLoads = new Dictionary<string, double> { { "DF_SP", df }, { "SPF_HF", spf } },
+                DeflectionAtAllowableLoad = defl,
+            };
+
+        private void Add(string model, int gauge, double w, double h, double b, double cl, double so, double bolt, params HDU_FastenerConfig[] options) =>
+            HDU_Dict.Add(model, new HDU_Data
+            {
+                Model = model, Gauge = gauge, W = w, H = h, B = b, CL = cl, SO = so, AnchorBoltDia = bolt, CodeRef = "IBC / FL / LA",
+                FastenerOptions = new List<HDU_FastenerConfig>(options),
+            });
+
         private void LoadHDUData()
         {
-            // DTT1Z
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 53, "HDU/DTT Holdowns (cont.)" table, (160) loads; checked 2026-11-02
-            HDU_Dict.Add("DTT1Z", new HDU_Data
-            {
-                Model = "DTT1Z",
-                Gauge = 14,
-                W = 1.5,
-                H = 7.125,
-                B = 1.4375,
-                CL = 0.75,
-                SO = 0.1875,
-                AnchorBoltDia = 0.375,
-                CodeRef = "IBC / FL / LA",
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 61, "HDUE/DTT Holdowns (cont.)" table, (160) loads
+            // DTT1Z: min. member 1-1/2 x 3-1/2 in C-C-2026 (C-C-2021 p. 53 gave 1-1/2 x 5-1/2)
+            Add("DTT1Z", 14, 1.5, 7.125, 1.4375, 0.75, 0.1875, 0.375,
+                Opt(6, "SD", "#9", 1.5, 1.5, 3.5, 840, 840, 0.170),
+                Opt(6, "", "0.148", 1.5, 1.5, 3.5, 910, 640, 0.167),
+                Opt(8, "", "0.148", 1.5, 1.5, 3.5, 910, 850, 0.167));
 
-                FastenerOptions = new List<HDU_FastenerConfig>
-                {
-                    new HDU_FastenerConfig
-                    {
-                        Screws_Quantity = 6,
-                        Screws_Type = "SD",
-                        ScrewSize = "#9",
-                        Length = 1.5,
-                        WoodMinHeight = 1.5,
-                        WoodMinWidth = 5.5,   // corrected 2026-11-02: was 3.5 (C-C-2021 p. 53: min. member 1-1/2 x 5-1/2)
-                        AllowableTensionLoads = new Dictionary<string, double>
-                        {
-                            { "DF_SP", 840 },
-                            { "SPF_HF", 840 }
-                        },
-                        DeflectionAtAllowableLoad = 0.17,
+            // Simpson Strong-Tie C-C-2026, p. 61, "HDUE/DTT Holdowns (cont.)" table
+            Add("DTT2Z", 14, 3.25, 6.9375, 1.625, 0.8125, 0.1875, 0.5,
+                Opt(8, "SDS", "1/4", 1.5, 1.5, 3.5, 1825, 1800, 0.105),
+                Opt(8, "SDS", "1/4", 1.5, 3, 3.5, 2145, 1835, 0.128));
 
-                    },
-                    new HDU_FastenerConfig
-                    {
-                        Screws_Quantity = 6,
-                        Screws_Type = "",
-                        ScrewSize = "0.148",
-                        Length = 1.5,
-                        WoodMinHeight = 1.5,
-                        WoodMinWidth = 5.5,   // corrected 2026-11-02: was 3.5 (C-C-2021 p. 53: min. member 1-1/2 x 5-1/2)
-                        AllowableTensionLoads = new Dictionary<string, double>
-                        {
-                            { "DF_SP", 910 },
-                            { "SPF_HF", 640 }
-                        },
-                        DeflectionAtAllowableLoad = 0.167,
+            // Simpson Strong-Tie C-C-2026, p. 61, "HDUE/DTT Holdowns (cont.)" table
+            Add("DTT2Z-SDS2.5", 14, 3.25, 6.9375, 1.625, 0.8125, 0.1875, 0.5,
+                Opt(8, "SDS", "1/4", 2.5, 3, 3.5, 2145, 2105, 0.128));
 
-                    },
-                    new HDU_FastenerConfig
-                    {
-                        Screws_Quantity = 8,
-                        Screws_Type = "",
-                        ScrewSize = "0.148",
-                        Length = 1.5,
-                        WoodMinHeight = 1.5,
-                        WoodMinWidth = 5.5,   // corrected 2026-11-02: was 3.5 (C-C-2021 p. 53: min. member 1-1/2 x 5-1/2)
-                        AllowableTensionLoads = new Dictionary<string, double>
-                        {
-                            { "DF_SP", 910 },
-                            { "SPF_HF", 850 }
-                        },
-                        DeflectionAtAllowableLoad = 0.167,
-                    },
+            // Simpson Strong-Tie C-C-2026, p. 61, "HDUE/DTT Holdowns (cont.)" table (new model in C-C-2026)
+            Add("HDUE3-SDS3", 14, 2.875, 8.6875, 3.375, 1.375, 1.5, 0.625,
+                Opt(7, "SDS", "1/4", 3, 3, 3.5, 3790, 3340, 0.127));
 
-                }
-            });
+            // Simpson Strong-Tie C-C-2026, p. 61, "HDUE/DTT Holdowns (cont.)" table (new model in C-C-2026)
+            Add("HDUE5-SDS3", 14, 2.875, 11.9375, 3.375, 1.375, 1.5, 0.625,
+                Opt(10, "SDS", "1/4", 3, 3, 3.5, 5375, 4700, 0.146));
 
-            // DTT2Z
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 53, "HDU/DTT Holdowns (cont.)" table, (160) loads; checked 2026-11-02
-            HDU_Dict.Add("DTT2Z", new HDU_Data
-            {
-                Model = "DTT2Z",
-                Gauge = 14,
-                W = 3.25,
-                H = 6.9375,
-                B = 1.625,
-                CL = 0.8125,
-                SO = 0.1875,
-                AnchorBoltDia = 0.5,
-                CodeRef = "IBC / FL / LA",
-                FastenerOptions = new List<HDU_FastenerConfig>
-                {
-                    new HDU_FastenerConfig
-                    {
-                        Screws_Quantity = 8,
-                        Screws_Type = "SDS",
-                        ScrewSize = "1/4",
-                        Length = 1.5,
-                        WoodMinHeight = 1.5,
-                        WoodMinWidth = 3.5,
-                        AllowableTensionLoads = new Dictionary<string, double>
-                        {
-                            { "DF_SP", 1825 },
-                            { "SPF_HF", 1800 }
-                        },
-                        DeflectionAtAllowableLoad = 0.105,
-                    },
-                    new HDU_FastenerConfig
-                    {
-                        Screws_Quantity = 8,
-                        Screws_Type = "SDS",
-                        ScrewSize = "1/4",
-                        Length = 1.5,
-                        WoodMinHeight = 3,
-                        WoodMinWidth = 3.5,
-                        AllowableTensionLoads = new Dictionary<string, double>
-                        {
-                            { "DF_SP", 2145 },
-                            { "SPF_HF", 1835 }
-                        },
-                        DeflectionAtAllowableLoad = 0.128,
+            // Simpson Strong-Tie C-C-2026, p. 61, "HDUE/DTT Holdowns (cont.)" table (new model in C-C-2026; DF/SP 7,015 carries footnote 3)
+            Add("HDUE7-SDS3", 14, 2.875, 14.6875, 3.375, 1.375, 1.5, 0.625,
+                Opt(13, "SDS", "1/4", 3, 3, 3.5, 7015, 6030, 0.154));
 
-                    }
-                }
-            });
+            // Simpson Strong-Tie C-C-2026, p. 61, "HDUE/DTT Holdowns (cont.)" table (new model in C-C-2026)
+            Add("HDUE9-SDS3.5", 12, 3, 17.375, 4.3125, 1.4375, 1.5, 0.875,
+                Opt(16, "SDS", "1/4", 3.5, 3.5, 3.5, 8425, 7305, 0.159),
+                Opt(16, "SDS", "1/4", 3.5, 4.5, 3.5, 9390, 7995, 0.134));
 
-            // DTT2Z-SDS2.5
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 53, "HDU/DTT Holdowns (cont.)" table, (160) loads; checked 2026-11-02
-            HDU_Dict.Add("DTT2Z-SDS2.5", new HDU_Data
-            {
-                Model = "DTT2Z-SDS2.5",
-                Gauge = 14,
-                W = 3.25,
-                H = 6.9375,
-                B = 1.625,
-                CL = 0.8125,
-                SO = 0.1875,
-                AnchorBoltDia = 0.5,
-                CodeRef = "IBC / FL / LA",
-                FastenerOptions = new List<HDU_FastenerConfig>
-                {
-                    new HDU_FastenerConfig
-                    {
-                        Screws_Quantity = 8,
-                        Screws_Type = "SDS",
-                        ScrewSize = "1/4",
-                        Length = 2.5,
-                        WoodMinHeight = 3,
-                        WoodMinWidth = 3.5,
-                        AllowableTensionLoads = new Dictionary<string, double>
-                        {
-                            { "DF_SP", 2145 },
-                            { "SPF_HF", 2105 }
-                        },
-                        DeflectionAtAllowableLoad = 0.128,
-                    },
-                }
-            });
+            // Simpson Strong-Tie C-C-2026, p. 61, "HDUE/DTT Holdowns (cont.)" table (new model in C-C-2026; heavy-hex nut, footnote 4)
+            Add("HDUE13-SDS3.5", 12, 3, 23.0625, 4.3125, 1.4375, 1.5, 1.0,
+                Opt(23, "SDS", "1/4", 3.5, 5.5, 3.5, 11900, 10215, 0.164),
+                Opt(23, "SDS", "1/4", 3.5, 7.25, 3.5, 12950, 11030, 0.145),
+                Opt(23, "SDS", "1/4", 3.5, 5.5, 5.5, 13110, 10980, 0.135));
 
-            // HDU2-SDS2.5
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 53, "HDU/DTT Holdowns (cont.)" table, (160) loads; checked 2026-11-02
-            HDU_Dict.Add("HDU2-SDS2.5", new HDU_Data
-            {
-                Model = "HDU2-SDS2.5",
-                Gauge = 14,
-                W = 3,
-                H = 8.6875,
-                B = 3.25,
-                CL = 1.3125,
-                SO = 1.375,
-                AnchorBoltDia = 0.625,
-                CodeRef = "IBC / FL / LA",
-                FastenerOptions = new List<HDU_FastenerConfig>
-                {
-                    new HDU_FastenerConfig
-                    {
-                        Screws_Quantity = 6,
-                        Screws_Type = "SDS",
-                        ScrewSize = "1/4",
-                        Length = 2.5,
-                        WoodMinHeight = 3,
-                        WoodMinWidth = 3.5,
-                        AllowableTensionLoads = new Dictionary<string, double>
-                        {
-                            { "DF_SP", 3075 },
-                            { "SPF_HF", 2215 }
-                        },
-                        DeflectionAtAllowableLoad = 0.088,
-                    }
-                },
-            });
-
-            // HDU4-SDS2.5
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 53, "HDU/DTT Holdowns (cont.)" table, (160) loads; checked 2026-11-02
-            HDU_Dict.Add("HDU4-SDS2.5", new HDU_Data
-            {
-                Model = "HDU4-SDS2.5",
-                Gauge = 14,
-                W = 3,
-                H = 10.9375,
-                B = 3.25,
-                CL = 1.3125,
-                SO = 1.375,
-                AnchorBoltDia = 0.625,
-                CodeRef = "IBC / FL / LA",
-                FastenerOptions = new List<HDU_FastenerConfig>
-                {
-                    new HDU_FastenerConfig
-                    {
-                        Screws_Quantity = 10,
-                        Screws_Type = "SDS",
-                        ScrewSize = "1/4",
-                        Length = 2.5,
-                        WoodMinHeight = 3,
-                        WoodMinWidth = 3.5,
-                        AllowableTensionLoads = new Dictionary<string, double>
-                        {
-                            { "DF_SP", 4565 },
-                            { "SPF_HF", 3285 }
-                        },
-                        DeflectionAtAllowableLoad = 0.114,
-                    }
-                },
-            });
-
-            // HDU5
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 53, "HDU/DTT Holdowns (cont.)" table, (160) loads; checked 2026-11-02
-            HDU_Dict.Add("HDU5-SDS2.5", new HDU_Data
-            {
-                Model = "HDU5-SDS2.5",
-                Gauge = 14,
-                W = 3,
-                H = 13.1875,
-                B = 3.25,
-                CL = 1.3125,
-                SO = 1.375,
-                AnchorBoltDia = 0.625,
-                CodeRef = "IBC / FL / LA",
-                FastenerOptions = new List<HDU_FastenerConfig>
-                {
-                    new HDU_FastenerConfig
-                    {
-                        Screws_Quantity = 14,
-                        Screws_Type = "SDS",
-                        ScrewSize = "1/4",
-                        Length = 2.5,
-                        WoodMinHeight = 3,
-                        WoodMinWidth = 3.5,
-                        AllowableTensionLoads = new Dictionary<string, double>
-                        {
-                            { "DF_SP", 5645 },
-                            { "SPF_HF", 4340 }
-                        },
-                        DeflectionAtAllowableLoad = 0.115,
-                    }
-                },
-            });
-
-            // HDU8-SDS2.5
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 53, "HDU/DTT Holdowns (cont.)" table, (160) loads; checked 2026-11-02
-            HDU_Dict.Add("HDU8-SDS2.5", new HDU_Data
-            {
-                Model = "HDU8-SDS2.5",
-                Gauge = 10,
-                W = 3,
-                H = 16.625,
-                B = 3.5,
-                CL = 1.375,
-                SO = 1.5,
-                AnchorBoltDia = 0.875,
-                CodeRef = "IBC / FL / LA",
-                FastenerOptions = new List<HDU_FastenerConfig>
-                {
-                    new HDU_FastenerConfig
-                    {
-                        Screws_Quantity = 20,
-                        Screws_Type = "SDS",
-                        ScrewSize = "1/4",
-                        Length = 2.5,
-                        WoodMinHeight = 3,
-                        WoodMinWidth = 3.5,
-                        AllowableTensionLoads = new Dictionary<string, double>
-                        {
-                            { "DF_SP", 6765 },
-                            { "SPF_HF", 5820 }
-                        },
-                        DeflectionAtAllowableLoad = 0.11,
-                    },
-                    new HDU_FastenerConfig
-                    {
-                        Screws_Quantity = 20,
-                        Screws_Type = "SDS",
-                        ScrewSize = "1/4",
-                        Length = 2.5,
-                        WoodMinHeight = 3.5,
-                        WoodMinWidth = 3.5,
-                        AllowableTensionLoads = new Dictionary<string, double>
-                        {
-                            { "DF_SP", 6970 },
-                            { "SPF_HF", 5995 }
-                        },
-                        DeflectionAtAllowableLoad = 0.116,
-                    },
-                    new HDU_FastenerConfig
-                    {
-                        Screws_Quantity = 20,
-                        Screws_Type = "SDS",
-                        ScrewSize = "1/4",
-                        Length = 2.5,
-                        WoodMinHeight = 3.5,
-                        WoodMinWidth = 4.5,
-                        AllowableTensionLoads = new Dictionary<string, double>
-                        {
-                            { "DF_SP", 7870 },
-                            { "SPF_HF", 6580 }
-                        },
-                        DeflectionAtAllowableLoad = 0.113,
-                    }
-                },
-            });
-
-            // HDU11
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 53, "HDU/DTT Holdowns (cont.)" table, (160) loads; checked 2026-11-02
-            HDU_Dict.Add("HDU11-SDS2.5", new HDU_Data
-            {
-                Model = "HDU11-SDS2.5",
-                Gauge = 10,
-                W = 3.0,
-                H = 22.25,
-                B = 3.5,
-                CL = 1.375,
-                SO = 1.5,
-                AnchorBoltDia = 1.0,
-                CodeRef = "IBC / FL / LA",
-                FastenerOptions = new List<HDU_FastenerConfig>
-                {
-                    new HDU_FastenerConfig
-                    {
-                        Screws_Quantity = 30,
-                        Screws_Type = "SDS",
-                        ScrewSize = "1/4",
-                        Length = 2.5,
-                        WoodMinHeight = 3.5,
-                        WoodMinWidth = 5.5,
-                        AllowableTensionLoads = new Dictionary<string, double>
-                        {
-                            { "DF_SP", 9535 },
-                            { "SPF_HF", 8030 }
-                        },
-                        DeflectionAtAllowableLoad = 0.137,
-                    },
-                    new HDU_FastenerConfig
-                    {
-                        Screws_Quantity = 30,
-                        Screws_Type = "SDS",
-                        ScrewSize = "1/4",
-                        Length = 2.5,
-                        WoodMinHeight = 3.5,
-                        WoodMinWidth = 7.25,
-                        AllowableTensionLoads = new Dictionary<string, double>
-                        {
-                            { "DF_SP", 11175 },
-                            { "SPF_HF", 9610 }
-                        },
-                        DeflectionAtAllowableLoad = 0.137,
-                    }
-                },
-
-            });
-
-            // HDU14
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 53, "HDU/DTT Holdowns (cont.)" table, (160) loads; checked 2026-11-02
-            HDU_Dict.Add("HDU14-SDS2.5", new HDU_Data
-            {
-                Model = "HDU14-SDS2.5",
-                Gauge = 7,
-                W = 3,
-                H = 25.6875,
-                B = 3.5,
-                CL = 1.5625,
-                SO = 1.5625,
-                AnchorBoltDia = 1.0,
-                CodeRef = "IBC / FL / LA",  // C-C-2021 p. 53: the 3-1/2 x 5-1/2 option has no code listing ("—"); the others IBC, FL, LA
-                FastenerOptions = new List<HDU_FastenerConfig>
-                {
-                    new HDU_FastenerConfig
-                    {
-                        Screws_Quantity = 36,
-                        Screws_Type = "SDS",
-                        ScrewSize = "1/4",
-                        Length = 2.5,
-                        WoodMinHeight = 3.5,
-                        WoodMinWidth = 5.5,
-                        AllowableTensionLoads = new Dictionary<string, double>
-                        {
-                            { "DF_SP", 10770 },
-                            { "SPF_HF", 9260 }
-                        },
-                        DeflectionAtAllowableLoad = 0.122,
-                    },
-                    new HDU_FastenerConfig
-                    {
-                        Screws_Quantity = 36,
-                        Screws_Type = "SDS",
-                        ScrewSize = "1/4",
-                        Length = 2.5,
-                        WoodMinHeight = 3.5,
-                        WoodMinWidth = 7.25,
-                        AllowableTensionLoads = new Dictionary<string, double>
-                        {
-                            { "DF_SP", 14390 },
-                            { "SPF_HF", 12375 }
-                        },
-                        DeflectionAtAllowableLoad = 0.177,
-                    },
-                    new HDU_FastenerConfig
-                    {
-                        Screws_Quantity = 36,
-                        Screws_Type = "SDS",
-                        ScrewSize = "1/4",
-                        Length = 2.5,
-                        WoodMinHeight = 3.5,
-                        WoodMinWidth = 5.5,
-                        AllowableTensionLoads = new Dictionary<string, double>
-                        {
-                            { "DF_SP", 14445 },
-                            { "SPF_HF", 12425 }
-                        },
-                        DeflectionAtAllowableLoad = 0.172,
-                    }
-                },
-            });
+            // Simpson Strong-Tie C-C-2026, p. 61, "HDUE/DTT Holdowns (cont.)" table (new model in C-C-2026; DF/SP 17,685 carries footnote 3)
+            Add("HDUE17-SDS4.5", 10, 3, 27.875, 5.1875, 1.9375, 1.5, 1.0,
+                Opt(28, "SDS", "1/4", 4.5, 5.5, 3.5, 16040, 13545, 0.094),
+                Opt(28, "SDS", "1/4", 4.5, 5.5, 5.5, 17685, 14775, 0.111));
         }
-
-
 
         public string PrintAllHDUData()
         {
             string str = "";
             foreach (KeyValuePair<string, HDU_Data> hdu in HDU_Dict)
-            {
                 str += hdu.Value.ToString() + "\n\n";
-            }
             return str;
         }
 
-        /// <summary>
-        /// Returns a list of all HDU_Dict models with allowable tension load greater than the minimum load for the given wood type.
-        /// </summary>
-        /// <param name="minimumLoad">The minimum allowable tension load to filter by.</param>
-        /// <param name="woodType">The wood type to filter by (e.g., WOODTYPE_DF_SP or WOODTYPE_SPF_HF).</param>
-        /// <returns>A list of HDU_Dict models that exceed the minimum load for the specified wood type.</returns>
-
+        /// <summary>All models with an option whose allowable tension for the wood type is at least the load.</summary>
         public override List<HDU_Data> GetTypedModelsExceedingMinLoad(double reqLoad, WoodTypes woodType)
-
         {
-            string wood_type_string = "";
+            string key;
             switch (woodType)
             {
-                case WoodTypes.WOODTYPE_DF_SP:
-                    wood_type_string = "DF_SP";
-                    break;
-                case WoodTypes.WOODTYPE_SPF_HF:
-                    wood_type_string = "SPF_HF";
-                    break;
-                default:
-                    throw new ArgumentException("Invalid wood type.");
+                case WoodTypes.WOODTYPE_DF_SP: key = "DF_SP"; break;
+                case WoodTypes.WOODTYPE_SPF_HF: key = "SPF_HF"; break;
+                default: throw new ArgumentException("Invalid wood type.");
             }
-            List<HDU_Data> matchingModels = new List<HDU_Data>();
-
-            foreach (KeyValuePair<string, HDU_Data> hduEntry in HDU_Dict)
-            {
-                HDU_Data hduData = hduEntry.Value;
-
-                // Check each fastener option for the given wood type
-                foreach (var fastener in hduData.FastenerOptions)
-                {
-                    // Find the allowable tension load for the given wood type
-                    if (fastener.AllowableTensionLoads.ContainsKey(wood_type_string))
-                    {
-                        double allowableTensionLoad = fastener.AllowableTensionLoads[wood_type_string];
-
-                        // Check if the allowable load exceeds the minimum
-                        if (allowableTensionLoad >= reqLoad)
-                        {
-                            matchingModels.Add(hduData);
-                            break; // No need to check further fasteners for this model
-                        }
-                    }
-                }
-            }
-
-            return matchingModels;
+            var matching = new List<HDU_Data>();
+            foreach (var m in HDU_Dict.Values)
+                foreach (var f in m.FastenerOptions)
+                    if (f.AllowableTensionLoads.TryGetValue(key, out double a) && a >= reqLoad) { matching.Add(m); break; }
+            return matching;
         }
 
-        public override List<Dictionary<string, BaseSimpsonConnectorData>> GetValidConnectors()
-        {
-            //List<HDU_Data> temp_list = Catalog.HDUManager.GetHDUModelsExceedingMinLoad(req_load, woodType);
-            // Your existing logic
-            return new List<Dictionary<string, BaseSimpsonConnectorData>>(); // Placeholder
-        }
+        public override List<Dictionary<string, BaseSimpsonConnectorData>> GetValidConnectors() =>
+            new List<Dictionary<string, BaseSimpsonConnectorData>>();
     }
 }

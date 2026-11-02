@@ -2,6 +2,21 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-02 — Hold-down catalog moved to Simpson C-C-2026; a copy kept in the repo (SWC)
+
+- **Reference copy:** `docs/references/C-C-2026.pdf`, downloaded from Simpson Strong-Tie's catalog page (see `docs/references/README.md`).
+- **Values updated to C-C-2026** (details in `DATA_VERIFICATION.md`):
+  - The HDU-SDS2.5 line is replaced by HDUE3/5/7/9/13/17 (p. 61), and DTT1Z's minimum member goes back to 1½ × 3½.
+  - HTTH6.5 is added and the HTT5 CL becomes 1-3/8 (p. 63).
+  - MSTC66 takes 68 nails (p. 291).
+  - STHD is unchanged (p. 67).
+- **The edition is cited in the app:**
+  - One source in the code: `SimpsonCatalog.Edition`, `Citation` and the `Pages*` constants, plus `ShearWallDesigner.CatalogSource` and `CatalogFootnote`.
+  - The hold-down catalog window shows a source line under the title and a Source column ("C-C-2026 p. 61"), and both appear in the printout.
+  - The Design tab has a footnote under the wall details, and the Hold-down¹ column refers to it. The report prints the same footnote.
+- **UI names:** "HDUE" in the wall table; "HDUE / DTT" and "LTT / HTT / HTTH" in the catalog.
+- **Tests:** `SimpsonCatalogTests` checks the whole HDUE/DTT table, HTTH6.5, every strap load and the edition citations. The design tests now expect HDUE models. SWC 189/189.
+
 ## 2026-11-02 — LSTHD / STHD hold-downs; the hold-down catalog checked against Simpson C-C-2021 (SWC)
 
 - **New hold-down type: LSTHD / STHD** (`HoldownFamilies.STHD_ToFoundation`, `NDSProvisions/SimpsonCatalog/STHD_Manager.cs`). It covers LSTHD8, STHD10, STHD14 and their RJ models, with every value from C-C-2021 p. 59.

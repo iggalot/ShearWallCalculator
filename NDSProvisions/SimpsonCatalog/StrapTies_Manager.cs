@@ -5,7 +5,7 @@ namespace ShearWallCalculator
 {
     public class StrapTies_Manager : BaseSimpsonConnectorManager<StrapTies_Data>
     {
-        /// <summary>Strap ties. Source: Simpson Strong-Tie, Wood Construction Connectors C-C-2021, p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table (MSTA49 also p. 270). Checked 2026-11-02.</summary>
+        /// <summary>Strap ties. Source: Simpson Strong-Tie, Wood Construction Connectors C-C-2026, pp. 290–291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties"; values from the p. 291 table (ASD, (160)). Copy: docs/references/C-C-2026.pdf.</summary>
         public Dictionary<string, StrapTies_Data> StrapTies_Dict = new Dictionary<string, StrapTies_Data>();
 
         public StrapTies_Manager()
@@ -16,7 +16,7 @@ namespace ShearWallCalculator
         private void LoadStrapTieData()
         {
             // ST2115
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("ST2115", new StrapTies_Data
             {
                 Model = "ST2115",
@@ -44,7 +44,7 @@ namespace ShearWallCalculator
             });
 
             // LSTA9
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("LSTA9", new StrapTies_Data
             {
                 Model = "LSTA9",
@@ -72,7 +72,7 @@ namespace ShearWallCalculator
             });
 
             // LSTA12
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("LSTA12", new StrapTies_Data
             {
                 Model = "LSTA12",
@@ -100,7 +100,7 @@ namespace ShearWallCalculator
             });
 
             // LSTA15
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("LSTA15", new StrapTies_Data
             {
                 Model = "LSTA15",
@@ -128,7 +128,7 @@ namespace ShearWallCalculator
             });
 
             // LSTA18
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("LSTA18", new StrapTies_Data
             {
                 Model = "LSTA18",
@@ -156,7 +156,7 @@ namespace ShearWallCalculator
             });
 
             // LSTA21
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("LSTA21", new StrapTies_Data
             {
                 Model = "LSTA21",
@@ -184,7 +184,7 @@ namespace ShearWallCalculator
             });
 
             // LSTA24
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("LSTA24", new StrapTies_Data
             {
                 Model = "LSTA24",
@@ -212,7 +212,7 @@ namespace ShearWallCalculator
             });
 
             // LSTA30
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("LSTA30", new StrapTies_Data
             {
                 Model = "LSTA30",
@@ -240,7 +240,7 @@ namespace ShearWallCalculator
             });
 
             // LSTA36
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("LSTA36", new StrapTies_Data
             {
                 Model = "LSTA36",
@@ -268,7 +268,7 @@ namespace ShearWallCalculator
             });
 
             // MSTA9
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("MSTA9", new StrapTies_Data
             {
                 Model = "MSTA9",
@@ -296,7 +296,7 @@ namespace ShearWallCalculator
             });
 
             // MSTA12
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("MSTA12", new StrapTies_Data
             {
                 Model = "MSTA12",
@@ -324,7 +324,7 @@ namespace ShearWallCalculator
             });
 
             // MSTA15
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("MSTA15", new StrapTies_Data
             {
                 Model = "MSTA15",
@@ -352,7 +352,7 @@ namespace ShearWallCalculator
             });
 
             // MSTA18
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("MSTA18", new StrapTies_Data
             {
                 Model = "MSTA18",
@@ -380,7 +380,7 @@ namespace ShearWallCalculator
             });
 
             // MSTA21
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("MSTA21", new StrapTies_Data
             {
                 Model = "MSTA21",
@@ -407,7 +407,7 @@ namespace ShearWallCalculator
             });
 
             // MSTA24
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("MSTA24", new StrapTies_Data
             {
                 Model = "MSTA24",
@@ -434,7 +434,7 @@ namespace ShearWallCalculator
             });
 
             // MSTA30
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("MSTA30", new StrapTies_Data
             {
                 Model = "MSTA30",
@@ -461,7 +461,7 @@ namespace ShearWallCalculator
             });
 
             // MSTA36
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("MSTA36", new StrapTies_Data
             {
                 Model = "MSTA36",
@@ -488,7 +488,7 @@ namespace ShearWallCalculator
             });
 
             // MSTA49
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("MSTA49", new StrapTies_Data
             {
                 Model = "MSTA49",
@@ -515,7 +515,7 @@ namespace ShearWallCalculator
             });
 
             // ST9
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("ST9", new StrapTies_Data
             {
                 Model = "ST9",
@@ -542,7 +542,7 @@ namespace ShearWallCalculator
             });
 
             // ST12
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("ST12", new StrapTies_Data
             {
                 Model = "ST12",
@@ -569,7 +569,7 @@ namespace ShearWallCalculator
             });
 
             // ST18
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("ST18", new StrapTies_Data
             {
                 Model = "ST18",
@@ -596,7 +596,7 @@ namespace ShearWallCalculator
             });
 
             // ST22
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("ST22", new StrapTies_Data
             {
                 Model = "ST22",
@@ -623,7 +623,7 @@ namespace ShearWallCalculator
             });
 
             // HRS6
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("HRS6", new StrapTies_Data
             {
                 Model = "HRS6",
@@ -650,7 +650,7 @@ namespace ShearWallCalculator
             });
 
             // HRS8
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("HRS8", new StrapTies_Data
             {
                 Model = "HRS8",
@@ -677,7 +677,7 @@ namespace ShearWallCalculator
             });
 
             // HRS8
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("HRS12", new StrapTies_Data
             {
                 Model = "HRS12",
@@ -704,7 +704,7 @@ namespace ShearWallCalculator
             });
 
             // ST292
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("ST292", new StrapTies_Data
             {
                 Model = "ST292",
@@ -731,7 +731,7 @@ namespace ShearWallCalculator
             });
 
             // ST2122
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("ST2122", new StrapTies_Data
             {
                 Model = "ST2122",
@@ -758,7 +758,7 @@ namespace ShearWallCalculator
             });
 
             // ST2215
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("ST2215", new StrapTies_Data
             {
                 Model = "ST2215",
@@ -785,7 +785,7 @@ namespace ShearWallCalculator
             });
 
             // ST6215
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("ST6215", new StrapTies_Data
             {
                 Model = "ST6215",
@@ -812,7 +812,7 @@ namespace ShearWallCalculator
             });
 
             // ST6224
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("ST6224", new StrapTies_Data
             {
                 Model = "ST6224",
@@ -839,7 +839,7 @@ namespace ShearWallCalculator
             });
 
             // ST6236
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("ST6236", new StrapTies_Data
             {
                 Model = "ST6236",
@@ -866,7 +866,7 @@ namespace ShearWallCalculator
             });
 
             // MSTI26
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("MSTI26", new StrapTies_Data
             {
                 Model = "MSTI26",
@@ -893,13 +893,13 @@ namespace ShearWallCalculator
             });
 
             // MSTI36
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("MSTI36", new StrapTies_Data
             {
                 Model = "MSTI36",
                 Gauge = 12,
                 W = 2.0625,
-                L = 36,   // corrected 2026-11-02: was 26 (C-C-2021 p. 269 lists MSTI36 L = 36)
+                L = 36,   // corrected 2026-11-02: was 26 (C-C-2026 p. 291: L = 36)
                 CodeRef = "IBC / FL / LA",
 
                 FastenerOptions = new List<StrapTies_FastenerConfig>
@@ -920,7 +920,7 @@ namespace ShearWallCalculator
             });
 
             // MSTI48
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("MSTI48", new StrapTies_Data
             {
                 Model = "MSTI48",
@@ -947,7 +947,7 @@ namespace ShearWallCalculator
             });
 
             // MSTI60
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("MSTI60", new StrapTies_Data
             {
                 Model = "MSTI60",
@@ -974,7 +974,7 @@ namespace ShearWallCalculator
             });
 
             // MSTI72
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("MSTI72", new StrapTies_Data
             {
                 Model = "MSTI72",
@@ -1001,7 +1001,7 @@ namespace ShearWallCalculator
             });
 
             // HTP37Z
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("HTP37Z", new StrapTies_Data
             {
                 Model = "HTP37Z",
@@ -1028,7 +1028,7 @@ namespace ShearWallCalculator
             });
 
             // MSTC28
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("MSTC28", new StrapTies_Data
             {
                 Model = "MSTC28",
@@ -1055,7 +1055,7 @@ namespace ShearWallCalculator
             });
 
             // MSTC40
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("MSTC40", new StrapTies_Data
             {
                 Model = "MSTC40",
@@ -1082,7 +1082,7 @@ namespace ShearWallCalculator
             });
 
             // MSTC52
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("MSTC52", new StrapTies_Data
             {
                 Model = "MSTC52",
@@ -1109,7 +1109,7 @@ namespace ShearWallCalculator
             });
 
             // MSTC66
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("MSTC66", new StrapTies_Data
             {
                 Model = "MSTC66",
@@ -1122,7 +1122,7 @@ namespace ShearWallCalculator
                 {
                     new StrapTies_FastenerConfig
                     {
-                        Screws_Quantity = 76,
+                        Screws_Quantity = 68,   // C-C-2026 p. 291 (C-C-2021 p. 269: 76)
                         Screws_Type = "",
                         ScrewSize = "0.148",
                         Length = 3.25,
@@ -1136,7 +1136,7 @@ namespace ShearWallCalculator
             });
 
             // MSTC78
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("MSTC78", new StrapTies_Data
             {
                 Model = "MSTC78",
@@ -1163,7 +1163,7 @@ namespace ShearWallCalculator
             });
 
             // HRS416Z
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("HRS416Z", new StrapTies_Data
             {
                 Model = "HRS416Z",
@@ -1190,14 +1190,14 @@ namespace ShearWallCalculator
             });
 
             // LSTI49
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("LSTI49", new StrapTies_Data
             {
                 Model = "LSTI49",
                 Gauge = 18,
                 W = 3.75,
                 L = 49,
-                CodeRef = "IBC / FL / LA", // corrected 2026-11-02: was "---" (C-C-2021 p. 269)
+                CodeRef = "IBC / FL / LA", // corrected 2026-11-02: was "---" (C-C-2026 p. 291)
 
                 FastenerOptions = new List<StrapTies_FastenerConfig>
                 {
@@ -1217,14 +1217,14 @@ namespace ShearWallCalculator
             });
 
             // LSTI73
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" table, (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 291, "HRS/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI/ST Strap Ties (cont.)" table, (160) loads
             StrapTies_Dict.Add("LSTI73", new StrapTies_Data
             {
                 Model = "LSTI73",
                 Gauge = 18,
                 W = 3.75,
                 L = 73,
-                CodeRef = "IBC / FL / LA", // corrected 2026-11-02: was "---" (C-C-2021 p. 269)
+                CodeRef = "IBC / FL / LA", // corrected 2026-11-02: was "---" (C-C-2026 p. 291)
 
                 FastenerOptions = new List<StrapTies_FastenerConfig>
                 {

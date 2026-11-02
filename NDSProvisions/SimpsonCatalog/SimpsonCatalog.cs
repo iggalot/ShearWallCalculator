@@ -20,6 +20,18 @@ namespace ShearWallCalculator
 
     public class SimpsonCatalog
     {
+        /// <summary>The catalog every hold-down value in the managers comes from (copy: docs/references/C-C-2026.pdf).</summary>
+        public const string Edition = "C-C-2026";
+
+        /// <summary>The full citation shown in the app, the report and the catalog listing.</summary>
+        public const string Citation = "Simpson Strong-Tie, Wood Construction Connectors catalog C-C-2026 (2026–2027 edition, expires 12/31/27)";
+
+        /// <summary>Where each manager's values are tabulated in <see cref="Edition"/>.</summary>
+        public const string PagesHduDtt = "p. 61";
+        public const string PagesHtt = "p. 63";
+        public const string PagesSthd = "p. 67";
+        public const string PagesStraps = "p. 291";
+
         // The mapping of our abstract managers to the approriate connector managers
         public readonly Dictionary<SimpsonCatalogs, BaseSimpsonConnectorManager> ManagerMap;
 

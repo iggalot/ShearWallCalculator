@@ -1,3 +1,4 @@
+using ShearWallCalculator;
 using ShearWallCalculator.Design;
 using System;
 using System.Collections.Generic;
@@ -35,8 +36,8 @@ namespace ShearWallVisualizer.Dialogs
         private static readonly (string label, HoldownFamilies? value)[] Families =
         {
             ("All families", null),
-            ("HDU / DTT hold-downs to foundation", HoldownFamilies.HDU_ToFoundation),
-            ("HTT tension ties to foundation", HoldownFamilies.HTT_ToFoundation),
+            ("HDUE / DTT hold-downs to foundation", HoldownFamilies.HDU_ToFoundation),
+            ("LTT / HTT / HTTH tension ties to foundation", HoldownFamilies.HTT_ToFoundation),
             ("Strap ties to wall below", HoldownFamilies.Strap_ToWallBelow),
             ("LSTHD / STHD strap-tie hold-downs to foundation", HoldownFamilies.STHD_ToFoundation),
         };
@@ -56,6 +57,12 @@ namespace ShearWallVisualizer.Dialogs
 
             var header = new StackPanel();
             header.Children.Add(new TextBlock { Text = "Hold-down catalog", FontSize = 20, FontWeight = FontWeights.SemiBold });
+            header.Children.Add(new TextBlock
+            {
+                Text = "Source: " + SimpsonCatalog.Citation + ". HDUE/DTT " + SimpsonCatalog.PagesHduDtt + ", LTT/HTT/HTTH " + SimpsonCatalog.PagesHtt +
+                       ", LSTHD/STHD " + SimpsonCatalog.PagesSthd + ", strap ties " + SimpsonCatalog.PagesStraps + ". A copy is kept with the source code (docs/references/C-C-2026.pdf).",
+                FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, MaxWidth = 1180, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 4, 0, 0),
+            });
             header.Children.Add(new TextBlock
             {
                 TextWrapping = TextWrapping.Wrap, Foreground = Brushes.DimGray, Margin = new Thickness(0, 4, 0, 10), MaxWidth = 1180, HorizontalAlignment = HorizontalAlignment.Left,
@@ -137,6 +144,7 @@ namespace ShearWallVisualizer.Dialogs
             Col("SPF/HF (lb)", nameof(Row.SPF), true);
             Col("Defl. (in)", nameof(Row.Defl), true);
             Col("Code", nameof(Row.Code));
+            Col("Source", nameof(Row.Source2));
             Col("Conditions (STHD)", nameof(Row.Conditions));
             Col("Used on walls", nameof(Row.Used));
             root.Children.Add(grid);
@@ -215,6 +223,8 @@ namespace ShearWallVisualizer.Dialogs
             var blocks = new List<FrameworkElement>
             {
                 ASCE7WindLoadCalculator.WindReport.Heading("Hold-down catalog"),
+                ASCE7WindLoadCalculator.WindReport.Para("Source: " + SimpsonCatalog.Citation + ". HDUE/DTT " + SimpsonCatalog.PagesHduDtt + ", LTT/HTT/HTTH " + SimpsonCatalog.PagesHtt +
+                    ", LSTHD/STHD " + SimpsonCatalog.PagesSthd + ", strap ties " + SimpsonCatalog.PagesStraps + "."),
                 ASCE7WindLoadCalculator.WindReport.Para(
                     $"{shownRows.Count} fastener option{(shownRows.Count == 1 ? "" : "s")} " +
                     (filters.Count == 0 ? "(the whole catalog)" : "(" + string.Join("; ", filters) + ")") + ". " +
@@ -225,15 +235,15 @@ namespace ShearWallVisualizer.Dialogs
                 ASCE7WindLoadCalculator.WindReport.Para(count.Text),
             };
             string[] headers = { "Std", "Co.", "Family", "Model", "Ga.", "W", "H or L", "B", "CL", "SO", "Bolt dia.", "Fasteners", "Length",
-                                 "Min. wood", "DF/SP (lb)", "SPF/HF (lb)", "Defl. (in)", "Code", "Conditions (STHD)", "Used on walls" };
+                                 "Min. wood", "DF/SP (lb)", "SPF/HF (lb)", "Defl. (in)", "Code", "Source", "Conditions (STHD)", "Used on walls" };
             var data = shownRows.Select(r => new[]
             {
                 r.Standard ? "✓" : "", r.Company, r.Family, r.Model, r.Gauge, r.W, r.HL, r.B, r.CL, r.SO, r.Bolt, r.Fasteners, r.Length,
-                r.Wood, r.DF, r.SPF, r.Defl, r.Code, r.Conditions, r.Used,
+                r.Wood, r.DF, r.SPF, r.Defl, r.Code, r.Source2, r.Conditions, r.Used,
             }).ToList();
             blocks.AddRange(ASCE7WindLoadCalculator.WindReport.Tables(headers, data, rowsPerTable: 24));
             var info = new ASCE7WindLoadCalculator.ReportInfo { Project = string.IsNullOrWhiteSpace(project) ? "Untitled project" : project, Program = "Shear Wall Calculator" };
-            return ASCE7WindLoadCalculator.WindReport.Document(info, "Simpson Strong-Tie hold-downs (catalog data in the app)",
+            return ASCE7WindLoadCalculator.WindReport.Document(info, "Simpson Strong-Tie hold-downs, " + SimpsonCatalog.Edition + " (catalog data in the app)",
                 new[] { new ASCE7WindLoadCalculator.ReportSection("Hold-down catalog", blocks) });
         }
 
@@ -350,7 +360,7 @@ namespace ShearWallVisualizer.Dialogs
         }
 
         private static string FamilyName(HoldownFamilies f) =>
-            f == HoldownFamilies.HDU_ToFoundation ? "HDU / DTT" : f == HoldownFamilies.HTT_ToFoundation ? "HTT" :
+            f == HoldownFamilies.HDU_ToFoundation ? "HDUE / DTT" : f == HoldownFamilies.HTT_ToFoundation ? "LTT / HTT" :
             f == HoldownFamilies.STHD_ToFoundation ? "STHD" : "Strap";
 
         private static string N(double? v) => v.HasValue ? v.Value.ToString("0.####", CultureInfo.InvariantCulture) : "";
@@ -379,6 +389,7 @@ namespace ShearWallVisualizer.Dialogs
                 SPF = r.AllowableSPF_HF?.ToString("0", CultureInfo.InvariantCulture) ?? "";
                 Defl = N(r.DeflectionAtAllowable); Code = first ? r.CodeRef : "";
                 Conditions = r.Conditions ?? "";
+                Source2 = first ? r.Source : "";
                 standard = list.Contains(Key);
                 SetCompany(company);
             }
@@ -402,6 +413,8 @@ namespace ShearWallVisualizer.Dialogs
             public string Defl { get; }
             public string Code { get; }
             public string Conditions { get; }
+            /// <summary>Catalog edition and page, e.g. "C-C-2026 p. 61" (on the model's first option).</summary>
+            public string Source2 { get; }
 
             public string Used
             {

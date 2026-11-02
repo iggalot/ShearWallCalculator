@@ -118,3 +118,19 @@ Source: Simpson Strong-Tie, *Wood Construction Connectors* catalog **C-C-2021**.
 - brick ledges;
 - minimum spacing 3 × le;
 - LRFD factors (the hold-downs are checked at ASD).
+
+### Update 2026-11-02 (later): moved to C-C-2026
+
+The catalog values now come from the current edition, **C-C-2026** (2026–2027, expires 12/31/27). A copy downloaded from Simpson Strong-Tie is kept at `docs/references/C-C-2026.pdf`; see `docs/references/README.md`. The app cites the edition in three places: the hold-down catalog window (header, a Source column, the printout), a footnote on the Design tab, and the report.
+
+| Data | C-C-2026 page | Change from the C-C-2021 values above |
+|---|---|---|
+| HDUE / DTT | p. 61 | **HDU2…HDU14-SDS2.5 are no longer in the catalog.** They are replaced by HDUE3-SDS3, HDUE5-SDS3, HDUE7-SDS3, HDUE9-SDS3.5, HDUE13-SDS3.5 and HDUE17-SDS4.5, with 13 fastener options. Standard-list keys "HDU…#n" saved by users are reported as not in the catalog. DTT1Z minimum member is 1½ × 3½ again (changed in this edition). DTT2Z values are unchanged. |
+| LTT / HTT / HTTH | p. 63 | Loads unchanged. HTT5 / HTT5KT / HTT5-3/4 CL is 1-3/8. New **HTTH6.5** (5 options, up to 7,650 lb DF/SP). |
+| LSTHD / STHD | p. 67 | Unchanged. |
+| Strap ties | p. 291 | **MSTC66 nails 68** (C-C-2021: 76). All other values unchanged. |
+
+Not modelled:
+- HDUE table footnote 3: some loads exceed ASTM F1554 Grade 36 anchor bolts, so the designer specifies the anchor.
+- Footnote 4: HDUE13 needs a heavy-hex nut.
+- HTTH6.5 without the ¾" cut washer: footnotes 7 and 8 give lower loads.

@@ -9,14 +9,14 @@ namespace ShearWallCalculator.Design
     /// <summary>What anchors the end of the wall against overturning.</summary>
     public enum HoldownFamilies
     {
-        HDU_ToFoundation = 0,     // HDU / DTT hold-downs anchored to the foundation
-        HTT_ToFoundation = 1,     // HTT tension ties anchored to the foundation
+        HDU_ToFoundation = 0,     // HDUE / DTT hold-downs anchored to the foundation (HDU in catalogs before C-C-2026)
+        HTT_ToFoundation = 1,     // LTT / HTT / HTTH tension ties anchored to the foundation
         Strap_ToWallBelow = 2,    // strap ties to the wall below
         STHD_ToFoundation = 3,    // LSTHD / STHD strap-tie hold-downs cast into the foundation
     }
 
     /// <summary>
-    /// The foundation conditions that set an LSTHD / STHD allowable load (Simpson C-C-2021 p. 59, "Tension Loads for STHD
+    /// The foundation conditions that set an LSTHD / STHD allowable load (Simpson C-C-2026 p. 67, "Tension Loads for STHD
     /// Installations"). One set for the project, saved with the design settings. The defaults are the conservative columns:
     /// cracked concrete, endwall, a 6" stemwall; the "Wind and SDC A&amp;B" row because this program designs for wind.
     /// </summary>
@@ -205,6 +205,8 @@ namespace ShearWallCalculator.Design
         public double? SO { get; set; }
         public double? AnchorBoltDia { get; set; }
         public string CodeRef { get; set; }
+        /// <summary>Where the values are tabulated, e.g. "C-C-2026 p. 61" (<see cref="SimpsonCatalog.Edition"/>).</summary>
+        public string Source { get; set; }
         public string Fasteners { get; set; }
         public double FastenerLength { get; set; }
         public double? WoodMinHeight { get; set; }
@@ -710,6 +712,17 @@ namespace ShearWallCalculator.Design
         /// <summary>Stable key of a catalog option: the model and the option's position (1-based) in its fastener options.</summary>
         public static string OptionKey(string model, int optionIndex) => $"{model}#{optionIndex + 1}";
 
+        /// <summary>The catalog edition and page a family's values come from, e.g. "C-C-2026 p. 61".</summary>
+        public static string CatalogSource(HoldownFamilies family) =>
+            SimpsonCatalog.Edition + " " + (family == HoldownFamilies.HDU_ToFoundation ? SimpsonCatalog.PagesHduDtt
+                                          : family == HoldownFamilies.HTT_ToFoundation ? SimpsonCatalog.PagesHtt
+                                          : family == HoldownFamilies.STHD_ToFoundation ? SimpsonCatalog.PagesSthd : SimpsonCatalog.PagesStraps);
+
+        /// <summary>The footnote for the design page and the report: the catalog edition every hold-down load comes from.</summary>
+        public static string CatalogFootnote =>
+            $"Hold-down allowable tension loads (ASD): {SimpsonCatalog.Citation} — HDUE/DTT {SimpsonCatalog.PagesHduDtt}, LTT/HTT/HTTH {SimpsonCatalog.PagesHtt}, " +
+            $"LSTHD/STHD {SimpsonCatalog.PagesSthd}, strap ties {SimpsonCatalog.PagesStraps}. Verify against the current catalog and the evaluation reports.";
+
         /// <summary>
         /// The lightest option (smallest allowable tension) that is at least the required tension, from the full catalog or,
         /// with <paramref name="standardOnly"/>, from the company standard list only (null when none there is strong enough).
@@ -747,7 +760,7 @@ namespace ShearWallCalculator.Design
                 rows.Add(new HoldownSpecRow
                 {
                     Key = OptionKey(model, index), Family = family, Model = model, FirstOfModel = index == 0, Gauge = gauge, W = w, HeightOrLength = hl, B = b, CL = cl, SO = so,
-                    AnchorBoltDia = bolt, CodeRef = code, Fasteners = Fasteners(qty, type, size), FastenerLength = length,
+                    AnchorBoltDia = bolt, CodeRef = code, Source = CatalogSource(family), Fasteners = Fasteners(qty, type, size), FastenerLength = length,
                     WoodMinHeight = minH, WoodMinWidth = minW, DeflectionAtAllowable = defl,
                     AllowableDF_SP = loads.TryGetValue("DF_SP", out var df) ? df : (double?)null,
                     AllowableSPF_HF = loads.TryGetValue("SPF_HF", out var spf) ? spf : (double?)null,

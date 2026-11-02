@@ -25,8 +25,8 @@ namespace ShearWallCalculator.Tests
         {
             // L = 10 ft, h = 9 ft, V = 5 k (strength). v = 0.6 x 5000 / 10 = 300 plf.
             // v_w = 785 plf (Table 4.3A); ASD 785 / 2.0 = 392.5 plf; ratio 0.764.
-            // Hold-down arm d = L - post = 10 - 3/12 = 9.75 ft (HDU2: min. 3 x 3.5 member, 3 in along the wall).
-            // T = 0.6 x 5000 x 9 / 9.75 = 2769.2 lb -> HDU2-SDS2.5 (3075 lb DF-SP), the lightest at or above it.
+            // Hold-down arm d = L - post = 10 - 3/12 = 9.75 ft (HDUE3: min. 3 x 3.5 member, 3 in along the wall).
+            // T = 0.6 x 5000 x 9 / 9.75 = 2769.2 lb -> HDUE3-SDS3 (3790 lb DF-SP, C-C-2026 p. 61), the lightest at or above it.
             var r = Designer.Check(1, Wall(10), 5.0, "Case 1", Asd);
             Assert.AreEqual(0.6, r.LoadFactor);
             Assert.AreEqual(300.0, r.Demand, 1e-9);
@@ -38,8 +38,8 @@ namespace ShearWallCalculator.Tests
             Assert.AreEqual(9.75, r.HoldownArm, 1e-12);
             Assert.AreEqual(27000 / 9.75, r.TensionAsd, 1e-9);
             Assert.AreEqual(45000 / 9.75, r.TensionLrfd, 1e-9, "reported for reference: 1.0W");
-            Assert.AreEqual("HDU2-SDS2.5", r.Holdown.Model);
-            Assert.AreEqual(3075.0, r.Holdown.Allowable);
+            Assert.AreEqual("HDUE3-SDS3", r.Holdown.Model);
+            Assert.AreEqual(3790.0, r.Holdown.Allowable);
             Assert.IsTrue(r.Pass);
             Assert.AreEqual("OK", r.Status);
         }
@@ -52,7 +52,7 @@ namespace ShearWallCalculator.Tests
             Assert.AreEqual(500.0, r.Demand, 1e-9);
             Assert.AreEqual(628.0, r.Capacity, 1e-9);
             Assert.AreEqual(27000 / 9.75, r.TensionAsd, 1e-9, "hold-downs are always checked at ASD (0.6W)");
-            Assert.AreEqual("HDU2-SDS2.5", r.Holdown.Model);
+            Assert.AreEqual("HDUE3-SDS3", r.Holdown.Model);
         }
 
         [TestMethod]
@@ -110,13 +110,13 @@ namespace ShearWallCalculator.Tests
         public void HoldownSelection_Boundaries()
         {
             Assert.AreEqual("DTT2Z", Designer.SelectHoldown(HoldownFamilies.HDU_ToFoundation, WoodTypes.WOODTYPE_DF_SP, 2145).Model);
-            Assert.AreEqual("HDU2-SDS2.5", Designer.SelectHoldown(HoldownFamilies.HDU_ToFoundation, WoodTypes.WOODTYPE_DF_SP, 2146).Model);
-            Assert.AreEqual("HDU14-SDS2.5", Designer.SelectHoldown(HoldownFamilies.HDU_ToFoundation, WoodTypes.WOODTYPE_DF_SP, 14400).Model);
+            Assert.AreEqual("HDUE3-SDS3", Designer.SelectHoldown(HoldownFamilies.HDU_ToFoundation, WoodTypes.WOODTYPE_DF_SP, 2146).Model);
+            Assert.AreEqual("HDUE17-SDS4.5", Designer.SelectHoldown(HoldownFamilies.HDU_ToFoundation, WoodTypes.WOODTYPE_DF_SP, 14400).Model);
             Assert.IsNull(Designer.SelectHoldown(HoldownFamilies.HDU_ToFoundation, WoodTypes.WOODTYPE_DF_SP, 20000), "beyond the catalog");
             Assert.IsNotNull(Designer.SelectHoldown(HoldownFamilies.HTT_ToFoundation, WoodTypes.WOODTYPE_DF_SP, 1000));
             Assert.IsNotNull(Designer.SelectHoldown(HoldownFamilies.Strap_ToWallBelow, WoodTypes.WOODTYPE_DF_SP, 500));
 
-            var big = Designer.Check(1, Wall(4, 10), 10.0, null, Asd); // T = 0.6 x 10000 x 10 / 4 = 15000 lb
+            var big = Designer.Check(1, Wall(4, 10), 12.0, null, Asd); // T = 0.6 x 12000 x 10 / (4 - 5.5/12) = 20329 lb > HDUE17 17,685 lb
             Assert.IsNull(big.Holdown);
             Assert.IsFalse(big.Pass);
         }
@@ -178,7 +178,7 @@ namespace ShearWallCalculator.Tests
         {
             // 40 x 20 ft flexible diaphragm, 10 ft walls on all four sides, Vx = 10 k, Vy = 6 k.
             // Tributary: each E-W wall line takes 10 / 2 = 5 k, each N-S line 6 / 2 = 3 k (one wall per line).
-            // E-W wall: v = 0.6 x 5000 / 10 = 300 plf vs 392.5 plf; T = 0.6 x 5000 x 9 / 10 = 2700 lb -> HDU2-SDS2.5.
+            // E-W wall: v = 0.6 x 5000 / 10 = 300 plf vs 392.5 plf; T = 0.6 x 5000 x 9 / 10 = 2700 lb -> HDUE3-SDS3.
             // N-S wall: v = 0.6 x 3000 / 10 = 180 plf; T = 0.6 x 3000 x 9 / 10 = 1620 lb.
             var calc = new ShearWallCalculator_FlexibleDiaphragm();
             calc._wall_system.AddWall(new WallData(9, 0, 5, 0, 15));
@@ -195,7 +195,7 @@ namespace ShearWallCalculator.Tests
                 Assert.AreEqual(300.0, r.Demand, 1e-6);
                 Assert.AreEqual(392.5, r.Capacity, 1e-9);
                 Assert.AreEqual(27000 / 9.75, r.TensionAsd, 1e-6, "d = 10 - 3/12 ft");
-                Assert.AreEqual("HDU2-SDS2.5", r.Holdown.Model);
+                Assert.AreEqual("HDUE3-SDS3", r.Holdown.Model);
                 Assert.IsTrue(r.Pass);
             }
             foreach (var id in calc._wall_system.NS_Walls.Keys)
@@ -254,23 +254,23 @@ namespace ShearWallCalculator.Tests
         public void StandardList_LimitsTheSelection_AndSaysWhenNoneFits()
         {
             var d = new ShearWallDesigner();
-            // full catalog: 2146 lb -> HDU2-SDS2.5 (3075 lb DF/SP)
-            Assert.AreEqual("HDU2-SDS2.5", d.SelectHoldown(HoldownFamilies.HDU_ToFoundation, WoodTypes.WOODTYPE_DF_SP, 2146).Model);
+            // full catalog: 2146 lb -> HDUE3-SDS3 (3790 lb DF/SP, C-C-2026 p. 61)
+            Assert.AreEqual("HDUE3-SDS3", d.SelectHoldown(HoldownFamilies.HDU_ToFoundation, WoodTypes.WOODTYPE_DF_SP, 2146).Model);
 
-            d.StandardList.Set(ShearWallDesigner.OptionKey("HDU5-SDS2.5", 0), true);
-            d.StandardList.Set(ShearWallDesigner.OptionKey("HDU8-SDS2.5", 0), true);
+            d.StandardList.Set(ShearWallDesigner.OptionKey("HDUE5-SDS3", 0), true);
+            d.StandardList.Set(ShearWallDesigner.OptionKey("HDUE9-SDS3.5", 0), true);
             var c = d.SelectHoldown(HoldownFamilies.HDU_ToFoundation, WoodTypes.WOODTYPE_DF_SP, 2146, standardOnly: true);
-            Assert.AreEqual("HDU5-SDS2.5", c.Model);
-            Assert.AreEqual("HDU5-SDS2.5#1", c.Key);
-            Assert.AreEqual(5645, c.Allowable, 0.0);
-            Assert.AreEqual("HDU8-SDS2.5", d.SelectHoldown(HoldownFamilies.HDU_ToFoundation, WoodTypes.WOODTYPE_DF_SP, 6000, true).Model);
-            Assert.IsNull(d.SelectHoldown(HoldownFamilies.HDU_ToFoundation, WoodTypes.WOODTYPE_DF_SP, 7000, true), "HDU8 #1 is 6765 lb");
-            Assert.IsNotNull(d.SelectHoldown(HoldownFamilies.HDU_ToFoundation, WoodTypes.WOODTYPE_DF_SP, 7000, false));
+            Assert.AreEqual("HDUE5-SDS3", c.Model);
+            Assert.AreEqual("HDUE5-SDS3#1", c.Key);
+            Assert.AreEqual(5375, c.Allowable, 0.0);
+            Assert.AreEqual("HDUE9-SDS3.5", d.SelectHoldown(HoldownFamilies.HDU_ToFoundation, WoodTypes.WOODTYPE_DF_SP, 6000, true).Model);
+            Assert.IsNull(d.SelectHoldown(HoldownFamilies.HDU_ToFoundation, WoodTypes.WOODTYPE_DF_SP, 9000, true), "HDUE9 #1 is 8425 lb");
+            Assert.IsNotNull(d.SelectHoldown(HoldownFamilies.HDU_ToFoundation, WoodTypes.WOODTYPE_DF_SP, 9000, false));
 
             var settings = new DesignSettings { Method = DesignMethods.ASD, HoldownsFromStandardList = true };
             var small = new ShearWallDesigner();
-            small.StandardList.Set(ShearWallDesigner.OptionKey("HDU2-SDS2.5", 0), true);
-            var r = small.Check(1, Wall(4, 10), 2.2, null, settings);   // v = 0.6 x 2200 / 4 = 330 plf; T = 0.6 x 2200 x 10 / 4 = 3300 lb > HDU2 3075 lb
+            small.StandardList.Set(ShearWallDesigner.OptionKey("DTT2Z-SDS2.5", 0), true);
+            var r = small.Check(1, Wall(4, 10), 2.2, null, settings);   // v = 330 plf; T = 0.6 x 2200 x 10 / 3.75 = 3520 lb > DTT2Z-SDS2.5 2145 lb
             Assert.IsNull(r.Holdown);
             Assert.IsTrue(r.HoldownFromStandardList);
             Assert.AreEqual("no standard-list hold-down strong enough", r.Status);
@@ -282,11 +282,11 @@ namespace ShearWallCalculator.Tests
             var d = new ShearWallDesigner();
             var rows = d.CatalogRows();
             Assert.AreEqual(rows.Count, System.Linq.Enumerable.Count(System.Linq.Enumerable.Distinct(System.Linq.Enumerable.Select(rows, r => r.Key))), "keys are unique");
-            // HDU14-SDS2.5 options 1 and 3 share fasteners and minimum wood text but are different options
-            var hdu14 = System.Linq.Enumerable.ToList(System.Linq.Enumerable.Where(rows, r => r.Model == "HDU14-SDS2.5"));
-            CollectionAssert.AreEqual(new[] { "HDU14-SDS2.5#1", "HDU14-SDS2.5#2", "HDU14-SDS2.5#3" }, System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Select(hdu14, r => r.Key)));
+            // HDUE13-SDS3.5 options 1 and 3 share fasteners and the first minimum wood figure but are different options
+            var hdue13 = System.Linq.Enumerable.ToList(System.Linq.Enumerable.Where(rows, r => r.Model == "HDUE13-SDS3.5"));
+            CollectionAssert.AreEqual(new[] { "HDUE13-SDS3.5#1", "HDUE13-SDS3.5#2", "HDUE13-SDS3.5#3" }, System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Select(hdue13, r => r.Key)));
             var choice = d.SelectHoldown(HoldownFamilies.HDU_ToFoundation, WoodTypes.WOODTYPE_DF_SP, 14400);
-            Assert.AreEqual("HDU14-SDS2.5 (36 1/4 SDS, min. 3.5 × 5.5)", choice.ToString());
+            Assert.AreEqual("HDUE17-SDS4.5 (28 1/4 SDS, min. 5.5 × 3.5)", choice.ToString());
 
             d.StandardList.Set("NOT-A-MODEL#1", true);
             CollectionAssert.AreEqual(new[] { "NOT-A-MODEL#1" }, d.StandardKeysNotInCatalog());
@@ -302,13 +302,13 @@ namespace ShearWallCalculator.Tests
                 var list = new HoldownStandardList();
                 int changed = 0;
                 list.Changed += (s, e) => changed++;
-                list.Set("HDU5-SDS2.5#1", true);
-                list.Set("HDU5-SDS2.5#1", true);        // already there: no change
+                list.Set("HDUE5-SDS3#1", true);
+                list.Set("HDUE5-SDS3#1", true);        // already there: no change
                 list.Set("LTTP2#2", true);
                 Assert.AreEqual(2, changed);
                 list.Save(path);
                 var back = HoldownStandardList.Load(path);
-                CollectionAssert.AreEquivalent(new[] { "HDU5-SDS2.5#1", "LTTP2#2" }, System.Linq.Enumerable.ToArray(back.Keys));
+                CollectionAssert.AreEquivalent(new[] { "HDUE5-SDS3#1", "LTTP2#2" }, System.Linq.Enumerable.ToArray(back.Keys));
             }
             finally
             {

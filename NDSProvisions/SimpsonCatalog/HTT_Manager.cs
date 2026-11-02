@@ -5,7 +5,7 @@ namespace ShearWallCalculator
 {
     public class HTT_Manager : BaseSimpsonConnectorManager<HTT_Data>
     {
-        /// <summary>LTT / HTT tension ties. Source: Simpson Strong-Tie, Wood Construction Connectors C-C-2021, p. 55, "LTT/HTT Tension Ties (cont.)" table (updated 08/03/21); the loads are unchanged in C-C-2024 p. 57. Checked 2026-11-02.</summary>
+        /// <summary>LTT / HTT / HTTH tension ties. Source: Simpson Strong-Tie, Wood Construction Connectors C-C-2026, pp. 62–63, "LTT/HTT/HTTH Tension Ties"; values from the p. 63 table (ASD, (160)). Copy: docs/references/C-C-2026.pdf.</summary>
         public Dictionary<string, HTT_Data> HTT_Dict = new Dictionary<string, HTT_Data>();
 
         public HTT_Manager()
@@ -16,7 +16,7 @@ namespace ShearWallCalculator
         private void LoadHDUData()
         {
             // LTTP2
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 55, "LTT/HTT Tension Ties (cont.)" table (updated 08/03/21), (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 63, "LTT/HTT/HTTH Tension Ties (cont.)" table, (160) loads
             HTT_Dict.Add("LTTP2", new HTT_Data
             {
                 Model = "LTTP2",
@@ -44,7 +44,7 @@ namespace ShearWallCalculator
                             { "DF_SP", 1845 },
                             { "SPF_HF", 1695 }
                         },
-                        DeflectionAtAllowableLoad = 0.104,   // corrected 2026-11-02: was 0.009 (C-C-2021 p. 55)
+                        DeflectionAtAllowableLoad = 0.104,   // corrected 2026-11-02: was 0.009 (C-C-2026 p. 63)
                     },
                     new HTT_FastenerConfig
                     {
@@ -59,7 +59,7 @@ namespace ShearWallCalculator
                             { "DF_SP", 2135 },
                             { "SPF_HF", 1965 }
                         },
-                        DeflectionAtAllowableLoad = 0.112,   // corrected 2026-11-02: was 0.011 (C-C-2021 p. 55)
+                        DeflectionAtAllowableLoad = 0.112,   // corrected 2026-11-02: was 0.011 (C-C-2026 p. 63)
                     },
                     new HTT_FastenerConfig
                     {
@@ -74,7 +74,7 @@ namespace ShearWallCalculator
                             { "DF_SP", 2570 },
                             { "SPF_HF", 2045 }
                         },
-                        DeflectionAtAllowableLoad = 0.136,   // corrected 2026-11-02: was 0.015 (C-C-2021 p. 55)
+                        DeflectionAtAllowableLoad = 0.136,   // corrected 2026-11-02: was 0.015 (C-C-2026 p. 63)
                     },
                     new HTT_FastenerConfig
                     {
@@ -89,13 +89,13 @@ namespace ShearWallCalculator
                             { "DF_SP", 2275 },
                             { "SPF_HF", 2230 }
                         },
-                        DeflectionAtAllowableLoad = 0.128,   // corrected 2026-11-02: was 0.013 (C-C-2021 p. 55)
+                        DeflectionAtAllowableLoad = 0.128,   // corrected 2026-11-02: was 0.013 (C-C-2026 p. 63)
                     },
                 }
             });
 
             // LTTI31
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 55, "LTT/HTT Tension Ties (cont.)" table (updated 08/03/21), (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 63, "LTT/HTT/HTTH Tension Ties (cont.)" table, (160) loads
             HTT_Dict.Add("LTTI31", new HTT_Data
             {
                 Model = "LTTI31",
@@ -129,7 +129,7 @@ namespace ShearWallCalculator
             });
 
             // HTT4
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 55, "LTT/HTT Tension Ties (cont.)" table (updated 08/03/21), (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 63, "LTT/HTT/HTTH Tension Ties (cont.)" table, (160) loads
             HTT_Dict.Add("HTT4", new HTT_Data
             {
                 Model = "HTT4",
@@ -223,7 +223,7 @@ namespace ShearWallCalculator
             });
 
             // HTT5
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 55, "LTT/HTT Tension Ties (cont.)" table (updated 08/03/21), (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 63, "LTT/HTT/HTTH Tension Ties (cont.)" table, (160) loads
             HTT_Dict.Add("HTT5", new HTT_Data
             {
                 Model = "HTT5",
@@ -231,7 +231,7 @@ namespace ShearWallCalculator
                 W = 2.5,
                 L = 16,
                 B = 2,
-                CL = 1.4375,  // not confirmed: C-C-2024 p. 57 gives 1-3/8 (marked as changed); dimension only, not used by the design
+                CL = 1.375,   // C-C-2026 p. 63 (was 1-7/16)
                 SO = 0.4375,
                 AnchorBoltDia = 0.625,
                 CodeRef = "IBC / FL / LA",
@@ -302,7 +302,7 @@ namespace ShearWallCalculator
             });
 
             // HTT5KT
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 55, "LTT/HTT Tension Ties (cont.)" table (updated 08/03/21), (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 63, "LTT/HTT/HTTH Tension Ties (cont.)" table, (160) loads
             HTT_Dict.Add("HTT5KT", new HTT_Data
             {
                 Model = "HTT5KT",
@@ -310,7 +310,7 @@ namespace ShearWallCalculator
                 W = 2.5,
                 L = 16,
                 B = 2,
-                CL = 1.4375,
+                CL = 1.375,   // C-C-2026 p. 63 (was 1-7/16)
                 SO = 0.4375,
                 AnchorBoltDia = 0.625,
                 CodeRef = "IBC / FL / LA",
@@ -336,7 +336,7 @@ namespace ShearWallCalculator
             });
 
             // HTT5-3/4
-            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 55, "LTT/HTT Tension Ties (cont.)" table (updated 08/03/21), (160) loads; checked 2026-11-02
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 63, "LTT/HTT/HTTH Tension Ties (cont.)" table, (160) loads
             HTT_Dict.Add("HTT5-3/4", new HTT_Data
             {
                 Model = "HTT5-3/4",
@@ -344,7 +344,7 @@ namespace ShearWallCalculator
                 W = 2.5,
                 L = 16,
                 B = 2,
-                CL = 1.4375,
+                CL = 1.375,   // C-C-2026 p. 63 (was 1-7/16)
                 SO = 0.4375,
                 AnchorBoltDia = 0.75,
                 CodeRef = "IBC / FL / LA",
@@ -399,7 +399,38 @@ namespace ShearWallCalculator
                 }
             });
 
+            // HTTH6.5 (new in C-C-2026)
+            // Simpson Strong-Tie C-C-2026 (Wood Construction Connectors), p. 63, "LTT/HTT/HTTH Tension Ties (cont.)" table, (160) loads.
+            // 3/4" cut washer required (p. 62); without it footnotes 7 and 8 give lower loads (not modelled).
+            HTT_Dict.Add("HTTH6.5", new HTT_Data
+            {
+                Model = "HTTH6.5",
+                Gauge = 10,
+                W = 3,
+                L = 20.25,
+                B = 0,          // not tabulated
+                CL = 1.3125,
+                SO = 0.53125,
+                AnchorBoltDia = 0.75,
+                CodeRef = "IBC / FL / LA",
+                FastenerOptions = new List<HTT_FastenerConfig>
+                {
+                    Htth(34, "", "0.148", 2.5, 3, 3.5, 6115, 5640, 0.136),
+                    Htth(34, "", "0.162", 2.5, 3, 3.5, 6505, 5675, 0.140),
+                    Htth(34, "SD", "#10", 1.5, 1.5, 7.25, 5375, 5010, 0.128),
+                    Htth(34, "SD", "#10", 1.5, 3, 3.5, 6390, 5795, 0.136),
+                    Htth(34, "SD", "#10", 2.5, 3, 3.5, 7650, 6760, 0.147),
+                }
+            });
         }
+
+        private static HTT_FastenerConfig Htth(int qty, string type, string size, double length, double thick, double width, double df, double spf, double defl) =>
+            new HTT_FastenerConfig
+            {
+                Screws_Quantity = qty, Screws_Type = type, ScrewSize = size, Length = length, WoodMinHeight = thick, WoodMinWidth = width,
+                AllowableTensionLoads = new Dictionary<string, double> { { "DF_SP", df }, { "SPF_HF", spf } },
+                DeflectionAtAllowableLoad = defl,
+            };
 
 
         public string PrintAllHTTData()

@@ -169,6 +169,10 @@ namespace ShearWallVisualizer.Controls
             var root = new DockPanel { Margin = new Thickness(12, 10, 12, 10), LastChildFill = true };
             DockPanel.SetDock(bar, Dock.Top);
             DockPanel.SetDock(tbNote, Dock.Top);
+            // Footnote: the catalog edition the hold-down loads come from (always shown, under the details).
+            var footnote = new TextBlock { Text = "¹ " + ShearWallDesigner.CatalogFootnote, TextWrapping = TextWrapping.Wrap, FontSize = 11, Foreground = InkSecondary, Margin = new Thickness(0, 6, 0, 0) };
+            DockPanel.SetDock(footnote, Dock.Bottom);
+            root.Children.Add(footnote);
             DockPanel.SetDock(detailsCard, Dock.Bottom);
             root.Children.Add(bar);
             root.Children.Add(tbNote);
@@ -334,12 +338,12 @@ namespace ShearWallVisualizer.Controls
             ("Nails", 46, "Edge fastener spacing of face 2", 0),
             ("Framing", 64, "Framing species group (Table 4.3A footnote)", 1),
             ("Dead (plf)", 46, "Dead load on the wall that resists overturning (0 = none)", 1),
-            ("Hold-down type", 70, "HDU, HTT or a cast-in STHD strap anchors the wall end to the foundation; a strap ties it to the wall below", 1),
+            ("Hold-down type", 70, "HDUE, HTT or a cast-in STHD strap anchors the wall end to the foundation; a strap ties it to the wall below", 1),
             ("v (plf)", 48, "Unit shear demand", 2),
             ("Allowed", 56, "Design unit shear capacity", 2),
             ("Ratio", 44, "Demand / capacity", 1),
             ("T (lb)", 50, "Hold-down tension at ASD", 2),
-            ("Hold-down", 84, "Lightest Simpson model at or above T", 0),
+            ("Hold-down¹", 84, "Lightest Simpson model at or above T (" + SimpsonCatalog.Edition + ", see the footnote)", 0),
             ("Status", 80, "", 0),
             ("", 30, "", 0),
         };
@@ -621,7 +625,7 @@ namespace ShearWallVisualizer.Controls
         private void ShowStrapConditions(StrapHoldownConditions c)
         {
             btnSthd.Content = $"STHD: {c.Stemwall:0.#}\" stemwall, {(c.CrackedConcrete ? "cracked" : "uncracked")}, {c.Position.ToString().ToLowerInvariant()}...";
-            btnSthd.ToolTip = "Foundation conditions for the LSTHD / STHD strap-tie hold-downs (Simpson C-C-2021 p. 59), one set for the project: " +
+            btnSthd.ToolTip = "Foundation conditions for the LSTHD / STHD strap-tie hold-downs (Simpson " + ShearWallDesigner.CatalogSource(HoldownFamilies.STHD_ToFoundation) + "), one set for the project: " +
                               c.Describe() + ". Click to change.";
         }
 
@@ -669,7 +673,7 @@ namespace ShearWallVisualizer.Controls
             var note = new TextBlock
             {
                 TextWrapping = TextWrapping.Wrap, MaxWidth = 400, Foreground = InkSecondary, Margin = new Thickness(0, 4, 0, 10),
-                Text = "Simpson C-C-2021 p. 59, \"Tension Loads for STHD Installations\". One set for the whole project; every wall with " +
+                Text = "Simpson " + ShearWallDesigner.CatalogSource(HoldownFamilies.STHD_ToFoundation) + ", \"Tension Loads for STHD Installations\". One set for the whole project; every wall with " +
                        "an STHD gets the allowable load of this column. Wind loads use the \"Wind and SDC A & B\" row. Not applied: " +
                        "the LSTHD8 0.9 factor for 1\"–4\" spalls, two-pour downturn footings, brick ledges (see the catalog).",
             };
@@ -705,12 +709,12 @@ namespace ShearWallVisualizer.Controls
 
         /// <summary>The table's short label (the column tooltip says where each one anchors).</summary>
         public static string ShortHoldownName(HoldownFamilies f) =>
-            f == HoldownFamilies.HDU_ToFoundation ? "HDU" : f == HoldownFamilies.HTT_ToFoundation ? "HTT" :
+            f == HoldownFamilies.HDU_ToFoundation ? "HDUE" : f == HoldownFamilies.HTT_ToFoundation ? "HTT" :
             f == HoldownFamilies.STHD_ToFoundation ? "STHD" : "Strap";
 
         public static string HoldownName(HoldownFamilies f) =>
-            f == HoldownFamilies.HDU_ToFoundation ? "HDU to foundation" :
-            f == HoldownFamilies.HTT_ToFoundation ? "HTT to foundation" :
+            f == HoldownFamilies.HDU_ToFoundation ? "HDUE / DTT to foundation" :
+            f == HoldownFamilies.HTT_ToFoundation ? "LTT / HTT / HTTH to foundation" :
             f == HoldownFamilies.STHD_ToFoundation ? "STHD cast in foundation" : "Strap to wall below";
 
         // ------------------------------------------------------------------ details

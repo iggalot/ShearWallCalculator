@@ -6,14 +6,14 @@ using ShearWallCalculator.Design;
 namespace ShearWallCalculator.Tests
 {
     /// <summary>
-    /// The hold-down catalog against its source, Simpson Strong-Tie Wood Construction Connectors C-C-2021: the LSTHD / STHD
-    /// table (p. 59) in full, and the values corrected when the HDU/DTT (p. 53), LTT/HTT (p. 55) and strap (p. 269) tables
-    /// were checked. The expected numbers are typed here from the catalog, not taken from the code.
+    /// The hold-down catalog against its source, Simpson Strong-Tie Wood Construction Connectors C-C-2026 (copy in
+    /// docs/references/C-C-2026.pdf): HDUE/DTT p. 61, LTT/HTT/HTTH p. 63, LSTHD/STHD p. 67, strap ties p. 291. The expected
+    /// numbers are typed here from the catalog, not taken from the code.
     /// </summary>
     [TestClass]
     public class SimpsonCatalogTests
     {
-        // C-C-2021 p. 59, "Tension Loads for STHD Installations": stemwall, model, nails, uncracked mid/corner/end, cracked mid/corner/end.
+        // C-C-2026 p. 67 (same as C-C-2021 p. 59), "Tension Loads for STHD Installations": stemwall, model, nails, uncracked mid/corner/end, cracked mid/corner/end.
         private static readonly (SthdSeismic row, double stem, string model, int nails, double[] unc, double[] cr)[] Table =
         {
             (SthdSeismic.WindAndSdcAB, 6, "LSTHD8", 20, new double[] { 2985, 2590, 1620 }, new double[] { 2565, 2225, 1395 }),
@@ -62,7 +62,7 @@ namespace ShearWallCalculator.Tests
         public void Sthd_StrapData_Gauge_Length_Embedment_Deflection()
         {
             var m = new STHD_Manager().STHD_Dict;
-            // C-C-2021 p. 58 "Material", p. 59 strap length / le columns, footnote 5 deflections (on framing, over sheathing)
+            // C-C-2026 p. 66 "Material", p. 67 strap length / le columns, footnote 5 deflections (on framing, over sheathing)
             var expected = new (string model, int ga, double L, double le, double onFraming, double overSheathing)[]
             {
                 ("LSTHD8", 14, 18.625, 8, 0.089, 0.114), ("LSTHD8RJ", 14, 32.125, 8, 0.089, 0.114),
@@ -125,26 +125,102 @@ namespace ShearWallCalculator.Tests
         }
 
         [TestMethod]
-        public void CheckedAgainstCC2021_TheCorrectedValues()
+        public void CheckedAgainstCC2026_TheCorrectedValues()
         {
             var cat = new SimpsonCatalog();
-            // p. 269: MSTI36 is 36" long (was 26); MSTC52 SPF/HF 4,735 lb (was 4,315, the MSTC40 value); LSTI listed IBC, FL, LA
+            Assert.AreEqual("C-C-2026", SimpsonCatalog.Edition);
+            // p. 291: MSTI36 is 36" long; MSTC52 SPF/HF 4,735 lb (MSTC40 4,315); LSTI listed IBC, FL, LA; MSTC66 takes 68 nails
             Assert.AreEqual(36, cat.StrapTiesManager.StrapTies_Dict["MSTI36"].L, 0.0);
             Assert.AreEqual(4735, cat.StrapTiesManager.StrapTies_Dict["MSTC52"].FastenerOptions[0].AllowableTensionLoads["SPF_HF"], 0.0);
             Assert.AreEqual(4315, cat.StrapTiesManager.StrapTies_Dict["MSTC40"].FastenerOptions[0].AllowableTensionLoads["SPF_HF"], 0.0);
             Assert.AreEqual("IBC / FL / LA", cat.StrapTiesManager.StrapTies_Dict["LSTI49"].CodeRef);
             Assert.AreEqual("IBC / FL / LA", cat.StrapTiesManager.StrapTies_Dict["LSTI73"].CodeRef);
-            // p. 53: DTT1Z minimum wood member 1-1/2 x 5-1/2 for each fastener option
-            Assert.IsTrue(cat.HDUManager.HDU_Dict["DTT1Z"].FastenerOptions.All(o => o.WoodMinHeight == 1.5 && o.WoodMinWidth == 5.5));
-            // p. 55: LTTP2 deflections 0.104, 0.112, 0.136, 0.128 in. (were ten times smaller)
+            Assert.AreEqual(68, cat.StrapTiesManager.StrapTies_Dict["MSTC66"].FastenerOptions[0].Screws_Quantity);
+            // p. 61: DTT1Z minimum wood member 1-1/2 x 3-1/2 for each fastener option
+            Assert.IsTrue(cat.HDUManager.HDU_Dict["DTT1Z"].FastenerOptions.All(o => o.WoodMinHeight == 1.5 && o.WoodMinWidth == 3.5));
+            // p. 63: LTTP2 deflections 0.104, 0.112, 0.136, 0.128 in.; HTT5 family CL 1-3/8
             CollectionAssert.AreEqual(new[] { 0.104, 0.112, 0.136, 0.128 },
                 cat.HTTManager.HTT_Dict["LTTP2"].FastenerOptions.Select(o => o.DeflectionAtAllowableLoad).ToArray());
+            foreach (var m in new[] { "HTT5", "HTT5KT", "HTT5-3/4" })
+                Assert.AreEqual(1.375, cat.HTTManager.HTT_Dict[m].CL, 0.0, m);
         }
 
         [TestMethod]
-        public void StrapTies_AllLoads_MatchCC2021Page269()
+        public void HdueDtt_AllOptions_MatchCC2026Page61()
         {
-            // C-C-2021 p. 269: model, nails, DF/SP, SPF/HF
+            // C-C-2026 p. 61: model, screws, length, min. member thickness x width, DF/SP, SPF/HF, deflection
+            var expected = new (string model, int n, double len, double t, double w, double df, double spf, double defl)[]
+            {
+                ("DTT1Z", 6, 1.5, 1.5, 3.5, 840, 840, 0.170), ("DTT1Z", 6, 1.5, 1.5, 3.5, 910, 640, 0.167), ("DTT1Z", 8, 1.5, 1.5, 3.5, 910, 850, 0.167),
+                ("DTT2Z", 8, 1.5, 1.5, 3.5, 1825, 1800, 0.105), ("DTT2Z", 8, 1.5, 3, 3.5, 2145, 1835, 0.128),
+                ("DTT2Z-SDS2.5", 8, 2.5, 3, 3.5, 2145, 2105, 0.128),
+                ("HDUE3-SDS3", 7, 3, 3, 3.5, 3790, 3340, 0.127),
+                ("HDUE5-SDS3", 10, 3, 3, 3.5, 5375, 4700, 0.146),
+                ("HDUE7-SDS3", 13, 3, 3, 3.5, 7015, 6030, 0.154),
+                ("HDUE9-SDS3.5", 16, 3.5, 3.5, 3.5, 8425, 7305, 0.159), ("HDUE9-SDS3.5", 16, 3.5, 4.5, 3.5, 9390, 7995, 0.134),
+                ("HDUE13-SDS3.5", 23, 3.5, 5.5, 3.5, 11900, 10215, 0.164), ("HDUE13-SDS3.5", 23, 3.5, 7.25, 3.5, 12950, 11030, 0.145),
+                ("HDUE13-SDS3.5", 23, 3.5, 5.5, 5.5, 13110, 10980, 0.135),
+                ("HDUE17-SDS4.5", 28, 4.5, 5.5, 3.5, 16040, 13545, 0.094), ("HDUE17-SDS4.5", 28, 4.5, 5.5, 5.5, 17685, 14775, 0.111),
+            };
+            var dict = new HDU_Manager().HDU_Dict;
+            var actual = dict.Values.SelectMany(m => m.FastenerOptions.Select(o => (m.Model, o))).ToList();
+            Assert.AreEqual(expected.Length, actual.Count, "no HDU-SDS2.5 models: C-C-2026 lists HDUE");
+            for (int i = 0; i < expected.Length; i++)
+            {
+                var e = expected[i]; var (model, o) = actual[i];
+                Assert.AreEqual(e.model, model, $"row {i + 1}");
+                Assert.AreEqual(e.n, o.Screws_Quantity, model);
+                Assert.AreEqual(e.len, o.Length, 0.0, model);
+                Assert.AreEqual(e.t, o.WoodMinHeight, 0.0, model);
+                Assert.AreEqual(e.w, o.WoodMinWidth, 0.0, model);
+                Assert.AreEqual(e.df, o.AllowableTensionLoads["DF_SP"], 0.0, model);
+                Assert.AreEqual(e.spf, o.AllowableTensionLoads["SPF_HF"], 0.0, model);
+                Assert.AreEqual(e.defl, o.DeflectionAtAllowableLoad, 0.0, model);
+            }
+            // dimensions of the new models (W, H, B, CL, SO, anchor)
+            var h17 = dict["HDUE17-SDS4.5"];
+            Assert.AreEqual((10, 3.0, 27.875, 5.1875, 1.9375, 1.5, 1.0), (h17.Gauge, h17.W, h17.H, h17.B, h17.CL, h17.SO, h17.AnchorBoltDia));
+            var h3 = dict["HDUE3-SDS3"];
+            Assert.AreEqual((14, 2.875, 8.6875, 3.375, 1.375, 1.5, 0.625), (h3.Gauge, h3.W, h3.H, h3.B, h3.CL, h3.SO, h3.AnchorBoltDia));
+        }
+
+        [TestMethod]
+        public void Htth65_MatchesCC2026Page63()
+        {
+            var m = new HTT_Manager().HTT_Dict["HTTH6.5"];
+            Assert.AreEqual((10, 3.0, 20.25, 1.3125, 0.53125, 0.75), (m.Gauge, m.W, m.L, m.CL, m.SO, m.AnchorBoltDia));
+            var expected = new (string size, string type, double len, double t, double w, double df, double spf, double defl)[]
+            {
+                ("0.148", "", 2.5, 3, 3.5, 6115, 5640, 0.136), ("0.162", "", 2.5, 3, 3.5, 6505, 5675, 0.140),
+                ("#10", "SD", 1.5, 1.5, 7.25, 5375, 5010, 0.128), ("#10", "SD", 1.5, 3, 3.5, 6390, 5795, 0.136),
+                ("#10", "SD", 2.5, 3, 3.5, 7650, 6760, 0.147),
+            };
+            Assert.AreEqual(expected.Length, m.FastenerOptions.Count);
+            for (int i = 0; i < expected.Length; i++)
+            {
+                var e = expected[i]; var o = m.FastenerOptions[i];
+                Assert.AreEqual(34, o.Screws_Quantity);
+                Assert.AreEqual((e.size, e.type, e.len, e.t, e.w), (o.ScrewSize, o.Screws_Type, o.Length, o.WoodMinHeight, o.WoodMinWidth), $"option {i + 1}");
+                Assert.AreEqual((e.df, e.spf, e.defl), (o.AllowableTensionLoads["DF_SP"], o.AllowableTensionLoads["SPF_HF"], o.DeflectionAtAllowableLoad), $"option {i + 1}");
+            }
+        }
+
+        [TestMethod]
+        public void TheCatalogListing_CitesTheEdition()
+        {
+            var rows = new ShearWallDesigner().CatalogRows();
+            Assert.IsTrue(rows.All(r => r.Source.StartsWith("C-C-2026 p. ")));
+            Assert.AreEqual("C-C-2026 p. 61", rows.First(r => r.Model == "HDUE3-SDS3").Source);
+            Assert.AreEqual("C-C-2026 p. 63", rows.First(r => r.Model == "HTTH6.5").Source);
+            Assert.AreEqual("C-C-2026 p. 67", rows.First(r => r.Model == "STHD10").Source);
+            Assert.AreEqual("C-C-2026 p. 291", rows.First(r => r.Model == "MSTA36").Source);
+            StringAssert.Contains(ShearWallDesigner.CatalogFootnote, "C-C-2026");
+        }
+
+        [TestMethod]
+        public void StrapTies_AllLoads_MatchCC2026Page291()
+        {
+            // C-C-2026 p. 291: model, nails, DF/SP, SPF/HF
             var expected = new Dictionary<string, (int n, double df, double spf)>
             {
                 ["ST2115"] = (10, 660, 660), ["LSTA9"] = (8, 740, 635), ["LSTA12"] = (10, 925, 795), ["LSTA15"] = (12, 1110, 955),
@@ -157,7 +233,7 @@ namespace ShearWallCalculator.Tests
                 ["ST6215"] = (20, 2090, 1910), ["ST6224"] = (28, 2535, 2535), ["ST6236"] = (40, 3845, 3845), ["MSTI26"] = (26, 2745, 2380),
                 ["MSTI36"] = (36, 3800, 3295), ["MSTI48"] = (48, 5070, 4390), ["MSTI60"] = (60, 5070, 5070), ["MSTI72"] = (72, 5070, 5070),
                 ["HTP37Z"] = (20, 900, 690), ["MSTC28"] = (36, 3460, 2990), ["MSTC40"] = (52, 4735, 4315), ["MSTC52"] = (62, 4735, 4735),
-                ["MSTC66"] = (76, 5850, 5850), ["MSTC78"] = (76, 5850, 5850), ["HRS416Z"] = (16, 2835, 2305), ["LSTI49"] = (32, 2970, 2560),
+                ["MSTC66"] = (68, 5850, 5850), ["MSTC78"] = (76, 5850, 5850), ["HRS416Z"] = (16, 2835, 2305), ["LSTI49"] = (32, 2970, 2560),
                 ["LSTI73"] = (48, 4205, 3840),
             };
             var dict = new StrapTies_Manager().StrapTies_Dict;

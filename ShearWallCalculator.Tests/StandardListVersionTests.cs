@@ -140,12 +140,12 @@ namespace ShearWallCalculator.Tests
         public void ProjectRecord_ListsTheWallsWhoseHoldownChanged_AndSavesWithTheProject()
         {
             var designer = new ShearWallDesigner();
-            designer.StandardList.Set(ShearWallDesigner.OptionKey("HDU5-SDS2.5", 0), true);
+            designer.StandardList.Set(ShearWallDesigner.OptionKey("HDUE5-SDS3", 0), true);
             designer.StandardList.MarkAsCompanyVersion(2, "2026-11-02");
             var settings = new DesignSettings { Method = DesignMethods.ASD, HoldownsFromStandardList = true };
             var wall = new WallData(10, 0, 0, 4, 0);
             var before = new Dictionary<int, WallDesignResult> { [1] = designer.Check(1, wall, 2.2, null, settings), [2] = designer.Check(2, new WallData(10, 0, 0, 20, 0), 0.5, null, settings, new WallDesignInputs { DeadLoad = 1000 }) };
-            Assert.AreEqual("HDU5-SDS2.5#1", before[1].Holdown.Key);
+            Assert.AreEqual("HDUE5-SDS3#1", before[1].Holdown.Key);
 
             var calc = new ShearWallCalculator_RigidDiaphragm();
             calc.DesignSettings = settings;
@@ -154,16 +154,16 @@ namespace ShearWallCalculator.Tests
             Assert.AreEqual(2, read.CompanyVersion);
             Assert.AreEqual("2026-11-02", read.CompanyDate);
             Assert.IsFalse(read.Customized);
-            Assert.AreEqual("HDU5-SDS2.5#1", read.WallHoldowns[1]);
+            Assert.AreEqual("HDUE5-SDS3#1", read.WallHoldowns[1]);
             Assert.AreEqual("", read.WallHoldowns[2], "no uplift, no hold-down");
             Assert.AreEqual(0, read.Differences(before).Count);
 
-            // company list v3 drops HDU5 for HDU8: wall 1 now gets HDU8
+            // company list v3 drops HDUE5 for HDUE9: wall 1 now gets HDUE9
             var v3 = new HoldownStandardList();
-            v3.Set(ShearWallDesigner.OptionKey("HDU8-SDS2.5", 0), true);
+            v3.Set(ShearWallDesigner.OptionKey("HDUE9-SDS3.5", 0), true);
             designer.StandardList.RestoreFrom(v3);
             var after = new Dictionary<int, WallDesignResult> { [1] = designer.Check(1, wall, 2.2, null, settings), [2] = before[2] };
-            CollectionAssert.AreEqual(new[] { "Wall 1: HDU5-SDS2.5#1 → HDU8-SDS2.5#1" }, read.Differences(after));
+            CollectionAssert.AreEqual(new[] { "Wall 1: HDUE5-SDS3#1 → HDUE9-SDS3.5#1" }, read.Differences(after));
             Assert.AreEqual("company list v2 (2026-11-02)", HoldownListRecord.Describe(read.CompanyVersion, read.CompanyDate, read.Customized));
         }
 

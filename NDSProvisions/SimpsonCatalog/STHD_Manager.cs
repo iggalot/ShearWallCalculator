@@ -5,8 +5,9 @@ namespace ShearWallCalculator
 {
     /// <summary>
     /// LSTHD / STHD strap-tie hold-downs cast into the foundation, standard and rim-joist (RJ) models.
-    /// Source: Simpson Strong-Tie, Wood Construction Connectors catalog C-C-2021, pp. 58–60, "LSTHD/STHD Strap-Tie Holdowns";
-    /// loads from p. 59, table "Tension Loads for STHD Installations" (ASD, (160), DF/SP/SPF/HF, f'c ≥ 2,500 psi).
+    /// Source: Simpson Strong-Tie, Wood Construction Connectors catalog C-C-2026, pp. 66–68, "LSTHD/STHD Strap-Tie Holdowns";
+    /// loads from p. 67, table "Tension Loads for STHD Installations" (ASD, (160), DF/SP/SPF/HF, f'c ≥ 2,500 psi).
+    /// The values are unchanged from C-C-2021 p. 59. Copy: docs/references/C-C-2026.pdf.
     /// The allowable load depends on the stemwall, the seismic row, cracked or uncracked concrete and where the strap is in
     /// the wall (midwall, corner, endwall); the design takes those from the project's <c>StrapHoldownConditions</c>.
     /// Not modelled (the engineer applies them): LSTHD8 0.9 × loads for 1"–4" spalls; two-pour downturn footings; brick ledge.
@@ -27,7 +28,7 @@ namespace ShearWallCalculator
         {
             const SthdSeismic wind = SthdSeismic.WindAndSdcAB, sdcCF = SthdSeismic.SdcCtoF;
 
-            // C-C-2021 p. 59, "Tension Loads for STHD Installations": LSTHD8 / LSTHD8RJ, 14 ga (p. 58 "Material"),
+            // C-C-2026 p. 67, "Tension Loads for STHD Installations": LSTHD8 / LSTHD8RJ, 14 ga (p. 66 "Material"),
             // L = 18-5/8" (RJ 32-1/8"), le = 8", nails 0.148 x 3-1/4; columns midwall, corner, endwall.
             // Deflection, table footnote 5: 0.089" on framing, 0.114" over 1/2" max. structural sheathing.
             var lsthd8 = new List<STHD_Installation>
@@ -38,7 +39,7 @@ namespace ShearWallCalculator
                 Row(8, sdcCF, 16, new double[] { 2615, 2125, 1635 }, new double[] { 2250, 1950, 1610 }),
             };
 
-            // C-C-2021 p. 59, same table: STHD10 / STHD10RJ, 12 ga, L = 24-5/8" (RJ 38-1/8"), le = 10".
+            // C-C-2026 p. 67, same table: STHD10 / STHD10RJ, 12 ga, L = 24-5/8" (RJ 38-1/8"), le = 10".
             // Deflection, footnote 5: 0.117" on framing, 0.146" over sheathing.
             var sthd10 = new List<STHD_Installation>
             {
@@ -48,7 +49,7 @@ namespace ShearWallCalculator
                 Row(8, sdcCF, 20, new double[] { 3400, 2940, 2295 }, new double[] { 3400, 2940, 2175 }),
             };
 
-            // C-C-2021 p. 59, same table: STHD14 / STHD14RJ, 12 ga, L = 26-1/8" (RJ 39-5/8"), le = 14".
+            // C-C-2026 p. 67, same table: STHD14 / STHD14RJ, 12 ga, L = 26-1/8" (RJ 39-5/8"), le = 14".
             // Deflection, footnote 5: 0.118" on framing, 0.164" over sheathing.
             var sthd14 = new List<STHD_Installation>
             {
@@ -60,12 +61,12 @@ namespace ShearWallCalculator
 
             // Standard models first, then the RJ models (same loads): the selection keeps catalog order on ties, so the
             // shorter standard strap wins unless the engineer picks an RJ model from the standard list.
-            Add("LSTHD8", 14, 18.625, 8, false, 0.089, 0.114, lsthd8);   // C-C-2021 p. 59
-            Add("STHD10", 12, 24.625, 10, false, 0.117, 0.146, sthd10);  // C-C-2021 p. 59
-            Add("STHD14", 12, 26.125, 14, false, 0.118, 0.164, sthd14);  // C-C-2021 p. 59
-            Add("LSTHD8RJ", 14, 32.125, 8, true, 0.089, 0.114, lsthd8);  // C-C-2021 p. 59 (rim joist column)
-            Add("STHD10RJ", 12, 38.125, 10, true, 0.117, 0.146, sthd10); // C-C-2021 p. 59 (rim joist column)
-            Add("STHD14RJ", 12, 39.625, 14, true, 0.118, 0.164, sthd14); // C-C-2021 p. 59 (rim joist column)
+            Add("LSTHD8", 14, 18.625, 8, false, 0.089, 0.114, lsthd8);   // C-C-2026 p. 67
+            Add("STHD10", 12, 24.625, 10, false, 0.117, 0.146, sthd10);  // C-C-2026 p. 67
+            Add("STHD14", 12, 26.125, 14, false, 0.118, 0.164, sthd14);  // C-C-2026 p. 67
+            Add("LSTHD8RJ", 14, 32.125, 8, true, 0.089, 0.114, lsthd8);  // C-C-2026 p. 67 (rim joist column)
+            Add("STHD10RJ", 12, 38.125, 10, true, 0.117, 0.146, sthd10); // C-C-2026 p. 67 (rim joist column)
+            Add("STHD14RJ", 12, 39.625, 14, true, 0.118, 0.164, sthd14); // C-C-2026 p. 67 (rim joist column)
         }
 
         private void Add(string model, int gauge, double length, double le, bool rimJoist, double deflFraming, double deflSheathing, List<STHD_Installation> rows)
