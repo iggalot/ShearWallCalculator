@@ -315,8 +315,22 @@ namespace ShearWallVisualizer
             holdownCatalog?.SetDesign(designResults);
         }
 
-        /// <summary>The check of each wall of one level for its governing shear (empty when the level cannot be calculated).</summary>
+        /// <summary>
+        /// The check of each wall of one level for its governing shear (empty when the level cannot be calculated). With
+        /// several floors the levels above are checked first, roof down, so each hold-down carries the walls stacked on it.
+        /// </summary>
         private Dictionary<int, WallDesignResult> CheckWalls(ShearWallCalculatorBase calc)
+        {
+            int i = levels.IndexOf(calc);
+            if (i < 0) return CheckLevel(calc, null, null, 0);
+            Dictionary<int, WallDesignResult> above = null;
+            for (int k = levels.Count - 1; k >= i; k--)
+                above = CheckLevel(levels[k], k + 1 < levels.Count ? levels[k + 1] : null, above, k + 2);
+            return above;
+        }
+
+        private Dictionary<int, WallDesignResult> CheckLevel(ShearWallCalculatorBase calc, ShearWallCalculatorBase upper,
+            Dictionary<int, WallDesignResult> upperDesign, int upperLevel)
         {
             var results = new Dictionary<int, WallDesignResult>();
             if (calc == null || designer == null || !calc.IsValidForCalculation) return results;
@@ -324,7 +338,8 @@ namespace ShearWallVisualizer
             {
                 if (!calc.TotalWallShear.TryGetValue(kv.Key, out double v)) continue;
                 calc.GoverningLoadCase.TryGetValue(kv.Key, out string governing);
-                results[kv.Key] = designer.Check(kv.Key, kv.Value, v, governing, calc.DesignSettings);
+                var above = upper == null ? null : StoryCascade.HoldownForcesOn(kv.Value, upper._wall_system._walls, upperDesign, upperLevel);
+                results[kv.Key] = designer.Check(kv.Key, kv.Value, v, governing, calc.DesignSettings, null, above);
             }
             return results;
         }

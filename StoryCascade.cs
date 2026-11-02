@@ -124,6 +124,44 @@ namespace ShearWallCalculator
             return notes;
         }
 
+        /// <summary>
+        /// The hold-down forces of the upper level's walls that stand on <paramref name="lower"/> (same line, within
+        /// <see cref="LineTolerance"/>): each upper wall with uplift lifts at one hold-down post (+T) and bears down at the
+        /// other (−T), for each wind direction. The uplift counts when its post is over the lower wall; the bearing only
+        /// when the uplift does too (a couple), so an upper wall hanging off the end never reduces the tension.
+        /// </summary>
+        public static List<Design.StackedForce> HoldownForcesOn(WallData lower, IDictionary<int, WallData> upperWalls,
+            IReadOnlyDictionary<int, Design.WallDesignResult> upperDesign, int upperLevel)
+        {
+            var forces = new List<Design.StackedForce>();
+            if (lower == null || upperWalls == null || upperDesign == null) return forces;
+            bool ew = lower.WallDir == WallDirs.EastWest;
+            double Lo(WallData w) => ew ? Math.Min(w.Start.X, w.End.X) : Math.Min(w.Start.Y, w.End.Y);
+            double Hi(WallData w) => ew ? Math.Max(w.Start.X, w.End.X) : Math.Max(w.Start.Y, w.End.Y);
+            double Line(WallData w) => ew ? w.Start.Y : w.Start.X;
+            double lo = Lo(lower), hi = Hi(lower);
+            bool On(double p) => p >= lo - LineTolerance && p <= hi + LineTolerance;
+            foreach (var kv in upperWalls.OrderBy(k => k.Key))
+            {
+                var u = kv.Value;
+                if (u.WallDir != lower.WallDir || Math.Abs(Line(u) - Line(lower)) > LineTolerance) continue;
+                if (!upperDesign.TryGetValue(kv.Key, out var r) || !(r.TensionAsd > 0) || double.IsInfinity(r.TensionAsd)) continue;
+                double half = r.PostAlongWall / 24.0;
+                double a = Lo(u) + half, b = Hi(u) - half; // the upper wall's hold-down posts
+                void Add(double up, double down, bool lowUp)
+                {
+                    if (!On(up)) return;
+                    string from = $"level {upperLevel}, wall {kv.Key}";
+                    forces.Add(new Design.StackedForce { Along = up - lo, Asd = r.TensionAsd, Lrfd = r.TensionLrfd, LowEndUp = lowUp, From = from });
+                    if (On(down))
+                        forces.Add(new Design.StackedForce { Along = down - lo, Asd = -r.TensionAsd, Lrfd = -r.TensionLrfd, LowEndUp = lowUp, From = from });
+                }
+                Add(a, b, true);  // wind lifting the low ends
+                Add(b, a, false); // and the other way
+            }
+            return forces;
+        }
+
         /// <summary>The length of <paramref name="w"/> that has a wall of <paramref name="below"/> on the same line under it (ft).</summary>
         public static double SupportedLength(WallData w, IEnumerable<WallData> below)
         {

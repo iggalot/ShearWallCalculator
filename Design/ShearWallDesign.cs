@@ -355,6 +355,23 @@ namespace ShearWallCalculator.Design
         private static string Name(string key) => string.IsNullOrEmpty(key) ? "none" : key;
     }
 
+    /// <summary>
+    /// A hold-down force of a wall above that stands on this wall: the upper wall's overturning, passed down at its
+    /// hold-down post. For one wind direction the upper wall lifts at one end (+T) and bears down at the other (−T).
+    /// </summary>
+    public sealed class StackedForce
+    {
+        /// <summary>ft from this wall's low end (smaller x for an east-west wall, smaller y for a north-south wall).</summary>
+        public double Along { get; set; }
+        /// <summary>lb, + uplift, − bearing down (ASD, 0.6W).</summary>
+        public double Asd { get; set; }
+        /// <summary>lb, the same at LRFD (1.0W), for reference.</summary>
+        public double Lrfd { get; set; }
+        /// <summary>The wind direction this force goes with: true when the low end of the walls is in tension.</summary>
+        public bool LowEndUp { get; set; }
+        public string From { get; set; }
+    }
+
     /// <summary>All the numbers for one wall, with the code reference for each step.</summary>
     public class WallDesignResult
     {
@@ -395,6 +412,14 @@ namespace ShearWallCalculator.Design
         public double TensionAsd { get; set; }      // lb: 0.6 V h / d - 0.6 D L / 2, d = L - post
         public double TensionLrfd { get; set; }     // lb: 1.0 V h / d - 0.9 D L / 2 (for reference)
         public HoldownChoice Holdown { get; set; }  // null if none in the pool is strong enough
+
+        /// <summary>The hold-down forces of the walls above standing on this one (empty on the top level or a single story).</summary>
+        public List<StackedForce> FromAbove { get; set; } = new List<StackedForce>();
+        /// <summary>This wall's own tension (its shear and dead load only), lb ASD / LRFD; <see cref="TensionAsd"/> adds the walls above.</summary>
+        public double OwnTensionAsd { get; set; }
+        public double OwnTensionLrfd { get; set; }
+        /// <summary>The tension added by the walls above (lb, ASD).</summary>
+        public double TensionFromAboveAsd => Math.Max(0, TensionAsd - OwnTensionAsd);
 
         /// <summary>True when the hold-down was drawn from the company standard list only.</summary>
         public bool HoldownFromStandardList { get; set; }
@@ -493,7 +518,10 @@ namespace ShearWallCalculator.Design
         /// <summary>Table 4.3A footnote: framing other than Douglas fir-larch or southern pine, 1 - (0.5 - G); SPF G = 0.42.</summary>
         public static double SpeciesFactor(WoodTypes species) => species == WoodTypes.WOODTYPE_SPF_HF ? 1 - (0.5 - 0.42) : 1.0;
 
-        public WallDesignResult Check(int wallId, WallData wall, double vKips, string governingCase, DesignSettings settings, WallDesignInputs d = null)
+        /// <param name="above">The hold-down forces of the walls of the story above standing on this wall (multi-story): they add their
+        /// moment about this wall's compression post, for the wind direction that lifts the same end.</param>
+        public WallDesignResult Check(int wallId, WallData wall, double vKips, string governingCase, DesignSettings settings, WallDesignInputs d = null,
+                                      IReadOnlyList<StackedForce> above = null)
         {
             d = d ?? wall.Design ?? new WallDesignInputs();
             settings = settings ?? new DesignSettings();
@@ -539,19 +567,55 @@ namespace ShearWallCalculator.Design
             double M = V * 1000.0 * h;                      // lb-ft
             double D = Math.Max(0, d.DeadLoad) * L;         // lb on the wall
             r.HoldownFromStandardList = settings.HoldownsFromStandardList;
+            r.FromAbove = above?.ToList() ?? new List<StackedForce>();
             double post = WallSchedule.DefaultPostAlongWall;
             for (int pass = 0; pass < 5; pass++)
             {
                 r.PostAlongWall = post;
                 r.HoldownArm = L - post / 12.0;
-                r.TensionAsd = r.HoldownArm > 0 ? Math.Max(0, 0.6 * M / r.HoldownArm - 0.6 * D / 2) : double.PositiveInfinity;
-                r.TensionLrfd = r.HoldownArm > 0 ? Math.Max(0, 1.0 * M / r.HoldownArm - 0.9 * D / 2) : double.PositiveInfinity;
+                double arm = r.HoldownArm;
+                // The walls above: their moment about the compression post at the far end, for the worse wind direction
+                // (both ends get the same hold-down). A wall stacked end to end adds its own T; the dead load of this
+                // wall resists the whole stack.
+                var (aboveAsd, aboveLrfd) = MomentFromAbove(r.FromAbove, L, post / 24.0);
+                double ownAsd = 0.6 * M / arm - 0.6 * D / 2, ownLrfd = 1.0 * M / arm - 0.9 * D / 2;
+                r.OwnTensionAsd = arm > 0 ? Math.Max(0, ownAsd) : double.PositiveInfinity;
+                r.OwnTensionLrfd = arm > 0 ? Math.Max(0, ownLrfd) : double.PositiveInfinity;
+                r.TensionAsd = arm > 0 ? Math.Max(0, ownAsd + aboveAsd / arm) : double.PositiveInfinity;
+                r.TensionLrfd = arm > 0 ? Math.Max(0, ownLrfd + aboveLrfd / arm) : double.PositiveInfinity;
                 r.Holdown = r.HoldownNeeded ? SelectHoldown(d.Holdown, d.Species, r.TensionAsd, settings.HoldownsFromStandardList) : null;
                 double next = WallSchedule.PostAlongWall(r.Holdown);
                 if (r.Holdown == null || Math.Abs(next - post) < 1e-9) break;
                 post = next;
             }
             return r;
+        }
+
+        /// <summary>
+        /// The overturning moment (lb-ft, ASD and LRFD) the forces from above put on a wall of length <paramref name="L"/>
+        /// about its compression post (centerline <paramref name="halfPost"/> ft in from the end): for each wind direction
+        /// Σ F × (distance from the post at the far end), and the larger of the two directions.
+        /// </summary>
+        public static (double asd, double lrfd) MomentFromAbove(IEnumerable<StackedForce> forces, double L, double halfPost)
+        {
+            double lowAsd = 0, lowLrfd = 0, highAsd = 0, highLrfd = 0;
+            foreach (var f in forces ?? Enumerable.Empty<StackedForce>())
+            {
+                double p = Math.Max(0, Math.Min(L, f.Along));
+                if (f.LowEndUp)
+                {
+                    double lever = Math.Max(0, L - halfPost - p); // compression post at the high end
+                    lowAsd += f.Asd * lever;
+                    lowLrfd += f.Lrfd * lever;
+                }
+                else
+                {
+                    double lever = Math.Max(0, p - halfPost);     // compression post at the low end
+                    highAsd += f.Asd * lever;
+                    highLrfd += f.Lrfd * lever;
+                }
+            }
+            return lowAsd >= highAsd ? (lowAsd, lowLrfd) : (highAsd, highLrfd);
         }
 
         /// <summary>The company standard hold-downs (kept by the app). Empty unless the host sets it.</summary>

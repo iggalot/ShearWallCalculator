@@ -482,8 +482,13 @@ namespace ShearWallVisualizer.Controls
                          $"{(double.IsNaN(r.Capacity) ? "-" : r.Capacity.ToString("0"))} plf → ratio {(double.IsNaN(r.Capacity) ? "-" : r.ShearRatio.ToString("0.00"))} {mark(r.ShearOk)}";
             yield return $"Hold-down arm: d = L − post = {r.Length:0.00} ft − {r.PostAlongWall:0.##} in = {r.HoldownArm:0.000} ft (hold-downs on the post centerlines)";
             yield return $"Hold-down (always ASD): T = M / d = 0.6 × {r.V:0.00} k × 1000 × {r.Height:0.0} ft / {r.HoldownArm:0.000} ft" +
-                         (d.DeadLoad > 0 ? $" − 0.6 × {d.DeadLoad:0} plf × {r.Length:0.00} ft / 2" : "") + $" = {r.TensionAsd:0} lb" +
+                         (d.DeadLoad > 0 ? $" − 0.6 × {d.DeadLoad:0} plf × {r.Length:0.00} ft / 2" : "") +
+                         (r.FromAbove.Count > 0 ? $" + walls above (next line) = {r.TensionAsd:0} lb" : $" = {r.TensionAsd:0} lb") +
                          $"  (LRFD 1.0W" + (d.DeadLoad > 0 ? " − 0.9D" : "") + $": {r.TensionLrfd:0} lb, for reference)";
+            if (r.FromAbove.Count > 0)
+                yield return $"Walls above standing on this wall: {string.Join(", ", r.FromAbove.Select(f => f.From).Distinct())}. Their hold-down " +
+                             $"forces (± {r.FromAbove.Max(f => Math.Abs(f.Asd)):0} lb at their posts) add Σ F × (distance to the compression post) / d = " +
+                             $"{r.TensionFromAboveAsd:0} lb (own {r.OwnTensionAsd:0} lb). Tie each upper hold-down down to this wall (strap or rod), not just to the floor.";
             yield return !r.HoldownNeeded ? "No uplift: no hold-down needed for overturning."
                 : r.Holdown == null ? $"✗ No {HoldownName(d.Holdown)} in the {(r.HoldownFromStandardList ? "company standard list" : "catalog")} reaches {r.TensionAsd:0} lb: lengthen the wall, add dead load or use another type" +
                                       (r.HoldownFromStandardList ? " (or add a stronger option to the standard list, or switch to the full catalog)." : ".")

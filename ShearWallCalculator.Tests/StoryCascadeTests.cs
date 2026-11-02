@@ -225,5 +225,96 @@ namespace ShearWallCalculator.Tests
                 Assert.AreEqual(roof._wall_system._walls.Count == 0 ? 0 : 1, notes.Count(n => n.Contains("cannot be calculated yet")));
             }
         }
+
+        // ------------------------------------------------------------------ hold-down tension through the floors
+
+        private static readonly Design.ShearWallDesigner Designer = new Design.ShearWallDesigner();
+
+        /// <summary>A couple at the posts of a wall the same length: the moment is T × d, so the tension below grows by T.</summary>
+        [TestMethod]
+        public void MomentFromAbove_CoupleEndToEnd_IsTd()
+        {
+            double L = 10, half = 0.125, d = L - 2 * half;
+            var forces = new[]
+            {
+                new Design.StackedForce { Along = half, Asd = 1000, Lrfd = 1600, LowEndUp = true },
+                new Design.StackedForce { Along = L - half, Asd = -1000, Lrfd = -1600, LowEndUp = true },
+                new Design.StackedForce { Along = L - half, Asd = 1000, Lrfd = 1600, LowEndUp = false },
+                new Design.StackedForce { Along = half, Asd = -1000, Lrfd = -1600, LowEndUp = false },
+            };
+            var (asd, lrfd) = Design.ShearWallDesigner.MomentFromAbove(forces, L, half);
+            Assert.AreEqual(1000 * d, asd, Tol);
+            Assert.AreEqual(1600 * d, lrfd, Tol);
+        }
+
+        /// <summary>A shorter wall above in the middle of a long one: its couple T × d_upper spreads over the longer arm below.</summary>
+        [TestMethod]
+        public void MomentFromAbove_ShortWallInTheMiddle()
+        {
+            var forces = new[]
+            {
+                new Design.StackedForce { Along = 6, Asd = 2000, LowEndUp = true },
+                new Design.StackedForce { Along = 14, Asd = -2000, LowEndUp = true },
+            };
+            var (asd, _) = Design.ShearWallDesigner.MomentFromAbove(forces, 20, 0.125);
+            Assert.AreEqual(2000 * 8, asd, Tol, "a couple: its moment does not depend on where it sits");
+        }
+
+        /// <summary>Upper walls on the same line give an uplift and a bearing force per direction; one off the line gives none.</summary>
+        [TestMethod]
+        public void HoldownForcesOn_FindsTheWallsAbove()
+        {
+            var lower = new WallData(9, 0, 0, 20, 0);
+            var upper = new Dictionary<int, WallData>
+            {
+                [1] = new WallData(9, 0, 0, 10, 0),      // on it, from the left end
+                [2] = new WallData(9, 16, 0.1, 26, 0.1), // hangs off the right end: only the uplift at x = 16.125 lands
+                [3] = new WallData(9, 0, 5, 10, 5),      // another line
+            };
+            var design = upper.ToDictionary(kv => kv.Key, kv => new Design.WallDesignResult { TensionAsd = 1000, TensionLrfd = 1500, PostAlongWall = 3 });
+            var f = StoryCascade.HoldownForcesOn(lower, upper, design, 2);
+            Assert.AreEqual(4, f.Count(x => x.From == "level 2, wall 1"));
+            Assert.AreEqual(1, f.Count(x => x.From == "level 2, wall 2"), "the bearing end is off the wall; the uplift at the other end lands only when lifting the low end");
+            var w2 = f.Single(x => x.From == "level 2, wall 2");
+            Assert.IsTrue(w2.LowEndUp);
+            Assert.AreEqual(16.125, w2.Along, Tol);
+            Assert.AreEqual(1000, w2.Asd, Tol);
+            Assert.IsFalse(f.Any(x => x.From == "level 2, wall 3"));
+        }
+
+        /// <summary>Walls stacked end to end: the hold-down below carries its own tension plus the one above (cumulative tension).</summary>
+        [TestMethod]
+        public void Check_StackedWall_TensionAccumulates()
+        {
+            var wall = new WallData(9, 0, 0, 10, 0);
+            var upperWalls = new Dictionary<int, WallData> { [7] = new WallData(9, 0, 0, 10, 0) };
+            var upperResult = Designer.Check(7, upperWalls[7], 2.0, null, new Design.DesignSettings());
+            var forces = StoryCascade.HoldownForcesOn(wall, upperWalls, new Dictionary<int, Design.WallDesignResult> { [7] = upperResult }, 2);
+
+            var alone = Designer.Check(1, wall, 3.0, null, new Design.DesignSettings());
+            var stacked = Designer.Check(1, wall, 3.0, null, new Design.DesignSettings(), null, forces);
+            Assert.AreEqual(0.6 * 3000 * 9 / stacked.HoldownArm, stacked.OwnTensionAsd, 1e-6, "its own share: 0.6 V h / d (d from the post of the heavier hold-down)");
+            double half = stacked.PostAlongWall / 24.0, upHalf = upperResult.PostAlongWall / 24.0;
+            double expected = stacked.OwnTensionAsd + upperResult.TensionAsd * (10 - half - upHalf) / stacked.HoldownArm
+                              - upperResult.TensionAsd * System.Math.Max(0, upHalf - half) / stacked.HoldownArm;
+            Assert.AreEqual(expected, stacked.TensionAsd, 1e-6);
+            Assert.IsTrue(stacked.TensionAsd > alone.TensionAsd + 0.9 * upperResult.TensionAsd, "about the upper T added");
+            Assert.IsTrue(stacked.Holdown == null || stacked.Holdown.Allowable >= stacked.TensionAsd, "the hold-down is chosen for the total");
+        }
+
+        /// <summary>The dead load of the lower wall resists the whole stack: 0.6 D L / 2 comes off the total, not just its own share.</summary>
+        [TestMethod]
+        public void Check_DeadLoadBelowOffsetsTheWallsAbove()
+        {
+            var wall = new WallData(9, 0, 0, 10, 0);
+            var forces = new List<Design.StackedForce>
+            {
+                new Design.StackedForce { Along = 0.125, Asd = 1000, Lrfd = 1000, LowEndUp = true },
+                new Design.StackedForce { Along = 9.875, Asd = -1000, Lrfd = -1000, LowEndUp = true },
+            };
+            var r = Designer.Check(1, wall, 0.0, null, new Design.DesignSettings(), new Design.WallDesignInputs { DeadLoad = 100 }, forces);
+            Assert.AreEqual(0.0, r.OwnTensionAsd, Tol, "no shear of its own");
+            Assert.AreEqual(System.Math.Max(0, (1000 * (10 - r.PostAlongWall / 24 - 0.125) - 1000 * System.Math.Max(0, 10 - r.PostAlongWall / 24 - 9.875)) / r.HoldownArm - 0.6 * 100 * 10 / 2), r.TensionAsd, 1e-6);
+        }
     }
 }
