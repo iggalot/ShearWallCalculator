@@ -2,6 +2,25 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-02 — Walls over beams, walls past the floor's edge, the framing list, the warnings log (SWC 739dff4, 347262b; BuildingModel 31ac477)
+
+- **Found on the junk project:** the three Level 3 notes on W6, W7 and W8 ("no wall under it") ignored the beams
+  BM1–BM3 that carry them.
+  - `StoryCascade.Unsupported` now counts the beams of the level below as well as its walls.
+  - A support end within 3 in of the wall's end reaches it, since the beams were drawn 1/16 ft short at the column corners.
+- **New check, `StoryCascade.OffFloor`:** the length of each upper wall beyond the diaphragm under it.
+  - A beam or column carries the wall's weight and uplift, but not its shear.
+  - It gives a note on the level and a `WallOffFloor` warning on the Design tab, which points at the wall.
+  - In junk, the Level 2 floor stops at x = 46 while W6, W7 and W8 run to 59.5.
+- **Walls & diaphragms tab:** two new tables.
+  - Beams in this level's framing, and columns standing under it.
+  - Each row shows what the member carries in the load path; a click selects it on the drawing.
+- **Sketch (both apps):** a selected column gets a ring well clear of its square.
+- **Log:**
+  - `[Issues]` lists every error and warning with its code, level, members and location: all of them when a model
+    loads, then `new:` / `resolved:`.
+  - `[Design]` does the same for each level's message, the failing and close walls, and the level notes.
+
 ## 2026-11-02 — Wall, beam and column details, on screen and in the report (SWC)
 
 - **Core `DetailCalcs`** (`CalcLine`: item, calculation, result). It restates the design and computes nothing new:
