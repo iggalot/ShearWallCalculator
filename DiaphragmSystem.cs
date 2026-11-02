@@ -209,12 +209,12 @@ namespace ShearWallCalculator
 
             if (exists == false)
             {
-                ShearWallCalculator.Diagnostics.Log.Warning($"Delete diaphragm: diaphragm #{id} does not exist.");
+                BuildingModel.Diagnostics.Log.Warning($"Delete diaphragm: diaphragm #{id} does not exist.");
                 return;
             }
             else
             {
-                ShearWallCalculator.Diagnostics.Log.Info($"Deleted diaphragm #{id}.");
+                BuildingModel.Diagnostics.Log.Info($"Deleted diaphragm #{id}.");
                 Update();
             }
         }

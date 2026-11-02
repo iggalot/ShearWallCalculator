@@ -1,3 +1,4 @@
+using BuildingModel.Diagnostics;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -130,7 +131,7 @@ namespace ShearWallVisualizer.Dialogs
             }
             catch (Exception ex)
             {
-                ShearWallCalculator.Diagnostics.Log.Warning("Could not render the PDF page " + path, ex);
+                Log.Warning("Could not render the PDF page " + path, ex);
                 MessageBox.Show(this, "The page could not be rendered:\n" + ex.Message, Title, MessageBoxButton.OK, MessageBoxImage.Warning);
             }
             finally

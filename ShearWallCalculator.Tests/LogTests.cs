@@ -1,8 +1,8 @@
+using BuildingModel.Diagnostics;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using ShearWallCalculator.Diagnostics;
 
 namespace ShearWallCalculator.Tests
 {
@@ -12,7 +12,11 @@ namespace ShearWallCalculator.Tests
     {
         /// <summary>Code under test logs (deleting a wall, for example); keep that out of the user's own log folder.</summary>
         [AssemblyInitialize]
-        public static void Redirect(TestContext _) => Log.Folder = Path.Combine(Path.GetTempPath(), "swc-test-logs");
+        public static void Redirect(TestContext _)
+        {
+            Log.Folder = Path.Combine(Path.GetTempPath(), "swc-test-logs");
+            Log.Start("ShearWallCalculator", "swc"); // the app's file prefix, as App.xaml.cs starts it
+        }
     }
 
     [TestClass]

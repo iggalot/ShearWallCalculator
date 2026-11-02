@@ -1,3 +1,4 @@
+using BuildingModel.Diagnostics;
 using BuildingModel.Checks;
 using BuildingModel.Edits;
 using BuildingModel.Geometry;
@@ -448,7 +449,7 @@ namespace ShearWallVisualizer
         /// <summary>Replaces the plan with a building from the Building Model app; the design inputs of walls with the same IDs stay.</summary>
         private void ImportModel_Click(object sender, RoutedEventArgs e)
         {
-            var open = new OpenFileDialog { Title = "Open a building model", Filter = ModelFilter };
+            var open = new OpenFileDialog { InitialDirectory = ProjectFolder.DialogFolder, Title = "Open a building model", Filter = ModelFilter };
             if (open.ShowDialog(this) != true) return;
             Building b;
             try { b = ModelFile.Load(open.FileName).Building; }
@@ -473,7 +474,7 @@ namespace ShearWallVisualizer
 
         private void ExportModel_Click(object sender, RoutedEventArgs e)
         {
-            var save = new SaveFileDialog { Title = "Save the building model", Filter = ModelFilter, FileName = Path.GetFileNameWithoutExtension(ProjectName) + ".bldg.json" };
+            var save = new SaveFileDialog { InitialDirectory = ProjectFolder.DialogFolder, Title = "Save the building model", Filter = ModelFilter, FileName = Path.GetFileNameWithoutExtension(ProjectName) + ".bldg.json" };
             if (save.ShowDialog(this) != true) return;
             try { ModelFile.Save(save.FileName, new ModelDocument { Building = ModelFile.Clone(building) }); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
@@ -495,7 +496,7 @@ namespace ShearWallVisualizer
                 return;
             }
             changes.Author = "Shear Wall Calculator";
-            var save = new SaveFileDialog { Title = "Export changes", Filter = ChangesFilter, FileName = Path.GetFileNameWithoutExtension(ProjectName) + ".changes.json" };
+            var save = new SaveFileDialog { InitialDirectory = ProjectFolder.DialogFolder, Title = "Export changes", Filter = ChangesFilter, FileName = Path.GetFileNameWithoutExtension(ProjectName) + ".changes.json" };
             if (save.ShowDialog(this) != true) return;
             try { File.WriteAllText(save.FileName, changes.ToJson()); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
@@ -510,7 +511,7 @@ namespace ShearWallVisualizer
         /// <summary>Applies a change set from another copy of the model; conflicts are listed and can be forced or skipped.</summary>
         private void ApplyChanges_Click(object sender, RoutedEventArgs e)
         {
-            var open = new OpenFileDialog { Title = "Apply a change set", Filter = ChangesFilter };
+            var open = new OpenFileDialog { InitialDirectory = ProjectFolder.DialogFolder, Title = "Apply a change set", Filter = ChangesFilter };
             if (open.ShowDialog(this) != true) return;
             ChangeSet changes;
             try { changes = ChangeSet.FromJson(File.ReadAllText(open.FileName)); }

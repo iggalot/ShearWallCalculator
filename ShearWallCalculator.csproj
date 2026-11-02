@@ -89,7 +89,6 @@
     <Compile Include="Design\ShearWallDesign.cs" />
     <Compile Include="Design\Sheathing.cs" />
     <Compile Include="Design\WallSchedule.cs" />
-    <Compile Include="Diagnostics\Log.cs" />
     <Compile Include="Diagnostics\ModelChangeLog.cs" />
     <Compile Include="Drawing\Snapping.cs" />
     <Compile Include="Drawing\CoordinateInput.cs" />
@@ -134,6 +133,10 @@
     <!-- Project files hold the wind inputs (Interfaces\ProjectFile.cs). -->
     <ProjectReference Include="..\ASCE7-Wind-Load-Calculator\ASCE7Wind.Core\ASCE7Wind.Core.csproj">
       <Name>ASCE7Wind.Core</Name>
+    </ProjectReference>
+    <!-- the shared building model library: its log is the one log of the three apps -->
+    <ProjectReference Include="..\BuildingModel\BuildingModel.Core\BuildingModel.Core.csproj">
+      <Name>BuildingModel.Core</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

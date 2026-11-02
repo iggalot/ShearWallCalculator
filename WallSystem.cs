@@ -346,11 +346,11 @@ namespace ShearWallCalculator
 
             if (exists == false)
             {
-                ShearWallCalculator.Diagnostics.Log.Warning($"Delete wall: wall #{id} does not exist.");
+                BuildingModel.Diagnostics.Log.Warning($"Delete wall: wall #{id} does not exist.");
                 return;
             } else
             {
-                ShearWallCalculator.Diagnostics.Log.Info($"Deleted wall #{id}.");
+                BuildingModel.Diagnostics.Log.Info($"Deleted wall #{id}.");
                 Update();
             }
         }

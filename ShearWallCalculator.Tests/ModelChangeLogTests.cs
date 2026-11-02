@@ -1,3 +1,4 @@
+using BuildingModel.Diagnostics;
 using System.Linq;
 using System.Windows;
 using calculator;

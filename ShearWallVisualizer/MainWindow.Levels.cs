@@ -1,3 +1,4 @@
+using BuildingModel.Diagnostics;
 using BuildingModel.Edits;
 using BuildingModel.Model;
 using ShearWallCalculator.ModelAdapter;

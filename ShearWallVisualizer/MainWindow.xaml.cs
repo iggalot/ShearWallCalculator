@@ -1,4 +1,5 @@
 ﻿using ASCE7WindLoadCalculator;
+using BuildingModel.Diagnostics;
 using calculator;
 using Microsoft.Win32;
 using Newtonsoft.Json;
@@ -1213,6 +1214,7 @@ namespace ShearWallVisualizer
             var open = new Microsoft.Win32.OpenFileDialog
             {
                 Title = "Import plan",
+                InitialDirectory = ProjectFolder.DialogFolder,
                 Filter = "Plans (*.dxf;*.pdf;*.png;*.jpg;*.jpeg;*.bmp;*.tif;*.tiff;*.gif)|*.dxf;*.pdf;*.png;*.jpg;*.jpeg;*.bmp;*.tif;*.tiff;*.gif|" +
                          "CAD drawing (*.dxf)|*.dxf|PDF sheet (*.pdf)|*.pdf|Images (*.png;*.jpg;*.jpeg;*.bmp;*.tif;*.tiff;*.gif)|*.png;*.jpg;*.jpeg;*.bmp;*.tif;*.tiff;*.gif|" +
                          "All files (*.*)|*.*",
@@ -1665,6 +1667,7 @@ namespace ShearWallVisualizer
         {
             if (!ConfirmDiscardOrSave()) return;
             currentProjectPath = null;
+            ProjectFolder.Close(); // no project folder until the new project is saved
             Log.Info("New project");
             windSetup.SetInputs(null, ASCE7_Versions.ASCE_VER_7_22, null);
             windSetup.SetOnlyCases1And3(false);
@@ -1696,6 +1699,7 @@ namespace ShearWallVisualizer
                 var dialog = new SaveFileDialog
                 {
                     Filter = ProjectFilter,
+                    InitialDirectory = ProjectFolder.DialogFolder,
                     FileName = (currentProjectPath == null ? "project" : System.IO.Path.GetFileNameWithoutExtension(ProjectName)) + ".swc.json",
                     AddExtension = false,
                 };
@@ -1715,6 +1719,7 @@ namespace ShearWallVisualizer
                 MessageBox.Show(this, "The project could not be saved:\n" + ex.Message, "Save", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return false;
             }
+            ProjectFolder.OpenFor(path); // outputs and the log go in the project's folder (its logs subfolder)
             currentProjectPath = path;
             AddToRecentFiles(path);
             Log.Info("Project saved: " + path);
@@ -1725,7 +1730,7 @@ namespace ShearWallVisualizer
         private void MenuItem_Load_Click(object sender, RoutedEventArgs e)
         {
             if (!ConfirmDiscardOrSave()) return;
-            var dialog = new OpenFileDialog { Filter = "Shear wall files (*.json)|*.json|All files (*.*)|*.*" };
+            var dialog = new OpenFileDialog { InitialDirectory = ProjectFolder.DialogFolder, Filter = "Shear wall files (*.json)|*.json|All files (*.*)|*.*" };
             if (dialog.ShowDialog(this) == true)
                 OpenProject(dialog.FileName);
         }
@@ -1764,6 +1769,7 @@ namespace ShearWallVisualizer
             if (migrated)
                 opened = ShearWallAdapter.FromCalculators(calcs, contents.Wind?.ToBuilding().StoryPlateHeights);
             SetBuilding(opened, calcs);
+            ProjectFolder.OpenFor(path); // outputs and the log go in the project's folder (its logs subfolder)
             currentProjectPath = path;
             ImageForNewProject();
             Log.Info("Project opened: " + path);

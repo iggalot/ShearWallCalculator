@@ -1,4 +1,5 @@
 ﻿using ShearWallCalculator.Diagnostics;
+using BuildingModel.Diagnostics;
 using System;
 using System.Threading.Tasks;
 using System.Windows;
@@ -23,7 +24,7 @@ namespace ShearWallVisualizer
                 Log.Error("Unobserved background task error", e.Exception);
                 e.SetObserved();
             };
-            Startup += (s, e) => Log.Info($"Shear Wall Calculator started (version {typeof(App).Assembly.GetName().Version}).");
+            Log.Start("ShearWallCalculator", "swc"); // the shared log: %AppData%\ShearWallCalculator\logs
             Exit += (s, e) => Log.Info("Shear Wall Calculator closed.");
         }
 
