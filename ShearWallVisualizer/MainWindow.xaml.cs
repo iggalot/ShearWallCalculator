@@ -167,6 +167,7 @@ namespace ShearWallVisualizer
                 ShowImageName();
 
                 geometryPanel?.Show(Calculator, selectedKind, selectedId);
+                ShowFramingRows(); // the beams and columns of the level shown
                 if (resultsPanel != null) resultsPanel.Notes = levelNotes;
                 resultsPanel?.Show(Calculator, CalculationTodo(), selectedKind == "Wall" ? selectedId : -1);
                 if (selectionCardOpen && (selectedKind == "Beam" || selectedKind == "Column")) ShowMemberCard();
@@ -247,6 +248,7 @@ namespace ShearWallVisualizer
             geometryPanel.GeometryChanged += (s, e) => GeometryTyped(); // typed coordinates go to the model
             geometryPanel.SelectionChanged += SelectFromTable;
             geometryPanel.DeleteRequested += DeleteFromTable;
+            geometryPanel.FramingSelected += id => Sketch.SelectAndShow(id); // SelectionChanged updates the rest
             tabDimensionsTabItem.Content = WithLevelBanner(geometryPanel);
             resultsPanel = new ShearResultsPanel();
             resultsPanel.WallSelected += id => SelectFromTable("Wall", id);

@@ -1,6 +1,7 @@
 using calculator;
 using ShearWallCalculator;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -38,6 +39,29 @@ namespace ShearWallVisualizer.Controls
         private readonly Grid diaphragmsHost = new Grid();
         private readonly TextBlock tbWallsTitle = Ui.Heading("Walls");
         private readonly TextBlock tbDiaphragmsTitle = Ui.Heading("Diaphragms");
+        private readonly Grid beamsHost = new Grid(), columnsHost = new Grid();
+        private readonly TextBlock tbBeamsTitle = Ui.Heading("Beams"), tbColumnsTitle = Ui.Heading("Columns");
+        private readonly SortState beamSort = new SortState(), columnSort = new SortState();
+        private UiTable beamTable, columnTable;
+        private IList<FramingRow> beamRows = new List<FramingRow>(), columnRows = new List<FramingRow>();
+        private string selectedFraming;
+
+        /// <summary>A beam or column row was clicked: its model ID (BM1, C2...).</summary>
+        public event Action<string> FramingSelected;
+
+        /// <summary>One beam or column of this level, as listed (the drawing and the Building Model editor edit them).</summary>
+        public sealed class FramingRow
+        {
+            public string Id { get; set; }
+            /// <summary>A beam's start, or a column's location.</summary>
+            public Point Start { get; set; }
+            public Point End { get; set; }
+            public double Length { get; set; }
+            /// <summary>Column: "the foundation to Level 2".</summary>
+            public string Span { get; set; }
+            /// <summary>What it carries from the load path (hold-downs, reactions), or empty.</summary>
+            public string Carries { get; set; }
+        }
         private ShearWallCalculatorBase calc;
         private UiTable wallTable, diaphragmTable;
 
@@ -52,10 +76,18 @@ namespace ShearWallVisualizer.Controls
             left.Children.Add(tbWallsTitle);
             left.Children.Add(wallsHost);
 
-            var right = new DockPanel();
-            DockPanel.SetDock(tbDiaphragmsTitle, Dock.Top);
-            right.Children.Add(tbDiaphragmsTitle);
-            right.Children.Add(diaphragmsHost);
+            // the right column: the diaphragms, then the beams and columns of this level (each table takes its share)
+            var right = new Grid();
+            foreach (var (title, host) in new (TextBlock, Grid)[] { (tbDiaphragmsTitle, diaphragmsHost), (tbBeamsTitle, beamsHost), (tbColumnsTitle, columnsHost) })
+            {
+                right.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                right.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+                Grid.SetRow(title, right.RowDefinitions.Count - 2);
+                Grid.SetRow(host, right.RowDefinitions.Count - 1);
+                host.Margin = new Thickness(0, 0, 0, 10);
+                right.Children.Add(title);
+                right.Children.Add(host);
+            }
 
             var columns = new Grid();
             columns.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -83,6 +115,88 @@ namespace ShearWallVisualizer.Controls
             SelectedId = selectedId;
             BuildWalls();
             BuildDiaphragms();
+            BuildFraming();
+        }
+
+        /// <summary>The beams in this level's framing and the columns standing under it, with the selected one (model ID).</summary>
+        public void ShowFraming(IList<FramingRow> beams, IList<FramingRow> columns, string selectedId)
+        {
+            beamRows = beams ?? new List<FramingRow>();
+            columnRows = columns ?? new List<FramingRow>();
+            selectedFraming = selectedId;
+            BuildFraming();
+        }
+
+        private void BuildFraming()
+        {
+            beamsHost.Children.Clear();
+            columnsHost.Children.Clear();
+            beamTable = columnTable = null;
+            tbBeamsTitle.Text = $"Beams ({beamRows.Count})";
+            tbColumnsTitle.Text = $"Columns ({columnRows.Count})";
+            const string edit = "Click a row to select it on the drawing; move or edit it there (or in the Building Model editor).";
+            if (beamRows.Count == 0)
+                beamsHost.Children.Add(Ui.Banner("No beams in this level's framing. Draw them in the Building Model editor (Beam, B).", warning: false));
+            else
+            {
+                beamTable = new UiTable(beamSort,
+                    ("Beam", 52, "Beam ID (shown on the drawing). " + edit),
+                    ("Start x", 60, "Start point (ft)"), ("Start y", 60, ""),
+                    ("End x", 60, "End point (ft)"), ("End y", 60, ""),
+                    ("Length", 58, "Span (ft)"),
+                    ("Carries", 0, "The hold-downs that land on it, and its end reactions (ASD)"));
+                beamTable.RowClicked += i => SelectFraming(beamRows, i);
+                for (int i = 0; i < beamRows.Count; i++)
+                {
+                    var b = beamRows[i];
+                    int r = beamTable.AddRow(i, b.Id == selectedFraming);
+                    int c = 0;
+                    beamTable.Text(r, c++, b.Id, i, bold: true, right: false);
+                    beamTable.Text(r, c++, Ui.Num(b.Start.X, "0.##"), i, Ui.InkSecondary);
+                    beamTable.Text(r, c++, Ui.Num(b.Start.Y, "0.##"), i, Ui.InkSecondary);
+                    beamTable.Text(r, c++, Ui.Num(b.End.X, "0.##"), i, Ui.InkSecondary);
+                    beamTable.Text(r, c++, Ui.Num(b.End.Y, "0.##"), i, Ui.InkSecondary);
+                    beamTable.Text(r, c++, Ui.Num(b.Length, "0.##"), i, Ui.InkSecondary);
+                    beamTable.Text(r, c++, b.Carries ?? "", i, Ui.InkSecondary, right: false);
+                }
+                beamsHost.Children.Add(beamTable.InFrame());
+            }
+            if (columnRows.Count == 0)
+                columnsHost.Children.Add(Ui.Banner("No columns under this level. Draw them in the Building Model editor (Column, P).", warning: false));
+            else
+            {
+                columnTable = new UiTable(columnSort,
+                    ("Column", 56, "Column ID (shown on the drawing). " + edit),
+                    ("x", 60, "Location (ft)"), ("y", 60, ""),
+                    ("Runs", 170, "From its base up to its top"),
+                    ("Carries", 0, "The hold-downs and beam ends that land on it (ASD)"));
+                columnTable.RowClicked += i => SelectFraming(columnRows, i);
+                for (int i = 0; i < columnRows.Count; i++)
+                {
+                    var p = columnRows[i];
+                    int r = columnTable.AddRow(i, p.Id == selectedFraming);
+                    int c = 0;
+                    columnTable.Text(r, c++, p.Id, i, bold: true, right: false);
+                    columnTable.Text(r, c++, Ui.Num(p.Start.X, "0.##"), i, Ui.InkSecondary);
+                    columnTable.Text(r, c++, Ui.Num(p.Start.Y, "0.##"), i, Ui.InkSecondary);
+                    columnTable.Text(r, c++, p.Span ?? "", i, Ui.InkSecondary, right: false);
+                    columnTable.Text(r, c++, p.Carries ?? "", i, Ui.InkSecondary, right: false);
+                }
+                columnsHost.Children.Add(columnTable.InFrame());
+            }
+        }
+
+        private void SelectFraming(IList<FramingRow> rows, int i)
+        {
+            if (i < 0 || i >= rows.Count) return;
+            selectedFraming = rows[i].Id;
+            SelectedKind = null;
+            SelectedId = -1;
+            wallTable?.Select(-1);
+            diaphragmTable?.Select(-1);
+            beamTable?.Select(ReferenceEquals(rows, beamRows) ? i : -1);
+            columnTable?.Select(ReferenceEquals(rows, columnRows) ? i : -1);
+            FramingSelected?.Invoke(selectedFraming);
         }
 
         private void BuildWalls()
@@ -213,6 +327,9 @@ namespace ShearWallVisualizer.Controls
             SelectedId = id;
             wallTable?.Select(kind == "Wall" ? id : -1);
             diaphragmTable?.Select(kind == "Diaphragm" ? id : -1);
+            selectedFraming = null;
+            beamTable?.Select(-1);
+            columnTable?.Select(-1);
             SelectionChanged?.Invoke(kind, id);
         }
 

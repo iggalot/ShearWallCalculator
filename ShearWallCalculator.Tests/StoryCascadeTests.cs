@@ -80,6 +80,48 @@ namespace ShearWallCalculator.Tests
             }
         }
 
+        /// <summary>
+        /// An upper wall over a beam is carried (no note); an upper wall past the edge of the floor below is flagged, beam or
+        /// not, since a beam takes the wall's weight and uplift but not its shear (the junk project: the floor stops at x = 46,
+        /// the upper walls run to 59.5 over beams).
+        /// </summary>
+        [TestMethod]
+        public void UpperWall_OverABeam_IsCarried_ButPastTheFloorEdge_IsFlagged()
+        {
+            var roof = new ShearWallCalculator_RigidDiaphragm();
+            roof._diaphragm_system.AddDiaphragm(new DiaphragmData_Rectangular(new Point(0, 0), new Point(60, 30)));
+            foreach (var w in new[] { (0.0, 0.0, 60.0, 0.0), (0.0, 30.0, 60.0, 30.0), (0.0, 0.0, 0.0, 30.0), (60.0, 0.0, 60.0, 30.0) })
+                roof._wall_system.AddWall(new WallData(9, w.Item1, w.Item2, w.Item3, w.Item4));
+            var floor = new ShearWallCalculator_RigidDiaphragm();
+            floor._diaphragm_system.AddDiaphragm(new DiaphragmData_Rectangular(new Point(0, 0), new Point(46, 30)));
+            foreach (var w in new[] { (0.0, 0.0, 46.0, 0.0), (0.0, 30.0, 46.0, 30.0), (0.0, 0.0, 0.0, 30.0), (46.0, 0.0, 46.0, 30.0) })
+                floor._wall_system.AddWall(new WallData(9, w.Item1, w.Item2, w.Item3, w.Item4));
+            // the beams under the overhang, drawn a little off the wall lines as in the project
+            var beams = new List<(Point, Point)> { (new Point(46, 29.94), new Point(60, 29.94)), (new Point(60, 29.94), new Point(60, 0.06)), (new Point(60, 0.06), new Point(45.9, 0)) };
+
+            var bare = StoryCascade.Unsupported(roof, floor, 3);
+            Assert.AreEqual(3, bare.Count(n => n.Contains("hold-downs need")), "without the beams: walls 1, 2 (14 of 60 ft) and 4 (all) over nothing");
+            var withBeams = StoryCascade.Unsupported(roof, floor, 3, beams);
+            Assert.AreEqual(0, withBeams.Count(n => n.Contains("hold-downs need")), "the beams carry them");
+
+            int Key(double x1, double y1, double x2, double y2) =>
+                roof._wall_system._walls.Single(kv => kv.Value.Start == new Point(x1, y1) && kv.Value.End == new Point(x2, y2)).Key;
+            int south = Key(0, 0, 60, 0), north = Key(0, 30, 60, 30), west = Key(0, 0, 0, 30), east = Key(60, 0, 60, 30);
+            var off = StoryCascade.OffFloor(roof, floor);
+            Assert.AreEqual(3, off.Count);
+            Assert.AreEqual(14, off[south], 1e-9, "the E-W walls: 46 to 60 is past the floor");
+            Assert.AreEqual(14, off[north], 1e-9);
+            Assert.AreEqual(30, off[east], 1e-9, "the N-S wall at x = 60: all of it");
+            Assert.IsFalse(off.ContainsKey(west), "the wall at x = 0 is on the floor's edge");
+            StringAssert.Contains(withBeams.Single(n => n.Contains($"wall {east}:")), "all of it is beyond the edge of the level 2 floor");
+            StringAssert.Contains(withBeams.Single(n => n.Contains($"wall {south}:")), "14 of its 60 ft");
+
+            // the floor extended under them: nothing to say
+            floor._diaphragm_system.AddDiaphragm(new DiaphragmData_Rectangular(new Point(46, 0), new Point(60, 30)));
+            Assert.AreEqual(0, StoryCascade.OffFloor(roof, floor).Count, "two diaphragms side by side cover the walls");
+            Assert.AreEqual(0, StoryCascade.Unsupported(roof, floor, 3, beams).Count);
+        }
+
         [TestMethod]
         public void DiscontinuousWall_Flagged_AndTheFloorSpreadsItsShear()
         {
@@ -89,7 +131,7 @@ namespace ShearWallCalculator.Tests
             floor.SetLoadCases(new[] { new LateralLoadCase("Y", 0, 0) });
             var notes = StoryCascade.Analyze(new List<ShearWallCalculatorBase> { floor, roof });
             Assert.AreEqual(1, notes.Count);
-            StringAssert.Contains(notes[0], "Level 2, wall 3: no wall on level 1");
+            StringAssert.Contains(notes[0], "Level 2, wall 3: no wall or beam on level 1");
 
             // roof: symmetric, 5 k in each N-S wall; on the floor the 10 k act at x = 20 (resultant), CR at x = 15
             var c = floor.CaseResults.Single();

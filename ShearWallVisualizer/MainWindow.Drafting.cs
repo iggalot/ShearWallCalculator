@@ -374,6 +374,7 @@ namespace ShearWallVisualizer
                     list.Add(new ModelIssue { Severity = Severity.Error, Code = "WallFails", Message = $"{id} fails on {s.Level.Name}: {why}.", Ids = { id }, LevelId = s.Level.Id, At = w.Middle });
                 }
                 AddLandingIssues(list);
+                AddOffFloorIssues(list);
                 if (Calculator != null && !Calculator.IsValidForCalculation && (s.Walls.Count > 0 || s.Diaphragms.Count > 0))
                     list.Add(new ModelIssue { Severity = Severity.Warning, Code = "NotCalculated", Message = $"{s.Level.Name} cannot be calculated yet: " + (CalculationTodo() ?? "check the walls and diaphragm."), LevelId = s.Level.Id });
             }
@@ -399,8 +400,32 @@ namespace ShearWallVisualizer
         /// <summary>The warnings that matter to the design (besides every error).</summary>
         private static readonly HashSet<string> DesignCodes = new HashSet<string>
         {
-            "HoldownUnsupported", "HoldownTypeReplaced", "HoldownTooWeak", "BeamCrossesColumn", "BeamMissesColumn", "NotCalculated",
+            "HoldownUnsupported", "HoldownTypeReplaced", "HoldownTooWeak", "BeamCrossesColumn", "BeamMissesColumn", "NotCalculated", "WallOffFloor",
         };
+
+        /// <summary>
+        /// An upper wall that runs past the edge of the floor under it: that part's shear has no diaphragm to go into (a beam or
+        /// column under it carries its weight and uplift, not its shear). One warning per wall, on the wall's own level.
+        /// </summary>
+        private void AddOffFloorIssues(List<ModelIssue> list)
+        {
+            for (int k = 1; k < stories.Count; k++)
+            {
+                var upper = stories[k];
+                foreach (var kv in StoryCascade.OffFloor(upper.Calculator, stories[k - 1].Calculator))
+                {
+                    if (!upper.Walls.TryGetValue(kv.Key, out var id) || !(building.Find(id) is Wall w)) continue;
+                    bool all = kv.Value >= w.Length - 0.1;
+                    list.Add(new ModelIssue
+                    {
+                        Severity = Severity.Warning, Code = "WallOffFloor", LevelId = upper.Level.Id, Ids = { id }, At = w.Middle,
+                        Message = $"{id} ({upper.Level.Name}): {(all ? "all of it is" : $"{kv.Value:0.#} of its {w.Length:0.#} ft is")} beyond the edge of the " +
+                                  $"{stories[k - 1].Level.Name} floor, so its shear has no diaphragm to go into. Extend the floor's diaphragm under it " +
+                                  "(a beam under the wall carries its weight and hold-downs, not its shear).",
+                    });
+                }
+            }
+        }
 
         /// <summary>An issue followed from the Design tab: the plan, its level, the members selected and in view.</summary>
         private void GoToIssue(ModelIssue i)

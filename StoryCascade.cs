@@ -24,7 +24,8 @@ namespace ShearWallCalculator
         public const double LineTolerance = 0.25;
 
         /// <summary>Calculates every level, top first. <paramref name="levels"/> runs bottom to top. Returns what to check (per level).</summary>
-        public static List<string> Analyze(IList<ShearWallCalculatorBase> levels)
+        /// <param name="beamsOn">The beams in the framing on top of story i (under the walls of story i + 1), as segments; null: none.</param>
+        public static List<string> Analyze(IList<ShearWallCalculatorBase> levels, Func<int, IEnumerable<(Point a, Point b)>> beamsOn = null)
         {
             var notes = new List<string>();
             if (levels == null || levels.Count == 0) return notes;
@@ -52,7 +53,7 @@ namespace ShearWallCalculator
                         calc.LoadsFromAbove = Reactions(upper, i + 2);
                     if ((calc is ShearWallCalculator_FlexibleDiaphragm || env != null) && calc.LoadsFromAbove.Count > 0)
                         notes.Add($"Level {i + 1}{(env != null ? ", flexible run of the envelope" : " is a flexible diaphragm")}: the walls above are spread as a uniform load plus torsion (an approximation).");
-                    notes.AddRange(Unsupported(upper, calc, i + 2));
+                    notes.AddRange(Unsupported(upper, calc, i + 2, beamsOn?.Invoke(i)));
                 }
                 calc.PerformCalculations();
             }
@@ -117,17 +118,27 @@ namespace ShearWallCalculator
             return new LateralLoadCase(name, c.Vx + fx, c.Vy + fy, c.Mt + m, c.ApplyMinimumEccentricity) { AboveVx = fx, AboveVy = fy, AboveMt = m };
         }
 
-        /// <summary>Upper walls with no wall under (most of) their length on the level below: their hold-downs and shear need a load path (beam, post).</summary>
-        public static List<string> Unsupported(ShearWallCalculatorBase upper, ShearWallCalculatorBase lower, int upperLevel)
+        /// <summary>
+        /// Upper walls with part of their length over nothing on the level below (no wall and no beam of
+        /// <paramref name="beams"/> on the same line): their weight and hold-downs need a load path; and upper walls that run
+        /// past the edge of the floor below (<see cref="OffFloor"/>): that part's shear has nowhere to go.
+        /// </summary>
+        public static List<string> Unsupported(ShearWallCalculatorBase upper, ShearWallCalculatorBase lower, int upperLevel,
+            IEnumerable<(Point a, Point b)> beams = null)
         {
             var notes = new List<string>();
-            var below = lower?._wall_system?._walls.Values.ToList() ?? new List<WallData>();
-            foreach (var kv in upper?._wall_system?._walls ?? new Dictionary<int, WallData>())
+            var below = (lower?._wall_system?._walls.Values ?? Enumerable.Empty<WallData>()).Select(b => (b.Start, b.End))
+                        .Concat(beams ?? Enumerable.Empty<(Point, Point)>()).ToList();
+            var off = OffFloor(upper, lower);
+            foreach (var kv in (upper?._wall_system?._walls ?? new Dictionary<int, WallData>()).OrderBy(k => k.Key))
             {
-                double under = SupportedLength(kv.Value, below);
-                if (under < kv.Value.WallLength - 0.1)
-                    notes.Add($"Level {upperLevel}, wall {kv.Key}: {(under < 0.1 ? "no wall" : $"a wall under only {under:0.#} of {kv.Value.WallLength:0.#} ft")} on level {upperLevel - 1}. " +
-                              "Its shear goes into the floor below; its hold-downs need a post, beam or blocking under them.");
+                double L = kv.Value.WallLength, under = SupportedLength(kv.Value, below);
+                if (under < L - 0.1)
+                    notes.Add($"Level {upperLevel}, wall {kv.Key}: {(under < 0.1 ? "no wall or beam" : $"a wall or beam under only {under:0.#} of {L:0.#} ft")} on level {upperLevel - 1}. " +
+                              "Its hold-downs need a post, beam or blocking under them.");
+                if (off.TryGetValue(kv.Key, out double beyond))
+                    notes.Add($"Level {upperLevel}, wall {kv.Key}: {(beyond >= L - 0.1 ? "all of it is" : $"{beyond:0.#} of its {L:0.#} ft is")} beyond the edge of the level {upperLevel - 1} floor, " +
+                              "so its shear has no diaphragm to go into. Extend the floor's diaphragm under it.");
             }
             return notes;
         }
@@ -219,22 +230,77 @@ namespace ShearWallCalculator
         }
 
         /// <summary>The length of <paramref name="w"/> that has a wall of <paramref name="below"/> on the same line under it (ft).</summary>
-        public static double SupportedLength(WallData w, IEnumerable<WallData> below)
+        public static double SupportedLength(WallData w, IEnumerable<WallData> below) =>
+            SupportedLength(w, below.Where(b => b.WallDir == w.WallDir).Select(b => (b.Start, b.End)));
+
+        /// <summary>
+        /// The length of <paramref name="w"/> with something under it on the same line (ft): walls or beams of the level
+        /// below, as segments; a segment counts when both its ends are within <see cref="LineTolerance"/> of the wall's line.
+        /// </summary>
+        public static double SupportedLength(WallData w, IEnumerable<(Point a, Point b)> below)
         {
             bool ew = w.WallDir == WallDirs.EastWest;
             double a0 = ew ? Math.Min(w.Start.X, w.End.X) : Math.Min(w.Start.Y, w.End.Y);
             double a1 = ew ? Math.Max(w.Start.X, w.End.X) : Math.Max(w.Start.Y, w.End.Y);
             double line = ew ? w.Start.Y : w.Start.X;
             var pieces = new List<(double, double)>();
-            foreach (var b in below)
+            foreach (var (p, q) in below)
             {
-                if (b.WallDir != w.WallDir) continue;
-                if (Math.Abs((ew ? b.Start.Y : b.Start.X) - line) > LineTolerance) continue;
-                double b0 = Math.Max(a0, ew ? Math.Min(b.Start.X, b.End.X) : Math.Min(b.Start.Y, b.End.Y));
-                double b1 = Math.Min(a1, ew ? Math.Max(b.Start.X, b.End.X) : Math.Max(b.Start.Y, b.End.Y));
+                if (Math.Abs((ew ? p.Y : p.X) - line) > LineTolerance || Math.Abs((ew ? q.Y : q.X) - line) > LineTolerance) continue;
+                double b0 = Math.Max(a0, ew ? Math.Min(p.X, q.X) : Math.Min(p.Y, q.Y));
+                double b1 = Math.Min(a1, ew ? Math.Max(p.X, q.X) : Math.Max(p.Y, q.Y));
+                // an end within the tolerance of the wall's end (a beam framing into a corner post) reaches it
+                if (b0 - a0 <= LineTolerance) b0 = a0;
+                if (a1 - b1 <= LineTolerance) b1 = a1;
                 if (b1 > b0) pieces.Add((b0, b1));
             }
-            // union of the overlaps
+            return Union(pieces);
+        }
+
+        /// <summary>
+        /// The length of <paramref name="w"/> over a diaphragm of <paramref name="floor"/> (ft): the part whose shear the floor
+        /// under it can take (its edges count, within <see cref="LineTolerance"/>).
+        /// </summary>
+        public static double OnFloorLength(WallData w, IEnumerable<DiaphragmData_Rectangular> floor)
+        {
+            bool ew = w.WallDir == WallDirs.EastWest;
+            double a0 = ew ? Math.Min(w.Start.X, w.End.X) : Math.Min(w.Start.Y, w.End.Y);
+            double a1 = ew ? Math.Max(w.Start.X, w.End.X) : Math.Max(w.Start.Y, w.End.Y);
+            double line = ew ? w.Start.Y : w.Start.X;
+            var pieces = new List<(double, double)>();
+            foreach (var d in floor)
+            {
+                double x0 = Math.Min(d.P1.X, d.P3.X), x1 = Math.Max(d.P1.X, d.P3.X), y0 = Math.Min(d.P1.Y, d.P3.Y), y1 = Math.Max(d.P1.Y, d.P3.Y);
+                double c0 = ew ? y0 : x0, c1 = ew ? y1 : x1;
+                if (line < c0 - LineTolerance || line > c1 + LineTolerance) continue;
+                double b0 = Math.Max(a0, ew ? x0 : y0), b1 = Math.Min(a1, ew ? x1 : y1);
+                if (b0 - a0 <= LineTolerance) b0 = a0; // a floor edge within the tolerance of the wall's end reaches it
+                if (a1 - b1 <= LineTolerance) b1 = a1;
+                if (b1 > b0) pieces.Add((b0, b1));
+            }
+            return Union(pieces);
+        }
+
+        /// <summary>
+        /// The upper level's walls that run past the edge of the floor under them (key → ft beyond it): that part's shear has no
+        /// diaphragm to go into. A beam or column under a wall carries its weight and uplift, not its shear.
+        /// </summary>
+        public static Dictionary<int, double> OffFloor(ShearWallCalculatorBase upper, ShearWallCalculatorBase lower)
+        {
+            var off = new Dictionary<int, double>();
+            var floor = lower?._diaphragm_system?._diaphragms.Values.ToList();
+            if (floor == null || floor.Count == 0) return off; // no floor at all: the level cannot be calculated, said elsewhere
+            foreach (var kv in upper?._wall_system?._walls ?? new Dictionary<int, WallData>())
+            {
+                double beyond = kv.Value.WallLength - OnFloorLength(kv.Value, floor);
+                if (beyond > 0.1) off[kv.Key] = beyond;
+            }
+            return off;
+        }
+
+        /// <summary>The total length of the union of the intervals.</summary>
+        private static double Union(List<(double, double)> pieces)
+        {
             double total = 0, end = double.NegativeInfinity;
             foreach (var (s, e) in pieces.OrderBy(p => p.Item1))
             {

@@ -50,7 +50,7 @@ namespace ShearWallVisualizer
         /// <summary>After <see cref="UpdateDesign"/>: each level's message and its failing and close walls, as above.</summary>
         private void LogDesign(IList<Controls.WallDesignPanel.DesignStory> list)
         {
-            var now = new HashSet<string>();
+            var now = new HashSet<string>(levelNotes.Select(n => "note: " + n)); // the Calculations tab's notes on the levels
             foreach (var s in list)
             {
                 if (s.Message != null) now.Add($"{s.Name}: {s.Message}");
@@ -72,7 +72,8 @@ namespace ShearWallVisualizer
             if (!fresh && now.SetEquals(loggedDesign)) return;
             int fail = now.Count(x => x.Contains(": FAIL:")), close = now.Count(x => x.Contains(": CLOSE:"));
             Log.Info("Design", (fresh ? "Model loaded: " : "Now ") + $"{fail} failing wall{(fail == 1 ? "" : "s")}, {close} close, " +
-                               $"{list.Count(s => s.Message != null)} level message{(list.Count(s => s.Message != null) == 1 ? "" : "s")}.");
+                               $"{list.Count(s => s.Message != null)} level message{(list.Count(s => s.Message != null) == 1 ? "" : "s")}, " +
+                               $"{levelNotes.Count} note{(levelNotes.Count == 1 ? "" : "s")}.");
             foreach (var line in (fresh ? now : now.Except(loggedDesign)).OrderBy(x => x))
                 Log.Info("Design", (fresh ? "" : "new: ") + line);
             if (!fresh)
