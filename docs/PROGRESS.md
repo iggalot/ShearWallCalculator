@@ -2,6 +2,32 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-02 — Wall, beam and column details, on screen and in the report (SWC)
+
+- **Core `DetailCalcs`** (`CalcLine`: item, calculation, result). It restates the design and computes nothing new:
+  - **Wall:**
+    - V and v = 0.6 V / L against the capacity, and h/b.
+    - M = V h; d = L − post; dead load; own uplift T = 0.6 M / d − 0.6 D / 2.
+    - Each force from above with its position and wind direction, and what they add.
+    - The total T and the hold-down with its ratio.
+    - What each end anchors to (flagged when its type was replaced).
+  - **Beam:** each load's share R start = T(L−a)/L and R end = T·a/L, summed per wind direction; the reactions; each end's support and connection.
+  - **Column:** what lands on it, what goes down it, its base connection.
+- **Drawings** (`Controls/MemberDetail.cs`, the same on screen and in the report):
+  - `WallElevation`: to scale, with sheathing joints, the end posts, a hold-down at each post (model, T, what it anchors to) and the shear. The forces from above are arrows at their positions, blue or orange by wind direction. Dimensions for d, L and h.
+  - `BeamDiagram`: the loads at a, the reactions, and the supports (wall, column or nothing).
+  - `ColumnDiagram`: the levels it passes, the loads on its top, and its base connection.
+- **Detail window:**
+  - Opened from the selection card's **Detail** button (walls), or from the card of a selected beam or column (new).
+  - It follows the selection and the design.
+- **Report:** after the shear-wall pages:
+  - "Level n: wall details" for each wall with uplift or forces from above.
+  - "Beams and columns carrying hold-downs".
+- **SWC:** From size… and Roof… are hidden. The building's size and roof are edited only in the Building Model editor.
+- **Tests:** `DetailCalcsTests` (4), checked against the design formulas. SWC 184.
+  - The three drawings were rendered to images and looked at.
+  - The detail window and the report pages were not exercised; the apps were open, so SWC was built to a separate folder.
+
 ## 2026-11-02 — Columns follow their supports; point snaps; beam/column crossings (BuildingModel 9d3fa65, SWC)
 
 - **One member.** A column is a single member from its base level to its top level.

@@ -19,6 +19,7 @@ namespace ShearWallVisualizer.Controls
         public event Action<string, int> OpenDesign;      // go to the Design tab for this wall
         public event Action<string, int> EditGeometry;    // go to the Walls & diaphragms tab
         public event Action<string, int> DeleteRequested;
+        public event Action<string, int> OpenDetail;      // the wall's elevation and calculation
         public event EventHandler Closed;
 
         private readonly StackPanel body = new StackPanel();
@@ -77,7 +78,19 @@ namespace ShearWallVisualizer.Controls
                                             Foreground = Ui.StateInk(r.State), FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap },
                 });
             }
-            Buttons(("Design", () => OpenDesign?.Invoke(kind, id)), ("Edit", () => EditGeometry?.Invoke(kind, id)), ("Delete", () => DeleteRequested?.Invoke(kind, id)));
+            Buttons(("Detail", () => OpenDetail?.Invoke(kind, id)), ("Design", () => OpenDesign?.Invoke(kind, id)), ("Edit", () => EditGeometry?.Invoke(kind, id)), ("Delete", () => DeleteRequested?.Invoke(kind, id)));
+        }
+
+        /// <summary>A beam or a column (from the building model): a few rows and its buttons.</summary>
+        public void ShowMember(string title, string subtitle, IEnumerable<(string label, string value, bool fails)> rows, Action detail, Action delete)
+        {
+            kind = null;
+            id = -1;
+            body.Children.Clear();
+            Header(title, subtitle);
+            foreach (var (label, value, fails) in rows) Row(label, value, ink: fails ? Ui.FailInk : null);
+            Buttons(("Detail", detail), ("Delete", delete));
+            Visibility = Visibility.Visible;
         }
 
         private void ShowDiaphragm(DiaphragmData_Rectangular d)

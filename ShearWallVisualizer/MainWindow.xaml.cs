@@ -97,6 +97,7 @@ namespace ShearWallVisualizer
             selectionCard.OpenDesign += SelectionCard_OpenDesign;
             selectionCard.EditGeometry += SelectionCard_EditGeometry;
             selectionCard.DeleteRequested += SelectionCard_Delete;
+            selectionCard.OpenDetail += (kind, id) => OpenDetail(kind, Math.Max(0, currentLevel), id, null);
             selectionCard.Closed += (s, e) => CloseSelectionCard();
             this.Closed += (s, e) => Log.Written -= OnLogWritten;
 
@@ -168,7 +169,8 @@ namespace ShearWallVisualizer
                 geometryPanel?.Show(Calculator, selectedKind, selectedId);
                 if (resultsPanel != null) resultsPanel.Notes = levelNotes;
                 resultsPanel?.Show(Calculator, CalculationTodo(), selectedKind == "Wall" ? selectedId : -1);
-                selectionCard.Show(Calculator, selectionCardOpen ? selectedKind : null, selectedId, designResults);
+                if (selectionCardOpen && (selectedKind == "Beam" || selectedKind == "Column")) ShowMemberCard();
+                else selectionCard.Show(Calculator, selectionCardOpen ? selectedKind : null, selectedId, designResults);
 
                 // notify controls that we have updated
                 OnUpdated?.Invoke(this, EventArgs.Empty); // signal that the window has been updated -- so that subcontrols can refresh
@@ -333,24 +335,7 @@ namespace ShearWallVisualizer
         /// <summary>A trace with the model's beams and columns by story, sizing new connections from the project's catalog.</summary>
         private LoadPathTrace NewLoadPath(IList<ShearWallCalculatorBase> calcs)
         {
-            var beams = new List<FramingBeam>();
-            var columns = new List<FramingColumn>();
-            if (building != null && stories.Count > 0)
-            {
-                int StoryOf(string levelId) => stories.FindIndex(s => s.Level.Id == levelId);
-                foreach (var bm in building.Beams)
-                {
-                    int i = StoryOf(bm.LevelId);
-                    if (i >= 0) beams.Add(new FramingBeam { Id = bm.Id, Start = new Point(bm.Start.X, bm.Start.Y), End = new Point(bm.End.X, bm.End.Y), OnStory = i });
-                }
-                foreach (var c in building.Columns)
-                {
-                    int top = StoryOf(c.TopLevelId);
-                    int below = StoryOf(c.BaseLevelId);
-                    int bas = building.Ground != null && c.BaseLevelId == building.Ground.Id ? 0 : below < 0 ? -1 : below + 1;
-                    if (top >= 0 && bas >= 0 && bas <= top) columns.Add(new FramingColumn { Id = c.Id, At = new Point(c.At.X, c.At.Y), BaseStory = bas, TopStory = top });
-                }
-            }
+            var (beams, columns) = Framing();
             var settings = calcs.FirstOrDefault(c => c != null)?.DesignSettings ?? new DesignSettings();
             return new LoadPathTrace(beams, columns, (f, species, t) =>
                 designer?.SelectHoldown(f, species, t, settings.HoldownsFromStandardList, settings.StrapHoldownsOrDefault()));
@@ -1340,7 +1325,7 @@ namespace ShearWallVisualizer
                 : null;
             var info = new ReportInfo { Project = ProjectName, Program = "Shear Wall Calculator" };
             var report = WindReport.Build(info, windVersion, windLoadParams, buildingData, analysis, ShearWallReport.Levels(levels.Count > 0 ? levels : new List<ShearWallCalculatorBase> { Calculator }, windLoadsLinked,
-                c => ReferenceEquals(c, Calculator) ? designResults : CheckWalls(c), designer, levelNotes));
+                c => ReferenceEquals(c, Calculator) ? designResults : CheckWalls(c), designer, levelNotes).Concat(DetailReportSections()));
             Log.Info("Report", $"Report previewed for {ProjectName}: {levels.Count} stor{(levels.Count == 1 ? "y" : "ies")}, {(windLoadsLinked ? "wind" : "manual")} loads.");
             new ReportPreviewWindow(report, ProjectName) { Owner = this }.Show();
         }

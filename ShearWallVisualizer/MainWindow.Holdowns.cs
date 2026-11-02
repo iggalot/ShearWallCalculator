@@ -42,6 +42,7 @@ namespace ShearWallVisualizer
             foreach (var kv in loadPath.ByLevel)
                 if (kv.Key < 0) foundationAnchors = kv.Value;
                 else landingsOnto[kv.Key] = kv.Value;
+            RefreshDetail(); // an open detail follows the design
             int open = landingsOnto.Values.Sum(l => l.Count(x => !x.Supported));
             if (open > 0) Log.Info("Hold-downs", $"{open} hold-down{(open == 1 ? "" : "s")} from an upper story land where there is no wall below.");
         }

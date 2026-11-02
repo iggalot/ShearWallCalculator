@@ -77,6 +77,7 @@ namespace ShearWallVisualizer
             // only shows or hides them (the Image button above). Importing, scaling and placing them is the editor's.
             sketchView.ShowPlanButton = false;
             sketchView.PlanEditing = false;
+            sketchView.ShowBuildingTools = false; // From size... and Roof...: the building's size and roof are edited only in the Building Model editor (Edit building)
             foreach (var t in new[] { SketchTool.Calibrate, SketchTool.PlanStraighten, SketchTool.PlanMove }) sketchView.HideTool(t);
             var s = Sketch;
             s.DrawOver += (o, e) =>
@@ -235,11 +236,14 @@ namespace ShearWallVisualizer
             string id = Sketch.SelectedId;
             var o = building.Find(id);
             int? key = CurrentStory?.Key(id);
+            selectedModelId = null;
             if (o is Wall && key != null) { selectedKind = "Wall"; selectedId = key.Value; }
             else if (o is Diaphragm && key != null) { selectedKind = "Diaphragm"; selectedId = key.Value; }
+            else if (o is Beam || o is Column) { selectedKind = o is Beam ? "Beam" : "Column"; selectedId = -1; selectedModelId = id; }
             else { selectedKind = null; selectedId = -1; }
             selectionCardOpen = selectedKind != null && Sketch.Tool == SketchTool.Select;
             UpdateFromSketch();
+            RefreshDetail(); // an open detail follows the selection
         }
 
         /// <summary>A row picked in a table: the same wall or diaphragm is selected on the plan (brought into view).</summary>
@@ -263,6 +267,7 @@ namespace ShearWallVisualizer
         private void DropMissingSelection()
         {
             if (selectedKind == null) return;
+            if ((selectedKind == "Beam" || selectedKind == "Column") && building?.Find(selectedModelId) != null) return;
             bool there = selectedKind == "Wall" ? Calculator._wall_system._walls.ContainsKey(selectedId)
                        : selectedKind == "Diaphragm" && Calculator._diaphragm_system._diaphragms.ContainsKey(selectedId);
             if (there) return;
