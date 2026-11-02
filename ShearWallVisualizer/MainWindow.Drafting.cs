@@ -218,14 +218,30 @@ namespace ShearWallVisualizer
             finally { storing = false; }
         }
 
-        /// <summary>Coordinates typed on the Walls &amp; diaphragms tab go to the model (then everything follows from it).</summary>
-        private void GeometryTyped()
+        /// <summary>Coordinates typed on the Members tab go to the model, that story's (then everything follows from it).</summary>
+        private void GeometryTyped(int story)
         {
-            var s = CurrentStory;
+            var s = story >= 0 && story < stories.Count ? stories[story] : CurrentStory;
             if (s == null) { UpdateShearWallUI(); return; }
             ShearWallAdapter.StoreDesign(building, stories); // a height or type typed there as well
             if (!ShearWallAdapter.StoreGeometry(building, s)) { UpdateShearWallUI(); return; }
-            Sketch.Commit("Coordinates typed on the Walls & diaphragms tab.");
+            Sketch.Commit($"Coordinates typed on the Members tab ({s.Level.Name}).");
+        }
+
+        /// <summary>
+        /// A member deleted from the Members tab, on any level: from the model (the whole wall when it spans stories, the whole
+        /// diaphragm when openings split it, a column through every story), so every level's list and drawing follow.
+        /// </summary>
+        private void DeleteMember(string modelId)
+        {
+            if (modelId == null || building?.Find(modelId) == null) return;
+            if (Sketch.Selection.Contains(modelId) || selectedModelId == modelId || CurrentStory?.ModelId(selectedKind, selectedId) == modelId)
+            {
+                selectionCardOpen = false; selectedKind = null; selectedId = -1; selectedModelId = null;
+                Sketch.ClearSelection();
+            }
+            Sketch.Edit($"Deleted {modelId}.  Ctrl+Z brings it back.", b => BuildingEdits.Delete(b, modelId));
+            Log.Info("Edit", $"{modelId} deleted from the Members tab.");
         }
 
         // ------------------------------------------------------------------ selection: model IDs ↔ calculator keys

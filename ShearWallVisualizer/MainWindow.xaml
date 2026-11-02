@@ -243,7 +243,7 @@
                     <TabItem x:Name="tabBuildingDataControlTabItem" Width="100" HorizontalAlignment="Center" Header="BuildingData" Margin="5 0 5 0"/>
                     
                     <!-- Walls and diaphragms with typed coordinates (GeometryPanel) -->
-                    <TabItem x:Name="tabDimensionsTabItem" Header="Walls &amp; diaphragms" Width="140" HorizontalAlignment="Center" Margin="5 0 5 0"/>
+                    <TabItem x:Name="tabDimensionsTabItem" Header="Members" Width="140" ToolTip="Every wall, diaphragm, beam and column, on every level" HorizontalAlignment="Center" Margin="5 0 5 0"/>
 
                     <!-- Wind Input control-->
                     <TabItem Header="WIND Input" x:Name="tabWindInputControlTabItem" Width="100" HorizontalAlignment="Center" Margin="5 0 5 0" />

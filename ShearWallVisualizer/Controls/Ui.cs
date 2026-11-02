@@ -10,7 +10,7 @@ using System.Windows.Media;
 namespace ShearWallVisualizer.Controls
 {
     /// <summary>
-    /// The look shared by the code-built panels (Design, Walls &amp; diaphragms, Calculations): colors, a table with a
+    /// The look shared by the code-built panels (Design, Members, Calculations): colors, a table with a
     /// shaded header and hairline rows, cards, and number boxes that commit on Enter or when focus leaves.
     /// </summary>
     internal static class Ui

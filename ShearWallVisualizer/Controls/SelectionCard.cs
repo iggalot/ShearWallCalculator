@@ -17,7 +17,7 @@ namespace ShearWallVisualizer.Controls
     public class SelectionCard : UserControl
     {
         public event Action<string, int> OpenDesign;      // go to the Design tab for this wall
-        public event Action<string, int> EditGeometry;    // go to the Walls & diaphragms tab
+        public event Action<string, int> EditGeometry;    // go to the Members tab
         public event Action<string, int> DeleteRequested;
         public event Action<string, int> OpenDetail;      // the wall's elevation and calculation
         public event EventHandler Closed;

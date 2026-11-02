@@ -12,9 +12,17 @@ _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`
   - A beam or column carries the wall's weight and uplift, but not its shear.
   - It gives a note on the level and a `WallOffFloor` warning on the Design tab, which points at the wall.
   - In junk, the Level 2 floor stops at x = 46 while W6, W7 and W8 run to 59.5.
-- **Walls & diaphragms tab:** two new tables.
-  - Beams in this level's framing, and columns standing under it.
-  - Each row shows what the member carries in the load path; a click selects it on the drawing.
+- **Walls & diaphragms tab, now Members:** every level, with a level filter (default: the level shown), sortable by level.
+  - Four tables: walls, diaphragms, beams and columns.
+    - Each has a Level column that sorts by elevation.
+    - A column is listed at its top level and appears on every level it runs through.
+  - Show: "This level" (the default, which follows the drawing), "All levels", or one level.
+  - Each beam and column row shows what it carries in the load path.
+  - A click shows the member's level and selects it on the drawing.
+  - Typed wall and diaphragm coordinates go to that member's own level.
+  - The × on any row deletes the member from the model on any level, without switching the drawing.
+    - The whole wall goes when it spans stories, and a column goes through every story.
+    - Every level's list follows, and Ctrl+Z brings it back.
 - **Sketch (both apps):** a selected column gets a ring well clear of its square.
 - **Log:**
   - `[Issues]` lists every error and warning with its code, level, members and location: all of them when a model

@@ -48,7 +48,7 @@ namespace ShearWallVisualizer
         }
 
         /// <summary>
-        /// The Walls &amp; diaphragms tab's beams (in the framing of the level shown) and columns (standing under it), with
+        /// The Members tab's beams (each in its level's framing) and columns (listed at their top level), every level, with
         /// what each carries in the load path.
         /// </summary>
         private void ShowFramingRows()
@@ -56,21 +56,23 @@ namespace ShearWallVisualizer
             if (geometryPanel == null) return;
             var beams = new List<Controls.GeometryPanel.FramingRow>();
             var columns = new List<Controls.GeometryPanel.FramingRow>();
-            if (building != null && currentLevel >= 0 && currentLevel < stories.Count && !foundationView)
+            if (building != null && stories.Count > 0)
             {
                 var (fb, fc) = Framing();
                 var landings = AllLandings();
-                foreach (var b in fb.Where(x => x.OnStory == currentLevel).OrderBy(x => x.Id))
+                foreach (var b in fb.OrderBy(x => x.OnStory).ThenBy(x => x.Id))
                 {
                     var r = loadPath?.Beams.FirstOrDefault(x => x.Beam.Id == b.Id);
+                    var level = stories[b.OnStory].Level;
                     beams.Add(new Controls.GeometryPanel.FramingRow
                     {
-                        Id = b.Id, Start = b.Start, End = b.End, Length = (b.End - b.Start).Length,
+                        Id = b.Id, Level = level.Name, Elevation = level.Elevation, FromStory = b.OnStory, ToStory = b.OnStory,
+                        Start = b.Start, End = b.End, Length = (b.End - b.Start).Length,
                         Carries = r == null || r.Loads.Count == 0 ? "nothing"
                                 : $"{r.Loads.Count} hold-down{(r.Loads.Count == 1 ? "" : "s")}; ends {r.StartAsd:N0} / {r.EndAsd:N0} lb",
                     });
                 }
-                foreach (var c in fc.Where(x => x.BaseStory <= currentLevel && x.TopStory >= currentLevel).OrderBy(x => x.Id))
+                foreach (var c in fc.OrderBy(x => x.TopStory).ThenBy(x => x.Id))
                 {
                     var col = building.Find(c.Id) as Column;
                     var lo = col == null ? null : building.Level(col.BaseLevelId);
@@ -78,7 +80,8 @@ namespace ShearWallVisualizer
                     var on = landings.Where(l => l.Support == SupportKind.Column && l.SupportId == $"column {c.Id}").ToList();
                     columns.Add(new Controls.GeometryPanel.FramingRow
                     {
-                        Id = c.Id, Start = c.At, End = c.At,
+                        Id = c.Id, Level = stories[c.TopStory].Level.Name, Elevation = stories[c.TopStory].Level.Elevation,
+                        FromStory = c.BaseStory, ToStory = c.TopStory, Start = c.At, End = c.At,
                         Span = $"{(lo == null || lo.Elevation == 0 ? "foundation" : lo.Name)} to {hi?.Name}" + (col?.BaseFixed == true ? " (set)" : ""),
                         Carries = on.Count == 0 ? "nothing" : $"{on.Count} load{(on.Count == 1 ? "" : "s")}, up to {on.Max(l => l.TensionAsd):N0} lb",
                     });
@@ -86,6 +89,12 @@ namespace ShearWallVisualizer
             }
             geometryPanel.ShowFraming(beams, columns, selectedKind == "Beam" || selectedKind == "Column" ? selectedModelId : null);
         }
+
+        /// <summary>Every story's walls and diaphragms for the Members tab (one unnamed set with no building model).</summary>
+        private List<Controls.GeometryPanel.LevelSet> MemberLevels() =>
+            stories.Count == 0
+                ? new List<Controls.GeometryPanel.LevelSet> { new Controls.GeometryPanel.LevelSet { Story = 0, Name = "", Calculator = Calculator } }
+                : stories.Select((s, i) => new Controls.GeometryPanel.LevelSet { Story = i, Name = s.Level.Name, Elevation = s.Level.Elevation, Calculator = s.Calculator }).ToList();
 
         /// <summary>The selection card's Detail, or a beam or column picked: the detail window shows it.</summary>
         private void OpenDetail(string kind, int story, int key, string modelId)
