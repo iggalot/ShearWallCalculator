@@ -103,6 +103,7 @@
     <Compile Include="ShearWallCalculatorBase.cs" />
     <Compile Include="ShearWallCalculator_FlexibleDiaphragm.cs" />
     <Compile Include="ShearWallCalculator_RigidDiaphragm.cs" />
+    <Compile Include="ShearWallCalculator_Envelope.cs" />
     <Compile Include="LateralLoadCase.cs" />
     <Compile Include="StoryCascade.cs" />
     <Compile Include="FloorEdits.cs" />

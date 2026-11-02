@@ -63,8 +63,12 @@ namespace ShearWallVisualizer.Helpers
 
             calc.PerformCalculations();
             bool rigid = calc is ShearWallCalculator_RigidDiaphragm;
+            var env = calc as ShearWallCalculator_Envelope;
             blocks.Add(WindReport.Para(
-                (rigid ? "Rigid diaphragm: the load is shared by wall rigidity, plus torsion from the eccentricity between the centre of mass and the centre of rigidity. "
+                (env != null ? "Envelope of a rigid and a flexible diaphragm (the engineer's choice for this project): both are calculated, and each wall is " +
+                               "designed for the larger of its two shears. Rigid: the load is shared by wall rigidity, plus torsion about the centre of rigidity. " +
+                               "Flexible: each wall line takes the load tributary to it, plus torsion by equivalent tributary weights. Each case below is marked (rigid) or (flexible). "
+                 : rigid ? "Rigid diaphragm: the load is shared by wall rigidity, plus torsion from the eccentricity between the centre of mass and the centre of rigidity. "
                        : "Flexible diaphragm: each wall line takes the load tributary to it. ") +
                 (linkedToWind
                     ? "Loads: the ASCE 7 wind load cases from the wind pages (Ch. 27 Fig. 27.3-8 or Ch. 28 Fig. 28.3-1, the wind from every side), strength level."
@@ -108,11 +112,27 @@ namespace ShearWallVisualizer.Helpers
                 "Hold-downs come in pairs, one at each end of the wall, both sized for the tension from V."));
             blocks.AddRange(WindReport.Tables(new[] { "Wall", "Dir.", "L (ft)", "h (ft)", "Most + (k)", "Case", "Most − (k)", "Case", "V (k)", "v (plf)" }, rows));
 
+            if (env != null)
+            {
+                blocks.Add(WindReport.Heading("Rigid and flexible"));
+                blocks.Add(WindReport.Para("Each wall's design shear by each calculation (kips, max |V| over its cases); the larger is used."));
+                blocks.AddRange(WindReport.Tables(new[] { "Wall", "Rigid V (k)", "Flexible V (k)", "Governs" },
+                    calc._wall_system._walls.Keys.OrderBy(k => k).Select(id => new[]
+                    {
+                        id.ToString(),
+                        env.Rigid.WallShearRange.TryGetValue(id, out var r) ? r.Design.ToString("0.000") : "-",
+                        env.Flexible.WallShearRange.TryGetValue(id, out var f) ? f.Design.ToString("0.000") : "-",
+                        env.Governs.TryGetValue(id, out var g) ? g : "-",
+                    }).ToList()));
+            }
+
             var sections = new List<ReportSection> { new ReportSection("Shear walls", blocks) };
-            if (calc is ShearWallCalculator_RigidDiaphragm rigidCalc && rigidCalc.CaseResults.Count > 0)
-                sections.Add(RigidSheet(rigidCalc));
-            if (calc is ShearWallCalculator_FlexibleDiaphragm flexCalc && flexCalc.CaseResults.Count > 0)
-                sections.Add(FlexibleSheet(flexCalc));
+            var rigidRun = calc as ShearWallCalculator_RigidDiaphragm ?? env?.Rigid;
+            var flexRun = calc as ShearWallCalculator_FlexibleDiaphragm ?? env?.Flexible;
+            if (rigidRun != null && rigidRun.CaseResults.Count > 0)
+                sections.Add(RigidSheet(rigidRun));
+            if (flexRun != null && flexRun.CaseResults.Count > 0)
+                sections.Add(FlexibleSheet(flexRun));
             if (design != null && design.Count > 0) sections.Add(DesignSection(calc, design, designer));
             return sections;
         }

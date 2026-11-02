@@ -34,16 +34,24 @@ namespace ShearWallCalculator
                 var calc = levels[i];
                 if (calc == null) continue;
                 calc.LoadsFromAbove = new Dictionary<string, List<PointLoad>>();
+                var env = calc as ShearWallCalculator_Envelope;
+                if (env != null) env.FlexibleLoadsFromAbove = null;
                 if (i < n - 1 && levels[i + 1] != null)
                 {
                     var upper = levels[i + 1];
                     bool upperHasWalls = upper._wall_system?._walls.Count > 0;
                     if (upperHasWalls && !upper.IsValidForCalculation)
                         notes.Add($"Level {i + 2} cannot be calculated yet (it needs a diaphragm and walls both ways), so its wind is not carried down to level {i + 1}.");
+                    else if (env != null && upper is ShearWallCalculator_Envelope upperEnv)
+                    {
+                        // two whole-building runs: rigid reactions to the rigid run below, flexible to the flexible
+                        calc.LoadsFromAbove = Reactions(upperEnv.Rigid, i + 2);
+                        env.FlexibleLoadsFromAbove = Reactions(upperEnv.Flexible, i + 2);
+                    }
                     else
                         calc.LoadsFromAbove = Reactions(upper, i + 2);
-                    if (calc is ShearWallCalculator_FlexibleDiaphragm && calc.LoadsFromAbove.Count > 0)
-                        notes.Add($"Level {i + 1} is a flexible diaphragm: the walls above are spread as a uniform load plus torsion (an approximation).");
+                    if ((calc is ShearWallCalculator_FlexibleDiaphragm || env != null) && calc.LoadsFromAbove.Count > 0)
+                        notes.Add($"Level {i + 1}{(env != null ? ", flexible run of the envelope" : " is a flexible diaphragm")}: the walls above are spread as a uniform load plus torsion (an approximation).");
                     notes.AddRange(Unsupported(upper, calc, i + 2));
                 }
                 calc.PerformCalculations();

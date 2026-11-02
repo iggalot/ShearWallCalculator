@@ -2,6 +2,36 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-02 — Diaphragm: rigid, flexible or the envelope of both (SWC)
+
+- **Before:** every level was calculated as a rigid diaphragm. The flexible calculator existed and was tested, but the app never used it. The per-diaphragm `DiaphragmType` is still saved, but nothing reads it.
+- **Project setting** `DesignSettings.Diaphragm` (Rigid / Flexible / Envelope):
+  - It's chosen in **Diaphragm:** on the Design tab, and the tooltip explains each choice.
+  - It's saved with the project's design settings. Older projects open as Rigid, the way they were calculated.
+  - The program does not classify the diaphragm; the engineer chooses.
+- **Envelope** (`ShearWallCalculator_Envelope`):
+  - It runs both calculations on the same walls, diaphragm and loads, and each wall gets the larger shear.
+  - The governing case is labelled, e.g. "Case 2 (flexible)", and `Governs` records which run gave each wall's shear.
+  - The range (most + / most −) covers both runs.
+  - Multi-story, the rigid run of a level carries the rigid reactions of the level above and the flexible run the flexible ones. This makes two whole-building analyses, enveloped wall by wall.
+- **Switching kinds:** `DiaphragmAnalysis.Ensure` turns a level's calculator into the chosen kind and keeps its walls, diaphragms, loads and settings. This happens on opening (`ShearWallAdapter.ToCalculators`) and when the setting changes.
+- **Calculations tab:**
+  - With the envelope, the summary says how many walls each run governs.
+  - The all-cases table adds Rigid V and Flexible V columns (the governing one in bold).
+  - Every case of both runs can be picked: "Case (rigid)" or "Case (flexible)".
+- **Report:** a rigid-vs-flexible table per wall, then both calculation sheets.
+- **Tests:** `EnvelopeDiaphragmTests` (4), against the stand-alone rigid and flexible calculations:
+  - wall by wall, the envelope takes the larger of the two;
+  - switching kinds keeps the data;
+  - two stories, each run carries its own reactions down;
+  - the setting is saved in the model.
+  - SWC 175/175.
+
+## 2026-11-02 — Fail and close-to-limit colours made distinct (SWC)
+
+- Fail was vermilion and close was amber, which looked nearly the same. Fail is now a dark crimson (stripe `#C8102E`) and close a light golden yellow (stripe `#F2C200`). They differ in hue and lightness, and fails stay dashed.
+- The plan pens and the status-line error ink read the brushes in `Controls/Ui.cs` (one place for the colours).
+
 ## 2026-11-02 — Plans under the levels belong to the building model only (SWC + BuildingModel)
 
 - **One plan system**, in `BuildingModel.Sketch`: `PlanImage` (DXF, PDF page, picture; scale, rotation, position, opacity, lock), drawn by the sketch, with snaps to CAD linework.

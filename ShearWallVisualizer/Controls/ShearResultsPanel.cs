@@ -93,8 +93,16 @@ namespace ShearWallVisualizer.Controls
 
         private bool Rigid => calc is ShearWallCalculator_RigidDiaphragm;
 
+        /// <summary>Envelope: both runs; their cases are listed as "Case (rigid)" and "Case (flexible)".</summary>
+        private ShearWallCalculator_Envelope Env => calc as ShearWallCalculator_Envelope;
+
+        private ShearWallCalculator_RigidDiaphragm RigidRun => calc as ShearWallCalculator_RigidDiaphragm ?? Env?.Rigid;
+        private ShearWallCalculator_FlexibleDiaphragm FlexibleRun => calc as ShearWallCalculator_FlexibleDiaphragm ?? Env?.Flexible;
+
         private IEnumerable<string> CaseNames() =>
-            calc is ShearWallCalculator_RigidDiaphragm r ? r.CaseResults.Select(c => c.Name)
+            Env != null ? Env.Rigid.CaseResults.Select(c => ShearWallCalculator_Envelope.Tagged(c.Name, ShearWallCalculator_Envelope.RigidTag))
+                             .Concat(Env.Flexible.CaseResults.Select(c => ShearWallCalculator_Envelope.Tagged(c.Name, ShearWallCalculator_Envelope.FlexibleTag)))
+            : calc is ShearWallCalculator_RigidDiaphragm r ? r.CaseResults.Select(c => c.Name)
             : calc is ShearWallCalculator_FlexibleDiaphragm f ? f.CaseResults.Select(c => c.Name)
             : Enumerable.Empty<string>();
 
@@ -105,26 +113,27 @@ namespace ShearWallVisualizer.Controls
             var strip = new WrapPanel();
             var ws = calc._wall_system;
             var ds = calc._diaphragm_system;
-            int cases = CaseNames().Count();
-            strip.Children.Add(Ui.Figure("Diaphragm", Rigid ? "Rigid" : "Flexible",
-                Rigid ? "Load shared by wall rigidity, plus torsion about the center of rigidity" : "Each wall line takes its tributary load, plus torsion by equivalent tributary weights"));
+            int cases = Env != null ? Env.Rigid.CaseResults.Count : CaseNames().Count();
+            strip.Children.Add(Ui.Figure("Diaphragm", Env != null ? "Envelope" : Rigid ? "Rigid" : "Flexible",
+                Env != null ? $"Rigid and flexible both calculated; each wall takes the larger shear (rigid governs {Env.Governs.Count(g => g.Value == ShearWallCalculator_Envelope.RigidTag)} walls, flexible {Env.Governs.Count(g => g.Value == ShearWallCalculator_Envelope.FlexibleTag)})"
+                : Rigid ? "Load shared by wall rigidity, plus torsion about the center of rigidity" : "Each wall line takes its tributary load, plus torsion by equivalent tributary weights"));
             strip.Children.Add(Ui.Figure("Largest load", $"Vx {Ui.Num(calc.V_x, "0.0")} k,  Vy {Ui.Num(calc.V_y, "0.0")} k",
                 $"{cases} load case{(cases == 1 ? "" : "s")}; strength level"));
             strip.Children.Add(Ui.Figure("Center of mass", $"({Ui.Num(ds.CtrMass.X, "0.0")}, {Ui.Num(ds.CtrMass.Y, "0.0")}) ft", "Centroid of the diaphragm areas; the load acts here"));
-            if (Rigid)
+            if (RigidRun != null)
             {
                 strip.Children.Add(Ui.Figure("Center of rigidity", $"({Ui.Num(ws.CtrRigidity.X, "0.0")}, {Ui.Num(ws.CtrRigidity.Y, "0.0")}) ft", "Σ k·x / Σ k of the N-S walls, Σ k·y / Σ k of the E-W walls"));
                 strip.Children.Add(Ui.Figure("Σ k (E-W, N-S)", $"{Ui.Num(ws.TotalRigidity_X, "0.00")},  {Ui.Num(ws.TotalRigidity_Y, "0.00")}", "Total rigidity of the walls in each direction"));
                 strip.Children.Add(Ui.Figure("J", $"{Ui.Num(ws.InertiaPolar, "0")} ft²", "Polar moment of the wall rigidities about the center of rigidity, Σ k·d²"));
             }
-            else
+            if (FlexibleRun != null)
             {
-                var f = (ShearWallCalculator_FlexibleDiaphragm)calc;
+                var f = FlexibleRun;
                 strip.Children.Add(Ui.Figure("Wall lines (E-W, N-S)", $"{f.LinesX.Count},  {f.LinesY.Count}"));
             }
             top.Children.Add(Ui.Card(strip, new Thickness(0, 0, 0, 0)));
 
-            if (calc is ShearWallCalculator_FlexibleDiaphragm flex)
+            if (FlexibleRun is ShearWallCalculator_FlexibleDiaphragm flex)
                 foreach (var w in flex.Warnings.Distinct())
                     top.Children.Add(new Border { Margin = new Thickness(0, 8, 0, 0), Child = Ui.Banner(w, warning: true) });
             foreach (var n in Notes ?? new List<string>())
@@ -139,7 +148,14 @@ namespace ShearWallVisualizer.Controls
             tables.RowDefinitions.Clear();
             string name = cbCase.SelectedItem as string;
             if (name == null || name == EnvelopeName) { Envelope(); return; }
-            if (calc is ShearWallCalculator_RigidDiaphragm r) RigidCase(r.CaseResults.First(c => c.Name == name));
+            if (Env != null)
+            {
+                var rc = Env.Rigid.CaseResults.FirstOrDefault(c => ShearWallCalculator_Envelope.Tagged(c.Name, ShearWallCalculator_Envelope.RigidTag) == name);
+                if (rc != null) { RigidCase(rc); return; }
+                var fc = Env.Flexible.CaseResults.FirstOrDefault(c => ShearWallCalculator_Envelope.Tagged(c.Name, ShearWallCalculator_Envelope.FlexibleTag) == name);
+                if (fc != null) FlexibleCase(fc);
+            }
+            else if (calc is ShearWallCalculator_RigidDiaphragm r) RigidCase(r.CaseResults.First(c => c.Name == name));
             else if (calc is ShearWallCalculator_FlexibleDiaphragm f) FlexibleCase(f.CaseResults.First(c => c.Name == name));
         }
 
@@ -166,13 +182,23 @@ namespace ShearWallVisualizer.Controls
 
         private void Envelope()
         {
+            var env = Env;
             tbCaseInfo.Text = "Per wall, the most positive and most negative shear over every case. The design shear is the larger magnitude. " +
+                              (env != null ? "Envelope: over the cases of both the rigid and the flexible calculation; each case says which. " : "") +
                               "Signs: the wall's force on the diaphragm (x right, y up).";
-            wallTable = NewWallTable(envelopeSort,
+            var columns = new List<(string, double, string)>
+            {
                 ("Wall", 44, ""), ("Dir", 40, ""), ("L (ft)", 52, "Wall length"), ("k", 54, "Relative rigidity"),
                 ("Most + (k)", 70, "Most positive shear over all cases"), ("Case", 150, ""),
                 ("Most − (k)", 70, "Most negative shear over all cases"), ("Case", 150, ""),
-                ("Design V (k)", 80, "max(|most +|, |most −|): goes to the Design tab"));
+            };
+            if (env != null)
+            {
+                columns.Add(("Rigid V (k)", 70, "The rigid-diaphragm design shear, max |V| over its cases"));
+                columns.Add(("Flexible V (k)", 80, "The flexible-diaphragm design shear, max |V| over its cases"));
+            }
+            columns.Add(("Design V (k)", 80, "max(|most +|, |most −|): goes to the Design tab"));
+            wallTable = NewWallTable(envelopeSort, columns.ToArray());
             foreach (var kv in Walls())
             {
                 int id = kv.Key;
@@ -188,6 +214,13 @@ namespace ShearWallVisualizer.Controls
                 wallTable.Text(r, c++, range?.MaxPositiveCase ?? "", id, Ui.InkSecondary, right: false, tip: range?.MaxPositiveCase);
                 wallTable.Text(r, c++, range == null ? "–" : Ui.Num(range.MaxNegative), id);
                 wallTable.Text(r, c++, range?.MaxNegativeCase ?? "", id, Ui.InkSecondary, right: false, tip: range?.MaxNegativeCase);
+                if (env != null)
+                {
+                    string Run(ShearWallCalculatorBase run) => run.WallShearRange.TryGetValue(id, out var x) ? Ui.Num(x.Design) : "–";
+                    bool rigidGoverns = env.Governs.TryGetValue(id, out var g) && g == ShearWallCalculator_Envelope.RigidTag;
+                    wallTable.Text(r, c++, Run(env.Rigid), id, bold: rigidGoverns);
+                    wallTable.Text(r, c++, Run(env.Flexible), id, bold: !rigidGoverns && g != null);
+                }
                 wallTable.Text(r, c++, range == null ? "–" : Ui.Num(range.Design), id, bold: true,
                     tip: range == null ? null : "Governing case: " + range.DesignCase);
                 AddDelete(wallTable, r, c, id);
@@ -196,9 +229,9 @@ namespace ShearWallVisualizer.Controls
         }
 
         /// <summary>Multi-story: the part of a case that comes from the walls of the level above (empty when none).</summary>
-        private string AboveText(string caseName)
+        private string AboveText(string caseName, ShearWallCalculatorBase run)
         {
-            var c = calc?.CasesToAnalyse().FirstOrDefault(x => x.Name == caseName);
+            var c = (run ?? calc)?.CasesToAnalyse().FirstOrDefault(x => x.Name == caseName);
             if (c == null || (c.AboveVx == 0 && c.AboveVy == 0 && c.AboveMt == 0)) return "";
             return $".   From the level above (its walls standing on this floor): Vx {Ui.Num(c.AboveVx)} k,  Vy {Ui.Num(c.AboveVy)} k,  Mt {Ui.Num(c.AboveMt, "0.0")} k·ft about the center of mass";
         }
@@ -206,7 +239,7 @@ namespace ShearWallVisualizer.Controls
         private void RigidCase(RigidCaseResult rc)
         {
             tbCaseInfo.Text = $"Vx {Ui.Num(rc.Vx)} k,  Vy {Ui.Num(rc.Vy)} k,  Mt {Ui.Num(rc.Mt, "0.0")} k·ft,  e = ({Ui.Num(rc.EccX)}, {Ui.Num(rc.EccY)}) ft,  " +
-                              $"Mt,comb = Vx·ey − Vy·ex + Mt = {Ui.Num(rc.MtComb, "0.0")} k·ft" + AboveText(rc.Name);
+                              $"Mt,comb = Vx·ey − Vy·ex + Mt = {Ui.Num(rc.MtComb, "0.0")} k·ft" + AboveText(rc.Name, RigidRun);
             var ws = calc._wall_system;
             wallTable = NewWallTable(caseSort,
                 ("Wall", 44, ""), ("Dir", 40, ""), ("k", 54, "Relative rigidity"),
@@ -233,7 +266,7 @@ namespace ShearWallVisualizer.Controls
         private void FlexibleCase(FlexibleCaseResult fc)
         {
             tbCaseInfo.Text = $"Vx {Ui.Num(fc.Vx)} k,  Vy {Ui.Num(fc.Vy)} k,  Mt {Ui.Num(fc.Mt, "0.0")} k·ft" +
-                              (fc.TorsionApplied ? $",  torsion center ({Ui.Num(fc.CenterX, "0.0")}, {Ui.Num(fc.CenterY, "0.0")}) ft,  J = Σ K·d² = {Ui.Num(fc.J, "0.0")} ft²" : "") + AboveText(fc.Name);
+                              (fc.TorsionApplied ? $",  torsion center ({Ui.Num(fc.CenterX, "0.0")}, {Ui.Num(fc.CenterY, "0.0")}) ft,  J = Σ K·d² = {Ui.Num(fc.J, "0.0")} ft²" : "") + AboveText(fc.Name, FlexibleRun);
 
             var lines = new UiTable(linesSort,
                 ("Line", 40, ""), ("Dir", 40, ""), ("At (ft)", 56, "Line position across the load: y for E-W lines, x for N-S lines"),

@@ -37,9 +37,25 @@ namespace ShearWallCalculator.Design
             (Seismic == SthdSeismic.WindAndSdcAB ? "Wind and SDC A&B" : "SDC C–F");
     }
 
+    /// <summary>
+    /// How the diaphragms carry the load to the shear walls (one choice for the whole project). The engineer decides which
+    /// idealization applies (ASCE 7 and SDPWS give the conditions); the program does not classify the diaphragm. Envelope
+    /// designs each wall for the worse of the two, a common choice when the diaphragm is neither clearly rigid nor clearly
+    /// flexible.
+    /// </summary>
+    public enum DiaphragmAssumption
+    {
+        Rigid = 0,     // load shared by wall rigidity, plus torsion about the center of rigidity
+        Flexible = 1,  // each wall line takes its tributary load (simple spans), plus torsion by equivalent tributary weights
+        Envelope = 2,  // both; each wall takes the larger shear
+    }
+
     /// <summary>Settings for the whole project.</summary>
     public class DesignSettings
     {
+        /// <summary>Rigid, flexible or the envelope of both (projects saved before this setting: rigid, as they were calculated).</summary>
+        public DiaphragmAssumption Diaphragm { get; set; } = DiaphragmAssumption.Rigid;
+
         public DesignMethods Method { get; set; } = DesignMethods.ASD;
         public SdpwsEditions Edition { get; set; } = SdpwsEditions.SDPWS_2021;
 

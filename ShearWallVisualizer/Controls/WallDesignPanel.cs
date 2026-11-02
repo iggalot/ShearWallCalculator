@@ -84,6 +84,14 @@ namespace ShearWallVisualizer.Controls
         private readonly RadioButton rbAsd = new RadioButton { Content = "ASD (0.6W)", Margin = new Thickness(0, 0, 12, 0), VerticalAlignment = VerticalAlignment.Center };
         private readonly RadioButton rbLrfd = new RadioButton { Content = "LRFD (1.0W)", Margin = new Thickness(0, 0, 20, 0), VerticalAlignment = VerticalAlignment.Center };
         private readonly ComboBox cbEdition = new ComboBox { Width = 130, Margin = new Thickness(0, 0, 20, 0) };
+        private readonly ComboBox cbDiaphragm = new ComboBox
+        {
+            Width = 190, Margin = new Thickness(0, 0, 20, 0),
+            ToolTip = "How the floor and roof diaphragms share the wind among the shear walls (one choice for the project; you decide which applies).\n" +
+                      "Rigid: by wall rigidity, plus torsion about the center of rigidity.\n" +
+                      "Flexible: each wall line takes its tributary load, plus torsion by equivalent tributary weights.\n" +
+                      "Envelope: both, and each wall is designed for the larger shear.",
+        };
         private readonly Button btnAuto = new Button { Content = "Auto-select nailing (all walls)", Padding = new Thickness(10, 3, 10, 3) };
         private readonly Button btnSthd = new Button { Padding = new Thickness(8, 2, 8, 2), Margin = new Thickness(0, 0, 20, 0), VerticalAlignment = VerticalAlignment.Center };
         private readonly ComboBox cbPool = new ComboBox { Width = 150, Margin = new Thickness(0, 0, 20, 0), ToolTip = "Standard list: only the hold-downs checked as company standard in View > Hold-down catalog. Full catalog: every option." };
@@ -131,6 +139,9 @@ namespace ShearWallVisualizer.Controls
             rbAsd.Checked += (s, e) => SettingsChanged();
             rbLrfd.Checked += (s, e) => SettingsChanged();
             cbEdition.SelectionChanged += (s, e) => SettingsChanged();
+            foreach (DiaphragmAssumption k in new[] { DiaphragmAssumption.Rigid, DiaphragmAssumption.Flexible, DiaphragmAssumption.Envelope })
+                cbDiaphragm.Items.Add(new ComboBoxItem { Content = DiaphragmAnalysis.Name(k), Tag = k });
+            cbDiaphragm.SelectionChanged += (s, e) => SettingsChanged();
             cbPool.Items.Add("Full catalog");
             cbPool.Items.Add("Standard list");
             cbPool.SelectionChanged += (s, e) => SettingsChanged();
@@ -146,6 +157,8 @@ namespace ShearWallVisualizer.Controls
             var bar = new WrapPanel { Margin = new Thickness(0, 0, 0, 2) };
             bar.Children.Add(Label("Floors:"));
             bar.Children.Add(cbFloors);
+            bar.Children.Add(Label("Diaphragm:"));
+            bar.Children.Add(cbDiaphragm);
             bar.Children.Add(Label("Design method:"));
             bar.Children.Add(rbAsd);
             bar.Children.Add(rbLrfd);
@@ -274,6 +287,7 @@ namespace ShearWallVisualizer.Controls
             var settings = calc?.DesignSettings ?? new DesignSettings();
             (settings.Method == DesignMethods.LRFD ? rbLrfd : rbAsd).IsChecked = true;
             cbEdition.SelectedItem = cbEdition.Items.OfType<ComboBoxItem>().First(i => (SdpwsEditions)i.Tag == settings.Edition);
+            cbDiaphragm.SelectedItem = cbDiaphragm.Items.OfType<ComboBoxItem>().First(i => (DiaphragmAssumption)i.Tag == settings.Diaphragm);
             int listed = designer?.StandardList.Count ?? 0;
             cbPool.Items[1] = $"Standard list ({listed})";
             cbPool.SelectedIndex = settings.HoldownsFromStandardList ? 1 : 0;
@@ -284,7 +298,9 @@ namespace ShearWallVisualizer.Controls
                           (settings.Method == DesignMethods.ASD ? "ASD: walls get 0.6W, capacity = nominal / 2.0. " : "LRFD: walls get 1.0W, capacity = 0.80 × nominal. ") +
                           "Hold-downs are always checked at ASD (0.6W) against Simpson allowable loads. Sheathing from SDPWS Tables 4.3A, 4.3B and 4.3C, " +
                           "one or two faces (different materials: the larger of the stronger face and 2 × the weaker, never added); each drawn wall is one full-height segment. " +
-                          (shown.Any(s => s.Calculator is ShearWallCalculator_FlexibleDiaphragm)
+                          (shown.Any(s => s.Calculator is ShearWallCalculator_Envelope)
+                              ? "Envelope: each wall is designed for the larger of its rigid-diaphragm shear (by wall rigidity, plus torsion) and its flexible-diaphragm shear (tributary to its wall line, plus torsion); the governing case says which. "
+                          : shown.Any(s => s.Calculator is ShearWallCalculator_FlexibleDiaphragm)
                               ? "Flexible diaphragm: each wall line takes its tributary load, plus the case torsion by equivalent tributary weights, split among its walls by rigidity. "
                               : "Rigid diaphragm: load shared by wall rigidity, plus torsion. ") + SdpwsSource.TableSource;
 
@@ -617,6 +633,7 @@ namespace ShearWallVisualizer.Controls
                 calc.DesignSettings = calc.DesignSettings ?? new DesignSettings();
                 calc.DesignSettings.Method = rbLrfd.IsChecked == true ? DesignMethods.LRFD : DesignMethods.ASD;
                 if (cbEdition.SelectedItem is ComboBoxItem item) calc.DesignSettings.Edition = (SdpwsEditions)item.Tag;
+                if (cbDiaphragm.SelectedItem is ComboBoxItem dItem) calc.DesignSettings.Diaphragm = (DiaphragmAssumption)dItem.Tag;
                 calc.DesignSettings.HoldownsFromStandardList = cbPool.SelectedIndex == 1;
             }
             DesignChanged?.Invoke(this, EventArgs.Empty);

@@ -39,6 +39,30 @@ namespace ShearWallVisualizer
         {
             if (settings == null) return;
             foreach (var l in levels) l.DesignSettings = settings;
+            ApplyDiaphragmAssumption(settings.Diaphragm);
+        }
+
+        /// <summary>
+        /// Rigid, flexible or envelope (the project setting): a level whose calculator is of another kind gets one of the right
+        /// kind with the same walls, diaphragms and loads, everywhere the level's calculator is kept.
+        /// </summary>
+        private void ApplyDiaphragmAssumption(ShearWallCalculator.Design.DiaphragmAssumption kind)
+        {
+            bool changed = false;
+            for (int i = 0; i < levels.Count; i++)
+            {
+                var now = ShearWallCalculator.DiaphragmAnalysis.Ensure(levels[i], kind);
+                if (ReferenceEquals(now, levels[i])) continue;
+                changed = true;
+                if (ReferenceEquals(Calculator, levels[i])) Calculator = now;
+                levels[i] = now;
+                if (i < stories.Count)
+                {
+                    stories[i].Calculator = now;
+                    calcByLevel[stories[i].Level.Id] = now;
+                }
+            }
+            if (changed) Log.Info("Shear walls", $"Diaphragm: {ShearWallCalculator.DiaphragmAnalysis.Name(kind)} for every level.");
         }
 
         /// <summary>Shows and edits story <paramref name="i"/> (0 = the first story).</summary>

@@ -110,7 +110,7 @@ namespace ShearWallCalculator.ModelAdapter
 
         /// <summary>
         /// Puts the model into the designer's calculators, one per story (reusing <paramref name="existing"/> in order,
-        /// so their loads and plan images stay; new ones are rigid-diaphragm calculators). The walls and diaphragms of
+        /// so their loads stay; each is made rigid, flexible or the envelope as the project settings say, DesignSettings.Diaphragm). The walls and diaphragms of
         /// each are replaced from the model. Returns the stories, bottom up.
         /// </summary>
         public static List<StoryMap> ToCalculators(Building b, IList<ShearWallCalculatorBase> existing = null)
@@ -121,7 +121,7 @@ namespace ShearWallCalculator.ModelAdapter
             for (int i = 0; i < levels.Count; i++)
             {
                 var level = levels[i];
-                var calc = existing != null && i < existing.Count && existing[i] != null ? existing[i] : new ShearWallCalculator_RigidDiaphragm();
+                var calc = DiaphragmAnalysis.Ensure(existing != null && i < existing.Count && existing[i] != null ? existing[i] : DiaphragmAnalysis.Create(settings.Diaphragm), settings.Diaphragm);
                 calc.DesignSettings = settings;
                 var map = new StoryMap { Level = level, Calculator = calc, PlateHeight = b.StoryHeight(level) };
                 Fill(b, map);
