@@ -91,6 +91,7 @@ namespace ShearWallVisualizer
                 DrawDebug(e.Context);
             };
             s.WallStyle = DesignPen;
+            s.ExtraSnapPoints = HoldownSnapPoints;
             s.LevelCaption = LevelCaption;
             s.Escaped += (o, e) =>
             {

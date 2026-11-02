@@ -2,6 +2,25 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-02 — Columns follow their supports; point snaps; beam/column crossings (BuildingModel 9d3fa65, SWC)
+
+- **One member.** A column is a single member from its base level to its top level.
+- **Automatic base** (the default):
+  - On every edit, a beam or wall drawn across its path trims it to stand there.
+  - Deleting or moving its support runs it down again, to the next support or the foundation.
+  - The status line says so, and Ctrl+Z undoes the edit and the trim together.
+- **Base set by hand** (`Column.BaseFixed`):
+  - Set from the right-click menu: **Run through to the foundation**, or **Stand on ▸ level**. The properties panel also has the checkbox and the Base list.
+  - The column then stays as set: a post that runs through, or one that stops where the engineer says. **Base: stands on what is under it** returns it to automatic.
+- **Warnings.** Selecting either one in the issue list selects both members and shows the level.
+  - `BeamCrossesColumn`: a column runs past a beam through it, so they are not connected.
+  - `BeamMissesColumn`: a beam passes within 1 ft of a column that reaches its level, but outside the 0.25 ft bearing tolerance.
+- **Point snaps** (ranked first):
+  - Column centres, including those of the story below.
+  - Beam ends.
+  - In SWC, the hold-down points of the level shown: from above, beam ends, column bases, the story's own, and the foundation anchors.
+- **Tests:** 4 more in `BeamColumnTests`. Totals: BuildingModel 70, Sketch 57, SWC 180.
+
 ## 2026-11-02 — The hold-down load path: beams, columns, and what each hold-down type can anchor to
 
 - **Building model** (BuildingModel dae5aff, 9174418):

@@ -150,6 +150,27 @@ namespace ShearWallVisualizer
             ctx.DrawText(ft, at);
         }
 
+        /// <summary>
+        /// The hold-down points to snap to on the level shown (a column under one, a beam end on one): those landing here from the
+        /// story above, with the beam ends and column bases, and this story's own hold-downs; in the foundation view, the anchors.
+        /// </summary>
+        private IEnumerable<BuildingModel.Edits.SnapPoint> HoldownSnapPoints()
+        {
+            var list = new List<BuildingModel.Edits.SnapPoint>();
+            BuildingModel.Edits.SnapPoint P(HoldownLanding l)
+            {
+                var from = l.UpperStory - 1 >= 0 && l.UpperStory - 1 < stories.Count ? stories[l.UpperStory - 1] : null;
+                string wall = from != null && from.Walls.TryGetValue(l.WallId, out var id) ? id : $"W{l.WallId}";
+                string label = l.Kind == PathPointKind.WallHoldown ? $"Hold-down {wall}" : l.From;
+                return new BuildingModel.Edits.SnapPoint(new BuildingModel.Geometry.Point2(l.At.X, l.At.Y), label);
+            }
+            if (foundationView) { list.AddRange(foundationAnchors.Select(P)); return list; }
+            if (landingsOnto.TryGetValue(currentLevel, out var onto)) list.AddRange(onto.Select(P));
+            var own = currentLevel == 0 ? foundationAnchors : landingsOnto.TryGetValue(currentLevel - 1, out var below) ? below : null;
+            if (own != null) list.AddRange(own.Where(l => l.Kind == PathPointKind.WallHoldown && l.UpperStory == currentLevel + 1).Select(P));
+            return list;
+        }
+
         /// <summary>The caption of the foundation view.</summary>
         private string FoundationCaption()
         {
