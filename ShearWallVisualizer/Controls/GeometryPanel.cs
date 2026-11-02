@@ -98,30 +98,25 @@ namespace ShearWallVisualizer.Controls
             FontSize = 12;
             Background = Ui.Surface;
 
-            var left = new DockPanel { Margin = new Thickness(0, 0, 14, 0) };
-            DockPanel.SetDock(tbWallsTitle, Dock.Top);
-            left.Children.Add(tbWallsTitle);
-            left.Children.Add(wallsHost);
-
-            // the right column: the diaphragms, then the beams and the columns (each table takes its share)
-            var right = new Grid();
-            foreach (var (title, host) in new (TextBlock, Grid)[] { (tbDiaphragmsTitle, diaphragmsHost), (tbBeamsTitle, beamsHost), (tbColumnsTitle, columnsHost) })
+            // the four tables one under the other, each its full height, in one scroll: they fit any window width
+            var stack = new StackPanel { Orientation = Orientation.Vertical };
+            foreach (var (title, host) in new (TextBlock, Grid)[] { (tbWallsTitle, wallsHost), (tbDiaphragmsTitle, diaphragmsHost), (tbBeamsTitle, beamsHost), (tbColumnsTitle, columnsHost) })
             {
-                right.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-                right.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-                Grid.SetRow(title, right.RowDefinitions.Count - 2);
-                Grid.SetRow(host, right.RowDefinitions.Count - 1);
-                host.Margin = new Thickness(0, 0, 0, 10);
-                right.Children.Add(title);
-                right.Children.Add(host);
+                host.Margin = new Thickness(0, 0, 0, 14);
+                host.HorizontalAlignment = HorizontalAlignment.Left;
+                stack.Children.Add(title);
+                stack.Children.Add(host);
             }
-
-            var columns = new Grid();
-            columns.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            columns.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            Grid.SetColumn(right, 1);
-            columns.Children.Add(left);
-            columns.Children.Add(right);
+            var columns = new ScrollViewer
+            {
+                Content = stack, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+            };
+            // the tables' own scroll boxes never need to scroll here (they get their full height): the wheel scrolls the page
+            columns.PreviewMouseWheel += (s, e) =>
+            {
+                columns.ScrollToVerticalOffset(columns.VerticalOffset - e.Delta / 3.0);
+                e.Handled = true;
+            };
 
             var note = Ui.Note("Every member of the building, on every level. Click a column header to sort (Level sorts bottom to top). " +
                                "Coordinates in feet from the drawing origin (x to the right, y up): type a wall's or diaphragm's value and press Enter; " +
