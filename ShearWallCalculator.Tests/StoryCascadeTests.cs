@@ -210,6 +210,19 @@ namespace ShearWallCalculator.Tests
             Assert.AreEqual(0, ShearWallCalculator.Interfaces.ProjectSerializer.Read(ShearWallCalculator.Interfaces.ProjectSerializer.ToJson(floor, null, true)).UpperLevels.Count, "one story: no upper levels");
         }
 
+        /// <summary>The story plate heights are saved with the building and come back (the eave is their sum).</summary>
+        [TestMethod]
+        public void ProjectFile_KeepsThePlateHeights()
+        {
+            var b = new ASCE7WindLoadCalculator.BuildingData { BuildingLength = 40, BuildingWidth = 30, NumberOfStories = 2, PlateHeights = new List<double> { 10, 9 } };
+            var wind = ShearWallCalculator.Interfaces.WindInputs.From(ASCE7WindLoadCalculator.ASCE7_Versions.ASCE_VER_7_22, new ASCE7WindLoadCalculator.WindParameters_Base(), b, false, null, null);
+            var read = ShearWallCalculator.Interfaces.ProjectSerializer.Read(ShearWallCalculator.Interfaces.ProjectSerializer.ToJson(Level(Box), wind, true, new[] { Level(Box) }));
+            var back = read.Wind.ToBuilding();
+            Assert.AreEqual(2, back.NumberOfStories);
+            CollectionAssert.AreEqual(new[] { 10.0, 9.0 }, back.StoryPlateHeights);
+            Assert.AreEqual(19, back.BuildingHeight, 1e-12);
+        }
+
         [TestMethod]
         public void EmptyOrUnfinishedUpperLevel_LevelOneAsBefore()
         {
@@ -315,6 +328,55 @@ namespace ShearWallCalculator.Tests
             var r = Designer.Check(1, wall, 0.0, null, new Design.DesignSettings(), new Design.WallDesignInputs { DeadLoad = 100 }, forces);
             Assert.AreEqual(0.0, r.OwnTensionAsd, Tol, "no shear of its own");
             Assert.AreEqual(System.Math.Max(0, (1000 * (10 - r.PostAlongWall / 24 - 0.125) - 1000 * System.Math.Max(0, 10 - r.PostAlongWall / 24 - 9.875)) / r.HoldownArm - 0.6 * 100 * 10 / 2), r.TensionAsd, 1e-6);
+        }
+
+        // ------------------------------------------------------------------ adding and deleting floors
+
+        [TestMethod]
+        public void FloorEdits_PlateHeights()
+        {
+            CollectionAssert.AreEqual(new[] { 10.0, 9.0, 8.0 }, FloorEdits.PlatesAfterAdd(new[] { 10.0, 9.0 }, 8));
+            CollectionAssert.AreEqual(new[] { 10.0, 8.0 }, FloorEdits.PlatesAfterDelete(new[] { 10.0, 9.0, 8.0 }, 1), "the stories above keep their heights");
+            CollectionAssert.AreEqual(new[] { 10.0 }, FloorEdits.PlatesAfterDelete(new[] { 10.0 }, 4), "out of range: unchanged");
+        }
+
+        /// <summary>Deleting the middle floor of three: level 3 becomes level 2 and stands on level 1; the cascade still runs.</summary>
+        [TestMethod]
+        public void FloorEdits_DeleteMiddleFloor_UpperMovesDown()
+        {
+            var l1 = Level(Box); var l2 = Level(Box); var l3 = Level((0, 0, 20, 0), (0, 30, 40, 30), (0, 0, 0, 30), (40, 0, 40, 30));
+            var levels = new List<ShearWallCalculatorBase> { l1, l2, l3 };
+            var lines = FloorEdits.DeleteConsequences(levels, 1, new[] { 10.0, 9.0, 8.0 });
+            Assert.IsTrue(lines.Any(l => l.Contains("Level 3 becomes level 2")));
+            Assert.IsTrue(lines.Any(l => l.Contains("eave drops from 27 to 18 ft")));
+            Assert.IsTrue(lines.Any(l => l.Contains("stands on a wall of level 1")), string.Join("; ", lines));
+            FloorEdits.Delete(levels, 1);
+            Assert.AreEqual(2, levels.Count);
+            Assert.AreSame(l3, levels[1]);
+            l3.SetLoadCases(new[] { new LateralLoadCase("W", 10, 0) });
+            l1.SetLoadCases(new[] { new LateralLoadCase("W", 8, 0) });
+            StoryCascade.Analyze(levels);
+            Assert.AreEqual(18, l1.CaseResults.Single().Vx, 1e-6, "level 1 carries the moved-down level");
+        }
+
+        /// <summary>Deleting level 1 under an upper floor: it lands on the foundation; deleting the top: the floor below becomes the roof.</summary>
+        [TestMethod]
+        public void FloorEdits_DeleteBottomOrTop_SaysWhatHappens()
+        {
+            var levels = new List<ShearWallCalculatorBase> { Level(Box), Level((5, 0, 15, 0)) };
+            Assert.IsTrue(FloorEdits.DeleteConsequences(levels, 0, null).Any(l => l.Contains("foundation")));
+            Assert.IsTrue(FloorEdits.DeleteConsequences(levels, 1, null).Any(l => l.Contains("becomes the roof")));
+            var three = new List<ShearWallCalculatorBase> { Level(Box), Level((5, 0, 15, 0)), Level((5, 10, 15, 10)) };
+            Assert.IsTrue(FloorEdits.DeleteConsequences(three, 1, null).Any(l => l.Contains("1 wall of level 3 will have no wall under it")));
+        }
+
+        [TestMethod]
+        public void FloorEdits_TheOnlyFloorIsClearedNotDeleted()
+        {
+            var only = new List<ShearWallCalculatorBase> { Level(Box) };
+            Assert.Throws<System.InvalidOperationException>(() => FloorEdits.Delete(only, 0));
+            Assert.AreEqual(5, FloorEdits.Clear(only[0]));
+            Assert.AreEqual(0, only[0]._wall_system._walls.Count);
         }
     }
 }

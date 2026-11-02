@@ -127,7 +127,6 @@ namespace ShearWallVisualizer
         private void UpdateLevelButtons()
         {
             if (levelGroup == null) return;
-            levelGroup.Visibility = levels.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
             var buttons = new[] { btnLevel1, btnLevel2, btnLevel3 };
             for (int k = 0; k < buttons.Length; k++)
             {
@@ -137,7 +136,15 @@ namespace ShearWallVisualizer
                 buttons[k].ToolTip = k < levels.Count ? $"Show and edit {LevelName(k)}: the walls of story {k + 1} and the " +
                                                         (k == levels.Count - 1 ? "roof" : $"floor over them") : null;
             }
-            btnCopyFromBelow.IsEnabled = currentLevel > 0;
+            miCopyFromBelow.IsEnabled = currentLevel > 0;
+            btnAddFloor.IsEnabled = levels.Count < FloorEdits.MaxFloors;
+            btnAddFloor.ToolTip = levels.Count < FloorEdits.MaxFloors
+                ? $"ADD FLOOR: level {levels.Count + 1} on top. Asks for its plate height (which sets the floor elevations and the eave), and can start from a copy of level {levels.Count}."
+                : $"This app handles up to {FloorEdits.MaxFloors} floors.";
+            btnDeleteFloor.ToolTip = levels.Count > 1
+                ? $"DELETE FLOOR: removes {LevelName(currentLevel)} with its walls and diaphragms" + (currentLevel < levels.Count - 1 ? "; the floors above move down one." : ".") + " You are told first what it does."
+                : "The building keeps one floor: this clears level 1 (Ctrl+Z undoes it).";
+            UpdateLevelBanners();
         }
 
         /// <summary>Every level, roof first, each carrying the walls above it. Replaces a single calculation.</summary>
@@ -146,6 +153,15 @@ namespace ShearWallVisualizer
             if (levels.Count == 0 || !levels.Contains(Calculator)) SetLevels(new[] { Calculator });
             ShareDesignSettings(Calculator.DesignSettings); // an undo restores a copy of the settings on this level
             levelNotes = StoryCascade.Analyze(levels);
+            UpdateLevelBanners(); // the plate heights may have changed in the building inputs
+            // walls drawn before a plate height changed keep their own height: say so
+            var plates = PlateHeights();
+            for (int i = 0; i < levels.Count && i < plates.Count; i++)
+            {
+                int off = levels[i]._wall_system._walls.Values.Count(w => Math.Abs(w.WallHeight - plates[i]) > 0.01);
+                if (off > 0)
+                    levelNotes.Add($"Level {i + 1}: {off} wall{(off == 1 ? " is" : "s are")} not the story's {plates[i]:0.##} ft plate height (set each wall's height on the Walls & diaphragms tab).");
+            }
         }
 
         /// <summary>Linked wind: each level gets the wind on its strip of the building (mid-story to mid-story).</summary>
@@ -192,6 +208,150 @@ namespace ShearWallVisualizer
             var label = new FormattedText($"Level {currentLevel} below (gray)", CultureInfo.GetCultureInfo("en-us"), FlowDirection.LeftToRight,
                 new Typeface("Segoe UI"), 12, Brushes.Gray, VisualTreeHelper.GetDpi(this).PixelsPerDip);
             ctx.DrawText(label, new Point(8, m_layers.ActualHeight - 22));
+        }
+
+        // ------------------------------------------------------------------ add and delete floors
+
+        /// <summary>The plate height of each story in use, bottom first (ft), from the building inputs.</summary>
+        private List<double> PlateHeights() =>
+            buildingData != null ? buildingData.StoryPlateHeights.ToList() : levels.Select(_ => defaultWallHeight).ToList();
+
+        /// <summary>The plate height of the level being drawn (ft): new walls get it.</summary>
+        private double CurrentPlateHeight()
+        {
+            var plates = PlateHeights();
+            double h = currentLevel < plates.Count ? plates[currentLevel] : defaultWallHeight;
+            return h > 0 ? h : defaultWallHeight;
+        }
+
+        /// <summary>The floors changed here: the building inputs get the new stories and plate heights, the wind is shared again.</summary>
+        private void ApplyFloors(List<double> plates)
+        {
+            if (buildingData != null)
+            {
+                buildingData.NumberOfStories = levels.Count;
+                buildingData.PlateHeights = plates;
+                SyncWindSetup();
+            }
+            histories.Keys.Where(k => !levels.Contains(k)).ToList().ForEach(k => histories.Remove(k));
+            RecalculateWind(); // re-sends the linked wind loads, one set per level
+            UpdateLevelButtons();
+            UpdateShearWallUI();
+        }
+
+        /// <summary>ADD FLOOR: a new top level, after asking for its plate height (and whether to copy the level below).</summary>
+        private void AddFloor_Click(object sender, RoutedEventArgs e)
+        {
+            if (levels.Count == 0 || !levels.Contains(Calculator)) SetLevels(new[] { Calculator });
+            if (levels.Count >= FloorEdits.MaxFloors)
+            {
+                MessageBox.Show(this, $"This app handles up to {FloorEdits.MaxFloors} floors.", "Add floor", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            var plates = PlateHeights();
+            var top = levels[levels.Count - 1];
+            bool topHasContent = top._wall_system._walls.Count + top._diaphragm_system._diaphragms.Count > 0;
+            var dialog = new Dialogs.AddFloorDialog(levels.Count + 1, plates.Sum(), plates.Count > 0 ? plates[plates.Count - 1] : defaultWallHeight, topHasContent) { Owner = this };
+            if (dialog.ShowDialog() != true) return;
+
+            var level = new ShearWallCalculator_RigidDiaphragm { DesignSettings = levels[0].DesignSettings };
+            levels.Add(level);
+            if (dialog.CopyBelow)
+            {
+                DrawingEdits.CopyFloor(top, level);
+                foreach (var w in level._wall_system._walls.Values) w.WallHeight = dialog.PlateHeight; // the new story's walls
+            }
+            ApplyFloors(FloorEdits.PlatesAfterAdd(plates, dialog.PlateHeight));
+            ShowLevel(levels.Count - 1);
+            ShowStatusMessage(LogLevel.Info, $"Added {LevelName(levels.Count - 1)}: floor at {plates.Sum():0.##} ft, plate height {dialog.PlateHeight:0.##} ft, eave {plates.Sum() + dialog.PlateHeight:0.##} ft." +
+                                             (dialog.CopyBelow ? $" Started from a copy of level {levels.Count - 1}." : " Draw its walls and diaphragm."));
+        }
+
+        /// <summary>
+        /// DELETE FLOOR: removes the level being shown, after saying what it does (the levels above move down onto the one
+        /// below, which may leave walls without a wall under them). The only floor is cleared instead.
+        /// </summary>
+        private void DeleteFloor_Click(object sender, RoutedEventArgs e)
+        {
+            if (levels.Count == 0 || !levels.Contains(Calculator)) SetLevels(new[] { Calculator });
+            int k = currentLevel;
+            if (levels.Count == 1)
+            {
+                int items = levels[0]._wall_system._walls.Count + levels[0]._diaphragm_system._diaphragms.Count;
+                if (items == 0) { ShowStatusMessage(LogLevel.Info, "Level 1 is already empty."); return; }
+                if (MessageBox.Show(this, $"The building keeps at least one floor. Clear level 1 instead ({items} walls and diaphragms)?\n\nCtrl+Z can undo the clearing.",
+                        "Delete floor", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+                ResetInputMode();
+                selectedKind = null;
+                selectedId = -1;
+                FloorEdits.Clear(levels[0]);
+                UpdateShearWallUI(); // recorded in the undo history
+                return;
+            }
+            var plates = PlateHeights();
+            var lines = FloorEdits.DeleteConsequences(levels, k, plates);
+            if (MessageBox.Show(this, $"Delete {LevelName(k)}?\n\n" + string.Join("\n", lines.Select(l => "• " + l)) + "\n\nThis cannot be undone (save first to keep a copy).",
+                    "Delete floor", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+
+            ResetInputMode();
+            selectedKind = null;
+            selectedId = -1;
+            selectionCardOpen = false;
+            string name = LevelName(k);
+            FloorEdits.Delete(levels, k);
+            currentLevel = Math.Min(k, levels.Count - 1);
+            Calculator = levels[currentLevel];
+            ImageForNewProject();
+            ApplyFloors(FloorEdits.PlatesAfterDelete(plates, k));
+            ShowLevel(currentLevel);
+            ShowStatusMessage(LogLevel.Info, $"Deleted {name}. Now {levels.Count} floor{(levels.Count == 1 ? "" : "s")}, eave {PlateHeights().Sum():0.##} ft; showing {LevelName(currentLevel)}.");
+        }
+
+        // ------------------------------------------------------------------ which level is shown
+
+        private readonly List<TextBlock> levelBanners = new List<TextBlock>();
+
+        /// <summary>The level-specific tabs (walls &amp; diaphragms, calculations, design) with a banner naming the level shown.</summary>
+        private UIElement WithLevelBanner(UIElement content)
+        {
+            var text = new TextBlock { FontSize = 14, FontWeight = FontWeights.SemiBold, Foreground = Brushes.White, TextTrimming = TextTrimming.CharacterEllipsis };
+            levelBanners.Add(text);
+            var banner = new Border { Background = new SolidColorBrush(Color.FromRgb(0x2A, 0x78, 0xD6)), Padding = new Thickness(10, 5, 10, 5), Child = text };
+            DockPanel.SetDock(banner, Dock.Top);
+            var dock = new DockPanel { LastChildFill = true };
+            dock.Children.Add(banner);
+            dock.Children.Add(content);
+            UpdateLevelBanners();
+            return dock;
+        }
+
+        /// <summary>"LEVEL 2 of 3 · story 2 walls and the floor over them · floor at 10 ft, plate 9 ft".</summary>
+        private string LevelDescription()
+        {
+            int n = Math.Max(1, levels.Count);
+            var plates = PlateHeights();
+            double floor = plates.Take(currentLevel).Sum();
+            string what = currentLevel == n - 1 ? "walls and the roof" : "walls and the floor over them";
+            string heights = currentLevel < plates.Count ? $" · on {(currentLevel == 0 ? "the foundation" : $"the floor at {floor:0.##} ft")}, plate {plates[currentLevel]:0.##} ft" : "";
+            return $"LEVEL {currentLevel + 1} of {n}{(currentLevel == n - 1 && n > 1 ? " (roof)" : "")} · story {currentLevel + 1} {what}{heights}";
+        }
+
+        private void UpdateLevelBanners()
+        {
+            string text = LevelDescription();
+            foreach (var t in levelBanners) t.Text = text;
+        }
+
+        /// <summary>The level on the drawing itself, top left.</summary>
+        private void DrawLevelTag(DrawingContext ctx)
+        {
+            if (levels.Count == 0) return;
+            var label = new FormattedText(levels.Count > 1 ? $"LEVEL {currentLevel + 1} of {levels.Count}{(currentLevel == levels.Count - 1 ? " (roof)" : "")}" : "LEVEL 1",
+                CultureInfo.GetCultureInfo("en-us"), FlowDirection.LeftToRight, new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal),
+                16, Brushes.White, VisualTreeHelper.GetDpi(this).PixelsPerDip);
+            var box = new Rect(8, 8, label.Width + 16, label.Height + 6);
+            ctx.DrawRoundedRectangle(new SolidColorBrush(Color.FromArgb(0xE0, 0x2A, 0x78, 0xD6)), null, box, 4, 4);
+            ctx.DrawText(label, new Point(16, 11));
         }
 
         // ------------------------------------------------------------------ show walls / diaphragms (separately)

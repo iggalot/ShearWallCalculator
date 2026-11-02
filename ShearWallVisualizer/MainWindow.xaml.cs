@@ -282,18 +282,18 @@ namespace ShearWallVisualizer
             geometryPanel.GeometryChanged += (s, e) => UpdateShearWallUI();
             geometryPanel.SelectionChanged += SelectFromTable;
             geometryPanel.DeleteRequested += DeleteFromTable;
-            tabDimensionsTabItem.Content = geometryPanel;
+            tabDimensionsTabItem.Content = WithLevelBanner(geometryPanel);
             resultsPanel = new ShearResultsPanel();
             resultsPanel.WallSelected += id => SelectFromTable("Wall", id);
             resultsPanel.WallDeleteRequested += id => DeleteFromTable("Wall", id);
-            tabCalculationsTabItem.Content = resultsPanel;
+            tabCalculationsTabItem.Content = WithLevelBanner(resultsPanel);
 
             designPanel = new WallDesignPanel();
             designPanel.DesignChanged += (s, e) => UpdateShearWallUI();
             designPanel.AutoSelectRequested += (s, e) => AutoSelectAllWalls();
             designPanel.WallSelected += id => SelectFromTable("Wall", id);
             designPanel.WallDeleteRequested += id => DeleteFromTable("Wall", id);
-            tabDesignTabItem.Content = designPanel;
+            tabDesignTabItem.Content = WithLevelBanner(designPanel);
         }
 
         /// <summary>Checks every wall for its governing shear (called after the wall calculations).</summary>
@@ -550,7 +550,7 @@ namespace ShearWallVisualizer
                 }
 
                 // a new wall starts with the project's default sheathing, if one was set in the Design tab
-                Calculator._wall_system.AddWall(new WallData(defaultWallHeight, startPoint.X, startPoint.Y, endPoint.X, endPoint.Y)
+                Calculator._wall_system.AddWall(new WallData(CurrentPlateHeight(), startPoint.X, startPoint.Y, endPoint.X, endPoint.Y)
                 {
                     Design = Calculator.DesignSettings?.NewWallDesign?.Clone(),
                 });
@@ -1071,6 +1071,8 @@ namespace ShearWallVisualizer
 
         private static readonly Pen SelectionHalo = FrozenPen(Color.FromArgb(0xB0, 0xFF, 0xB0, 0x20), 16); // picked on the drawing or in a table: a wide amber glow
         private static readonly Pen SelectionOutline = FrozenPen(Color.FromArgb(0xD0, 0xFF, 0xA0, 0x00), 6);
+        private static readonly Pen DiaphragmEdge = FrozenPen(Color.FromRgb(0x9A, 0x1B, 0x1B), 2);       // a diaphragm: the red of its fill, darker
+        private static readonly Pen DiaphragmSelected = FrozenPen(Color.FromRgb(0x6E, 0x0A, 0x0A), 5);   // a picked diaphragm: darker and wider still
 
         private static Pen FrozenPen(Color c, double thickness)
         {
@@ -1155,7 +1157,7 @@ namespace ShearWallVisualizer
 
                     SolidColorBrush rectFillBrush = new SolidColorBrush(Colors.Red);
                     rectFillBrush.Opacity = 0.5;
-                    Pen pen = new Pen(rectFillBrush, 1);
+                    Pen pen = DiaphragmEdge; // the fill's red, darker, so the outline reads over the fill
 
                     Point insertPoint_screen = new Point(p1_screen.X, p3_screen.Y);  // TODO: Need a better way to get P4 point of rectangle
 
@@ -1163,7 +1165,7 @@ namespace ShearWallVisualizer
                     double height = Math.Abs(p3_screen.Y - p1_screen.Y);
                     ctx.DrawRectangle(rectFillBrush, pen, new Rect(insertPoint_screen.X, insertPoint_screen.Y, width, height));
                     if (selectedKind == "Diaphragm" && selectedId == rect.Key)
-                        ctx.DrawRectangle(null, SelectionOutline, new Rect(insertPoint_screen.X, insertPoint_screen.Y, width, height));
+                        ctx.DrawRectangle(null, DiaphragmSelected, new Rect(insertPoint_screen.X, insertPoint_screen.Y, width, height));
 
                     Point center_world = new Point((rect.Value.P1.X + rect.Value.P3.X) / 2, (rect.Value.P1.Y + rect.Value.P3.Y) / 2);
                     Point center_screen = WorldToScreen(center_world, m_layers);
@@ -1190,6 +1192,7 @@ namespace ShearWallVisualizer
                     }
                 }
             }
+            DrawLevelTag(ctx); // which level is shown, top left
         }
 
         private void DrawDebug(DrawingContext ctx)

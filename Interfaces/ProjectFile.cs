@@ -67,6 +67,7 @@ namespace ShearWallCalculator.Interfaces
                 Width = b.BuildingWidth,
                 EaveHeight = b.BuildingHeight,
                 Stories = b.NumberOfStories,
+                PlateHeights = b.PlateHeights,
                 OverhangWidth = b.OverhangWidth,
                 ParapetHeight = b.ParapetHeight,
                 ParapetEnclosure = b.ParapetEnclosure,
@@ -99,6 +100,7 @@ namespace ShearWallCalculator.Interfaces
             BuildingWidth = Building.Width,
             BuildingHeight = Building.EaveHeight,
             NumberOfStories = Building.Stories,
+            PlateHeights = Building.PlateHeights,
             OverhangWidth = Building.OverhangWidth,
             ParapetHeight = Building.ParapetHeight,
             ParapetEnclosure = Building.ParapetEnclosure,
@@ -128,6 +130,8 @@ namespace ShearWallCalculator.Interfaces
 
         /// <summary>Stories (floors), 1 to 3; older files have none and open as one story.</summary>
         public int Stories { get; set; } = 1;
+        /// <summary>Each story's plate height, bottom first (ft); the eave height is their sum. Absent (null) in older files: the eave is split equally.</summary>
+        public List<double> PlateHeights { get; set; }
         /// <summary>Roof overhang beyond the wall face (ft); 0 for none (absent in older files).</summary>
         public double OverhangWidth { get; set; }
         /// <summary>Parapet height above a flat roof (ft); 0 for none (absent in older files).</summary>

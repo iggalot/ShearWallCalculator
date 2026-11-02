@@ -38,6 +38,10 @@
                 <MenuItem Header="_Move" Click="btnMove_Click" InputGestureText="M"/>
                 <MenuItem Header="_Copy" Click="btnCopy_Click" InputGestureText="C"/>
                 <MenuItem Header="_Delete" Click="Delete_Click" InputGestureText="Del"/>
+                <Separator/>
+                <MenuItem Header="_Add floor..." Click="AddFloor_Click"/>
+                <MenuItem Header="Delete this _floor..." Click="DeleteFloor_Click"/>
+                <MenuItem x:Name="miCopyFromBelow" Header="Copy the level _below onto this level" Click="CopyFromBelow_Click"/>
                 <MenuItem Header="Mea_sure distance" Click="btnMeasure_Click" InputGestureText="T"/>
                 <Separator/>
                 <MenuItem Header="_Ortho (move, copy, measure)" Click="btnOrtho_Click" InputGestureText="F8"/>
@@ -155,13 +159,15 @@
                 <DockPanel>
                     <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
                         <!-- Multi-story (Floors in the building inputs): which level the plan shows and edits -->
-                        <StackPanel x:Name="levelGroup" Orientation="Horizontal" Visibility="Collapsed">
+                        <StackPanel x:Name="levelGroup" Orientation="Horizontal">
                             <TextBlock Style="{StaticResource ToolGroup}" Text="LEVEL"/>
                             <Button x:Name="btnLevel1" Style="{StaticResource Tool}" Content="1" Padding="9,4" CommandParameter="1" Click="LevelButton_Click"/>
                             <Button x:Name="btnLevel2" Style="{StaticResource Tool}" Content="2" Padding="9,4" CommandParameter="2" Click="LevelButton_Click"/>
                             <Button x:Name="btnLevel3" Style="{StaticResource Tool}" Content="3" Padding="9,4" CommandParameter="3" Click="LevelButton_Click"/>
-                            <Button x:Name="btnCopyFromBelow" Style="{StaticResource Tool}" Content="Copy ↑" Click="CopyFromBelow_Click"
-                                    ToolTip="Copy every wall (with its design) and diaphragm of the level below onto this level, to start it. Ctrl+Z undoes it."/>
+                            <Button x:Name="btnAddFloor" Style="{StaticResource Tool}" Content="+ Floor" Click="AddFloor_Click"
+                                    ToolTip="ADD FLOOR: a new story on top (up to 3). Asks for its plate height (which sets the floor elevations and the eave), and can start from a copy of the floor below."/>
+                            <Button x:Name="btnDeleteFloor" Style="{StaticResource Tool}" Content="✕ Floor" Click="DeleteFloor_Click"
+                                    ToolTip="DELETE FLOOR: removes the level shown, with all its walls and diaphragms. The floors above move down one; you are told first what that does to the load path."/>
                             <Rectangle Style="{StaticResource ToolDivider}"/>
                         </StackPanel>
                         <TextBlock Style="{StaticResource ToolGroup}" Text="DRAW"/>
