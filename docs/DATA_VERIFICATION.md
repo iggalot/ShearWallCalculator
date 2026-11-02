@@ -98,3 +98,23 @@ See `AUDIT.md` for details:
 5. **Gypsum lath rows 24 and 25** (360 vs 200 plf): the difference between them looks large; check the values.
 6. **Two faces (user, 2026-10-31; revised 2026-11-01):** same material on both faces = 2 × one face (SDPWS 2021 4.3.5.4.1); different materials = the larger of the stronger face and 2 × the weaker (SDPWS 2021 4.3.5.4.2). **The faces are never added.** The SDPWS wind exception (wood structural panel + gypsum wallboard summed) was a project setting, on by default; the user removed it after their own research because a simple sum can be unconservative (the two materials reach their peak strength at different drifts). Older projects that saved the setting open and are designed with the rule above. A face over its h/b limit does not count. The rule and its sources are shown in the app: Design tab settings bar (tooltip), Help > Two-face sheathing rule, and the report.
 7. **Sources for the two-face rule** (checked 2026-11-01, secondary): AWC FAQ (2021-09-27) cites SDPWS 4.3.3.3.2 and names only WSP + gypsum for the wind exception; WoodWorks (SDPWS 2021) cites 4.3.5.4.1 / 4.3.5.4.2 and names WSP, hardboard panel siding or structural fiberboard + GWB. The exception is no longer used (item 6), so the difference between the two lists no longer matters.
+
+## Simpson Strong-Tie hold-downs (SWC) — checked against C-C-2021 on 2026-11-02
+
+Source: Simpson Strong-Tie, *Wood Construction Connectors* catalog **C-C-2021**. I read the catalog page images from copies hosted by distributors (fastenersplus.com, emisupply.com) and a page viewer (palmerdonavin.cld.bz). Simpson no longer hosts C-C-2021, so none of the PDFs are stored in the repository. Every entry in `NDSProvisions/SimpsonCatalog/*_Manager.cs` carries a comment with the page and table it comes from.
+
+| Data | Page / table | Result |
+|---|---|---|
+| `HDU_Manager` (DTT1Z, DTT2Z, DTT2Z-SDS2.5, HDU2…HDU14-SDS2.5) | p. 53, "HDU/DTT Holdowns (cont.)" (DTT also p. 295) | All loads and deflections ✅. ❌ **DTT1Z minimum wood member** is 1½ × 5½ (was coded 1½ × 3½); corrected. HDU14 with a 3½ × 5½ post has no code listing ("—"); noted in a comment. |
+| `HTT_Manager` (LTTP2, LTTI31, HTT4, HTT5, HTT5KT, HTT5-3/4) | p. 55, "LTT/HTT Tension Ties (cont.)" (updated 08/03/21) | All loads ✅. These match C-C-2024 p. 57 too. ❌ **LTTP2 deflections** were 0.009 / 0.011 / 0.015 / 0.013; the catalog gives 0.104 / 0.112 / 0.136 / 0.128; corrected. The LTTP2 ½"-rod rows (1,680 / 1,545 and 2,320 / 1,970 lb) are not coded, because the model uses the ⅝"/¾" rows. ⚠ HTT5 / HTT5KT / HTT5-3/4 **CL** coded 1-7/16: the 2021 table text could not be read reliably. C-C-2024 gives 1-3/8, marked as changed. It is a dimension only, not used by the design. |
+| `StrapTies_Manager` (45 models) | p. 269, "HRS/ST/HTP/LSTA/LSTI/MST/MSTA/MSTC/MSTI Strap Ties (cont.)" | Loads and nail counts ✅ except: ❌ **MSTI36 length** 26 → 36. ❌ **MSTC52 SPF/HF** 4,315 → 4,735 (4,315 is the MSTC40 value). ❌ **LSTI49 / LSTI73 code ref** "---" → IBC, FL, LA. All corrected. Every load is checked by `SimpsonCatalogTests.StrapTies_AllLoads_MatchCC2021Page269`. |
+| `STHD_Manager` (new: LSTHD8, STHD10, STHD14 and their RJ models) | pp. 58–60, "LSTHD/STHD Strap-Tie Holdowns"; loads p. 59, "Tension Loads for STHD Installations" | Typed from the table. Every one of its 144 values (both seismic rows, uncracked and cracked, midwall / corner / endwall, 6" and 8" stemwall) is tested by `SimpsonCatalogTests.Sthd_EveryTableValue_ForEveryCondition_StandardAndRimJoist`. |
+
+**STHD conditions** are one set for the project (`DesignSettings.StrapHoldowns`, saved with the design settings). You set them in the Design tab with the "STHD: …" button. The defaults are the conservative columns: 6" stemwall, cracked concrete, endwall, and the "Wind and SDC A&B" row. An option needs a stemwall at least its minimum, so with a 6" stemwall the 8" options are not used. The allowable load is the same for every framing species. The deflection shown is the "on framing" value; the value over ½" sheathing is stored as well.
+
+**Not applied (the engineer checks them):**
+- the LSTHD8 0.9 factor for 1"–4" spalls;
+- two-pour downturn footings;
+- brick ledges;
+- minimum spacing 3 × le;
+- LRFD factors (the hold-downs are checked at ASD).

@@ -2,6 +2,15 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-02 — LSTHD / STHD hold-downs; the hold-down catalog checked against Simpson C-C-2021 (SWC)
+
+- **New hold-down type: LSTHD / STHD** (`HoldownFamilies.STHD_ToFoundation`, `NDSProvisions/SimpsonCatalog/STHD_Manager.cs`). It covers LSTHD8, STHD10, STHD14 and their RJ models, with every value from C-C-2021 p. 59.
+  - Each model has two options: `#1` is the 6" stemwall, `#2` the 8" stemwall. Both can be added to the standard list (favorites) in the catalog window.
+  - The allowable load and the nail count come from the project's STHD conditions: stemwall, cracked or uncracked concrete, midwall / corner / endwall, and the seismic row. Set them with the Design tab's "STHD: …" button. The defaults are 6", cracked, endwall, Wind and SDC A&B.
+  - The wall table offers "STHD"; the wall details and the report state the conditions. The catalog window has an STHD family filter and a Conditions column, and follows changes to the conditions.
+- **Catalog checked** against C-C-2021 pp. 53, 55 and 269. Five corrections, listed in `DATA_VERIFICATION.md`: MSTI36 length, MSTC52 SPF/HF load, LSTI code refs, DTT1Z minimum member, LTTP2 deflections. Every dictionary entry now cites its edition, page and table.
+- **Tests:** `SimpsonCatalogTests` (6). SWC 186/186.
+
 ## 2026-11-02 — One project file, in a project folder; the model's geometry drives the wind (SWC + BuildingModel + W7)
 
 _Branch `dev/ui-pass-2` in all three repositories._

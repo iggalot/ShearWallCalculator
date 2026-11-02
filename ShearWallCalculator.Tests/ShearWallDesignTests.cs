@@ -217,12 +217,13 @@ namespace ShearWallCalculator.Tests
         public void HoldownCatalogRows_AreTheValuesTheDesignUses()
         {
             var d = new ShearWallDesigner();
-            var rows = d.CatalogRows();
+            var sthd = new StrapHoldownConditions { Stemwall = 8 }; // every STHD option usable (a 6" stemwall leaves out the 8" options)
+            var rows = d.CatalogRows(sthd);
             Assert.IsTrue(rows.Count > 0);
             foreach (HoldownFamilies family in Enum.GetValues(typeof(HoldownFamilies)))
                 foreach (var species in new[] { WoodTypes.WOODTYPE_DF_SP, WoodTypes.WOODTYPE_SPF_HF })
                 {
-                    var options = System.Linq.Enumerable.ToList(d.Options(family, species));
+                    var options = System.Linq.Enumerable.ToList(d.Options(family, species, sthd));
                     var shown = System.Linq.Enumerable.ToList(System.Linq.Enumerable.Where(rows, r => r.Family == family &&
                         (species == WoodTypes.WOODTYPE_SPF_HF ? r.AllowableSPF_HF : r.AllowableDF_SP).HasValue));
                     Assert.AreEqual(options.Count, shown.Count, $"{family} {species}");

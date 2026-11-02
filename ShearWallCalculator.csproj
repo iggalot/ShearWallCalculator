@@ -121,6 +121,8 @@
     <Compile Include="NDSProvisions\SimpsonCatalog\SimpsonCatalog.cs" />
     <Compile Include="NDSProvisions\SimpsonCatalog\StrapTies_FastenerConfig.cs" />
     <Compile Include="NDSProvisions\SimpsonCatalog\StrapTies_Manager.cs" />
+    <Compile Include="NDSProvisions\SimpsonCatalog\STHD_Data.cs" />
+    <Compile Include="NDSProvisions\SimpsonCatalog\STHD_Manager.cs" />
     <Compile Include="WallData.cs" />
     <Compile Include="WallSystem.cs" />
   </ItemGroup>

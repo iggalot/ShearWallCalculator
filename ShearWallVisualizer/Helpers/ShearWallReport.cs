@@ -283,6 +283,10 @@ namespace ShearWallVisualizer.Helpers
             }
             else
                 blocks.Add(WindReport.Para("Hold-downs selected from the full catalog (the lightest adequate option of the wall's type)."));
+            if (design.Values.Any(r => r.Holdown?.Conditions != null))
+                blocks.Add(WindReport.Para("LSTHD / STHD strap-tie hold-downs: allowable loads from Simpson Strong-Tie C-C-2021 p. 59, \"Tension Loads " +
+                                           "for STHD Installations\", for " + s.StrapHoldownsOrDefault().Describe() + " (f'c ≥ 2,500 psi; minimum spacing " +
+                                           "3 × le; the LSTHD8 spall, two-pour and brick-ledge provisions are not applied)."));
             var rows = design.Keys.OrderBy(k => k).Select(k => design[k]).Select(r => new[]
             {
                 r.WallId.ToString(), r.Panel, ShortRule(r.CombineRule),

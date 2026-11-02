@@ -8,6 +8,7 @@ namespace ShearWallCalculator
         SIMPSON_CATALOG_HDU = 0,  // hold down catalog for HDU_Dict family of connectoes
         SIMPSON_CATALOG_STRAP = 1, // hold down catalog for strap ties
         SIMPSON_CATALOG_HTT = 2, // hold down for HTT_Dict and LTT family of hold downs
+        SIMPSON_CATALOG_STHD = 3, // LSTHD / STHD strap-tie hold-downs cast into the foundation
     }
     public enum WoodTypes
     {
@@ -26,6 +27,7 @@ namespace ShearWallCalculator
         public HDU_Manager HDUManager = new HDU_Manager();
         public StrapTies_Manager StrapTiesManager = new StrapTies_Manager();
         public HTT_Manager HTTManager = new HTT_Manager();
+        public STHD_Manager STHDManager = new STHD_Manager();
 
         public SimpsonCatalog()
         {
@@ -33,7 +35,8 @@ namespace ShearWallCalculator
             {
                 { SimpsonCatalogs.SIMPSON_CATALOG_HDU, new HDU_Manager() },
                 { SimpsonCatalogs.SIMPSON_CATALOG_STRAP, new StrapTies_Manager() },
-                { SimpsonCatalogs.SIMPSON_CATALOG_HTT, new HTT_Manager() }
+                { SimpsonCatalogs.SIMPSON_CATALOG_HTT, new HTT_Manager() },
+                { SimpsonCatalogs.SIMPSON_CATALOG_STHD, new STHD_Manager() }
             };
         }
 

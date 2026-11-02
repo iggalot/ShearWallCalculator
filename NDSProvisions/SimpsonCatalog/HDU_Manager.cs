@@ -5,6 +5,7 @@ namespace ShearWallCalculator
 {
     public class HDU_Manager : BaseSimpsonConnectorManager<HDU_Data>
     {
+        /// <summary>HDU / DTT hold-downs. Source: Simpson Strong-Tie, Wood Construction Connectors C-C-2021, p. 53, "HDU/DTT Holdowns (cont.)" table (DTT also p. 295, "DTT Deck Tension Ties"). All values checked against it 2026-11-02.</summary>
         public Dictionary<string, HDU_Data> HDU_Dict = new Dictionary<string, HDU_Data>();
 
         public HDU_Manager()
@@ -15,6 +16,7 @@ namespace ShearWallCalculator
         private void LoadHDUData()
         {
             // DTT1Z
+            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 53, "HDU/DTT Holdowns (cont.)" table, (160) loads; checked 2026-11-02
             HDU_Dict.Add("DTT1Z", new HDU_Data
             {
                 Model = "DTT1Z",
@@ -36,7 +38,7 @@ namespace ShearWallCalculator
                         ScrewSize = "#9",
                         Length = 1.5,
                         WoodMinHeight = 1.5,
-                        WoodMinWidth = 3.5,
+                        WoodMinWidth = 5.5,   // corrected 2026-11-02: was 3.5 (C-C-2021 p. 53: min. member 1-1/2 x 5-1/2)
                         AllowableTensionLoads = new Dictionary<string, double>
                         {
                             { "DF_SP", 840 },
@@ -52,7 +54,7 @@ namespace ShearWallCalculator
                         ScrewSize = "0.148",
                         Length = 1.5,
                         WoodMinHeight = 1.5,
-                        WoodMinWidth = 3.5,
+                        WoodMinWidth = 5.5,   // corrected 2026-11-02: was 3.5 (C-C-2021 p. 53: min. member 1-1/2 x 5-1/2)
                         AllowableTensionLoads = new Dictionary<string, double>
                         {
                             { "DF_SP", 910 },
@@ -68,7 +70,7 @@ namespace ShearWallCalculator
                         ScrewSize = "0.148",
                         Length = 1.5,
                         WoodMinHeight = 1.5,
-                        WoodMinWidth = 3.5,
+                        WoodMinWidth = 5.5,   // corrected 2026-11-02: was 3.5 (C-C-2021 p. 53: min. member 1-1/2 x 5-1/2)
                         AllowableTensionLoads = new Dictionary<string, double>
                         {
                             { "DF_SP", 910 },
@@ -81,6 +83,7 @@ namespace ShearWallCalculator
             });
 
             // DTT2Z
+            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 53, "HDU/DTT Holdowns (cont.)" table, (160) loads; checked 2026-11-02
             HDU_Dict.Add("DTT2Z", new HDU_Data
             {
                 Model = "DTT2Z",
@@ -129,6 +132,7 @@ namespace ShearWallCalculator
             });
 
             // DTT2Z-SDS2.5
+            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 53, "HDU/DTT Holdowns (cont.)" table, (160) loads; checked 2026-11-02
             HDU_Dict.Add("DTT2Z-SDS2.5", new HDU_Data
             {
                 Model = "DTT2Z-SDS2.5",
@@ -161,6 +165,7 @@ namespace ShearWallCalculator
             });
 
             // HDU2-SDS2.5
+            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 53, "HDU/DTT Holdowns (cont.)" table, (160) loads; checked 2026-11-02
             HDU_Dict.Add("HDU2-SDS2.5", new HDU_Data
             {
                 Model = "HDU2-SDS2.5",
@@ -193,6 +198,7 @@ namespace ShearWallCalculator
             });
 
             // HDU4-SDS2.5
+            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 53, "HDU/DTT Holdowns (cont.)" table, (160) loads; checked 2026-11-02
             HDU_Dict.Add("HDU4-SDS2.5", new HDU_Data
             {
                 Model = "HDU4-SDS2.5",
@@ -225,6 +231,7 @@ namespace ShearWallCalculator
             });
 
             // HDU5
+            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 53, "HDU/DTT Holdowns (cont.)" table, (160) loads; checked 2026-11-02
             HDU_Dict.Add("HDU5-SDS2.5", new HDU_Data
             {
                 Model = "HDU5-SDS2.5",
@@ -257,6 +264,7 @@ namespace ShearWallCalculator
             });
 
             // HDU8-SDS2.5
+            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 53, "HDU/DTT Holdowns (cont.)" table, (160) loads; checked 2026-11-02
             HDU_Dict.Add("HDU8-SDS2.5", new HDU_Data
             {
                 Model = "HDU8-SDS2.5",
@@ -319,6 +327,7 @@ namespace ShearWallCalculator
             });
 
             // HDU11
+            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 53, "HDU/DTT Holdowns (cont.)" table, (160) loads; checked 2026-11-02
             HDU_Dict.Add("HDU11-SDS2.5", new HDU_Data
             {
                 Model = "HDU11-SDS2.5",
@@ -367,6 +376,7 @@ namespace ShearWallCalculator
             });
 
             // HDU14
+            // Simpson Strong-Tie C-C-2021 (Wood Construction Connectors), p. 53, "HDU/DTT Holdowns (cont.)" table, (160) loads; checked 2026-11-02
             HDU_Dict.Add("HDU14-SDS2.5", new HDU_Data
             {
                 Model = "HDU14-SDS2.5",
@@ -377,7 +387,7 @@ namespace ShearWallCalculator
                 CL = 1.5625,
                 SO = 1.5625,
                 AnchorBoltDia = 1.0,
-                CodeRef = "IBC / FL / LA",
+                CodeRef = "IBC / FL / LA",  // C-C-2021 p. 53: the 3-1/2 x 5-1/2 option has no code listing ("—"); the others IBC, FL, LA
                 FastenerOptions = new List<HDU_FastenerConfig>
                 {
                     new HDU_FastenerConfig

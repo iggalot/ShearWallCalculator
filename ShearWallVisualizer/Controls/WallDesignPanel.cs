@@ -85,6 +85,7 @@ namespace ShearWallVisualizer.Controls
         private readonly RadioButton rbLrfd = new RadioButton { Content = "LRFD (1.0W)", Margin = new Thickness(0, 0, 20, 0), VerticalAlignment = VerticalAlignment.Center };
         private readonly ComboBox cbEdition = new ComboBox { Width = 130, Margin = new Thickness(0, 0, 20, 0) };
         private readonly Button btnAuto = new Button { Content = "Auto-select nailing (all walls)", Padding = new Thickness(10, 3, 10, 3) };
+        private readonly Button btnSthd = new Button { Padding = new Thickness(8, 2, 8, 2), Margin = new Thickness(0, 0, 20, 0), VerticalAlignment = VerticalAlignment.Center };
         private readonly ComboBox cbPool = new ComboBox { Width = 150, Margin = new Thickness(0, 0, 20, 0), ToolTip = "Standard list: only the hold-downs checked as company standard in View > Hold-down catalog. Full catalog: every option." };
         private readonly TextBlock tbTwoFaces = new TextBlock
         {
@@ -133,6 +134,7 @@ namespace ShearWallVisualizer.Controls
             cbPool.Items.Add("Full catalog");
             cbPool.Items.Add("Standard list");
             cbPool.SelectionChanged += (s, e) => SettingsChanged();
+            btnSthd.Click += (s, e) => EditStrapConditions();
             btnAuto.Click += (s, e) => AutoSelectRequested?.Invoke(shown.Select(x => x.Index).ToList());
             cbFloors.SelectionChanged += (s, e) =>
             {
@@ -151,6 +153,7 @@ namespace ShearWallVisualizer.Controls
             bar.Children.Add(cbEdition);
             bar.Children.Add(Label("Hold-downs:"));
             bar.Children.Add(cbPool);
+            bar.Children.Add(btnSthd);
             bar.Children.Add(tbTwoFaces);
             bar.Children.Add(btnAuto);
             bar.Children.Add(tbSummary);
@@ -270,6 +273,7 @@ namespace ShearWallVisualizer.Controls
             int listed = designer?.StandardList.Count ?? 0;
             cbPool.Items[1] = $"Standard list ({listed})";
             cbPool.SelectedIndex = settings.HoldownsFromStandardList ? 1 : 0;
+            ShowStrapConditions(settings.StrapHoldownsOrDefault());
             loading = false;
 
             tbNote.Text = (loadsFromWind ? "Wall shears from the ASCE 7 wind load cases (strength level). " : "Wall shears from MANUAL loads, taken as strength-level wind. ") +
@@ -330,7 +334,7 @@ namespace ShearWallVisualizer.Controls
             ("Nails", 46, "Edge fastener spacing of face 2", 0),
             ("Framing", 64, "Framing species group (Table 4.3A footnote)", 1),
             ("Dead (plf)", 46, "Dead load on the wall that resists overturning (0 = none)", 1),
-            ("Hold-down type", 70, "HDU or HTT anchors the wall end to the foundation; a strap ties it to the wall below", 1),
+            ("Hold-down type", 70, "HDU, HTT or a cast-in STHD strap anchors the wall end to the foundation; a strap ties it to the wall below", 1),
             ("v (plf)", 48, "Unit shear demand", 2),
             ("Allowed", 56, "Design unit shear capacity", 2),
             ("Ratio", 44, "Demand / capacity", 1),
@@ -451,7 +455,7 @@ namespace ShearWallVisualizer.Controls
                 Put(row, col++, Combo(new object[] { "DF / SP", "SPF / HF" }, d.Species == WoodTypes.WOODTYPE_SPF_HF ? "SPF / HF" : "DF / SP",
                     o => d.Species = (string)o == "SPF / HF" ? WoodTypes.WOODTYPE_SPF_HF : WoodTypes.WOODTYPE_DF_SP, id));
                 Put(row, col++, DeadLoadBox(d, id));
-                Put(row, col++, Combo(new object[] { ShortHoldownName(HoldownFamilies.HDU_ToFoundation), ShortHoldownName(HoldownFamilies.HTT_ToFoundation), ShortHoldownName(HoldownFamilies.Strap_ToWallBelow) },
+                Put(row, col++, Combo(new object[] { ShortHoldownName(HoldownFamilies.HDU_ToFoundation), ShortHoldownName(HoldownFamilies.HTT_ToFoundation), ShortHoldownName(HoldownFamilies.STHD_ToFoundation), ShortHoldownName(HoldownFamilies.Strap_ToWallBelow) },
                     ShortHoldownName(d.Holdown), o => d.Holdown = Enum.GetValues(typeof(HoldownFamilies)).Cast<HoldownFamilies>().First(f => ShortHoldownName(f) == (string)o), id));
 
                 Cell(row, col++, double.IsInfinity(r.Demand) ? "-" : r.Demand.ToString("0"), id);
@@ -614,13 +618,100 @@ namespace ShearWallVisualizer.Controls
             DesignChanged?.Invoke(this, EventArgs.Empty);
         }
 
+        private void ShowStrapConditions(StrapHoldownConditions c)
+        {
+            btnSthd.Content = $"STHD: {c.Stemwall:0.#}\" stemwall, {(c.CrackedConcrete ? "cracked" : "uncracked")}, {c.Position.ToString().ToLowerInvariant()}...";
+            btnSthd.ToolTip = "Foundation conditions for the LSTHD / STHD strap-tie hold-downs (Simpson C-C-2021 p. 59), one set for the project: " +
+                              c.Describe() + ". Click to change.";
+        }
+
+        /// <summary>
+        /// Asks for the project's LSTHD / STHD foundation conditions (stemwall, concrete, position, seismic row) and gives them
+        /// to every story; the design is then redone.
+        /// </summary>
+        private void EditStrapConditions()
+        {
+            if (stories.Count == 0) return;
+            var now = (SettingsCalc?.DesignSettings ?? new DesignSettings()).StrapHoldownsOrDefault();
+            var stem = new ComboBox { Width = 260, Margin = new Thickness(0, 0, 0, 8) };
+            stem.Items.Add("6\" minimum stemwall (6\" to under 8\")");
+            stem.Items.Add("8\" minimum stemwall (or slab on grade, note 11)");
+            stem.SelectedIndex = now.Stemwall >= 8 ? 1 : 0;
+            var concrete = new ComboBox { Width = 260, Margin = new Thickness(0, 0, 0, 8) };
+            concrete.Items.Add("Cracked concrete");
+            concrete.Items.Add("Uncracked concrete");
+            concrete.SelectedIndex = now.CrackedConcrete ? 0 : 1;
+            var position = new ComboBox { Width = 260, Margin = new Thickness(0, 0, 0, 8) };
+            position.Items.Add("Midwall (1.5 le or more from the end)");
+            position.Items.Add("Corner");
+            position.Items.Add("Endwall (lowest loads)");
+            position.SelectedIndex = (int)now.Position;
+            var seismic = new ComboBox { Width = 260, Margin = new Thickness(0, 0, 0, 8) };
+            seismic.Items.Add("Wind and SDC A & B");
+            seismic.Items.Add("SDC C – F");
+            seismic.SelectedIndex = (int)now.Seismic;
+
+            var grid = new Grid { Margin = new Thickness(16) };
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            grid.ColumnDefinitions.Add(new ColumnDefinition());
+            void RowOf(int i, string label, Control c)
+            {
+                grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                var t = new TextBlock { Text = label, Margin = new Thickness(0, 3, 10, 8) };
+                Grid.SetRow(t, i); Grid.SetRow(c, i); Grid.SetColumn(c, 1);
+                grid.Children.Add(t); grid.Children.Add(c);
+            }
+            RowOf(0, "Stemwall:", stem);
+            RowOf(1, "Concrete:", concrete);
+            RowOf(2, "Position:", position);
+            RowOf(3, "Load row:", seismic);
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            var note = new TextBlock
+            {
+                TextWrapping = TextWrapping.Wrap, MaxWidth = 400, Foreground = InkSecondary, Margin = new Thickness(0, 4, 0, 10),
+                Text = "Simpson C-C-2021 p. 59, \"Tension Loads for STHD Installations\". One set for the whole project; every wall with " +
+                       "an STHD gets the allowable load of this column. Wind loads use the \"Wind and SDC A & B\" row. Not applied: " +
+                       "the LSTHD8 0.9 factor for 1\"–4\" spalls, two-pour downturn footings, brick ledges (see the catalog).",
+            };
+            Grid.SetRow(note, 4); Grid.SetColumnSpan(note, 2); grid.Children.Add(note);
+            var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
+            var ok = new Button { Content = "OK", Width = 80, IsDefault = true, Margin = new Thickness(0, 0, 8, 0) };
+            var cancel = new Button { Content = "Cancel", Width = 80, IsCancel = true };
+            buttons.Children.Add(ok); buttons.Children.Add(cancel);
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            Grid.SetRow(buttons, 5); Grid.SetColumnSpan(buttons, 2); grid.Children.Add(buttons);
+            var dlg = new Window
+            {
+                Title = "STHD foundation conditions", Content = grid, SizeToContent = SizeToContent.WidthAndHeight, ResizeMode = ResizeMode.NoResize,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner, Owner = Window.GetWindow(this), ShowInTaskbar = false,
+            };
+            ok.Click += (s, e) => dlg.DialogResult = true;
+            if (dlg.ShowDialog() != true) return;
+
+            var c2 = new StrapHoldownConditions
+            {
+                Stemwall = stem.SelectedIndex == 1 ? 8 : 6, CrackedConcrete = concrete.SelectedIndex == 0,
+                Position = (SthdPositions)position.SelectedIndex, Seismic = (SthdSeismic)seismic.SelectedIndex,
+            };
+            foreach (var calc in stories.Select(s => s.Calculator).Where(x => x != null)) // one set for the project: every story
+            {
+                calc.DesignSettings = calc.DesignSettings ?? new DesignSettings();
+                calc.DesignSettings.StrapHoldowns = c2.Clone();
+            }
+            BuildingModel.Diagnostics.Log.Info("Design", $"STHD conditions: {now.Describe()} -> {c2.Describe()}");
+            ShowStrapConditions(c2);
+            DesignChanged?.Invoke(this, EventArgs.Empty);
+        }
+
         /// <summary>The table's short label (the column tooltip says where each one anchors).</summary>
         public static string ShortHoldownName(HoldownFamilies f) =>
-            f == HoldownFamilies.HDU_ToFoundation ? "HDU" : f == HoldownFamilies.HTT_ToFoundation ? "HTT" : "Strap";
+            f == HoldownFamilies.HDU_ToFoundation ? "HDU" : f == HoldownFamilies.HTT_ToFoundation ? "HTT" :
+            f == HoldownFamilies.STHD_ToFoundation ? "STHD" : "Strap";
 
         public static string HoldownName(HoldownFamilies f) =>
             f == HoldownFamilies.HDU_ToFoundation ? "HDU to foundation" :
-            f == HoldownFamilies.HTT_ToFoundation ? "HTT to foundation" : "Strap to wall below";
+            f == HoldownFamilies.HTT_ToFoundation ? "HTT to foundation" :
+            f == HoldownFamilies.STHD_ToFoundation ? "STHD cast in foundation" : "Strap to wall below";
 
         // ------------------------------------------------------------------ details
 
@@ -722,7 +813,8 @@ namespace ShearWallVisualizer.Controls
             yield return !r.HoldownNeeded ? "No uplift: no hold-down needed for overturning."
                 : r.Holdown == null ? $"✗ No {HoldownName(d.Holdown)} in the {(r.HoldownFromStandardList ? "company standard list" : "catalog")} reaches {r.TensionAsd:0} lb: lengthen the wall, add dead load or use another type" +
                                       (r.HoldownFromStandardList ? " (or add a stronger option to the standard list, or switch to the full catalog)." : ".")
-                : $"{HoldownName(d.Holdown)}{(r.HoldownFromStandardList ? " (standard list)" : "")}: {r.Holdown} — allowable {r.Holdown.Allowable:0} lb ({(d.Species == WoodTypes.WOODTYPE_SPF_HF ? "SPF/HF" : "DF/SP")}) → ratio {r.HoldownRatio:0.00} {mark(true)}";
+                : $"{HoldownName(d.Holdown)}{(r.HoldownFromStandardList ? " (standard list)" : "")}: {r.Holdown} — allowable {r.Holdown.Allowable:0} lb ({(d.Species == WoodTypes.WOODTYPE_SPF_HF ? "SPF/HF" : "DF/SP")}) → ratio {r.HoldownRatio:0.00} {mark(true)}" +
+                  (r.Holdown.Conditions != null ? $" [{r.Holdown.Conditions}]" : "");
         }
 
         private static TextBlock Label(string text) =>

@@ -12,6 +12,28 @@ namespace ShearWallCalculator.Design
         HDU_ToFoundation = 0,     // HDU / DTT hold-downs anchored to the foundation
         HTT_ToFoundation = 1,     // HTT tension ties anchored to the foundation
         Strap_ToWallBelow = 2,    // strap ties to the wall below
+        STHD_ToFoundation = 3,    // LSTHD / STHD strap-tie hold-downs cast into the foundation
+    }
+
+    /// <summary>
+    /// The foundation conditions that set an LSTHD / STHD allowable load (Simpson C-C-2021 p. 59, "Tension Loads for STHD
+    /// Installations"). One set for the project, saved with the design settings. The defaults are the conservative columns:
+    /// cracked concrete, endwall, a 6" stemwall; the "Wind and SDC A&amp;B" row because this program designs for wind.
+    /// </summary>
+    public class StrapHoldownConditions
+    {
+        /// <summary>The stemwall width (in.): options listed for a minimum stemwall up to this are used (6 or 8; slab on grade: 8, table footnote 11).</summary>
+        public double Stemwall { get; set; } = 6;
+        public bool CrackedConcrete { get; set; } = true;
+        public SthdPositions Position { get; set; } = SthdPositions.Endwall;
+        public SthdSeismic Seismic { get; set; } = SthdSeismic.WindAndSdcAB;
+
+        public StrapHoldownConditions Clone() => (StrapHoldownConditions)MemberwiseClone();
+
+        /// <summary>e.g. "6\" stemwall, cracked, endwall, Wind and SDC A&amp;B".</summary>
+        public string Describe() =>
+            $"{Stemwall:0.#}\" stemwall, {(CrackedConcrete ? "cracked" : "uncracked")} concrete, {Position.ToString().ToLowerInvariant()}, " +
+            (Seismic == SthdSeismic.WindAndSdcAB ? "Wind and SDC A&B" : "SDC C–F");
     }
 
     /// <summary>Settings for the whole project.</summary>
@@ -25,6 +47,12 @@ namespace ShearWallCalculator.Design
 
         /// <summary>The hold-downs and list version when the project was last saved (null in older projects).</summary>
         public HoldownListRecord HoldownList { get; set; }
+
+        /// <summary>The foundation conditions for LSTHD / STHD hold-downs (null in older projects: the defaults).</summary>
+        public StrapHoldownConditions StrapHoldowns { get; set; }
+
+        /// <summary>The STHD conditions in use: the project's, else the defaults.</summary>
+        public StrapHoldownConditions StrapHoldownsOrDefault() => StrapHoldowns ?? new StrapHoldownConditions();
 
         /// <summary>
         /// The sheathing, nailing and hold-down type given to a newly drawn EXTERIOR wall (null: the program default,
@@ -184,6 +212,10 @@ namespace ShearWallCalculator.Design
         public double? AllowableDF_SP { get; set; }
         public double? AllowableSPF_HF { get; set; }
         public double? DeflectionAtAllowable { get; set; }
+        /// <summary>LSTHD / STHD: the minimum stemwall (in.) of this option; null for the other families.</summary>
+        public double? MinStemwall { get; set; }
+        /// <summary>LSTHD / STHD: the conditions its allowable load is for (e.g. "8\" stemwall, cracked concrete, endwall, ...").</summary>
+        public string Conditions { get; set; }
     }
 
     public sealed class HoldownChoice
@@ -195,6 +227,8 @@ namespace ShearWallCalculator.Design
         public double Allowable { get; set; }
         public double? WoodMinHeight { get; set; }
         public double? WoodMinWidth { get; set; }
+        /// <summary>LSTHD / STHD: the stemwall and conditions the allowable load is for; null for the other families.</summary>
+        public string Conditions { get; set; }
 
         /// <summary>e.g. "HDU14-SDS2.5 (36 1/4 SDS, min. 3.5 × 7.25)": the minimum member tells apart options with the same fasteners.</summary>
         public override string ToString()
@@ -632,7 +666,7 @@ namespace ShearWallCalculator.Design
                 r.OwnTensionLrfd = arm > 0 ? Math.Max(0, ownLrfd) : double.PositiveInfinity;
                 r.TensionAsd = arm > 0 ? Math.Max(0, ownAsd + aboveAsd / arm) : double.PositiveInfinity;
                 r.TensionLrfd = arm > 0 ? Math.Max(0, ownLrfd + aboveLrfd / arm) : double.PositiveInfinity;
-                r.Holdown = r.HoldownNeeded ? SelectHoldown(d.Holdown, d.Species, r.TensionAsd, settings.HoldownsFromStandardList) : null;
+                r.Holdown = r.HoldownNeeded ? SelectHoldown(d.Holdown, d.Species, r.TensionAsd, settings.HoldownsFromStandardList, settings.StrapHoldownsOrDefault()) : null;
                 double next = WallSchedule.PostAlongWall(r.Holdown);
                 if (r.Holdown == null || Math.Abs(next - post) < 1e-9) break;
                 post = next;
@@ -680,10 +714,11 @@ namespace ShearWallCalculator.Design
         /// The lightest option (smallest allowable tension) that is at least the required tension, from the full catalog or,
         /// with <paramref name="standardOnly"/>, from the company standard list only (null when none there is strong enough).
         /// </summary>
-        public HoldownChoice SelectHoldown(HoldownFamilies family, WoodTypes species, double requiredLb, bool standardOnly = false)
+        /// <param name="sthd">The foundation conditions for LSTHD / STHD (null: the defaults); ignored by the other families.</param>
+        public HoldownChoice SelectHoldown(HoldownFamilies family, WoodTypes species, double requiredLb, bool standardOnly = false, StrapHoldownConditions sthd = null)
         {
             string key = species == WoodTypes.WOODTYPE_SPF_HF ? "SPF_HF" : "DF_SP";
-            return HoldownOptions(family, key)
+            return HoldownOptions(family, key, sthd)
                 .Where(o => !standardOnly || StandardList.Contains(o.Key))
                 .Where(o => o.Allowable >= requiredLb)
                 .OrderBy(o => o.Allowable)
@@ -701,8 +736,10 @@ namespace ShearWallCalculator.Design
         /// Every hold-down in the catalog this designer selects from, one row per model and fastener option, with all the
         /// stored data. It reads the same managers as <see cref="SelectHoldown"/>, so the values shown are the values used.
         /// </summary>
-        public List<HoldownSpecRow> CatalogRows()
+        /// <param name="sthd">The foundation conditions the LSTHD / STHD allowable loads are given for (null: the defaults).</param>
+        public List<HoldownSpecRow> CatalogRows(StrapHoldownConditions sthd = null)
         {
+            sthd = sthd ?? new StrapHoldownConditions();
             var rows = new List<HoldownSpecRow>();
             void Add(HoldownFamilies family, string model, int gauge, double w, double hl, double? b, double? cl, double? so, double? bolt, string code,
                      int qty, string type, string size, double length, double? minH, double? minW, IDictionary<string, double> loads, double? defl, int index)
@@ -737,24 +774,43 @@ namespace ShearWallCalculator.Design
                     Add(HoldownFamilies.Strap_ToWallBelow, m.Model, m.Gauge, m.W, m.L, null, null, null, null, m.CodeRef,
                         f.Screws_Quantity, f.Screws_Type, f.ScrewSize, f.Length, null, null, f.AllowableTensionLoads, null, i);
                 }
+            // LSTHD / STHD: one option per minimum stemwall ("#1" 6", "#2" 8"); the nails and the allowable load are the
+            // table's for the project's seismic row, concrete and position. The loads are the same for every species.
+            string conditions = sthd.Describe();
+            foreach (var m in catalog.STHDManager.STHD_Dict.Values)
+                for (int i = 0; i < STHD_Manager.Stemwalls.Length; i++)
+                {
+                    var inst = m.Installations.FirstOrDefault(x => x.MinStemwall == STHD_Manager.Stemwalls[i] && x.Seismic == sthd.Seismic);
+                    if (inst == null) continue;
+                    double a = inst.Allowable(sthd.CrackedConcrete, sthd.Position);
+                    var loads = new Dictionary<string, double> { { "DF_SP", a }, { "SPF_HF", a } };
+                    Add(HoldownFamilies.STHD_ToFoundation, m.Model, m.Gauge, m.W, m.L, null, null, null, null, m.CodeRef,
+                        inst.Nails_Quantity, "", inst.NailSize, inst.NailLength, m.WoodMinHeight, m.WoodMinWidth, loads, m.DeflectionOnFraming, i);
+                    rows[rows.Count - 1].MinStemwall = inst.MinStemwall;
+                    rows[rows.Count - 1].Conditions = $"min. {inst.MinStemwall:0.#}\" stemwall, le = {m.Embedment:0.#}\"; {conditions}";
+                }
             return rows;
         }
 
         /// <summary>The options <see cref="SelectHoldown"/> chooses from (for checks against <see cref="CatalogRows"/>).</summary>
-        public IEnumerable<HoldownChoice> Options(HoldownFamilies family, WoodTypes species) =>
-            HoldownOptions(family, species == WoodTypes.WOODTYPE_SPF_HF ? "SPF_HF" : "DF_SP");
+        public IEnumerable<HoldownChoice> Options(HoldownFamilies family, WoodTypes species, StrapHoldownConditions sthd = null) =>
+            HoldownOptions(family, species == WoodTypes.WOODTYPE_SPF_HF ? "SPF_HF" : "DF_SP", sthd);
 
-        /// <summary>The selectable options of one family for one species, built from <see cref="CatalogRows"/> (one source of data).</summary>
-        private IEnumerable<HoldownChoice> HoldownOptions(HoldownFamilies family, string species)
+        /// <summary>
+        /// The selectable options of one family for one species, built from <see cref="CatalogRows"/> (one source of data).
+        /// LSTHD / STHD options need a stemwall at least their minimum.
+        /// </summary>
+        private IEnumerable<HoldownChoice> HoldownOptions(HoldownFamilies family, string species, StrapHoldownConditions sthd)
         {
-            foreach (var r in CatalogRows().Where(r => r.Family == family))
+            sthd = sthd ?? new StrapHoldownConditions();
+            foreach (var r in CatalogRows(sthd).Where(r => r.Family == family && (r.MinStemwall == null || r.MinStemwall <= sthd.Stemwall + 1e-9)))
             {
                 double? a = species == "SPF_HF" ? r.AllowableSPF_HF : r.AllowableDF_SP;
                 if (a.HasValue)
                     yield return new HoldownChoice
                     {
                         Key = r.Key, Model = r.Model, Fasteners = r.Fasteners, Allowable = a.Value,
-                        WoodMinHeight = r.WoodMinHeight, WoodMinWidth = r.WoodMinWidth,
+                        WoodMinHeight = r.WoodMinHeight, WoodMinWidth = r.WoodMinWidth, Conditions = r.Conditions,
                     };
             }
         }

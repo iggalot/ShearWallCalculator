@@ -27,8 +27,10 @@ namespace ShearWallVisualizer.Dialogs
         private readonly CheckBox usedOnly = new CheckBox { Content = "Only options used by the design", Margin = new Thickness(12, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
         private readonly DataGrid grid;
         private readonly TextBlock count = new TextBlock { Foreground = Brushes.DimGray, Margin = new Thickness(0, 6, 0, 0), TextWrapping = TextWrapping.Wrap };
-        private readonly List<Row> rows;
-        private readonly ICollectionView view;
+        private List<Row> rows;
+        private ICollectionView view;
+        private StrapHoldownConditions sthd;
+        private IEnumerable<KeyValuePair<string, IReadOnlyDictionary<int, WallDesignResult>>> lastDesign;
 
         private static readonly (string label, HoldownFamilies? value)[] Families =
         {
@@ -36,11 +38,14 @@ namespace ShearWallVisualizer.Dialogs
             ("HDU / DTT hold-downs to foundation", HoldownFamilies.HDU_ToFoundation),
             ("HTT tension ties to foundation", HoldownFamilies.HTT_ToFoundation),
             ("Strap ties to wall below", HoldownFamilies.Strap_ToWallBelow),
+            ("LSTHD / STHD strap-tie hold-downs to foundation", HoldownFamilies.STHD_ToFoundation),
         };
 
-        public HoldownCatalogWindow(ShearWallDesigner designer)
+        /// <param name="sthd">The project's foundation conditions for the LSTHD / STHD loads (null: the defaults).</param>
+        public HoldownCatalogWindow(ShearWallDesigner designer, StrapHoldownConditions sthd = null)
         {
             this.designer = designer ?? throw new ArgumentNullException(nameof(designer));
+            this.sthd = sthd ?? new StrapHoldownConditions();
             Title = "Hold-down catalog";
             Width = 1280;
             Height = 760;
@@ -132,11 +137,12 @@ namespace ShearWallVisualizer.Dialogs
             Col("SPF/HF (lb)", nameof(Row.SPF), true);
             Col("Defl. (in)", nameof(Row.Defl), true);
             Col("Code", nameof(Row.Code));
+            Col("Conditions (STHD)", nameof(Row.Conditions));
             Col("Used on walls", nameof(Row.Used));
             root.Children.Add(grid);
             Content = root;
 
-            rows = designer.CatalogRows().Select(r => new Row(r, designer.StandardList, designer.CompanyList)).ToList();
+            rows = designer.CatalogRows(this.sthd).Select(r => new Row(r, designer.StandardList, designer.CompanyList)).ToList();
             view = CollectionViewSource.GetDefaultView(rows);
             view.Filter = o => Keep((Row)o);
             grid.ItemsSource = view;
@@ -165,6 +171,7 @@ namespace ShearWallVisualizer.Dialogs
         /// </summary>
         public void SetDesign(IEnumerable<KeyValuePair<string, IReadOnlyDictionary<int, WallDesignResult>>> byFloor)
         {
+            lastDesign = byFloor;
             var floors = (byFloor ?? Enumerable.Empty<KeyValuePair<string, IReadOnlyDictionary<int, WallDesignResult>>>())
                          .Where(f => f.Value != null).ToList();
             bool named = floors.Count > 1;
@@ -175,6 +182,21 @@ namespace ShearWallVisualizer.Dialogs
                     .Select(f => (named ? f.Key + ": " : "") + string.Join(", ", f.walls)));
             if (usedOnly.IsChecked == true) view.Refresh();
             UpdateCount();
+        }
+
+        /// <summary>The conditions the LSTHD / STHD rows are shown for.</summary>
+        public string StrapConditions => sthd.Describe();
+
+        /// <summary>The project's STHD conditions changed: the LSTHD / STHD rows show the loads for the new ones.</summary>
+        public void SetStrapConditions(StrapHoldownConditions conditions)
+        {
+            sthd = conditions?.Clone() ?? new StrapHoldownConditions();
+            rows = designer.CatalogRows(sthd).Select(r => new Row(r, designer.StandardList, designer.CompanyList)).ToList();
+            view = CollectionViewSource.GetDefaultView(rows);
+            view.Filter = o => Keep((Row)o);
+            grid.ItemsSource = view;
+            if (lastDesign != null) SetDesign(lastDesign);
+            Refilter();
         }
 
         /// <summary>
@@ -203,11 +225,11 @@ namespace ShearWallVisualizer.Dialogs
                 ASCE7WindLoadCalculator.WindReport.Para(count.Text),
             };
             string[] headers = { "Std", "Co.", "Family", "Model", "Ga.", "W", "H or L", "B", "CL", "SO", "Bolt dia.", "Fasteners", "Length",
-                                 "Min. wood", "DF/SP (lb)", "SPF/HF (lb)", "Defl. (in)", "Code", "Used on walls" };
+                                 "Min. wood", "DF/SP (lb)", "SPF/HF (lb)", "Defl. (in)", "Code", "Conditions (STHD)", "Used on walls" };
             var data = shownRows.Select(r => new[]
             {
                 r.Standard ? "✓" : "", r.Company, r.Family, r.Model, r.Gauge, r.W, r.HL, r.B, r.CL, r.SO, r.Bolt, r.Fasteners, r.Length,
-                r.Wood, r.DF, r.SPF, r.Defl, r.Code, r.Used,
+                r.Wood, r.DF, r.SPF, r.Defl, r.Code, r.Conditions, r.Used,
             }).ToList();
             blocks.AddRange(ASCE7WindLoadCalculator.WindReport.Tables(headers, data, rowsPerTable: 24));
             var info = new ASCE7WindLoadCalculator.ReportInfo { Project = string.IsNullOrWhiteSpace(project) ? "Untitled project" : project, Program = "Shear Wall Calculator" };
@@ -328,7 +350,8 @@ namespace ShearWallVisualizer.Dialogs
         }
 
         private static string FamilyName(HoldownFamilies f) =>
-            f == HoldownFamilies.HDU_ToFoundation ? "HDU / DTT" : f == HoldownFamilies.HTT_ToFoundation ? "HTT" : "Strap";
+            f == HoldownFamilies.HDU_ToFoundation ? "HDU / DTT" : f == HoldownFamilies.HTT_ToFoundation ? "HTT" :
+            f == HoldownFamilies.STHD_ToFoundation ? "STHD" : "Strap";
 
         private static string N(double? v) => v.HasValue ? v.Value.ToString("0.####", CultureInfo.InvariantCulture) : "";
 
@@ -355,6 +378,7 @@ namespace ShearWallVisualizer.Dialogs
                 DF = r.AllowableDF_SP?.ToString("0", CultureInfo.InvariantCulture) ?? "";
                 SPF = r.AllowableSPF_HF?.ToString("0", CultureInfo.InvariantCulture) ?? "";
                 Defl = N(r.DeflectionAtAllowable); Code = first ? r.CodeRef : "";
+                Conditions = r.Conditions ?? "";
                 standard = list.Contains(Key);
                 SetCompany(company);
             }
@@ -377,6 +401,7 @@ namespace ShearWallVisualizer.Dialogs
             public string SPF { get; }
             public string Defl { get; }
             public string Code { get; }
+            public string Conditions { get; }
 
             public string Used
             {
