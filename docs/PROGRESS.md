@@ -2,6 +2,15 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-02 — Plans under the levels belong to the building model only (SWC + BuildingModel)
+
+- **One plan system**, in `BuildingModel.Sketch`: `PlanImage` (DXF, PDF page, picture; scale, rotation, position, opacity, lock), drawn by the sketch, with snaps to CAD linework.
+  - The level stores a small record (`Sketch.Plan`); the file is copied into the project's `plans` folder, so undo stays cheap and the folder carries its plans.
+  - Older files convert on opening: SWC's `ShearWall.Image` (the picture inside the file is written to `plans`) and the first editor's `Sketch.Underlay`.
+- **Editor (Plan ▾):** import DXF / PDF / picture; set scale, straighten, move, rotate 90°; opacity, lock, hide; **Move to floor**, **Copy to floor**, **Remove**. Every one is an undoable model edit.
+- **SWC:** shows or hides the plan (this screen only) and zooms to it; Image ▾ links to the editor. Its own image code, import dialogs and PDF reader were removed (moved to the sketch).
+- **Tests:** `PlanImageTests` (15) and `DxfReaderTests` (11) in BuildingModel.Sketch.Tests; SWC 171, Sketch 40, BuildingModel 70.
+
 ## 2026-11-02 — The discontinued HDU kept as its own hold-down family (SWC)
 
 - **New family** `HoldownFamilies.HDU_Legacy_ToFoundation`, with the data in `NDSProvisions/SimpsonCatalog/HDU_Legacy_Manager.cs`. It covers HDU2/4/5/8/11/14-SDS2.5 with the C-C-2021 p. 53 values, and is used only when a wall is set to it:

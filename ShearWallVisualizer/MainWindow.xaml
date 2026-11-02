@@ -1,4 +1,4 @@
-﻿<Window x:Class="ShearWallVisualizer.MainWindow"
+<Window x:Class="ShearWallVisualizer.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -50,7 +50,7 @@
                 <MenuItem Header="_Ortho (move, copy, measure)" Click="btnOrtho_Click" InputGestureText="F8"/>
                 <MenuItem Header="_Zoom to the drawing" Click="btnZoomExtents_Click" InputGestureText="Z"/>
                 <Separator/>
-                <MenuItem Header="Import plan (DXF, PDF, image)..." Click="ImportPlanImage_Click"/>
+                <MenuItem Header="Plans: import or place them in the Building Model editor..." Click="EditBuilding_Click"/>
             </MenuItem>
             <MenuItem Header="_Model">
                 <MenuItem Header="_3D view of the building" Click="Show3D_Click"/>
@@ -191,9 +191,9 @@
                         <Rectangle Style="{StaticResource ToolDivider}"/>
                         <TextBlock Style="{StaticResource ToolGroup}" Text="SHOW"/>
                         <Button x:Name="btnHideImage" Style="{StaticResource Tool}" Content="Image" Tag="on" Click="btnHideImage_Click"
-                                ToolTip="Show or hide the plan image layer (under the drawing, never selectable; the image is stored in the project file)"/>
+                                ToolTip="Show or hide the plan under this level (on this screen only; the plan is the building model's)"/>
                         <Button x:Name="btnImageOptions" Style="{StaticResource Tool}" Content="▾" Padding="6,4" Click="btnImageOptions_Click"
-                                ToolTip="Plan image: import, set the scale with two points, straighten, move, opacity, lock"/>
+                                ToolTip="Plan: show or hide, zoom to it; plans are imported and placed in the Building Model editor"/>
                         <Button x:Name="btnShowDesign" Style="{StaticResource Tool}" Content="Design" Tag="on" Click="btnShowDesign_Click"
                                 ToolTip="Shear wall marks (SW1, SW2, ...) with each wall's hold-down, the hold-downs at the wall ends, and the shear wall schedule"/>
                         <Button x:Name="btn3D" Style="{StaticResource Tool}" Content="3D" Click="Show3D_Click"

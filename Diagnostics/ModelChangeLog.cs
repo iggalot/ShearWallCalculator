@@ -21,7 +21,6 @@ namespace ShearWallCalculator.Diagnostics
         public Dictionary<int, string> Diaphragms { get; } = new Dictionary<int, string>();
         public Dictionary<string, string> Settings { get; } = new Dictionary<string, string>();
         public List<string> Loads { get; } = new List<string>();
-        public Dictionary<string, string> Image { get; } = new Dictionary<string, string>();
 
         private static string F(double v) => v.ToString("0.###", CultureInfo.InvariantCulture);
         private static string P(Point p) => $"({F(p.X)}, {F(p.Y)})";
@@ -62,19 +61,6 @@ namespace ShearWallCalculator.Diagnostics
             else
                 s.Loads.Add($"manual: Vx = {F(calc.V_x)} k, Vy = {F(calc.V_y)} k");
 
-            var img = calc.Image;
-            if (img != null)
-            {
-                s.Image["file"] = img.Path ?? "";
-                s.Image["source"] = img.Source ?? "image";
-                s.Image["stored in project"] = img.Data == null ? "no" : $"yes, {img.Data.Length / 1024.0:0} kB";
-                s.Image["scale"] = $"{(img.FeetPerPixel * 12).ToString("0.####", CultureInfo.InvariantCulture)} in per pixel" + (img.Calibrated ? "" : " (not set)");
-                s.Image["rotation"] = F(img.RotationDegrees) + "°";
-                s.Image["position"] = "top-left at " + P(img.Origin);
-                s.Image["opacity"] = (img.Opacity * 100).ToString("0", CultureInfo.InvariantCulture) + " %";
-                s.Image["locked"] = img.Locked ? "yes" : "no";
-                s.Image["shown"] = img.Visible ? "yes" : "no";
-            }
             return s;
         }
 
@@ -136,12 +122,6 @@ namespace ShearWallCalculator.Diagnostics
                 lines.Add("Loads changed: " + (after.Loads.Count == 0 ? "none" : string.Join("; ", after.Loads)) +
                           "  (were " + (before.Loads.Count == 0 ? "none" : string.Join("; ", before.Loads)) + ")");
 
-            if (before.Image.Count == 0 && after.Image.Count > 0)
-                lines.Add($"Plan image added: {after.Image["file"]}, {after.Image["scale"]}");
-            else if (before.Image.Count > 0 && after.Image.Count == 0)
-                lines.Add($"Plan image removed: {before.Image["file"]}");
-            else
-                Compare("Plan image", before.Image, after.Image, lines);
             return lines;
         }
 

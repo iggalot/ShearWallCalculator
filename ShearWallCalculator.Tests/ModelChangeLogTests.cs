@@ -89,17 +89,12 @@ namespace ShearWallCalculator.Tests
                 c._diaphragm_system._diaphragms[did].P3 = new Point(50, 30);
                 c.DesignSettings.Method = DesignMethods.LRFD;
                 c.SetLoadCases(new[] { new LateralLoadCase("Case 1", 12.5, 0) });
-                c.Image = ReferenceImage.Imported(@"C:\plans\a.png", 1000, 800, 0.05);
             });
             string all = string.Join("\n", lines);
             Assert.IsTrue(lines.Any(l => l.StartsWith($"Diaphragm {did}:") && l.Contains("40 × 30") && l.Contains("50 × 30")), all);
             Assert.IsTrue(lines.Contains("Design setting design method: ASD → LRFD"), all);
             Assert.IsTrue(lines.Any(l => l.StartsWith("Loads changed: Case 1: Vx = 12.5 k")), all);
-            Assert.IsTrue(lines.Any(l => l.StartsWith(@"Plan image added: C:\plans\a.png")), all);
-
-            var img = Diff(calc, c => { c.Image.Calibrate(new Point(0, 0), new Point(10, 0), 20); c.Image.Locked = true; });
-            Assert.IsTrue(img.Any(l => l.StartsWith("Plan image scale:")), string.Join("\n", img));
-            Assert.IsTrue(img.Contains("Plan image locked: no → yes"), string.Join("\n", img));
+            // the plan under the level is the building's (the editor logs its changes), not part of this log
         }
     }
 }

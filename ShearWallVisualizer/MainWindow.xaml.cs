@@ -1,4 +1,4 @@
-﻿using ASCE7WindLoadCalculator;
+using ASCE7WindLoadCalculator;
 using BuildingModel.Diagnostics;
 using calculator;
 using Microsoft.Win32;
@@ -71,18 +71,11 @@ namespace ShearWallVisualizer
 
 
         // plan image: the decoded file (kept while the path is the same) and the two-point commands
-        private BitmapSource planBitmap;
-        private string planBitmapPath;
-        private byte[] planBitmapData;   // the stored image the bitmap was decoded from
-        private Geometry planVector;           // CAD linework of the plan, image units
-        private List<VectorPath> planVectorPaths; // the paths it was built from
-        private readonly ImageTool imageTool = new ImageTool();
 
         public EventHandler OnUpdated;  // the event that signals that the drawing has been updated -- controls will listen for this at the time they are created.
 
         bool hideImage = false;
         bool showDesign = true; // schedule marks, hold-downs and the schedule on the plan
-        bool imageDrawWarned = false;   // log a reference-image drawing failure once, not every frame
 
         /// <summary>A new story's height: the building model's default (the one source).</summary>
         private double defaultWallHeight => (building?.Defaults ?? new BuildingModel.Model.ModelDefaults()).StoryHeight;
@@ -993,117 +986,15 @@ namespace ShearWallVisualizer
                 }
             }
         }
-        // ------------------------------------------------------------------ plan image
+        // ------------------------------------------------------------------ the plan under the level
 
-        /// <summary>The plan under the drawing: image units → world (scale, rotation, position) → screen.</summary>
-        private void DrawReferenceImage(DrawingContext ctx)
-        {
-            var img = Calculator?.Image;
-            if (hideImage || img == null || !img.Visible) return;
-            try
-            {
-                Point o = WorldToScreen(new Point(0, 0), m_layers), ex = WorldToScreen(new Point(1, 0), m_layers), ey = WorldToScreen(new Point(0, 1), m_layers);
-                var m = img.PixelToWorldMatrix();
-                m.Append(new Matrix(ex.X - o.X, ex.Y - o.Y, ey.X - o.X, ey.Y - o.Y, o.X, o.Y));
-                double opacity = Math.Max(0.05, Math.Min(1, img.Opacity));
-                if (img.IsVector)
-                {
-                    // the geometry is transformed, not the pen: lines stay one pixel wide at any zoom
-                    var lines = new GeometryGroup { Transform = new MatrixTransform(m) };
-                    lines.Children.Add(PlanVector(img));
-                    ctx.PushOpacity(opacity);
-                    ctx.DrawGeometry(null, PlanPen, lines);
-                    ctx.Pop();
-                    return;
-                }
-                var bmp = PlanBitmap(img);
-                if (bmp == null) return;
-                ctx.PushTransform(new MatrixTransform(m));
-                ctx.PushOpacity(opacity);
-                ctx.DrawImage(bmp, new Rect(0, 0, img.PixelWidth, img.PixelHeight));
-                ctx.Pop();
-                ctx.Pop();
-            }
-            catch (Exception ex)
-            {
-                if (!imageDrawWarned) Log.Warning("Could not draw the plan image", ex);
-                imageDrawWarned = true;
-            }
-        }
+        // The plans are the building's (BuildingModel.Sketch.PlanImage): the sketch draws them, and snaps to CAD linework;
+        // the Building Model editor imports, scales, places, moves and removes them. Here they are only shown or hidden.
 
-        private static readonly Pen PlanPen = FrozenPen(Color.FromRgb(0x4A, 0x55, 0x68), 1.0);
-
-        /// <summary>The CAD linework as one geometry in image units, built once per import.</summary>
-        private Geometry PlanVector(ReferenceImage img)
-        {
-            if (planVector != null && planVectorPaths == img.Paths) return planVector;
-            var g = new StreamGeometry();
-            using (var c = g.Open())
-                foreach (var p in img.Paths)
-                {
-                    var xy = p.Xy;
-                    if (xy == null || xy.Length < 4) continue;
-                    c.BeginFigure(new Point(xy[0], xy[1]), false, p.Closed);
-                    var pts = new List<Point>(xy.Length / 2 - 1);
-                    for (int i = 2; i + 1 < xy.Length; i += 2) pts.Add(new Point(xy[i], xy[i + 1]));
-                    c.PolyLineTo(pts, true, false);
-                }
-            g.Freeze();
-            planVector = g;
-            planVectorPaths = img.Paths;
-            return g;
-        }
-
-        /// <summary>
-        /// The decoded plan image: from the copy stored in the project when there is one, otherwise from the file
-        /// (which is then stored, so the next save carries it). Loaded once; null (with one warning) when it cannot be read.
-        /// </summary>
-        private BitmapSource PlanBitmap(ReferenceImage img)
-        {
-            if (img.Data == null)
-            {
-                string path = img.Resolve(currentProjectPath);
-                if (path == null || !img.Embed(path))
-                {
-                    if (planBitmapPath != img.Path)
-                    {
-                        planBitmapPath = img.Path;
-                        planBitmap = null;
-                        Log.Warning("The plan image was not found: " + img.Path + " (import it again; it is then stored in the project file).");
-                    }
-                    return null;
-                }
-                Log.Info($"Plan image stored in the project: {path} ({img.Data.Length / 1024.0:0} kB; saved with the next save)");
-            }
-            if (planBitmap != null && planBitmapData == img.Data) return planBitmap;
-            planBitmapData = img.Data;
-            planBitmapPath = img.Path;
-            planBitmap = null;
-            try
-            {
-                var b = new BitmapImage();
-                b.BeginInit();
-                b.StreamSource = new System.IO.MemoryStream(img.Data);
-                b.CacheOption = BitmapCacheOption.OnLoad;
-                b.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
-                b.EndInit();
-                b.Freeze();
-                planBitmap = b;
-                img.PixelWidth = b.PixelWidth;
-                img.PixelHeight = b.PixelHeight;
-            }
-            catch (Exception ex)
-            {
-                Log.Warning("Could not read the plan image " + img.Path, ex);
-            }
-            return planBitmap;
-        }
-
-        /// <summary>The image ▾ menu: import, the two-point commands, opacity, lock, remove.</summary>
+        /// <summary>The Image ▾ menu: show or hide, zoom to the plan, and where plans are edited.</summary>
         private void btnImageOptions_Click(object sender, RoutedEventArgs e)
         {
-            var img = Calculator?.Image;
-            bool movable = img != null && !img.Locked;
+            var plan = Sketch.PlanOf(Sketch.ActiveLevel);
             var menu = new ContextMenu { PlacementTarget = (UIElement)sender, Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom };
             void Item(string header, Action act, bool enabled = true, string tip = null)
             {
@@ -1111,230 +1002,40 @@ namespace ShearWallVisualizer
                 mi.Click += (s, a) => act();
                 menu.Items.Add(mi);
             }
-
-            Item(img == null ? "Import plan (DXF, PDF, image)..." : "Replace plan (DXF, PDF, image)...", ImportPlanImage);
-            Item(hideImage ? "Show image layer" : "Hide image layer", () => btnHideImage_Click(btnHideImage, null), img != null,
-                 "The image is a layer under the drawing: it is never selected by clicks, and it is saved inside the project file.");
+            Item(hideImage ? "Show the plan" : "Hide the plan", () => btnHideImage_Click(btnHideImage, null), plan != null, "Only on this screen: the plan stays in the building model.");
+            Item("Zoom to the plan", ZoomToImage, plan != null);
             menu.Items.Add(new Separator());
-            Item("Set scale: click two points, type the distance", () => StartImageCommand(ImageCommand.Calibrate), movable,
-                 "Pick the two ends of a long dimension on the image; the image is rescaled about the first point.");
-            Item("Straighten: click two points on a wall line", () => StartImageCommand(ImageCommand.Straighten), movable,
-                 "Turns the image so that line runs exactly E-W or N-S.");
-            Item("Move: base point, then destination", () => StartImageCommand(ImageCommand.Move), movable,
-                 "The destination snaps to the walls, e.g. to line up a building corner with a wall end.");
-            Item("Rotate 90°", () => { img.RotateAbout(Center(img.WorldBounds()), 90); ImageChanged(); }, movable);
-            menu.Items.Add(new Separator());
-            var opacity = new MenuItem { Header = "Opacity", IsEnabled = img != null };
-            foreach (double v in new[] { 0.25, 0.4, 0.6, 0.8, 1.0 })
-            {
-                var mi = new MenuItem { Header = $"{v * 100:0} %", IsCheckable = true, IsChecked = img != null && Math.Abs(img.Opacity - v) < 0.01 };
-                mi.Click += (s, a) => { img.Opacity = v; ImageChanged(); };
-                opacity.Items.Add(mi);
-            }
-            menu.Items.Add(opacity);
-            Item(img?.Locked == true ? "Unlock" : "Lock (no moving or rescaling)", () => { img.Locked = !img.Locked; ImageChanged(); }, img != null);
-            Item("Zoom to image", ZoomToImage, img != null);
-            menu.Items.Add(new Separator());
-            Item("Remove image", RemovePlanImage, img != null);
+            Item("Import or place plans in the Building Model editor...", EditBuilding,
+                 tip: "The plans are part of the building: they are imported, scaled, moved, copied to another floor and removed in the Building Model editor.");
             menu.IsOpen = true;
-        }
-
-        private void ImportPlanImage_Click(object sender, RoutedEventArgs e) => ImportPlanImage();
-
-        /// <summary>
-        /// Import a plan under the drawing: a DXF (true size from its units, linework you can snap to), a PDF sheet
-        /// (the printed drawing scale; the paper size is in the file) or a picture (drawing scale and dpi, or set the
-        /// scale on the drawing). The plan is stored in the project file.
-        /// </summary>
-        private async void ImportPlanImage()
-        {
-            if (Calculator == null) return;
-            var open = new Microsoft.Win32.OpenFileDialog
-            {
-                Title = "Import plan",
-                InitialDirectory = ProjectFolder.DialogFolder,
-                Filter = "Plans (*.dxf;*.pdf;*.png;*.jpg;*.jpeg;*.bmp;*.tif;*.tiff;*.gif)|*.dxf;*.pdf;*.png;*.jpg;*.jpeg;*.bmp;*.tif;*.tiff;*.gif|" +
-                         "CAD drawing (*.dxf)|*.dxf|PDF sheet (*.pdf)|*.pdf|Images (*.png;*.jpg;*.jpeg;*.bmp;*.tif;*.tiff;*.gif)|*.png;*.jpg;*.jpeg;*.bmp;*.tif;*.tiff;*.gif|" +
-                         "All files (*.*)|*.*",
-            };
-            if (open.ShowDialog(this) != true) return;
-            string file = open.FileName;
-            string ext = System.IO.Path.GetExtension(file).ToLowerInvariant();
-
-            ReferenceImage result = null;
-            bool calibrateOnDrawing = false;
-            Cursor = Cursors.Wait;
-            try
-            {
-                if (ext == ".dwg")
-                {
-                    MessageBox.Show(this, "DWG files are not read directly. In AutoCAD, save the drawing as DXF (SAVEAS > DXF, or DXFOUT) and import the DXF: " +
-                                          "it comes in at true size.", "Import plan", MessageBoxButton.OK, MessageBoxImage.Information);
-                    return;
-                }
-                if (ext == ".dxf")
-                {
-                    var drawing = await PdfPages.InBackground(() => DxfReader.ReadFile(file));
-                    if (drawing.Paths.Count == 0) throw new System.IO.InvalidDataException("No lines, polylines or arcs were found in model space.");
-                    Cursor = null;
-                    var dialog = new ImportDxfDialog(file, drawing) { Owner = this };
-                    if (dialog.ShowDialog() != true) return;
-                    result = dialog.Result;
-                }
-                else if (ext == ".pdf")
-                {
-                    var pages = await PdfPages.InBackground(() => PdfPages.PaperSizes(file));
-                    if (pages.Count == 0) throw new System.IO.InvalidDataException("The PDF has no pages.");
-                    Cursor = null;
-                    var dialog = new ImportPdfDialog(file, pages, DrawingWidthFeet()) { Owner = this };
-                    if (dialog.ShowDialog() != true) return;
-                    result = dialog.Result;
-                    calibrateOnDrawing = dialog.CalibrateOnDrawing;
-                }
-                else
-                {
-                    Cursor = null;
-                    var dialog = new ImportImageDialog(file, DrawingWidthFeet()) { Owner = this };
-                    if (dialog.ShowDialog() != true) return;
-                    result = dialog.Result;
-                    result.Source = "Image";
-                    calibrateOnDrawing = dialog.CalibrateOnDrawing;
-                    if (!result.Embed(file)) Log.Warning("The plan image could not be stored in the project: " + file);
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.Warning("Could not import the plan " + file, ex);
-                MessageBox.Show(this, "This file could not be imported.\n\n" + ex.Message, "Import plan", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-            finally
-            {
-                Cursor = null;
-            }
-
-            Calculator.Image = result;
-            planBitmap = null;
-            planBitmapData = null;
-            planVector = null;
-            imageDrawWarned = false;
-            hideImage = false;
-            btnHideImage.Tag = "on";
-            Log.Info($"Plan imported ({result.Source}): {file}");
-            ZoomToImage();
-            if (calibrateOnDrawing) StartImageCommand(ImageCommand.Calibrate);
-            ImageChanged();
-        }
-
-        private void RemovePlanImage()
-        {
-            if (Calculator?.Image == null) return;
-            if (MessageBox.Show(this, "Remove the plan image from this project? (The image file is not deleted.)", "Remove image",
-                                MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) return;
-            Calculator.Image = null;
-            planBitmap = null;
-            imageTool.Cancel();
-            ImageChanged();
-        }
-
-        private void StartImageCommand(ImageCommand command)
-        {
-            if (Calculator?.Image == null) return;
-            if (Calculator.Image.Locked)
-            {
-                ShowStatusMessage(LogLevel.Warning, "The image is locked: Image ▾ > Unlock first.");
-                return;
-            }
-            ResetInputMode();
-            Sketch.SetTool(BuildingModel.Sketch.SketchTool.Select);
-            if (selectionCardOpen) CloseSelectionCard();
-            imageTool.Begin(command);
-            hideImage = false;
-            Calculator.Image.Visible = true;
-            btnHideImage.Tag = "on";
-            ShowStatusMessage(LogLevel.Info, imageTool.Prompt);
-            RedrawDrawing();
-        }
-
-        /// <summary>A click while an image command is active.</summary>
-        private void ImageToolClick(Point p)
-        {
-            string message = imageTool.Click(Calculator.Image, p, out bool warning);
-            if (message != null) ShowStatusMessage(warning ? LogLevel.Warning : LogLevel.Info, message);
-            if (imageTool.WaitingForDistance) sketchView.FocusCommand();
-            else if (imageTool.Active) ShowStatusMessage(LogLevel.Info, imageTool.Prompt);
-            ImageChanged();
-        }
-
-        /// <summary>Picked points and the rubber band of an image command.</summary>
-        private void DrawImageTool(DrawingContext ctx)
-        {
-            if (!imageTool.Active) return;
-            var pen = new Pen(new SolidColorBrush(Color.FromRgb(0xD9, 0x5F, 0x00)), 1.5) { DashStyle = DashStyles.Dash };
-            var dot = new SolidColorBrush(Color.FromRgb(0xD9, 0x5F, 0x00));
-            Point? last = null;
-            foreach (var p in imageTool.Points)
-            {
-                Point s = WorldToScreen(p, m_layers);
-                ctx.DrawEllipse(dot, null, s, 4, 4);
-                if (last != null) ctx.DrawLine(pen, last.Value, s);
-                last = s;
-            }
-            if (last != null && !imageTool.WaitingForDistance)
-                ctx.DrawLine(pen, last.Value, WorldToScreen(ToPoint(Sketch.CursorPoint), m_layers));
-        }
-
-        private void ImageChanged()
-        {
-            LogModelChanges();
-            ShowImageName();
-            RedrawDrawing();
         }
 
         private void ShowImageName()
         {
-            var img = Calculator?.Image;
-            if (img == null)
+            var p = Sketch?.PlanOf(Sketch.ActiveLevel);
+            if (p == null)
             {
                 tbImageFileName.Text = "";
                 tbImageFileName.ToolTip = null;
                 return;
             }
-            tbImageFileName.Text = "Plan: " + System.IO.Path.GetFileName(img.Path) + (string.IsNullOrEmpty(img.Source) ? "" : $" ({img.Source})") + (img.Calibrated ? "" : "  (scale not set)") + (img.Locked ? "  (locked)" : "");
-            tbImageFileName.ToolTip = img.Path + Environment.NewLine +
-                                      (img.IsVector ? $"CAD linework, {img.Paths.Count} paths, " : $"{img.FeetPerPixel * 12:0.###} in per pixel, ") + $"turned {img.RotationDegrees:0.##}°, opacity {img.Opacity * 100:0} %";
+            tbImageFileName.Text = "Plan: " + System.IO.Path.GetFileName(p.File) + (string.IsNullOrEmpty(p.Source) ? "" : $" ({p.Source})") + (p.Calibrated ? "" : "  (scale not set)");
+            tbImageFileName.ToolTip = p.FullPath(null) + Environment.NewLine + "Imported and placed in the Building Model editor (Image ▾ or Edit building).";
         }
 
-        /// <summary>Width of what is drawn (ft), for the first size of an uncalibrated image; 60 ft when nothing is drawn.</summary>
-        private double DrawingWidthFeet()
-        {
-            var r = Rect.Empty;
-            if (Calculator?._diaphragm_system != null)
-                foreach (var d in Calculator._diaphragm_system._diaphragms.Values) { r.Union(d.P1); r.Union(d.P3); }
-            if (Calculator?._wall_system != null)
-                foreach (var w in Calculator._wall_system._walls.Values) { r.Union(w.Start); r.Union(w.End); }
-            return r.IsEmpty || r.Width < 1 ? 60 : r.Width;
-        }
-
-        private static Point Center(Rect r) => new Point(r.X + r.Width / 2, r.Y + r.Height / 2);
-
-        /// <summary>Zooms so the whole image shows, with a margin.</summary>
+        /// <summary>Zooms so the whole plan shows, with a margin.</summary>
         private void ZoomToImage()
         {
-            var img = Calculator?.Image;
-            if (img == null || img.PixelWidth <= 0) return;
-            Rect b = img.WorldBounds();
-            if (b.Width <= 0 || b.Height <= 0) return;
-            Sketch.ZoomTo(b);
+            var b = Sketch.PlanOf(Sketch.ActiveLevel)?.WorldBounds() ?? Rect.Empty;
+            if (!b.IsEmpty && b.Width > 0 && b.Height > 0) Sketch.ZoomTo(b);
         }
-
         /// <summary>After New or Open: the project's image (older projects moved over), shown as it was saved.</summary>
         /// <summary>The model as last logged; each change is logged as its differences from it.</summary>
         private ModelSnapshot loggedModel;
 
         /// <summary>
         /// Logs what changed in the model since the last call (walls and diaphragms added, deleted or resized; sheathing,
-        /// nailing, framing, dead load, hold-down type; design settings; loads; the plan image), whichever panel changed it.
+        /// nailing, framing, dead load, hold-down type; design settings; loads), whichever panel changed it.
         /// </summary>
         private void LogModelChanges()
         {
@@ -1342,7 +1043,7 @@ namespace ShearWallVisualizer
             {
                 var now = ModelSnapshot.Take(Calculator, designer);
                 if (loggedModel == null)
-                    Log.Info($"Model: {now.WallGeometry.Count} walls, {now.Diaphragms.Count} diaphragms" + (now.Image.Count > 0 ? ", plan image " + now.Image["file"] : ""));
+                    Log.Info($"Model: {now.WallGeometry.Count} walls, {now.Diaphragms.Count} diaphragms" + "");
                 else
                     foreach (string line in ModelChangeLog.Differences(loggedModel, now))
                         Log.Info(line);
@@ -1356,14 +1057,8 @@ namespace ShearWallVisualizer
 
         private void ImageForNewProject()
         {
-            planBitmap = null;
-            planBitmapPath = null;
-            planBitmapData = null;
-            planVector = null;
-            imageDrawWarned = false;
             loggedModel = null; // a different project: start the change log afresh
-            imageTool.Cancel();
-            hideImage = Calculator?.Image != null && !Calculator.Image.Visible;
+            hideImage = !Sketch.ShowUnderlay;
             btnHideImage.Tag = hideImage ? null : "on";
         }
 
@@ -1402,7 +1097,7 @@ namespace ShearWallVisualizer
         private void RouteTypingToCommand(object sender, TextCompositionEventArgs e)
         {
             if (InWindWorkspace || string.IsNullOrEmpty(e.Text)) return;
-            if (Sketch.Tool == BuildingModel.Sketch.SketchTool.Select && !imageTool.WaitingForDistance) return;
+            if (Sketch.Tool == BuildingModel.Sketch.SketchTool.Select) return;
             if (e.OriginalSource is System.Windows.Controls.Primitives.TextBoxBase) return;
             if ("0123456789.-@".IndexOf(e.Text[0]) < 0) return;
             sketchView.FocusCommand(e.Text);
@@ -1420,7 +1115,7 @@ namespace ShearWallVisualizer
         private void btnHideImage_Click(object sender, RoutedEventArgs e)
         {
             hideImage = !hideImage;
-            if (Calculator?.Image != null) Calculator.Image.Visible = !hideImage; // saved with the project
+            Sketch.ShowUnderlay = !hideImage; // this screen only: the plan stays in the building model
             btnHideImage.Tag = hideImage ? null : "on";
             RedrawDrawing();
         }
@@ -1725,7 +1420,6 @@ namespace ShearWallVisualizer
         /// <summary>Cancels the plan-image command and the sketch's command in progress.</summary>
         private void ResetInputMode()
         {
-            imageTool.Cancel();
             Sketch.ResetCommand();
         }
         #endregion

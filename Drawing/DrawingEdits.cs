@@ -81,8 +81,8 @@ namespace ShearWallCalculator.Drawing
             return null;
         }
 
-        /// <summary>The box around every wall and diaphragm (and the plan, when given and shown); <see cref="Rect.Empty"/> when there is nothing.</summary>
-        public static Rect Extents(ShearWallCalculatorBase calc, bool includePlan)
+        /// <summary>The box around every wall and diaphragm; <see cref="Rect.Empty"/> when there is nothing. (The plan under the level is the sketch's.)</summary>
+        public static Rect Extents(ShearWallCalculatorBase calc)
         {
             Rect r = Rect.Empty;
             foreach (var w in calc?._wall_system?._walls.Values ?? Enumerable.Empty<WallData>())
@@ -94,12 +94,6 @@ namespace ShearWallCalculator.Drawing
             {
                 r.Union(d.P1);
                 r.Union(d.P3);
-            }
-            var img = calc?.Image;
-            if (includePlan && img != null && img.Visible)
-            {
-                var b = img.WorldBounds();
-                if (!b.IsEmpty) r.Union(b);
             }
             return r;
         }

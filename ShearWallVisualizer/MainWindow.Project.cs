@@ -197,7 +197,6 @@ namespace ShearWallVisualizer
         /// <summary>Puts an opened or new project into the window. Returns a note for the user (loads that changed), or null.</summary>
         private string LoadProject(Building b, IList<ShearWallCalculatorBase> calcs, WindSection wind, ShearWallProject section, int active = 0)
         {
-            imageTool.Cancel();
             windLoadsLinked = wind != null;
             var w = wind ?? WindSection.New();
             windSetup.SetInputs(new BuildingData { EnclosureType = w.Enclosure, ParapetEnclosure = w.ParapetEnclosure }, w.Edition, w.ToParameters());

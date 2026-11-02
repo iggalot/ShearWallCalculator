@@ -31,13 +31,16 @@ namespace ShearWallCalculator.Tests
         private static Building ThroughTheFile(Building b) => ModelFile.FromJson(ModelFile.ToJson(new ModelDocument { Building = b })).Building;
 
         [TestMethod]
-        public void ManualLoadsAndImages_PerStory_ThroughTheFile()
+        public void ManualLoads_PerStory_ThroughTheFile_ThePlansStayInTheBuilding()
         {
             var b = TwoStories();
             var stories = ShearWallAdapter.ToCalculators(b);
             stories[0].Calculator.AddLoads(12.5, 8);
             stories[1].Calculator.AddLoads(6, 4.25);
-            stories[1].Calculator.Image = new ReferenceImage { Path = @"C:\plans\roof.png", FeetPerPixel = 0.05, Origin = new Point(1, 2), PixelWidth = 100, PixelHeight = 80 };
+            // a plan under the roof level, as the editor stores it, and one in the format older projects used
+            var roofLevel = b.Level(stories[1].Level.Id);
+            roofLevel.SetData("Sketch.Plan", "{\"File\":\"plans\\\\roof.png\"}");
+            b.Level(stories[0].Level.Id).SetData("ShearWall.Image", "{\"Path\":\"C:\\\\plans\\\\l2.png\"}");
 
             var saved = ModelFile.Clone(b);
             ShearWallProject.Save(saved, stories, manualLoads: true);
@@ -50,13 +53,10 @@ namespace ShearWallCalculator.Tests
             Assert.AreEqual(12.5, calcs[0].V_x, 1e-12);
             Assert.AreEqual(8, calcs[0].V_y, 1e-12);
             Assert.AreEqual(4.25, calcs[1].V_y, 1e-12);
-            Assert.IsNull(calcs[0].Image);
-            Assert.AreEqual(@"C:\plans\roof.png", calcs[1].Image.Path);
-            Assert.AreEqual(0.05, calcs[1].Image.FeetPerPixel, 1e-12);
-            Assert.AreEqual(new Point(1, 2), calcs[1].Image.Origin);
 
             Assert.IsNull(opened.GetData(ShearWallProject.Key), "taken out of the building while it is edited");
-            Assert.IsTrue(opened.Levels.All(l => l.GetData(ShearWallProject.ImageKey) == null));
+            Assert.IsNotNull(opened.Level(stories[1].Level.Id).GetData("Sketch.Plan"), "the plans are the building's: kept, not taken out");
+            Assert.IsNotNull(opened.Level(stories[0].Level.Id).GetData("ShearWall.Image"), "an older plan is left for the sketch to convert");
         }
 
         [TestMethod]
@@ -81,7 +81,7 @@ namespace ShearWallCalculator.Tests
             var calcs = ShearWallProject.Open(ThroughTheFile(TwoStories()), manualLoads: true, out var section);
             Assert.IsNull(section, "not designed yet");
             Assert.AreEqual(2, calcs.Count);
-            Assert.IsTrue(calcs.All(c => c.V_x == 0 && c.Image == null));
+            Assert.IsTrue(calcs.All(c => c.V_x == 0));
         }
 
         [TestMethod]

@@ -149,12 +149,12 @@ namespace ShearWallCalculator.Tests
         {
             var calc = Building();
             calc._wall_system.AddWall(new WallData(9, 50, -5, 50, 10));
-            var r = DrawingEdits.Extents(calc, includePlan: false);
+            var r = DrawingEdits.Extents(calc);
             Assert.AreEqual(new Rect(0, -5, 50, 35), r);
             Assert.IsTrue(DrawingEdits.Delete(calc, "Wall", 2));
             Assert.IsFalse(DrawingEdits.Delete(calc, "Wall", 2));
-            Assert.AreEqual(new Rect(0, 0, 40, 30), DrawingEdits.Extents(calc, false));
-            Assert.IsTrue(DrawingEdits.Extents(new ShearWallCalculator_RigidDiaphragm(), true).IsEmpty);
+            Assert.AreEqual(new Rect(0, 0, 40, 30), DrawingEdits.Extents(calc));
+            Assert.IsTrue(DrawingEdits.Extents(new ShearWallCalculator_RigidDiaphragm()).IsEmpty);
 
             Assert.AreEqual(new Point(10, 2), DrawingEdits.Ortho(new Point(10, 3), new Point(0, 2)));
             Assert.AreEqual(new Point(0, -8), DrawingEdits.Ortho(new Point(1, -8), new Point(0, 2)));

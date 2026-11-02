@@ -73,39 +73,24 @@ namespace ShearWallVisualizer
         {
             sketchView.ShowLevelBar = false;    // the LEVEL buttons above choose the level
             sketchView.MaxStories = FloorEdits.MaxFloors; // New from size: the designer handles up to this many floors
-            sketchView.ShowPlanButton = false;  // Image ▾ above imports the plan (PDF, DXF, picture) per level
-            sketchView.HideTool(SketchTool.Calibrate);
+            // The plans under the levels are the building's: the sketch draws them (and snaps to CAD linework); this app
+            // only shows or hides them (the Image button above). Importing, scaling and placing them is the editor's.
+            sketchView.ShowPlanButton = false;
+            sketchView.PlanEditing = false;
+            foreach (var t in new[] { SketchTool.Calibrate, SketchTool.PlanStraighten, SketchTool.PlanMove }) sketchView.HideTool(t);
             var s = Sketch;
-            s.DrawUnder += (o, e) => DrawReferenceImage(e.Context);
             s.DrawOver += (o, e) =>
             {
                 DrawBracedWallLines(e.Context);
                 DrawWallDesign(e.Context);
                 DrawCOMandCOR(e.Context);
-                DrawImageTool(e.Context);
                 DrawDebug(e.Context);
             };
             s.WallStyle = DesignPen;
             s.LevelCaption = LevelCaption;
-            s.InterceptClick = p =>
-            {
-                if (!imageTool.Active || Calculator?.Image == null) return false;
-                ImageToolClick(ToPoint(p));
-                return true;
-            };
-            s.HostWantsSnaps = () => imageTool.Active && imageTool.WantsSnaps;
-            s.HostFrom = () => imageTool.Active && imageTool.Points.Count > 0 ? ToPoint2(imageTool.Points[imageTool.Points.Count - 1]) : (Point2?)null;
-            s.ExtraSnapLines = PlanLinesNear;
-            s.InterceptTyped = text =>
-            {
-                if (!imageTool.WaitingForDistance) return false;
-                EnterImageDistance(text);
-                return true;
-            };
             s.Escaped += (o, e) =>
             {
-                if (imageTool.Active) { imageTool.Cancel(); Draw(); }
-                else if (selectionCardOpen) CloseSelectionCard();
+                if (selectionCardOpen) CloseSelectionCard();
             };
             s.ModelChanged += (o, e) => { if (!storing) ModelToCalculators(); };
             s.ActiveLevelChanged += (o, e) => ActiveLevelChanged();
@@ -181,7 +166,6 @@ namespace ShearWallVisualizer
         {
             int i = stories.FindIndex(s => s.Level.Id == Sketch.ActiveLevel?.Id);
             if (i < 0 || (i == currentLevel && ReferenceEquals(Calculator, levels[i]))) return;
-            imageTool.Cancel();
             selectedKind = null;
             selectedId = -1;
             selectionCardOpen = false;
@@ -389,31 +373,6 @@ namespace ShearWallVisualizer
                 Child = new Border { Background = Brushes.White, BorderBrush = new SolidColorBrush(Color.FromRgb(0xC3, 0xC2, 0xB7)), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(4), Child = list },
             };
             popup.IsOpen = true;
-        }
-
-        // ------------------------------------------------------------------ the plan image's commands and snaps
-
-        /// <summary>The CAD plan's lines near the cursor, for the sketch's snaps.</summary>
-        private IEnumerable<Segment2> PlanLinesNear(Point2 p, double reach)
-        {
-            var img = Calculator?.Image;
-            if (img == null || !img.IsVector || !img.Visible || hideImage) return null;
-            return img.SegmentsNear(ToPoint(p), reach).Select(s => new Segment2(ToPoint2(s.A), ToPoint2(s.B)));
-        }
-
-        private void EnterImageDistance(string text)
-        {
-            if (imageTool.EnterDistance(Calculator?.Image, text, out string done))
-            {
-                Keyboard.Focus(Sketch);
-                ShowStatusMessage(LogLevel.Info, done);
-                ImageChanged();
-            }
-            else
-            {
-                ShowStatusMessage(LogLevel.Warning, done);
-                sketchView.FocusCommand(text);
-            }
         }
 
         // ------------------------------------------------------------------ 3D

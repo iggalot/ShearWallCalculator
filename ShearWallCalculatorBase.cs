@@ -9,9 +9,6 @@ namespace ShearWallCalculator
     {
         private const double DEFAULT_BUILDING_HEIGHT = 10.0;
 
-        /// <summary>The plan image under the drawing (null: none).</summary>
-        public ShearWallCalculator.Drawing.ReferenceImage Image { get; set; }
-
         public string CalculatorType { get; }
         public WallSystem _wall_system { get; set;  } = new WallSystem();
         public DiaphragmSystem _diaphragm_system { get; set; } = new DiaphragmSystem();
@@ -153,8 +150,6 @@ namespace ShearWallCalculator
             LoadCases = new List<LateralLoadCase>(copy_calc.LoadCases ?? new List<LateralLoadCase>());
             DesignSettings = copy_calc.DesignSettings ?? new ShearWallCalculator.Design.DesignSettings();
 
-            // Loaded image information
-            Image = copy_calc.Image?.Clone();
 
             Update();  // update necessary system parts
         }
