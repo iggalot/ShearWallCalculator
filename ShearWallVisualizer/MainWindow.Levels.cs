@@ -117,7 +117,8 @@ namespace ShearWallVisualizer
             if (levels.Count == 0) return;
             ShareDesignSettings(Calculator.DesignSettings);
             var beams = Framing().beams; // a wall over a beam is carried
-            levelNotes = StoryCascade.Analyze(levels, i => beams.Where(b => b.OnStory == i).Select(b => (b.Start, b.End)));
+            levelNotes = StoryCascade.Analyze(levels, i => beams.Where(b => b.OnStory == i).Select(b => (b.Start, b.End)),
+                i => i >= 0 && i < stories.Count ? stories[i].Level.Name : null); // the model's level names, as on the plans
             if (stories.Count > FloorEdits.MaxFloors)
                 levelNotes.Add($"The model has {stories.Count} stories; the wind loads are split over the first {FloorEdits.MaxFloors} only.");
             UpdateLevelBanners();

@@ -25,10 +25,17 @@ namespace ShearWallCalculator
 
         /// <summary>Calculates every level, top first. <paramref name="levels"/> runs bottom to top. Returns what to check (per level).</summary>
         /// <param name="beamsOn">The beams in the framing on top of story i (under the walls of story i + 1), as segments; null: none.</param>
-        public static List<string> Analyze(IList<ShearWallCalculatorBase> levels, Func<int, IEnumerable<(Point a, Point b)>> beamsOn = null)
+        /// <param name="nameOf">
+        /// The name of story i's level: the level on top of it, whose plan its walls are drawn on ("Level 3"). Null: "level
+        /// i + 1" (the first story is level 1).
+        /// </param>
+        public static List<string> Analyze(IList<ShearWallCalculatorBase> levels, Func<int, IEnumerable<(Point a, Point b)>> beamsOn = null,
+            Func<int, string> nameOf = null)
         {
             var notes = new List<string>();
             if (levels == null || levels.Count == 0) return notes;
+            string Name(int story) => nameOf?.Invoke(story) ?? $"level {story + 1}";
+            string Cap(string s) => string.IsNullOrEmpty(s) ? s : char.ToUpper(s[0]) + s.Substring(1);
             int n = levels.Count;
             for (int i = n - 1; i >= 0; i--)
             {
@@ -42,7 +49,7 @@ namespace ShearWallCalculator
                     var upper = levels[i + 1];
                     bool upperHasWalls = upper._wall_system?._walls.Count > 0;
                     if (upperHasWalls && !upper.IsValidForCalculation)
-                        notes.Add($"Level {i + 2} cannot be calculated yet (it needs a diaphragm and walls both ways), so its wind is not carried down to level {i + 1}.");
+                        notes.Add($"{Cap(Name(i + 1))} cannot be calculated yet (it needs a diaphragm and walls both ways), so its wind is not carried down to {Name(i)}.");
                     else if (env != null && upper is ShearWallCalculator_Envelope upperEnv)
                     {
                         // two whole-building runs: rigid reactions to the rigid run below, flexible to the flexible
@@ -52,8 +59,8 @@ namespace ShearWallCalculator
                     else
                         calc.LoadsFromAbove = Reactions(upper, i + 2);
                     if ((calc is ShearWallCalculator_FlexibleDiaphragm || env != null) && calc.LoadsFromAbove.Count > 0)
-                        notes.Add($"Level {i + 1}{(env != null ? ", flexible run of the envelope" : " is a flexible diaphragm")}: the walls above are spread as a uniform load plus torsion (an approximation).");
-                    notes.AddRange(Unsupported(upper, calc, i + 2, beamsOn?.Invoke(i)));
+                        notes.Add($"{Cap(Name(i))}{(env != null ? ", flexible run of the envelope" : " is a flexible diaphragm")}: the walls above are spread as a uniform load plus torsion (an approximation).");
+                    notes.AddRange(Unsupported(upper, calc, i + 2, beamsOn?.Invoke(i), Cap(Name(i + 1)), Name(i)));
                 }
                 calc.PerformCalculations();
             }
@@ -123,10 +130,14 @@ namespace ShearWallCalculator
         /// <paramref name="beams"/> on the same line): their weight and hold-downs need a load path; and upper walls that run
         /// past the edge of the floor below (<see cref="OffFloor"/>): that part's shear has nowhere to go.
         /// </summary>
+        /// <param name="upperName">The upper walls' level, as named in the model (null: "Level <paramref name="upperLevel"/>").</param>
+        /// <param name="lowerName">The level under them (the floor they stand on; null: "level <paramref name="upperLevel"/> − 1").</param>
         public static List<string> Unsupported(ShearWallCalculatorBase upper, ShearWallCalculatorBase lower, int upperLevel,
-            IEnumerable<(Point a, Point b)> beams = null)
+            IEnumerable<(Point a, Point b)> beams = null, string upperName = null, string lowerName = null)
         {
             var notes = new List<string>();
+            upperName = upperName ?? $"Level {upperLevel}";
+            lowerName = lowerName ?? $"level {upperLevel - 1}";
             var below = (lower?._wall_system?._walls.Values ?? Enumerable.Empty<WallData>()).Select(b => (b.Start, b.End))
                         .Concat(beams ?? Enumerable.Empty<(Point, Point)>()).ToList();
             var off = OffFloor(upper, lower);
@@ -134,10 +145,10 @@ namespace ShearWallCalculator
             {
                 double L = kv.Value.WallLength, under = SupportedLength(kv.Value, below);
                 if (under < L - 0.1)
-                    notes.Add($"Level {upperLevel}, wall {kv.Key}: {(under < 0.1 ? "no wall or beam" : $"a wall or beam under only {under:0.#} of {L:0.#} ft")} on level {upperLevel - 1}. " +
+                    notes.Add($"{upperName}, wall {kv.Key}: {(under < 0.1 ? "no wall or beam" : $"a wall or beam under only {under:0.#} of {L:0.#} ft")} on {lowerName}. " +
                               "Its hold-downs need a post, beam or blocking under them.");
                 if (off.TryGetValue(kv.Key, out double beyond))
-                    notes.Add($"Level {upperLevel}, wall {kv.Key}: {(beyond >= L - 0.1 ? "all of it is" : $"{beyond:0.#} of its {L:0.#} ft is")} beyond the edge of the level {upperLevel - 1} floor, " +
+                    notes.Add($"{upperName}, wall {kv.Key}: {(beyond >= L - 0.1 ? "all of it is" : $"{beyond:0.#} of its {L:0.#} ft is")} beyond the edge of the {lowerName} floor, " +
                               "so its shear has no diaphragm to go into. Extend the floor's diaphragm under it.");
             }
             return notes;
