@@ -286,6 +286,7 @@ namespace ShearWallVisualizer
         private void btnCopy_Click(object sender, RoutedEventArgs e) => Sketch.SetTool(SketchTool.Copy);
         private void btnMeasure_Click(object sender, RoutedEventArgs e) => Sketch.SetTool(SketchTool.Measure);
         private void btnNote_Click(object sender, RoutedEventArgs e) => Sketch.SetTool(SketchTool.Note);
+        private void btnCut_Click(object sender, RoutedEventArgs e) => Sketch.SetTool(SketchTool.Cut);
         private void btnOrtho_Click(object sender, RoutedEventArgs e) => Sketch.ToggleOrtho();
         private void btnZoomExtents_Click(object sender, RoutedEventArgs e) => Sketch.ZoomExtents();
 

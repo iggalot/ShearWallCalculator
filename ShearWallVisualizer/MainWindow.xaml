@@ -45,6 +45,7 @@
                 <MenuItem x:Name="miCopyFromBelow" Header="Copy the level _below onto this level" Click="CopyFromBelow_Click"/>
                 <MenuItem Header="Mea_sure distance" Click="btnMeasure_Click" InputGestureText="T"/>
                 <MenuItem Header="_Note on the plan" Click="btnNote_Click" InputGestureText="N"/>
+                <MenuItem Header="Cu_t from the diaphragms (notch, L, courtyard)" Click="btnCut_Click" InputGestureText="K"/>
                 <Separator/>
                 <MenuItem Header="_Ortho (move, copy, measure)" Click="btnOrtho_Click" InputGestureText="F8"/>
                 <MenuItem Header="_Zoom to the drawing" Click="btnZoomExtents_Click" InputGestureText="Z"/>
@@ -172,7 +173,7 @@
                     </Style>
                 </Border.Resources>
                 <DockPanel>
-                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                    <WrapPanel Orientation="Horizontal" DockPanel.Dock="Left">
                         <!-- Multi-story (Floors in the building inputs): which level the plan shows and edits -->
                         <StackPanel x:Name="levelGroup" Orientation="Horizontal">
                             <TextBlock Style="{StaticResource ToolGroup}" Text="LEVEL"/>
@@ -185,6 +186,12 @@
                                     ToolTip="DELETE FLOOR: removes the level shown, with all its walls and diaphragms. The floors above move down one; you are told first what that does to the load path."/>
                             <Rectangle Style="{StaticResource ToolDivider}"/>
                         </StackPanel>
+                        
+                        <TextBlock Style="{StaticResource ToolGroup}" Text="LOADS"/>
+                        <Button x:Name="btnLoadEntry" Style="{StaticResource Tool}" Content="Loads..." Click="btnOpenLoadDialog_Click"
+                                ToolTip="Use the wind loads (automatic) or enter loads by hand"/>
+                        <TextBlock x:Name="LoadInfoTextBlock" VerticalAlignment="Center" Margin="2,0,0,0" FontSize="13" Foreground="#52514E"/>
+                        <Rectangle Style="{StaticResource ToolDivider}"/>
                         <TextBlock Style="{StaticResource ToolGroup}" Text="SHOW"/>
                         <Button x:Name="btnHideImage" Style="{StaticResource Tool}" Content="Image" Tag="on" Click="btnHideImage_Click"
                                 ToolTip="Show or hide the plan image layer (under the drawing, never selectable; the image is stored in the project file)"/>
@@ -196,11 +203,7 @@
                                 ToolTip="The building in 3D from the model: every level's diaphragm and the walls (shear walls blue); the level shown is stronger"/>
                         <Button x:Name="btnIssues" Style="{StaticResource Tool}" Content="✓" Click="Issues_Click"
                                 ToolTip="Errors and warnings in the model and the design (also marked on the plan)"/>
-                        <Rectangle Style="{StaticResource ToolDivider}"/>
-                        <Button x:Name="btnLoadEntry" Style="{StaticResource Tool}" Content="Loads..." Click="btnOpenLoadDialog_Click"
-                                ToolTip="Use the wind loads (automatic) or enter loads by hand"/>
-                        <TextBlock x:Name="LoadInfoTextBlock" VerticalAlignment="Center" Margin="6,0,0,0" FontSize="13" Foreground="#52514E"/>
-                    </StackPanel>
+                    </WrapPanel>
                     <TextBlock x:Name="tbImageFileName" DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center"
                                Foreground="#7A7974" FontSize="12" TextTrimming="CharacterEllipsis"/>
                 </DockPanel>
