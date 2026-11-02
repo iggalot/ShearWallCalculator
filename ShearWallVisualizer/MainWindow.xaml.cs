@@ -83,7 +83,8 @@ namespace ShearWallVisualizer
         bool showDesign = true; // schedule marks, hold-downs and the schedule on the plan
         bool imageDrawWarned = false;   // log a reference-image drawing failure once, not every frame
 
-        private double defaultWallHeight = 9.0;
+        /// <summary>A new story's height: the building model's default (the one source).</summary>
+        private double defaultWallHeight => (building?.Defaults ?? new BuildingModel.Model.ModelDefaults()).StoryHeight;
 
         private bool selectionCardOpen;                    // the card shows the picked wall or diaphragm
         private bool debugMode = false;
