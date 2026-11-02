@@ -31,6 +31,18 @@ namespace ShearWallVisualizer.Controls
             public IReadOnlyDictionary<int, WallDesignResult> Results { get; set; } = new Dictionary<int, WallDesignResult>();
             /// <summary>Why this story has nothing to design yet (null when it has).</summary>
             public string Message { get; set; }
+            /// <summary>What fixes the message (show the floor's plan, open the loads, list the model errors), and its link text.</summary>
+            public Action Fix { get; set; }
+            public string FixLabel { get; set; }
+        }
+
+        /// <summary>A warning listed on the Design tab with a link that goes to it (the element on its plan, or the screen that fixes it).</summary>
+        public sealed class DesignWarning
+        {
+            public string Text { get; set; }
+            public bool IsError { get; set; }
+            public string LinkText { get; set; } = "Show me";
+            public Action Go { get; set; }
         }
 
         public event EventHandler DesignChanged;
@@ -205,11 +217,14 @@ namespace ShearWallVisualizer.Controls
                 if (e.HeightChanged) CheckTableRoom();
             };
             Grid.SetRow(bar, 0);
-            Grid.SetRow(tbNote, 1);
+            var noteArea = new StackPanel();
+            noteArea.Children.Add(tbNote);
+            noteArea.Children.Add(warningList);
+            Grid.SetRow(noteArea, 1);
             Grid.SetRow(tableScroll, 2);
             Grid.SetRow(detailsCard, 3);
             root.Children.Add(bar);
-            root.Children.Add(tbNote);
+            root.Children.Add(noteArea);
             root.Children.Add(tableScroll);
             root.Children.Add(detailsCard);
             root.SizeChanged += (s, e) => FitDetails(e.NewSize.Height);
@@ -223,6 +238,78 @@ namespace ShearWallVisualizer.Controls
         internal const double DetailsShare = 0.4;
 
         private readonly ScrollViewer detailsScroll;
+
+        // ------------------------------------------------------------------ warnings that go to what they are about
+
+        /// <summary>The warnings under the note: the floors that cannot be designed yet, then the host's (model errors, the load path).</summary>
+        private readonly StackPanel warningList = new StackPanel { Margin = new Thickness(0, 0, 0, 6) };
+        private List<DesignWarning> hostWarnings = new List<DesignWarning>();
+
+        /// <summary>At most this many warnings are listed; the rest are counted (the ✗ list on the plan has them all).</summary>
+        internal const int MaxWarningsShown = 6;
+
+        /// <summary>The host's warnings about the design (model errors, hold-downs with nothing under them...), each with where it goes.</summary>
+        public void SetWarnings(IList<DesignWarning> list, Action showAll = null)
+        {
+            hostWarnings = list?.ToList() ?? new List<DesignWarning>();
+            showAllWarnings = showAll;
+            ShowWarnings();
+        }
+
+        private Action showAllWarnings;
+
+        /// <summary>The warnings shown now (for tests): the floors' messages first, then the host's.</summary>
+        internal List<DesignWarning> Warnings =>
+            stories.Where(s => s.Message != null && (floorFilter < 0 || s.Index == floorFilter))
+                   .Select(s => new DesignWarning { Text = (stories.Count > 1 ? s.Name + ": " : "") + s.Message, IsError = true, LinkText = s.FixLabel ?? "Show me", Go = s.Fix })
+                   .Concat(hostWarnings).ToList();
+
+        private void ShowWarnings()
+        {
+            warningList.Children.Clear();
+            var all = Warnings;
+            foreach (var w in all.Take(MaxWarningsShown))
+            {
+                var text = new TextBlock { TextWrapping = TextWrapping.Wrap, Foreground = w.IsError ? FailInk : Ui.WarnInk };
+                text.Inlines.Add(new Run((w.IsError ? "● " : "▲ ") + w.Text + "  "));
+                if (w.Go != null)
+                {
+                    var link = new Hyperlink(new Run(w.LinkText)) { FontWeight = FontWeights.SemiBold };
+                    var go = w.Go;
+                    link.Click += (s, e) =>
+                    {
+                        BuildingModel.Diagnostics.Log.Info("Design", $"Warning followed: {w.Text}");
+                        go();
+                    };
+                    text.Inlines.Add(link);
+                }
+                warningList.Children.Add(text);
+            }
+            if (all.Count > MaxWarningsShown)
+            {
+                var more = new TextBlock { Foreground = InkSecondary };
+                more.Inlines.Add(new Run($"and {all.Count - MaxWarningsShown} more  "));
+                if (showAllWarnings != null)
+                {
+                    var link = new Hyperlink(new Run("List them all"));
+                    link.Click += (s, e) => showAllWarnings();
+                    more.Inlines.Add(link);
+                }
+                warningList.Children.Add(more);
+            }
+        }
+
+        /// <summary>The next wall (after the selected one, round the table) in a state: the summary's "✗ n fail" and "close" links.</summary>
+        private void NextWall(Func<WallDesignResult, bool> which)
+        {
+            var keys = results.Keys.OrderBy(k => k).Where(k => which(results[k])).ToList();
+            if (keys.Count == 0) return;
+            int next = keys.FirstOrDefault(k => k > selectedWall);
+            if (!keys.Contains(next)) next = keys[0];
+            Select(next);
+            var row = table.Children.OfType<Border>().FirstOrDefault(b => b.Tag is int t && t == next);
+            row?.BringIntoView();
+        }
 
         private void FitDetails(double panelHeight)
         {
@@ -346,23 +433,38 @@ namespace ShearWallVisualizer.Controls
 
             ClearTable();
             details.Children.Clear();
+            ShowWarnings(); // the floors that cannot be designed yet, each with a link to what fixes it (and the host's warnings)
 
             if (results.Count == 0 || calc == null || designer == null)
             {
                 tbSummary.Text = string.Empty;
                 btnAuto.IsEnabled = false;
-                table.Children.Add(new TextBlock { Text = message ?? "Nothing to design yet.", Margin = new Thickness(12), TextWrapping = TextWrapping.Wrap, MaxWidth = 700 });
+                table.Children.Add(new TextBlock { Text = message != null ? "Nothing to design yet: see the warnings above (each link goes to what fixes it)." : "Nothing to design yet.",
+                                                   Margin = new Thickness(12), TextWrapping = TextWrapping.Wrap, MaxWidth = 700 });
                 detailsCard.Visibility = Visibility.Collapsed;
                 return;
             }
-            // floors that cannot be designed yet are named above the table; the others are listed
-            if (message != null) tbNote.Inlines.Add(new Run("\n" + message) { Foreground = Ui.WarnInk, FontWeight = FontWeights.SemiBold });
 
             btnAuto.IsEnabled = true;
             int pass = results.Values.Count(r => r.Pass);
             int close = results.Values.Count(r => r.State == DesignState.Close);
-            tbSummary.Text = $"{pass} of {results.Count} walls pass" + (close > 0 ? $"  ·  {Ui.Mark(DesignState.Close)} {close} close to the limit" : "") +
-                             (pass < results.Count ? $"  ·  {Ui.Mark(DesignState.Fail)} {results.Count - pass} fail" : "");
+            // "✗ n fail" and "close to the limit" are links: each click selects the next such wall (row, details and plan)
+            tbSummary.Inlines.Clear();
+            tbSummary.Inlines.Add(new Run($"{pass} of {results.Count} walls pass"));
+            if (close > 0)
+            {
+                tbSummary.Inlines.Add(new Run("  ·  "));
+                var link = new Hyperlink(new Run($"{Ui.Mark(DesignState.Close)} {close} close to the limit")) { Foreground = Ui.CloseInk, ToolTip = "Click: the next wall close to its limit" };
+                link.Click += (s, e) => NextWall(r => r.State == DesignState.Close);
+                tbSummary.Inlines.Add(link);
+            }
+            if (pass < results.Count)
+            {
+                tbSummary.Inlines.Add(new Run("  ·  "));
+                var link = new Hyperlink(new Run($"{Ui.Mark(DesignState.Fail)} {results.Count - pass} fail")) { Foreground = FailInk, ToolTip = "Click: the next wall that fails (its row, its details and its place on the plan)" };
+                link.Click += (s, e) => NextWall(r => !r.Pass);
+                tbSummary.Inlines.Add(link);
+            }
             tbSummary.Foreground = pass == results.Count ? PassInk : FailInk;
             BuildTable();
             if (!results.ContainsKey(selectedWall) && results.Count > 0) // start on the first wall that fails

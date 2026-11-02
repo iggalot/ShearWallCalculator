@@ -383,6 +383,30 @@ namespace ShearWallVisualizer
             btnIssues.Content = errors > 0 ? $"✗ {errors}" + (warnings > 0 ? $"  ⚠ {warnings}" : "") : warnings > 0 ? $"⚠ {warnings}" : "✓";
             btnIssues.Foreground = errors > 0 ? StatusErrorInk : warnings > 0 ? StatusWarnInk : Controls.Ui.PassInk;
             btnIssues.ToolTip = list.Count == 0 ? "No errors or warnings in the model or the design." : $"{errors} errors, {warnings} warnings: click for the list (click one to find it on the plan).";
+
+            // the Design tab lists what stops or bends the design, each going to its element on the plan: model errors and the
+            // load path (hold-downs with nothing under them, a replaced type, beams and columns not connected). Failing walls are
+            // the summary's "✗ n fail" link there.
+            var forDesign = list.Where(i => i.Code != "WallFails" && (i.Severity == Severity.Error || DesignCodes.Contains(i.Code)))
+                                .OrderBy(i => i.Severity == Severity.Error ? 0 : 1).ToList();
+            designPanel?.SetWarnings(forDesign.Select(i => new Controls.WallDesignPanel.DesignWarning
+            {
+                Text = i.Message, IsError = i.Severity == Severity.Error, LinkText = "Show on the plan", Go = () => GoToIssue(i),
+            }).ToList(), () => { rbWorkspaceWalls.IsChecked = true; ShowIssueList(btnIssues); });
+        }
+
+        /// <summary>The warnings that matter to the design (besides every error).</summary>
+        private static readonly HashSet<string> DesignCodes = new HashSet<string>
+        {
+            "HoldownUnsupported", "HoldownTypeReplaced", "HoldownTooWeak", "BeamCrossesColumn", "BeamMissesColumn", "NotCalculated",
+        };
+
+        /// <summary>An issue followed from the Design tab: the plan, its level, the members selected and in view.</summary>
+        private void GoToIssue(ModelIssue i)
+        {
+            rbWorkspaceWalls.IsChecked = true;
+            Sketch.ShowIssue(i);
+            Log.Info("Issues", $"Shown on the plan: {i.Code} {string.Join(", ", i.Ids)}");
         }
 
         private void Issues_Click(object sender, RoutedEventArgs e) => ShowIssueList(btnIssues);

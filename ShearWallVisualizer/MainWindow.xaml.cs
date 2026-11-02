@@ -289,11 +289,27 @@ namespace ShearWallVisualizer
             for (int i = 0; i < calcs.Count; i++)
             {
                 var c = calcs[i];
-                string message = null;
-                if (blocked != null) message = blocked;
-                else if (c == null || !c.IsValidForCalculation) message = "draw a diaphragm and walls in both directions first (see the Calculations tab).";
-                else if (allDesignResults[i].Count == 0) message = "no wall shears yet: add loads (LOADS button) or link the wind loads.";
-                list.Add(new WallDesignPanel.DesignStory { Index = i, Name = LevelName(i), Calculator = c, Results = allDesignResults[i], Message = message });
+                string message = null, fixLabel = null;
+                Action fix = null;
+                int story = i;
+                if (blocked != null)
+                {
+                    message = blocked;
+                    if (HasProject) { fix = () => { rbWorkspaceWalls.IsChecked = true; ShowIssueList(btnIssues); }; fixLabel = "List the errors"; }
+                }
+                else if (c == null || !c.IsValidForCalculation)
+                {
+                    message = "draw a diaphragm and walls in both directions first.";
+                    fix = () => { rbWorkspaceWalls.IsChecked = true; ShowLevel(story); };
+                    fixLabel = $"Show {LevelName(i)}'s plan";
+                }
+                else if (allDesignResults[i].Count == 0)
+                {
+                    message = "no wall shears yet: add loads or link the wind loads.";
+                    fix = () => btnOpenLoadDialog_Click(btnLoadEntry, new RoutedEventArgs());
+                    fixLabel = "Open Loads";
+                }
+                list.Add(new WallDesignPanel.DesignStory { Index = i, Name = LevelName(i), Calculator = c, Results = allDesignResults[i], Message = message, Fix = fix, FixLabel = fixLabel });
                 if (ReferenceEquals(c, Calculator)) designResults = allDesignResults[i];
             }
             if (list.Count == 1 && list[0].Message != null) list[0].Message = char.ToUpper(list[0].Message[0]) + list[0].Message.Substring(1);
