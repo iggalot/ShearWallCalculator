@@ -170,6 +170,54 @@ namespace ShearWallCalculator
             return forces;
         }
 
+        /// <summary>
+        /// Where each hold-down of a story's walls lands: the post centerline at each end of every wall that needs hold-downs
+        /// (<see cref="Design.WallSchedule.HoldownPoints"/>), and what is under it. With <paramref name="lowerWalls"/> null the
+        /// story is the first one and every hold-down anchors to the FOUNDATION; otherwise it lands on a wall of the story below
+        /// when one is on the same line and reaches the post (within <see cref="LineTolerance"/>), and has NO SUPPORT when
+        /// none does (a beam, post or blocking is needed under it).
+        /// </summary>
+        public static List<HoldownLanding> Landings(IDictionary<int, WallData> upperWalls, IReadOnlyDictionary<int, Design.WallDesignResult> upperDesign,
+                                                    IDictionary<int, WallData> lowerWalls, int upperStory)
+        {
+            var list = new List<HoldownLanding>();
+            if (upperWalls == null || upperDesign == null) return list;
+            foreach (var kv in upperWalls.OrderBy(k => k.Key))
+            {
+                if (!upperDesign.TryGetValue(kv.Key, out var r) || !r.HoldownNeeded) continue;
+                var w = kv.Value;
+                var (p1, p2) = Design.WallSchedule.HoldownPoints(w, r.Holdown);
+                foreach (var p in new[] { p1, p2 })
+                {
+                    var l = new HoldownLanding
+                    {
+                        UpperStory = upperStory, WallId = kv.Key, At = p, TensionAsd = r.TensionAsd, Model = r.Holdown?.Model,
+                        OnFoundation = lowerWalls == null,
+                    };
+                    if (lowerWalls != null) l.LowerWallId = WallUnder(p, w.WallDir, lowerWalls);
+                    list.Add(l);
+                }
+            }
+            return list;
+        }
+
+        /// <summary>The wall of <paramref name="walls"/> in the direction given that runs under the point (same line, between its ends), or null.</summary>
+        public static int? WallUnder(Point p, WallDirs dir, IDictionary<int, WallData> walls)
+        {
+            foreach (var kv in walls.OrderBy(k => k.Key))
+            {
+                var b = kv.Value;
+                if (b.WallDir != dir) continue;
+                bool ew = dir == WallDirs.EastWest;
+                if (Math.Abs((ew ? b.Start.Y : b.Start.X) - (ew ? p.Y : p.X)) > LineTolerance) continue;
+                double lo = ew ? Math.Min(b.Start.X, b.End.X) : Math.Min(b.Start.Y, b.End.Y);
+                double hi = ew ? Math.Max(b.Start.X, b.End.X) : Math.Max(b.Start.Y, b.End.Y);
+                double at = ew ? p.X : p.Y;
+                if (at >= lo - LineTolerance && at <= hi + LineTolerance) return kv.Key;
+            }
+            return null;
+        }
+
         /// <summary>The length of <paramref name="w"/> that has a wall of <paramref name="below"/> on the same line under it (ft).</summary>
         public static double SupportedLength(WallData w, IEnumerable<WallData> below)
         {
@@ -196,5 +244,31 @@ namespace ShearWallCalculator
             }
             return total;
         }
+    }
+}
+
+namespace ShearWallCalculator
+{
+    /// <summary>One hold-down of a wall and what it lands on: a wall of the story below, the foundation, or nothing (needs a beam or post).</summary>
+    public sealed class HoldownLanding
+    {
+        /// <summary>The story (1 = the first) of the wall whose hold-down this is.</summary>
+        public int UpperStory { get; set; }
+        public int WallId { get; set; }
+
+        /// <summary>The post centerline in plan (ft).</summary>
+        public System.Windows.Point At { get; set; }
+
+        /// <summary>The hold-down tension (lb, ASD) and the model chosen (null: none strong enough).</summary>
+        public double TensionAsd { get; set; }
+        public string Model { get; set; }
+
+        /// <summary>The wall of the story below it lands on (null: none, or the foundation).</summary>
+        public int? LowerWallId { get; set; }
+
+        /// <summary>A first-story hold-down: it anchors to the foundation.</summary>
+        public bool OnFoundation { get; set; }
+
+        public bool Supported => OnFoundation || LowerWallId != null;
     }
 }

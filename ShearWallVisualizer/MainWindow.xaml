@@ -175,6 +175,8 @@
                         <!-- Multi-story (Floors in the building inputs): which level the plan shows and edits -->
                         <StackPanel x:Name="levelGroup" Orientation="Horizontal">
                             <TextBlock Style="{StaticResource ToolGroup}" Text="LEVEL"/>
+                            <Button x:Name="btnFoundation" Style="{StaticResource Tool}" Content="Foundation" Padding="9,4" Click="Foundation_Click"
+                                    ToolTip="FOUNDATION: the ground plan with every hold-down anchor of the first story's walls (wall, model, uplift), for the foundation design. Pick a level to edit walls again."/>
                             <Button x:Name="btnLevel1" Style="{StaticResource Tool}" Content="1" Padding="9,4" CommandParameter="1" Click="LevelButton_Click"/>
                             <Button x:Name="btnLevel2" Style="{StaticResource Tool}" Content="2" Padding="9,4" CommandParameter="2" Click="LevelButton_Click"/>
                             <Button x:Name="btnLevel3" Style="{StaticResource Tool}" Content="3" Padding="9,4" CommandParameter="3" Click="LevelButton_Click"/>

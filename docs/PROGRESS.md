@@ -2,6 +2,23 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-02 — Where the hold-downs land: on the wall below, on nothing, on the foundation (SWC)
+
+- **Core** `StoryCascade.Landings`:
+  - Each wall that needs hold-downs has two, on its post centerlines (`WallSchedule.HoldownPoints`).
+  - Each one lands on a wall of the story below (same line, between its ends, within `LineTolerance`) or on nothing. For the first story, they land on the foundation.
+  - `HoldownLanding` carries the wall, point, ASD tension, model and support.
+- **On each level's plan:** the hold-downs of the story above.
+  - A dark triangle where one lands on a wall, with its uplift (↓ 2.4k).
+  - A red triangle reading "no wall below: beam or post" where nothing is under it. This is also an error in the issue list, on the level where the support is missing.
+- **Foundation view** (the Foundation button before the level buttons):
+  - The ground plan, with the first story's walls dashed and every hold-down anchor labelled with its wall, model and uplift. The caption gives the count and the largest uplift.
+  - Picking a level returns to editing.
+- **Tests:** `Landings_OnAWallBelow_OnNothing_OrOnTheFoundation`. SWC 176/176.
+- **Next:**
+  - Beams: a building-model object that can be drawn in either app. Hold-downs and straps from above load it, and its end reactions become hold-down points on what is under its ends.
+  - Then the wall elevation view: the wall, its hold-downs, those coming down from above, and the calculations, with the same drawing in the report.
+
 ## 2026-11-02 — Diaphragm: rigid, flexible or the envelope of both (SWC)
 
 - **Before:** every level was calculated as a rigid diaphragm. The flexible calculator existed and was tested, but the app never used it. The per-diaphragm `DiaphragmType` is still saved, but nothing reads it.

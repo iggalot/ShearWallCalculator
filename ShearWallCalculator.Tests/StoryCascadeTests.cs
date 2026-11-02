@@ -280,6 +280,45 @@ namespace ShearWallCalculator.Tests
             Assert.IsFalse(f.Any(x => x.From == "level 2, wall 3"));
         }
 
+        /// <summary>
+        /// Where the hold-downs land: each wall that needs them has two, on its post centerlines; on a wall of the story below
+        /// (same line, between its ends), on nothing (a beam or post is needed), or, for the first story, on the foundation.
+        /// </summary>
+        [TestMethod]
+        public void Landings_OnAWallBelow_OnNothing_OrOnTheFoundation()
+        {
+            var upper = new Dictionary<int, WallData>
+            {
+                [1] = new WallData(9, 0, 0, 10, 0),   // over the lower wall along y = 0
+                [2] = new WallData(9, 14, 0, 24, 0),  // its east end hangs past the lower wall (ends at x = 20)
+                [3] = new WallData(9, 30, 5, 30, 15), // N-S, nothing under it
+                [4] = new WallData(9, 0, 30, 10, 30), // no hold-downs needed
+            };
+            var lower = new Dictionary<int, WallData> { [11] = new WallData(9, 0, 0, 20, 0) };
+            var design = new Dictionary<int, Design.WallDesignResult>
+            {
+                [1] = new Design.WallDesignResult { TensionAsd = 1200 },
+                [2] = new Design.WallDesignResult { TensionAsd = 900 },
+                [3] = new Design.WallDesignResult { TensionAsd = 500 },
+                [4] = new Design.WallDesignResult { TensionAsd = 0 },
+            };
+            var l = StoryCascade.Landings(upper, design, lower, 2);
+            Assert.AreEqual(6, l.Count, "two per wall that needs hold-downs; wall 4 needs none");
+            Assert.IsTrue(l.Where(x => x.WallId == 1).All(x => x.LowerWallId == 11 && x.Supported));
+            var w2 = l.Where(x => x.WallId == 2).OrderBy(x => x.At.X).ToList();
+            Assert.AreEqual(11, w2[0].LowerWallId, "the west post is over the lower wall");
+            Assert.IsNull(w2[1].LowerWallId, "the east post (x near 24) is past its end");
+            Assert.IsFalse(w2[1].Supported);
+            Assert.AreEqual(900, w2[1].TensionAsd);
+            Assert.IsTrue(l.Where(x => x.WallId == 3).All(x => !x.Supported), "a N-S wall with no N-S wall under it");
+            Assert.IsTrue(l.All(x => x.UpperStory == 2));
+
+            var anchors = StoryCascade.Landings(lower, new Dictionary<int, Design.WallDesignResult> { [11] = new Design.WallDesignResult { TensionAsd = 2000 } }, null, 1);
+            Assert.AreEqual(2, anchors.Count);
+            Assert.IsTrue(anchors.All(a => a.OnFoundation && a.Supported && a.LowerWallId == null));
+            Assert.IsTrue(anchors.Min(a => a.At.X) > 0 && anchors.Max(a => a.At.X) < 20, "on the post centerlines, inside the wall ends");
+        }
+
         /// <summary>Walls stacked end to end: the hold-down below carries its own tension plus the one above (cumulative tension).</summary>
         [TestMethod]
         public void Check_StackedWall_TensionAccumulates()

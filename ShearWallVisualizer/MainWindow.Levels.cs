@@ -99,12 +99,14 @@ namespace ShearWallVisualizer
             for (int k = 0; k < buttons.Length; k++)
             {
                 buttons[k].Visibility = k < stories.Count ? Visibility.Visible : Visibility.Collapsed;
-                buttons[k].Tag = k == currentLevel ? "on" : null;
+                buttons[k].Tag = k == currentLevel && !foundationView ? "on" : null;
                 buttons[k].Content = k < stories.Count ? stories[k].Level.Name : $"{k + 1}";
                 buttons[k].ToolTip = k < stories.Count ? $"Show and edit {LevelName(k)} at {stories[k].Level.Elevation:0.##} ft: the walls of story {k + 1} and the " +
                                                          (k == stories.Count - 1 ? "roof" : "floor") + " on them" : null;
             }
-            miCopyFromBelow.IsEnabled = currentLevel > 0;
+            btnFoundation.Visibility = stories.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+            btnFoundation.Tag = foundationView ? "on" : null;
+            miCopyFromBelow.IsEnabled = currentLevel > 0 && !foundationView;
             btnFloors.ToolTip = $"FLOORS: {stories.Count} in the model. Floors are added, deleted and given their plate heights in the Building Model editor (the building's geometry is edited only there); this opens it on the project.";
             UpdateLevelBanners();
         }

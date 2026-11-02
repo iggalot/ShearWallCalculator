@@ -81,9 +81,13 @@ namespace ShearWallVisualizer
             var s = Sketch;
             s.DrawOver += (o, e) =>
             {
-                DrawBracedWallLines(e.Context);
-                DrawWallDesign(e.Context);
-                DrawCOMandCOR(e.Context);
+                if (!foundationView)
+                {
+                    DrawBracedWallLines(e.Context);
+                    DrawWallDesign(e.Context);
+                    DrawCOMandCOR(e.Context);
+                }
+                DrawLandings(e.Context); // hold-downs from the story above, or the foundation anchors
                 DrawDebug(e.Context);
             };
             s.WallStyle = DesignPen;
@@ -154,7 +158,8 @@ namespace ShearWallVisualizer
             levels = stories.Select(s => s.Calculator).ToList();
             int i = stories.FindIndex(s => s.Level.Id == Sketch.ActiveLevel?.Id);
             currentLevel = i >= 0 ? i : Math.Max(0, Math.Min(currentLevel, levels.Count - 1));
-            if (i < 0 && stories.Count > 0) { storing = true; try { Sketch.ShowLevel(stories[currentLevel].Level.Id); } finally { storing = false; } }
+            bool onGround = foundationView && Sketch.ActiveLevel != null && Sketch.ActiveLevel.Elevation == 0;
+            if (i < 0 && stories.Count > 0 && !onGround) { storing = true; try { Sketch.ShowLevel(stories[currentLevel].Level.Id); } finally { storing = false; } }
             Calculator = levels.Count > 0 ? levels[currentLevel] : new ShearWallCalculator_RigidDiaphragm();
             ModelToWind(); // the wind calculation's building is the model's
             UpdateLevelButtons();
@@ -164,7 +169,27 @@ namespace ShearWallVisualizer
         /// <summary>The level shown in the sketch changed (LEVEL buttons, or a selected issue on another level).</summary>
         private void ActiveLevelChanged()
         {
+            if (Sketch.ActiveLevel != null && Sketch.ActiveLevel.Elevation == 0 && stories.Count > 0)
+            {
+                // the ground: the foundation view (the first story's hold-down anchors); the first story stays the one calculated
+                foundationView = true;
+                selectedKind = null;
+                selectedId = -1;
+                selectionCardOpen = false;
+                currentLevel = 0;
+                Calculator = levels[0];
+                UpdateLevelButtons();
+                UpdateFromSketch();
+                ShowStatusMessage(LogLevel.Info, FoundationCaption() + ". Pick a level to edit walls again.");
+                return;
+            }
+            bool wasFoundation = foundationView;
+            foundationView = false;
             int i = stories.FindIndex(s => s.Level.Id == Sketch.ActiveLevel?.Id);
+            if (wasFoundation && i >= 0)
+            {
+                currentLevel = -1; // so the level below is shown again even when it is the first story
+            }
             if (i < 0 || (i == currentLevel && ReferenceEquals(Calculator, levels[i]))) return;
             selectedKind = null;
             selectedId = -1;
@@ -313,6 +338,7 @@ namespace ShearWallVisualizer
 
         private string LevelCaption(Level l)
         {
+            if (l != null && l.Elevation == 0 && foundationView) return FoundationCaption();
             int i = stories.FindIndex(s => s.Level.Id == l.Id);
             if (i < 0) return null;
             var s0 = stories[i];
@@ -341,6 +367,7 @@ namespace ShearWallVisualizer
                                : "no hold-down strong enough";
                     list.Add(new ModelIssue { Severity = Severity.Error, Code = "WallFails", Message = $"{id} fails on {s.Level.Name}: {why}.", Ids = { id }, LevelId = s.Level.Id, At = w.Middle });
                 }
+                AddLandingIssues(list);
                 if (Calculator != null && !Calculator.IsValidForCalculation && (s.Walls.Count > 0 || s.Diaphragms.Count > 0))
                     list.Add(new ModelIssue { Severity = Severity.Warning, Code = "NotCalculated", Message = $"{s.Level.Name} cannot be calculated yet: " + (CalculationTodo() ?? "check the walls and diaphragm."), LevelId = s.Level.Id });
             }

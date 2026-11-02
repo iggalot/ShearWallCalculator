@@ -300,6 +300,7 @@ namespace ShearWallVisualizer
             var sthd = Calculator?.DesignSettings?.StrapHoldownsOrDefault() ?? new StrapHoldownConditions();
             if (holdownCatalog != null && holdownCatalog.StrapConditions != sthd.Describe()) holdownCatalog.SetStrapConditions(sthd); // the STHD loads follow the project
             holdownCatalog?.SetDesign(DesignByFloor());
+            ComputeLandings(); // where every hold-down lands: on a wall below, the foundation, or nothing
         }
 
         /// <summary>Every floor's checks, roof down, so each hold-down carries the walls stacked on it; index = story.</summary>
