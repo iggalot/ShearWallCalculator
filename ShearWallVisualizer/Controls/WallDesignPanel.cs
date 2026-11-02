@@ -173,32 +173,72 @@ namespace ShearWallVisualizer.Controls
             bar.Children.Add(cbAllColumns);
             cbAllColumns.Click += (s, e) => UpdateDensity(force: true);
 
+            // The table comes first: it fills the height and never gets less than MinTableHeight; the details of the selected
+            // wall (and the catalog footnote) scroll inside a box capped at DetailsShare of the panel. Before, the details were
+            // docked under the table with no limit: a long explanation (two faces, forces from above) left the table one row,
+            // or none at all, and nothing said so.
+            var footnote = new TextBlock { Text = "¹ " + ShearWallDesigner.CatalogFootnote, TextWrapping = TextWrapping.Wrap, FontSize = 11, Foreground = InkSecondary, Margin = new Thickness(0, 6, 0, 0) };
+            var detailsBody = new StackPanel();
+            detailsBody.Children.Add(details);
+            detailsBody.Children.Add(footnote);
             detailsCard = new Border
             {
                 Background = Brushes.White, BorderBrush = Hairline, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(6),
-                Padding = new Thickness(12, 8, 12, 10), Margin = new Thickness(0, 10, 0, 0), Child = details,
+                Padding = new Thickness(12, 8, 4, 10), Margin = new Thickness(0, 10, 0, 0),
+                Child = detailsScroll = new ScrollViewer { Content = detailsBody, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, Padding = new Thickness(0, 0, 8, 0) },
             };
 
-            var root = new DockPanel { Margin = new Thickness(12, 10, 12, 10), LastChildFill = true };
-            DockPanel.SetDock(bar, Dock.Top);
-            DockPanel.SetDock(tbNote, Dock.Top);
-            // Footnote: the catalog edition the hold-down loads come from (always shown, under the details).
-            var footnote = new TextBlock { Text = "¹ " + ShearWallDesigner.CatalogFootnote, TextWrapping = TextWrapping.Wrap, FontSize = 11, Foreground = InkSecondary, Margin = new Thickness(0, 6, 0, 0) };
-            DockPanel.SetDock(footnote, Dock.Bottom);
-            root.Children.Add(footnote);
-            DockPanel.SetDock(detailsCard, Dock.Bottom);
-            root.Children.Add(bar);
-            root.Children.Add(tbNote);
-            root.Children.Add(detailsCard);
+            var root = new Grid { Margin = new Thickness(12, 10, 12, 10) };
+            root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });                                          // settings bar
+            root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });                                          // note
+            root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star), MinHeight = MinTableHeight }); // the table
+            root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });                                          // details
             tableScroll = new ScrollViewer
             {
                 Content = new Border { Background = Brushes.White, BorderBrush = Hairline, BorderThickness = new Thickness(1), Child = table, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top },
                 HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
                 VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             };
-            tableScroll.SizeChanged += (s, e) => { if (e.WidthChanged) UpdateDensity(force: false); };
+            tableScroll.SizeChanged += (s, e) =>
+            {
+                if (e.WidthChanged) UpdateDensity(force: false);
+                if (e.HeightChanged) CheckTableRoom();
+            };
+            Grid.SetRow(bar, 0);
+            Grid.SetRow(tbNote, 1);
+            Grid.SetRow(tableScroll, 2);
+            Grid.SetRow(detailsCard, 3);
+            root.Children.Add(bar);
+            root.Children.Add(tbNote);
             root.Children.Add(tableScroll);
+            root.Children.Add(detailsCard);
+            root.SizeChanged += (s, e) => FitDetails(e.NewSize.Height);
             Content = root;
+        }
+
+        /// <summary>The table never gets less than this (DIPs): about six rows.</summary>
+        internal const double MinTableHeight = 170;
+
+        /// <summary>The details box takes at most this share of the panel's height; it scrolls beyond that.</summary>
+        internal const double DetailsShare = 0.4;
+
+        private readonly ScrollViewer detailsScroll;
+
+        private void FitDetails(double panelHeight)
+        {
+            if (!(panelHeight > 0)) return;
+            detailsScroll.MaxHeight = Math.Max(90, panelHeight * DetailsShare);
+        }
+
+        private double lastWarnedHeight = -1;
+
+        /// <summary>Logs (once per size) when the table is squeezed below its minimum: the layout problem shows in the log.</summary>
+        private void CheckTableRoom()
+        {
+            double h = tableScroll.ActualHeight;
+            if (results.Count == 0 || !(h > 0) || h >= MinTableHeight - 1 || Math.Abs(h - lastWarnedHeight) < 1) return;
+            lastWarnedHeight = h;
+            BuildingModel.Diagnostics.Log.Warning($"[Design tab] The wall table has only {h:0} px (panel {ActualHeight:0} px, details {detailsCard.ActualHeight:0} px, note {tbNote.ActualHeight:0} px): the window is too short for it.");
         }
 
         /// <summary>
@@ -567,9 +607,13 @@ namespace ShearWallVisualizer.Controls
             cb.SelectionChanged += (s, e) =>
             {
                 if (loading || cb.SelectedItem == null) return;
+                string was = e.RemovedItems.Count > 0 ? e.RemovedItems[0]?.ToString() : "-";
                 apply(cb.SelectedItem);
                 selectedWall = id;
-                DesignChanged?.Invoke(this, EventArgs.Empty);
+                var st = Story(id);
+                BuildingModel.Diagnostics.Log.Info("Design", $"{st?.Name} wall {id % KeyStride}: {was} → {cb.SelectedItem}");
+                // the table is rebuilt after this event, not inside it: the box that raised it is one of the table's cells
+                Dispatcher.BeginInvoke(new Action(() => DesignChanged?.Invoke(this, EventArgs.Empty)), System.Windows.Threading.DispatcherPriority.Input);
             };
             return cb;
         }
