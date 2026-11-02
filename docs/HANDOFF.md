@@ -43,21 +43,23 @@ machine (by a person or by Claude Code). Give it to the assistant at the start: 
 
 | Repo | Branch | Last commits | What |
 |---|---|---|---|
-| `F:\Programming\ShearWallCalculator` | `dev/shared-sketcher` | `5096dda` (the switch), from clean `6f4be44` | The Shear Wall Designer (`ShearWallVisualizer`), its core library and tests |
-| `F:\Programming\BuildingModel` | `dev/building-model` | `5b59549`, `7b35d35`, `7dca7bc` | The building model, sketcher, app and adapters (new projects, made for this work) |
-| `F:\Programming\ASCE7-Wind-Load-Calculator` | (unchanged) | | The wind engine, referenced by both |
+| `C:\Programming\ShearWallCalculator` | `dev/shared-sketcher` | `5096dda` (the switch), from clean `6f4be44` | The Shear Wall Designer (`ShearWallVisualizer`), its core library and tests |
+| `C:\Programming\BuildingModel` | `dev/building-model` | `5b59549`, `7b35d35`, `7dca7bc` | The building model, sketcher, app and adapters (new projects, made for this work) |
+| `C:\Programming\ASCE7-Wind-Load-Calculator` | `dev/wind-core-refactor` | `a549e82` | The wind engine, referenced by both. **Must be on this branch**: `ASCE7Wind.Core` is not on `main` |
 
-The repos have no remote. **To move to another machine, copy all three folders (with their `.git` folders)** to the
-same parent folder. The projects reference each other by relative path (`..\..\BuildingModel\...`,
-`..\ShearWallCalculator\...`, `..\ASCE7-Wind-Load-Calculator\...`). A `git bundle` of each repo also works.
+The repos are also stored on GitHub (`origin`), pushed from the first machine. Assistants commit locally only and do
+not push. After cloning on a new machine, check out the branches above in every repo (a fresh clone is on `main`,
+where SWC does not build). The projects reference each other by relative path (`..\..\BuildingModel\...`,
+`..\ShearWallCalculator\...`, `..\ASCE7-Wind-Load-Calculator\...`), so keep the three folders side by side.
 
 ## Build and test
 
-These are Visual Studio 2026 (version 18) paths; adjust them on the other machine.
+Paths for Visual Studio 2022 Community (the second machine); the first machine had Visual Studio 2026 (version 18),
+with `18` in place of `2022` in the paths.
 
 ```
-MSBuild:  C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe
-vstest:   C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\Extensions\TestPlatform\vstest.console.exe
+MSBuild:  C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe
+vstest:   C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\Extensions\TestPlatform\vstest.console.exe
 
 MSBuild ShearWallCalculator.sln -restore          (also builds the three BuildingModel projects it uses)
 vstest  ShearWallCalculator.Tests\bin\Debug\...\ShearWallCalculator.Tests.dll
