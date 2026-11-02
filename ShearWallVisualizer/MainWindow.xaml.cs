@@ -314,6 +314,7 @@ namespace ShearWallVisualizer
             }
             if (list.Count == 1 && list[0].Message != null) list[0].Message = char.ToUpper(list[0].Message[0]) + list[0].Message.Substring(1);
             designPanel.Show(list, Math.Max(0, levels.IndexOf(Calculator)), designer, windLoadsLinked);
+            LogDesign(list); // the levels' messages and the failing and close walls
             if (selectedKind == "Wall") designPanel.SelectWall(Math.Max(0, levels.IndexOf(Calculator)), selectedId); // the same wall as on the drawing and the other tabs
             var sthd = Calculator?.DesignSettings?.StrapHoldownsOrDefault() ?? new StrapHoldownConditions();
             if (holdownCatalog != null && holdownCatalog.StrapConditions != sthd.Describe()) holdownCatalog.SetStrapConditions(sthd); // the STHD loads follow the project

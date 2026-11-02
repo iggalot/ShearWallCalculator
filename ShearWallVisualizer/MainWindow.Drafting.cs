@@ -378,6 +378,7 @@ namespace ShearWallVisualizer
                     list.Add(new ModelIssue { Severity = Severity.Warning, Code = "NotCalculated", Message = $"{s.Level.Name} cannot be calculated yet: " + (CalculationTodo() ?? "check the walls and diaphragm."), LevelId = s.Level.Id });
             }
             issues = list;
+            LogIssues(list); // what the user is warned about, and where
             Sketch.Issues = list;
             int errors = list.Count(i => i.Severity == Severity.Error), warnings = list.Count - errors;
             btnIssues.Content = errors > 0 ? $"✗ {errors}" + (warnings > 0 ? $"  ⚠ {warnings}" : "") : warnings > 0 ? $"⚠ {warnings}" : "✓";
