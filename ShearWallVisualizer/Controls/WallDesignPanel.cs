@@ -459,7 +459,7 @@ namespace ShearWallVisualizer.Controls
                 Put(row, col++, Combo(new object[] { "DF / SP", "SPF / HF" }, d.Species == WoodTypes.WOODTYPE_SPF_HF ? "SPF / HF" : "DF / SP",
                     o => d.Species = (string)o == "SPF / HF" ? WoodTypes.WOODTYPE_SPF_HF : WoodTypes.WOODTYPE_DF_SP, id));
                 Put(row, col++, DeadLoadBox(d, id));
-                Put(row, col++, Combo(new object[] { ShortHoldownName(HoldownFamilies.HDU_ToFoundation), ShortHoldownName(HoldownFamilies.HTT_ToFoundation), ShortHoldownName(HoldownFamilies.STHD_ToFoundation), ShortHoldownName(HoldownFamilies.Strap_ToWallBelow) },
+                Put(row, col++, Combo(new object[] { ShortHoldownName(HoldownFamilies.HDU_ToFoundation), ShortHoldownName(HoldownFamilies.HTT_ToFoundation), ShortHoldownName(HoldownFamilies.STHD_ToFoundation), ShortHoldownName(HoldownFamilies.Strap_ToWallBelow), ShortHoldownName(HoldownFamilies.HDU_Legacy_ToFoundation) },
                     ShortHoldownName(d.Holdown), o => d.Holdown = Enum.GetValues(typeof(HoldownFamilies)).Cast<HoldownFamilies>().First(f => ShortHoldownName(f) == (string)o), id));
 
                 Cell(row, col++, double.IsInfinity(r.Demand) ? "-" : r.Demand.ToString("0"), id);
@@ -709,10 +709,12 @@ namespace ShearWallVisualizer.Controls
 
         /// <summary>The table's short label (the column tooltip says where each one anchors).</summary>
         public static string ShortHoldownName(HoldownFamilies f) =>
+            f == HoldownFamilies.HDU_Legacy_ToFoundation ? "HDU (disc.)" :
             f == HoldownFamilies.HDU_ToFoundation ? "HDUE" : f == HoldownFamilies.HTT_ToFoundation ? "HTT" :
             f == HoldownFamilies.STHD_ToFoundation ? "STHD" : "Strap";
 
         public static string HoldownName(HoldownFamilies f) =>
+            f == HoldownFamilies.HDU_Legacy_ToFoundation ? "HDU to foundation (discontinued; C-C-2021 p. 53)" :
             f == HoldownFamilies.HDU_ToFoundation ? "HDUE / DTT to foundation" :
             f == HoldownFamilies.HTT_ToFoundation ? "LTT / HTT / HTTH to foundation" :
             f == HoldownFamilies.STHD_ToFoundation ? "STHD cast in foundation" : "Strap to wall below";

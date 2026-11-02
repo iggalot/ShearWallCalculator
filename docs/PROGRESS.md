@@ -2,6 +2,16 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-02 — The discontinued HDU kept as its own hold-down family (SWC)
+
+- **New family** `HoldownFamilies.HDU_Legacy_ToFoundation`, with the data in `NDSProvisions/SimpsonCatalog/HDU_Legacy_Manager.cs`. It covers HDU2/4/5/8/11/14-SDS2.5 with the C-C-2021 p. 53 values, and is used only when a wall is set to it:
+  - "HDU (disc.)" in the wall table;
+  - "HDU (discontinued)" in the catalog window, where its rows can be added to favorites;
+  - the Source column reads "C-C-2021 p. 53 (discontinued, L-C-HDUECONV25)".
+- **Source of the discontinuation:** Simpson letter L-C-HDUECONV25 (April 2, 2025), saved at `docs/references/L-C-HDUECONV25.pdf`. Its Tables 1 and 2 match the coded maximum loads and dimensions.
+- **Citations:** the design-page footnote, the report footnote, and the catalog window and its printout cite C-C-2021 p. 53 and the letter for HDU.
+- **Tests:** two new tests in `SimpsonCatalogTests`. SWC 191/191.
+
 ## 2026-11-02 — Hold-down catalog moved to Simpson C-C-2026; a copy kept in the repo (SWC)
 
 - **Reference copy:** `docs/references/C-C-2026.pdf`, downloaded from Simpson Strong-Tie's catalog page (see `docs/references/README.md`).

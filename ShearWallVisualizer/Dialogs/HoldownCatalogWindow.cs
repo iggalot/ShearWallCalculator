@@ -40,6 +40,7 @@ namespace ShearWallVisualizer.Dialogs
             ("LTT / HTT / HTTH tension ties to foundation", HoldownFamilies.HTT_ToFoundation),
             ("Strap ties to wall below", HoldownFamilies.Strap_ToWallBelow),
             ("LSTHD / STHD strap-tie hold-downs to foundation", HoldownFamilies.STHD_ToFoundation),
+            ("HDU hold-downs to foundation (discontinued, C-C-2021)", HoldownFamilies.HDU_Legacy_ToFoundation),
         };
 
         /// <param name="sthd">The project's foundation conditions for the LSTHD / STHD loads (null: the defaults).</param>
@@ -60,7 +61,7 @@ namespace ShearWallVisualizer.Dialogs
             header.Children.Add(new TextBlock
             {
                 Text = "Source: " + SimpsonCatalog.Citation + ". HDUE/DTT " + SimpsonCatalog.PagesHduDtt + ", LTT/HTT/HTTH " + SimpsonCatalog.PagesHtt +
-                       ", LSTHD/STHD " + SimpsonCatalog.PagesSthd + ", strap ties " + SimpsonCatalog.PagesStraps + ". A copy is kept with the source code (docs/references/C-C-2026.pdf).",
+                       ", LSTHD/STHD " + SimpsonCatalog.PagesSthd + ", strap ties " + SimpsonCatalog.PagesStraps + ". A copy is kept with the source code (docs/references/C-C-2026.pdf). " + LegacyNote,
                 FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, MaxWidth = 1180, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 4, 0, 0),
             });
             header.Children.Add(new TextBlock
@@ -224,7 +225,7 @@ namespace ShearWallVisualizer.Dialogs
             {
                 ASCE7WindLoadCalculator.WindReport.Heading("Hold-down catalog"),
                 ASCE7WindLoadCalculator.WindReport.Para("Source: " + SimpsonCatalog.Citation + ". HDUE/DTT " + SimpsonCatalog.PagesHduDtt + ", LTT/HTT/HTTH " + SimpsonCatalog.PagesHtt +
-                    ", LSTHD/STHD " + SimpsonCatalog.PagesSthd + ", strap ties " + SimpsonCatalog.PagesStraps + "."),
+                    ", LSTHD/STHD " + SimpsonCatalog.PagesSthd + ", strap ties " + SimpsonCatalog.PagesStraps + ". " + LegacyNote),
                 ASCE7WindLoadCalculator.WindReport.Para(
                     $"{shownRows.Count} fastener option{(shownRows.Count == 1 ? "" : "s")} " +
                     (filters.Count == 0 ? "(the whole catalog)" : "(" + string.Join("; ", filters) + ")") + ". " +
@@ -359,7 +360,11 @@ namespace ShearWallVisualizer.Dialogs
             return null;
         }
 
+        /// <summary>Where the discontinued HDU rows come from (they are not in the current edition).</summary>
+        private static readonly string LegacyNote = "Discontinued HDU-SDS2.5 (used only for walls set to that family): " + SimpsonCatalog.LegacyHduCitation + "; copy in docs/references/" + SimpsonCatalog.LegacyHduLetter + ".pdf.";
+
         private static string FamilyName(HoldownFamilies f) =>
+            f == HoldownFamilies.HDU_Legacy_ToFoundation ? "HDU (discontinued)" :
             f == HoldownFamilies.HDU_ToFoundation ? "HDUE / DTT" : f == HoldownFamilies.HTT_ToFoundation ? "LTT / HTT" :
             f == HoldownFamilies.STHD_ToFoundation ? "STHD" : "Strap";
 

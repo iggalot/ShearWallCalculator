@@ -13,6 +13,7 @@ namespace ShearWallCalculator.Design
         HTT_ToFoundation = 1,     // LTT / HTT / HTTH tension ties anchored to the foundation
         Strap_ToWallBelow = 2,    // strap ties to the wall below
         STHD_ToFoundation = 3,    // LSTHD / STHD strap-tie hold-downs cast into the foundation
+        HDU_Legacy_ToFoundation = 4, // discontinued HDU-SDS2.5 (C-C-2021 p. 53; Simpson letter L-C-HDUECONV25), only when chosen
     }
 
     /// <summary>
@@ -714,14 +715,17 @@ namespace ShearWallCalculator.Design
 
         /// <summary>The catalog edition and page a family's values come from, e.g. "C-C-2026 p. 61".</summary>
         public static string CatalogSource(HoldownFamilies family) =>
-            SimpsonCatalog.Edition + " " + (family == HoldownFamilies.HDU_ToFoundation ? SimpsonCatalog.PagesHduDtt
+            family == HoldownFamilies.HDU_Legacy_ToFoundation
+                ? $"{SimpsonCatalog.LegacyHduEdition} {SimpsonCatalog.PagesLegacyHdu} (discontinued, {SimpsonCatalog.LegacyHduLetter})"
+                : SimpsonCatalog.Edition + " " + (family == HoldownFamilies.HDU_ToFoundation ? SimpsonCatalog.PagesHduDtt
                                           : family == HoldownFamilies.HTT_ToFoundation ? SimpsonCatalog.PagesHtt
                                           : family == HoldownFamilies.STHD_ToFoundation ? SimpsonCatalog.PagesSthd : SimpsonCatalog.PagesStraps);
 
         /// <summary>The footnote for the design page and the report: the catalog edition every hold-down load comes from.</summary>
         public static string CatalogFootnote =>
             $"Hold-down allowable tension loads (ASD): {SimpsonCatalog.Citation} — HDUE/DTT {SimpsonCatalog.PagesHduDtt}, LTT/HTT/HTTH {SimpsonCatalog.PagesHtt}, " +
-            $"LSTHD/STHD {SimpsonCatalog.PagesSthd}, strap ties {SimpsonCatalog.PagesStraps}. Verify against the current catalog and the evaluation reports.";
+            $"LSTHD/STHD {SimpsonCatalog.PagesSthd}, strap ties {SimpsonCatalog.PagesStraps}. Discontinued HDU (only where chosen): {SimpsonCatalog.LegacyHduEdition} {SimpsonCatalog.PagesLegacyHdu}. " +
+            "Verify against the current catalog and the evaluation reports.";
 
         /// <summary>
         /// The lightest option (smallest allowable tension) that is at least the required tension, from the full catalog or,
@@ -771,6 +775,14 @@ namespace ShearWallCalculator.Design
                 {
                     var f = m.FastenerOptions[i];
                     Add(HoldownFamilies.HDU_ToFoundation, m.Model, m.Gauge, m.W, m.H, m.B, m.CL, m.SO, m.AnchorBoltDia, m.CodeRef,
+                        f.Screws_Quantity, f.Screws_Type, f.ScrewSize, f.Length, f.WoodMinHeight, f.WoodMinWidth, f.AllowableTensionLoads, f.DeflectionAtAllowableLoad, i);
+                }
+            // discontinued HDU-SDS2.5: their own family, so they are only selected for a wall set to it
+            foreach (var m in catalog.LegacyHDUManager.HDU_Dict.Values)
+                for (int i = 0; i < m.FastenerOptions.Count; i++)
+                {
+                    var f = m.FastenerOptions[i];
+                    Add(HoldownFamilies.HDU_Legacy_ToFoundation, m.Model, m.Gauge, m.W, m.H, m.B, m.CL, m.SO, m.AnchorBoltDia, m.CodeRef,
                         f.Screws_Quantity, f.Screws_Type, f.ScrewSize, f.Length, f.WoodMinHeight, f.WoodMinWidth, f.AllowableTensionLoads, f.DeflectionAtAllowableLoad, i);
                 }
             foreach (var m in catalog.HTTManager.HTT_Dict.Values)

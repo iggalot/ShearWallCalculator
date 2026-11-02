@@ -32,6 +32,15 @@ namespace ShearWallCalculator
         public const string PagesSthd = "p. 67";
         public const string PagesStraps = "p. 291";
 
+        /// <summary>
+        /// The discontinued HDU-SDS2.5 hold-downs (<see cref="HDU_Legacy_Manager"/>): not in <see cref="Edition"/>; their values
+        /// are from the previous edition, and Simpson's letter L-C-HDUECONV25 (copy: docs/references) discontinues them.
+        /// </summary>
+        public const string LegacyHduEdition = "C-C-2021";
+        public const string PagesLegacyHdu = "p. 53";
+        public const string LegacyHduLetter = "L-C-HDUECONV25";
+        public const string LegacyHduCitation = "Simpson Strong-Tie, Wood Construction Connectors catalog C-C-2021, p. 53 (HDU discontinued: Simpson letter L-C-HDUECONV25, April 2, 2025, \"HDUE™ Holdown One-for-One Replacement for Discontinued HDU\")";
+
         // The mapping of our abstract managers to the approriate connector managers
         public readonly Dictionary<SimpsonCatalogs, BaseSimpsonConnectorManager> ManagerMap;
 
@@ -40,6 +49,7 @@ namespace ShearWallCalculator
         public StrapTies_Manager StrapTiesManager = new StrapTies_Manager();
         public HTT_Manager HTTManager = new HTT_Manager();
         public STHD_Manager STHDManager = new STHD_Manager();
+        public HDU_Legacy_Manager LegacyHDUManager = new HDU_Legacy_Manager();
 
         public SimpsonCatalog()
         {

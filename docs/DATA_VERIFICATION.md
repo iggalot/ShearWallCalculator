@@ -134,3 +134,14 @@ Not modelled:
 - HDUE table footnote 3: some loads exceed ASTM F1554 Grade 36 anchor bolts, so the designer specifies the anchor.
 - Footnote 4: HDUE13 needs a heavy-hex nut.
 - HTTH6.5 without the ¾" cut washer: footnotes 7 and 8 give lower loads.
+
+### Update 2026-11-02 (later): the discontinued HDU kept as its own family
+
+The HDU-SDS2.5 line is back as `HoldownFamilies.HDU_Legacy_ToFoundation` ("HDU (disc.)" in the wall table), so designs that already specify HDU can still be checked. The designer only selects HDU for a wall set to that family.
+
+- **Values:** the C-C-2021 p. 53 data from commit cc51d7e, unchanged. The 2026-11-02 check against C-C-2021 is in the section above.
+- **Second source:** Simpson letter L-C-HDUECONV25 (April 2, 2025; copy at `docs/references/L-C-HDUECONV25.pdf`).
+  - Table 1 gives each model's maximum allowable loads (DF/SP, SPF/HF), screws and anchor diameter. Table 2 gives W, H, B, CL and SO.
+  - All six models match. `SimpsonCatalogTests.LegacyHdu_MatchesSimpsonLetter_LCHDUECONV25` checks them.
+  - The smaller-post options (HDU8 6765/6970, HDU11 9535, HDU14 10770/14390) are in C-C-2021 p. 53 only.
+- **Discontinuation:** the letter says, "Simpson Strong-Tie® is discontinuing the HDU holdown series, replacing it with the HDUE series".

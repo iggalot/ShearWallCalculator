@@ -209,12 +209,57 @@ namespace ShearWallCalculator.Tests
         public void TheCatalogListing_CitesTheEdition()
         {
             var rows = new ShearWallDesigner().CatalogRows();
-            Assert.IsTrue(rows.All(r => r.Source.StartsWith("C-C-2026 p. ")));
+            Assert.IsTrue(rows.Where(r => r.Family != HoldownFamilies.HDU_Legacy_ToFoundation).All(r => r.Source.StartsWith("C-C-2026 p. ")));
+            Assert.AreEqual("C-C-2021 p. 53 (discontinued, L-C-HDUECONV25)", rows.First(r => r.Model == "HDU8-SDS2.5").Source);
             Assert.AreEqual("C-C-2026 p. 61", rows.First(r => r.Model == "HDUE3-SDS3").Source);
             Assert.AreEqual("C-C-2026 p. 63", rows.First(r => r.Model == "HTTH6.5").Source);
             Assert.AreEqual("C-C-2026 p. 67", rows.First(r => r.Model == "STHD10").Source);
             Assert.AreEqual("C-C-2026 p. 291", rows.First(r => r.Model == "MSTA36").Source);
             StringAssert.Contains(ShearWallDesigner.CatalogFootnote, "C-C-2026");
+        }
+
+        [TestMethod]
+        public void LegacyHdu_MatchesSimpsonLetter_LCHDUECONV25()
+        {
+            // Simpson letter L-C-HDUECONV25 (April 2, 2025, docs/references): Table 1 max. allowable loads (160), DF/SP and SPF/HF,
+            // the screws and the anchor; Table 2 W, H, B, CL, SO. The letter gives only the largest-post option of each model.
+            var expected = new (string model, int screws, double bolt, double df, double spf, double w, double h, double b, double cl, double so)[]
+            {
+                ("HDU2-SDS2.5", 6, 0.625, 3075, 2215, 3, 8.6875, 3.25, 1.3125, 1.375),
+                ("HDU4-SDS2.5", 10, 0.625, 4565, 3285, 3, 10.9375, 3.25, 1.3125, 1.375),
+                ("HDU5-SDS2.5", 14, 0.625, 5645, 4340, 3, 13.1875, 3.25, 1.3125, 1.375),
+                ("HDU8-SDS2.5", 20, 0.875, 7870, 6580, 3, 16.625, 3.5, 1.375, 1.5),
+                ("HDU11-SDS2.5", 30, 1.0, 11175, 9610, 3, 22.25, 3.5, 1.375, 1.5),
+                ("HDU14-SDS2.5", 36, 1.0, 14445, 12425, 3, 25.6875, 3.5, 1.5625, 1.5625),
+            };
+            var dict = new HDU_Legacy_Manager().HDU_Dict;
+            CollectionAssert.AreEquivalent(expected.Select(e => e.model).ToList(), dict.Keys.ToList());
+            foreach (var e in expected)
+            {
+                var m = dict[e.model];
+                Assert.AreEqual(e.bolt, m.AnchorBoltDia, 1e-9, e.model);
+                Assert.AreEqual(e.w, m.W, 1e-9, e.model); Assert.AreEqual(e.h, m.H, 1e-9, e.model);
+                Assert.AreEqual(e.b, m.B, 1e-9, e.model); Assert.AreEqual(e.cl, m.CL, 1e-9, e.model); Assert.AreEqual(e.so, m.SO, 1e-9, e.model);
+                Assert.IsTrue(m.FastenerOptions.All(o => o.Screws_Quantity == e.screws && o.Length == 2.5), e.model);
+                Assert.AreEqual(e.df, m.FastenerOptions.Max(o => o.AllowableTensionLoads["DF_SP"]), 0.0, e.model);
+                Assert.AreEqual(e.spf, m.FastenerOptions.Max(o => o.AllowableTensionLoads["SPF_HF"]), 0.0, e.model);
+            }
+        }
+
+        [TestMethod]
+        public void LegacyHdu_IsSelectedOnlyForItsOwnFamily()
+        {
+            var d = new ShearWallDesigner();
+            // the current family never picks a discontinued HDU
+            Assert.IsTrue(d.Options(HoldownFamilies.HDU_ToFoundation, WoodTypes.WOODTYPE_DF_SP).All(o => !o.Model.StartsWith("HDU") || o.Model.StartsWith("HDUE")));
+            // the legacy family: only HDU-SDS2.5; 7000 lb DF/SP -> HDU8-SDS2.5 (C-C-2021 p. 53: 6765 / 6970 / 7870, the 7870 option)
+            Assert.IsTrue(d.Options(HoldownFamilies.HDU_Legacy_ToFoundation, WoodTypes.WOODTYPE_DF_SP).All(o => o.Model.StartsWith("HDU") && o.Model.EndsWith("-SDS2.5")));
+            var c = d.SelectHoldown(HoldownFamilies.HDU_Legacy_ToFoundation, WoodTypes.WOODTYPE_DF_SP, 7000);
+            Assert.AreEqual("HDU8-SDS2.5", c.Model);
+            Assert.AreEqual(7870, c.Allowable, 0.0);
+            Assert.AreEqual("HDU14-SDS2.5", d.SelectHoldown(HoldownFamilies.HDU_Legacy_ToFoundation, WoodTypes.WOODTYPE_DF_SP, 14400).Model);
+            Assert.IsNull(d.SelectHoldown(HoldownFamilies.HDU_Legacy_ToFoundation, WoodTypes.WOODTYPE_DF_SP, 14446));
+            StringAssert.Contains(ShearWallDesigner.CatalogFootnote, "C-C-2021 p. 53");
         }
 
         [TestMethod]

@@ -113,6 +113,7 @@
     <Compile Include="NDSProvisions\SimpsonCatalog\BaseSimpsonConnectorData.cs" />
     <Compile Include="NDSProvisions\SimpsonCatalog\HDU_FastenerConfig.cs" />
     <Compile Include="NDSProvisions\SimpsonCatalog\HDU_Manager.cs" />
+    <Compile Include="NDSProvisions\SimpsonCatalog\HDU_Legacy_Manager.cs" />
     <Compile Include="NDSProvisions\SimpsonCatalog\HTT_Data.cs" />
     <Compile Include="NDSProvisions\SimpsonCatalog\HTT_FastenerConfig.cs" />
     <Compile Include="NDSProvisions\SimpsonCatalog\HTT_Manager.cs" />
