@@ -274,14 +274,21 @@ namespace ShearWallVisualizer
             RefreshDetail(); // an open detail follows the selection
         }
 
-        /// <summary>A row picked in a table: the same wall or diaphragm is selected on the plan (brought into view).</summary>
+        /// <summary>
+        /// A row picked in a table: the same wall or diaphragm is selected on the plan (brought into view) and its card opens,
+        /// as a click on it on the plan does; also when it was selected already (its card may have been closed).
+        /// </summary>
         private void SelectFromTable(string kind, int id)
         {
             string modelId = CurrentStory?.ModelId(kind, id);
             selectedKind = kind;
             selectedId = id;
-            if (modelId != null && Sketch.SelectedId != modelId) Sketch.SelectAndShow(modelId); // SelectionChanged updates the rest
-            else UpdateShearWallUI();
+            if (modelId != null && Sketch.SelectedId != modelId) Sketch.SelectAndShow(modelId); // SelectionChanged opens the card and updates the rest
+            else
+            {
+                selectionCardOpen = Sketch.Tool == SketchTool.Select;
+                UpdateShearWallUI();
+            }
         }
 
         private void DeleteFromTable(string kind, int id)

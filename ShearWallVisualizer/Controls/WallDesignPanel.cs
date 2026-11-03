@@ -673,7 +673,12 @@ namespace ShearWallVisualizer.Controls
 
         private void Select(int id, bool notify = true)
         {
-            if (selectedWall == id) return;
+            if (selectedWall == id)
+            {
+                // the row already picked, clicked again: its card on the plan opens again (it may have been closed)
+                if (notify) WallSelected?.Invoke(StoryOf(id), WallOf(id));
+                return;
+            }
             selectedWall = id;
             if (notify) WallSelected?.Invoke(StoryOf(id), WallOf(id));
             foreach (var b in table.Children.OfType<Border>().Where(b => Grid.GetColumnSpan(b) == Columns.Length && b.Tag is int))
