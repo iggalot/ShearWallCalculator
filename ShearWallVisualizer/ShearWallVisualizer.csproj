@@ -111,6 +111,9 @@
     <Compile Include="MainWindow.Levels.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="MainWindow.Loads.cs">
+      <DependentUpon>MainWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="MainWindow.Holdowns.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </Compile>

@@ -2,6 +2,27 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-02 — Load cases, wall by wall; the Loads overlay; columns on the foundation plan (BuildingModel 266db64)
+
+- **Checked: every load case is its own simultaneous Vx, Vy, Mt, solved on its own,** in the rigid and the flexible
+  solvers and both runs of the envelope.
+  - The wind calculator sends ASCE 7 Fig. 27.3-8 Cases 1–4 with both wind signs and both torsion signs: 4 + 8 + 4 + 16 = 32 cases.
+  - Each case's Mt,comb = Vx·ey − Vy·ex + Mt is formed inside that case, so a Vx of one case never meets a Vy of another.
+  - The upper story's wall reactions join the case of the same name below (`StoryCascade.WithLoadsFromAbove`).
+  - Each wall keeps its most + and most − shear and is designed for the larger magnitude. Both hold-downs take it,
+    since the reversed wind lifts the other end.
+- **`CaseBreakdown`** (calculator library, tested against the solvers in `CaseBreakdownTests`): every wall in every case
+  (own load, from above, ex, ey, Mt,comb, direct, torsion, total, governs), and one case's loads from above.
+- **Calculations tab:** "Background: every load case, wall by wall", **collapsed by default**. It is for digging into
+  the numbers; the design table stays on top. It follows the selected wall or shows all walls, and a row click selects the wall.
+- **Plan, Loads (off by default; ▾ picks the case, or pick it on the Calculations tab, and the two follow each other):**
+  - Orange: the shear each upper wall puts into this floor.
+  - Blue: what the top of each wall here receives.
+  - The legend gives the case's own wind, the part from above, the total on the diaphragm and Mt,comb.
+  - With no case picked, it shows the case that designs the most walls on the level.
+- **Foundation plan:** a column run down to the foundation is drawn there ("C1 base", outlined square) and can be picked.
+  The same holds on any level a column stands on.
+
 ## 2026-11-02 — Walls over beams, walls past the floor's edge, the framing list, the warnings log (SWC 739dff4, 347262b; BuildingModel 31ac477)
 
 - **Found on the junk project:** the three Level 3 notes on W6, W7 and W8 ("no wall under it") ignored the beams

@@ -254,6 +254,7 @@ namespace ShearWallVisualizer
             resultsPanel = new ShearResultsPanel();
             resultsPanel.WallSelected += id => SelectFromTable("Wall", id);
             resultsPanel.WallDeleteRequested += id => DeleteFromTable("Wall", id);
+            resultsPanel.CaseChosen += name => ShowLoadsCase(name, fromPanel: true); // the plan's Loads overlay follows the case shown
             tabCalculationsTabItem.Content = WithLevelBanner(resultsPanel);
 
             designPanel = new WallDesignPanel();

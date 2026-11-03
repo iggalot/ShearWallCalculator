@@ -23,6 +23,24 @@ namespace ShearWallVisualizer.Controls
         /// <summary>The × on a wall row (wall id); the host deletes it.</summary>
         public event Action<int> WallDeleteRequested;
 
+        /// <summary>A load case was picked in Show (its listed name; null: all load cases). The plan's Loads overlay follows it.</summary>
+        public event Action<string> CaseChosen;
+
+        /// <summary>Shows one case (from the plan's Loads menu), without raising <see cref="CaseChosen"/>.</summary>
+        public void ChooseCase(string listed)
+        {
+            if (listed == null || !cbCase.Items.Contains(listed) || Equals(cbCase.SelectedItem, listed)) return;
+            loading = true;
+            cbCase.SelectedItem = listed;
+            loading = false;
+            BuildTables();
+        }
+
+        // the background: every load case, wall by wall (collapsed until the designer opens it)
+        private readonly SortState deepSort = new SortState();
+        private bool deepOpen;
+        private int deepWall = -2; // -2: follow the selected wall; -1: all walls; else the wall
+
         private readonly SortState envelopeSort = new SortState(), caseSort = new SortState(), flexSort = new SortState(), linesSort = new SortState();
 
         private readonly StackPanel top = new StackPanel();
@@ -47,7 +65,13 @@ namespace ShearWallVisualizer.Controls
             caseBar.Children.Add(label);
             caseBar.Children.Add(cbCase);
             caseBar.Children.Add(tbCaseInfo);
-            cbCase.SelectionChanged += (s, e) => { if (!loading) BuildTables(); };
+            cbCase.SelectionChanged += (s, e) =>
+            {
+                if (loading) return;
+                BuildTables();
+                string n = cbCase.SelectedItem as string;
+                CaseChosen?.Invoke(n == EnvelopeName ? null : n);
+            };
 
             var root = new DockPanel { Margin = new Thickness(12, 10, 12, 10) };
             DockPanel.SetDock(top, Dock.Top);
@@ -225,7 +249,107 @@ namespace ShearWallVisualizer.Controls
                     tip: range == null ? null : "Governing case: " + range.DesignCase);
                 AddDelete(wallTable, r, c, id);
             }
-            Place(wallTable.InFrame(), 0);
+            // the design table at its own height (scrolling past 360 px), the background under it taking the rest when opened
+            var frame = wallTable.InFrame();
+            Place(frame, 0, auto: true);
+            frame.MaxHeight = 360;
+            Place(BackgroundCalcs(), 1);
+        }
+
+        /// <summary>
+        /// The background calculation, collapsed: every load case for a wall (or every wall), each case its own Vx, Vy and Mt:
+        /// this level's own load, the part from the level above, the eccentricities and Mt,comb, and the direct, torsional and
+        /// total shear, the governing case marked. For digging into the numbers; the design uses the table above.
+        /// </summary>
+        private Expander BackgroundCalcs()
+        {
+            var rows = CaseBreakdown.Rows(calc);
+            var wallIds = rows.Select(r => r.Wall).Distinct().OrderBy(i => i).ToList();
+            int shown = deepWall == -2 ? (wallIds.Contains(selectedWall) ? selectedWall : -1) : deepWall;
+            int nCases = rows.Select(r => r.Case).Distinct().Count();
+            var ex = new Expander
+            {
+                IsExpanded = deepOpen, Margin = new Thickness(0, 10, 0, 0),
+                Header = new TextBlock
+                {
+                    Text = $"Background: every load case, wall by wall ({nCases} cases, each its own Vx, Vy and Mt, solved on its own)",
+                    FontWeight = FontWeights.SemiBold, Foreground = Ui.InkSecondary,
+                },
+            };
+            ex.Expanded += (s, e) => { deepOpen = true; if (ex.Content == null) ex.Content = DeepContent(rows, wallIds, shown); };
+            ex.Collapsed += (s, e) => deepOpen = false;
+            if (deepOpen) ex.Content = DeepContent(rows, wallIds, shown); // built only when open: up to walls × cases rows
+            return ex;
+        }
+
+        private UIElement DeepContent(List<WallCaseRow> rows, List<int> wallIds, int shown)
+        {
+            var cb = new ComboBox { Width = 140, Margin = new Thickness(0, 0, 10, 0) };
+            cb.Items.Add("All walls");
+            foreach (int id in wallIds) cb.Items.Add($"Wall {id}");
+            cb.SelectedIndex = shown < 0 ? 0 : wallIds.IndexOf(shown) + 1;
+            var host = new ContentControl();
+            void Fill()
+            {
+                int pick = cb.SelectedIndex <= 0 ? -1 : wallIds[cb.SelectedIndex - 1];
+                host.Content = DeepTable(rows.Where(r => pick < 0 || r.Wall == pick).ToList());
+            }
+            cb.SelectionChanged += (s, e) => { deepWall = cb.SelectedIndex <= 0 ? -1 : wallIds[cb.SelectedIndex - 1]; Fill(); };
+            Fill();
+            var bar = new DockPanel { Margin = new Thickness(0, 6, 0, 6) };
+            DockPanel.SetDock(cb, Dock.Left);
+            bar.Children.Add(cb);
+            bar.Children.Add(new TextBlock
+            {
+                Text = "Own: this level's wind. Above: the walls of the level above, on this floor (Mt about the center of mass). " +
+                       "Mt,comb = Vx·ey − Vy·ex + Mt (rigid). Shears: the wall's force on the diaphragm. ◀ the case that designs the wall.",
+                TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkSecondary, VerticalAlignment = VerticalAlignment.Center,
+            });
+            var dock = new DockPanel();
+            DockPanel.SetDock(bar, Dock.Top);
+            dock.Children.Add(bar);
+            dock.Children.Add(host);
+            return dock;
+        }
+
+        private UIElement DeepTable(List<WallCaseRow> rows)
+        {
+            var t = new UiTable(deepSort,
+                ("Wall", 40, ""), ("Load case", 250, ""),
+                ("Own Vx", 56, "This level's wind, x (k)"), ("Own Vy", 56, "This level's wind, y (k)"), ("Own Mt", 56, "This level's case torsion (k·ft)"),
+                ("Above Vx", 62, "From the walls of the level above, x (k)"), ("Above Vy", 62, "From the walls of the level above, y (k)"),
+                ("Above Mt", 68, "Moment of the upper walls' forces about this level's center of mass (k·ft)"),
+                ("ex", 48, "Rigid: center of rigidity − center of mass, x (ft)"), ("ey", 48, "Rigid: center of rigidity − center of mass, y (ft)"),
+                ("Mt,comb", 64, "Rigid: Vx·ey − Vy·ex + Mt (k·ft), about the center of rigidity"),
+                ("Direct", 58, "k"), ("Torsion", 60, "k"), ("Total", 58, "k"), ("", 24, "◀ governs: this case designs the wall"));
+            var count = new Dictionary<int, int>();
+            foreach (var r in rows)
+            {
+                count.TryGetValue(r.Wall, out int n);
+                count[r.Wall] = n + 1;
+                int key = r.Wall * 10000 + n;
+                int row = t.AddRow(key, false);
+                int c = 0;
+                Brush ink = r.Governs ? Ui.Ink : Ui.InkSecondary;
+                t.Text(row, c++, r.Wall.ToString(), key, bold: true, right: false);
+                t.Text(row, c++, r.Case, key, ink, bold: r.Governs, right: false, tip: r.Case);
+                foreach (double v in new[] { r.OwnVx, r.OwnVy, r.OwnMt, r.AboveVx, r.AboveVy, r.AboveMt }) t.Text(row, c++, Ui.Num(v), key, ink);
+                t.Text(row, c++, r.EccX.HasValue ? Ui.Num(r.EccX.Value) : "–", key, ink);
+                t.Text(row, c++, r.EccY.HasValue ? Ui.Num(r.EccY.Value) : "–", key, ink);
+                t.Text(row, c++, r.MtComb.HasValue ? Ui.Num(r.MtComb.Value, "0.0") : "–", key, ink);
+                t.Text(row, c++, Ui.Num(r.Direct), key, ink);
+                t.Text(row, c++, Ui.Num(r.Torsion), key, ink);
+                t.Text(row, c++, Ui.Num(r.Total), key, bold: true);
+                t.Text(row, c++, r.Governs ? "◀" : "", key, Ui.Ink, bold: true, right: false);
+            }
+            t.RowClicked += key =>
+            {
+                t.Select(key);
+                int wall = key / 10000;
+                selectedWall = wall;
+                WallSelected?.Invoke(wall);
+            };
+            return t.InFrame();
         }
 
         /// <summary>Multi-story: the part of a case that comes from the walls of the level above (empty when none).</summary>

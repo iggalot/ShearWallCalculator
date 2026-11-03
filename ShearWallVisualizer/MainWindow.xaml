@@ -198,6 +198,10 @@
                                 ToolTip="Plan: show or hide, zoom to it; plans are imported and placed in the Building Model editor"/>
                         <Button x:Name="btnShowDesign" Style="{StaticResource Tool}" Content="Design" Tag="on" Click="btnShowDesign_Click"
                                 ToolTip="Shear wall marks (SW1, SW2, ...) with each wall's hold-down, the hold-downs at the wall ends, and the shear wall schedule"/>
+                        <Button x:Name="btnLoads" Style="{StaticResource Tool}" Content="Loads" Click="btnLoads_Click"
+                                ToolTip="One load case on the plan: the shear each wall of the level above puts into this floor (orange) and what the top of each wall here receives (blue). Pick the case with ▾ or on the Calculations tab"/>
+                        <Button x:Name="btnLoadsOptions" Style="{StaticResource Tool}" Content="▾" Padding="6,4" Click="btnLoadsOptions_Click"
+                                ToolTip="The load case the Loads overlay shows"/>
                         <Button x:Name="btn3D" Style="{StaticResource Tool}" Content="3D" Click="Show3D_Click"
                                 ToolTip="The building in 3D from the model: every level's diaphragm and the walls (shear walls blue); the level shown is stronger"/>
                         <Button x:Name="btnIssues" Style="{StaticResource Tool}" Content="✓" Click="Issues_Click"

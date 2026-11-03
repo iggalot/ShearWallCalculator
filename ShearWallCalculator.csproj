@@ -77,6 +77,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BracedWallLine.cs" />
+    <Compile Include="CaseBreakdown.cs" />
     <Compile Include="DiaphragmData_Rectangular.cs" />
     <Compile Include="DiaphragmSystem.cs" />
     <Compile Include="DrawableObject.cs" />

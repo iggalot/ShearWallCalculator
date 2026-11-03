@@ -89,6 +89,7 @@ namespace ShearWallVisualizer
                     DrawCOMandCOR(e.Context);
                 }
                 DrawLandings(e.Context); // hold-downs from the story above, or the foundation anchors
+                DrawLoads(e.Context);    // one load case: the shears from above and what each wall top receives (off unless asked for)
                 DrawDebug(e.Context);
             };
             s.WallStyle = DesignPen;
