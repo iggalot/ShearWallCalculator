@@ -1087,12 +1087,12 @@ Wall framing isn't only a shear-wall matter, so it moved out of the calculator. 
 - **WoodFraming.StudDesign** checks one stud:
   - Axial load is the wall's top loads (D, L, Lr, S in plf) over the stud spacing.
   - Bending is from the C&C wind (exterior) or 5 psf (interior, IBC 1607.16), simply supported between the plates. The sheathing braces the weak axis.
-  - Combinations are the 2024 IBC 1605.2 alternative ASD set (Eq. 16-1 to 16-4), each with the variable loads zeroed in turn. CD comes from the shortest load in the combination.
+  - Combinations come from the LoadManager (see below). A combination with a load the stud doesn't carry is skipped. CD comes from the shortest load in the combination.
   - Also checked: bearing on the plates (Fc⊥, Cb = 1), shear, and deflection (IBC Table 1604.3, ℓ/240 by default, wind at 0.42 × C&C per note f; E').
   - Hand-checked: D + L + 0.6W for D 300, L 400, W 30 psf on a 2x6 gives 0.6876.
-- **The building model** holds each wall's top loads per story (WallTopLoad). The gravity load path will write them later; for now they're entered by hand. It also holds the project's stud species and grade (DF-L No. 2) and the wall deflection limit (240).
+- **The building model** holds the project's stud species and grade (DF-L No. 2) and the wall deflection limit (240). It holds no loads.
 - **Construction window, Pieces**: when the stud table doesn't apply, a "Studs: NDS design" section appears.
-  - It has D / L / Lr / S boxes. A change is saved to the model through the sketch, so it's undoable and logged.
+  - It has D / L / Lr / S boxes. A change is saved to the LoadManager's "Loads" section through the sketch, so it's undoable and logged.
   - It shows the stud and its reference values, le/d and FcE, the lateral load and where it came from, a table of every combination (CD, P, fc, CP, Fc', fb, Fb', Eq. 3.9-3), the other checks, and the quoted sources.
   - The subtitle gives the NDS result.
 - **Wind on the studs**: the wind model's own C&C calculator gives p = qh Kd (GCp ∓ GCpi), the larger of inward and outward, at least 16 psf.
@@ -1104,6 +1104,22 @@ Wall framing isn't only a shear-wall matter, so it moved out of the calculator. 
   - The effective wind area rule (ASCE 7 26.2) and the Fig. 30.3-1 zone width; the wind library uses the same a as Fig. 28.3-1.
   - Snow is taken as ASCE 7-22 gives it, with 0.7 S, following the 2024 IBC.
 - Checked in the app on lbltest:
-  - SW2-11 (2x8, interior, D 300 / L 400): D + L + Li governs at 0.16. By hand: Fc' = 1417.5 × 0.483 = 685 psi, Fb' = 1242 psi, fb = 163 psi.
+  - SW2-11 (2x8, interior, D 300 / L 400): D + L + Li governs at 0.16 (now named D + L: the 5 psf is a live load). By hand: Fc' = 1417.5 × 0.483 = 685 psi, Fb' = 1242 psi, fb = 163 psi.
   - SW2-1 (2x6, exterior): 37.2 psf from Zone 5 (34.2 × 0.85 × (1.10 + 0.18)). With D 300, L 400, S 250 all ten combinations appear and D + L + 0.6W + 0.7S/2 governs at 0.89 (P = 1,050 lb).
   - Deflection 0.645" ≤ 0.731". Ctrl+Z restores the previous loads.
+
+### LoadManager: loads out of the building model
+Loads aren't the building model's. Like the wind calculator's "Wind" section, they come from their own system.
+- **LoadManager** (C:\Programming\LoadManager, a new local repo with no remote) references only BuildingModel.Core.
+  - LoadSection: the "Loads" section of the project file. For now it holds the wall-top line loads (D, L, Lr, S in plf) by model wall ID and the story's top level ID. SetWallTop is one edit, so it's undoable through the sketch. All zero removes the entry.
+  - LoadCombinations.IbcAlternativeAsd(): the 2024 IBC 1605.2 alternative ASD set, Eq. 16-1 to 16-6, with the quoted source. Each equation is expanded with its variable loads zeroed in turn (the CA amendment's wording), without repeats.
+  - A combination another covers term by term is dropped (same loads, same dead factor, no larger variable loads: D + 0.6W/2 under D + 0.6W, D + 0.7S/2 under D + 0.7S). 0.9D + E/1.4 is kept.
+  - Floor and roof area loads, and the gravity load path that turns them into wall-top loads, come next.
+- **BuildingModel**: WallTopLoad, Wall.TopLoads, TopLoadOf and SetTopLoad are removed. The stud lumber and deflection defaults stay.
+- **WoodFraming.StudDesign** takes LineLoad and the LoadManager's combinations (the IBC set by default, or the caller's). Durations follow NDS Table 2.3.2 (StudDesign.Duration); rain isn't in the table and throws. The interior 5 psf is a live load (L), so it goes with L.
+- **SWC** reads and writes the wall-top loads through LoadSection.
+- Tests: LoadManager 6, WoodFraming 30, BuildingModel 146, SWC 219.
+- Checked in the app on a copy of lbltest (lbltwo):
+  - SW2-1 with D 300 / L 400 / S 250 gives the same ten combinations, with D + L + 0.6W + 0.7S/2 governing at 0.89.
+  - Ctrl+Z and Ctrl+Y step through the edits.
+  - The saved file holds `"Loads": {"WallTops": {"W1": {"L2": {...}}}}` beside "Wind", and nothing on the wall itself.

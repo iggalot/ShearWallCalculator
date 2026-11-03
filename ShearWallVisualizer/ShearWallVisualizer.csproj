@@ -202,6 +202,10 @@
     <ProjectReference Include="..\..\NDS_WoodLibrary\NDS_WoodLibrary.csproj">
       <Name>NDS_WoodLibrary</Name>
     </ProjectReference>
+    <!-- the project's loads (the "Loads" section of the project file) and the load combinations: not the building model's -->
+    <ProjectReference Include="..\..\LoadManager\LoadManager\LoadManager.csproj">
+      <Name>LoadManager</Name>
+    </ProjectReference>
     <!-- the Building Model editor: referenced so BuildingModel.exe is copied next to this program (Model > Edit building) -->
     <ProjectReference Include="..\..\BuildingModel\BuildingModel.App\BuildingModel.App.csproj">
       <Name>BuildingModel.App</Name>

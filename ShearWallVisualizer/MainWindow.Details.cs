@@ -46,14 +46,15 @@ namespace ShearWallVisualizer
                 wallBuild.UndoRedo += redo => { if (redo) Sketch.Redo(); else Sketch.Undo(); };
                 // a stud size picked there is the wall's, in the building model (every app reads it): an edit through the
                 // sketch, so it is saved, undoable and logged like any other model edit
-                // the loads on the wall's top entered there: the model's too (the gravity load path will write them later)
+                // the loads on the wall's top entered there: the LoadManager's ("Loads" in the project file, not the model's; an
+                // edit through the sketch all the same, so saved and undoable; the gravity load path will write them later)
                 wallBuild.TopLoadChanged += load =>
                 {
                     var d = wallBuild?.Data;
                     if (selectedKind != "Wall" || building == null || d?.ModelWallId == null || d.TopLevelId == null) return;
                     string what = $"{d.Name}: loads on its top D {load.Dead:0.##}, L {load.Live:0.##}, Lr {load.RoofLive:0.##}, S {load.Snow:0.##} plf.";
                     Dispatcher.BeginInvoke(new Action(() =>
-                        Sketch.Edit(what, b => BuildingModel.Edits.BuildingEdits.SetTopLoad(b, d.ModelWallId, d.TopLevelId, load))),
+                        Sketch.Edit(what, b => LoadManager.LoadSection.SetWallTop(b, d.ModelWallId, d.TopLevelId, load))),
                         System.Windows.Threading.DispatcherPriority.Input);
                 };
                 wallBuild.StudSizeChosen += size =>
@@ -158,7 +159,7 @@ namespace ShearWallVisualizer
             d.StudSize = size;
             d.StudSpacing = mw != null && top != null ? building.StudSpacingOf(mw, top) : defaults.StudSpacing;
             // the NDS stud design: the loads on its top, its lumber and deflection limit (the model's), the wind on its studs
-            d.TopLoad = Building.TopLoadOf(mw, top);
+            d.TopLoad = LoadManager.LoadSection.Read(building).WallTop(mw?.Id, top);
             d.Exterior = mw != null && building.IsExterior(mw);
             d.StudSpecies = Enum.TryParse(defaults.StudSpecies, out NDS_WoodLibrary.NDS2018.Species sp) ? sp : NDS_WoodLibrary.NDS2018.Species.DouglasFirLarch;
             d.StudGrade = Enum.TryParse(defaults.StudGrade, out NDS_WoodLibrary.NDS2018.Grade gr) ? gr : NDS_WoodLibrary.NDS2018.Grade.No2;

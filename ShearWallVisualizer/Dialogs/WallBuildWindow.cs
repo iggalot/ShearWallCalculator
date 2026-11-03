@@ -73,8 +73,8 @@ namespace ShearWallVisualizer.Dialogs
         public string StudWindNote { get; set; }
         /// <summary>A function of the stud's length and spacing (in) giving its wind (psf, note); null with manual loads.</summary>
         public Func<double, double, (double psf, string note)?> StudWind { get; set; }
-        /// <summary>The gravity loads on the wall's top (the building model's, plf); null: none entered.</summary>
-        public BuildingModel.Model.WallTopLoad TopLoad { get; set; }
+        /// <summary>The gravity loads on the wall's top (plf, the LoadManager's "Loads" in the project file); null: none entered.</summary>
+        public LoadManager.LineLoad TopLoad { get; set; }
         /// <summary>The project's stud lumber and wall deflection limit (the building model's defaults).</summary>
         public Species StudSpecies { get; set; }
         public Grade StudGrade { get; set; }
@@ -102,7 +102,7 @@ namespace ShearWallVisualizer.Dialogs
             return StudDesign.Check(new StudDesignInput
             {
                 Species = StudSpecies, Grade = StudGrade, Size = f.StudSize, SpacingIn = f.Spacing, LengthIn = len,
-                Loads = new WallTopLoads { Dead = t?.Dead ?? 0, Live = t?.Live ?? 0, RoofLive = t?.RoofLive ?? 0, Snow = t?.Snow ?? 0 },
+                Loads = t ?? new LoadManager.LineLoad(),
                 WindPressurePsf = psf, WindNote = StudWindNote, DeflectionLimit = DeflectionLimit,
             });
         }
@@ -176,8 +176,8 @@ namespace ShearWallVisualizer.Dialogs
         /// <summary>Ctrl+Z (false) or Ctrl+Y (true) pressed here: the host undoes or redoes the model.</summary>
         public event Action<bool> UndoRedo;
 
-        /// <summary>The engineer entered the loads on the shown wall's top (plf). The host saves them in the building model.</summary>
-        public event Action<BuildingModel.Model.WallTopLoad> TopLoadChanged;
+        /// <summary>The engineer entered the loads on the shown wall's top (plf). The host saves them in the project file through the LoadManager.</summary>
+        public event Action<LoadManager.LineLoad> TopLoadChanged;
 
         /// <summary>Open this window whenever a wall is picked (the host reads it).</summary>
         public bool OpenOnPick { get => follow.IsChecked == true; set => follow.IsChecked = value; }
@@ -550,7 +550,7 @@ namespace ShearWallVisualizer.Dialogs
 
         /// <summary>
         /// The studs designed per NDS-2018 3.9.2 (outside the prescriptive table): the loads on the wall's top (entered
-        /// here, saved in the building model), the wind on the studs, each IBC 1605.2 combination, and the other checks.
+        /// here, saved in the project file's loads), the wind on the studs, each IBC 1605.2 combination, and the other checks.
         /// </summary>
         private void NdsStudSection(Panel p, WallFraming f)
         {
@@ -573,7 +573,7 @@ namespace ShearWallVisualizer.Dialogs
             Section(p, "Studs: NDS design", verdict + (loads ? "" : " No loads on the wall's top entered yet: wind (or 5 psf) and the studs' own capacity only."));
             if (!d.Passes) ((TextBlock)p.Children[p.Children.Count - 1]).Foreground = Ui.FailInk;
 
-            // the loads on the wall's top, entered here, saved in the model (the gravity load path will fill them in later)
+            // the loads on the wall's top, entered here, saved in the project file's loads, not the model (the gravity load path will fill them in later)
             var bar = new WrapPanel { Margin = new Thickness(0, 4, 0, 6) };
             bar.Children.Add(new TextBlock { Text = "Loads on the wall's top (plf, service):", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0), Foreground = Ui.InkSecondary });
             var t = data.TopLoad;
@@ -589,8 +589,8 @@ namespace ShearWallVisualizer.Dialogs
             void Apply()
             {
                 double Num(TextBox b) => double.TryParse(b.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var x) && x > 0 ? x : 0;
-                var next = new BuildingModel.Model.WallTopLoad { Dead = Num(boxes[0]), Live = Num(boxes[1]), RoofLive = Num(boxes[2]), Snow = Num(boxes[3]) };
-                if (next.SameAs(data.TopLoad ?? new BuildingModel.Model.WallTopLoad())) return;
+                var next = new LoadManager.LineLoad { Dead = Num(boxes[0]), Live = Num(boxes[1]), RoofLive = Num(boxes[2]), Snow = Num(boxes[3]) };
+                if (next.SameAs(data.TopLoad ?? new LoadManager.LineLoad())) return;
                 TopLoadChanged?.Invoke(next);
             }
             foreach (var b in boxes)
@@ -598,7 +598,7 @@ namespace ShearWallVisualizer.Dialogs
                 b.LostFocus += (o, e) => Apply();
                 b.KeyDown += (o, e) => { if (e.Key == System.Windows.Input.Key.Enter) { Apply(); e.Handled = true; } };
             }
-            bar.Children.Add(new TextBlock { Text = "Enter or leave a box to apply (saved with the wall in the building model; Ctrl+Z undoes it).", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(10, 0, 0, 0), Foreground = Ui.InkMuted, FontSize = 11 });
+            bar.Children.Add(new TextBlock { Text = "Enter or leave a box to apply (saved in the project's loads; Ctrl+Z undoes it).", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(10, 0, 0, 0), Foreground = Ui.InkMuted, FontSize = 11 });
             p.Children.Add(bar);
 
             var s = d.Section;
