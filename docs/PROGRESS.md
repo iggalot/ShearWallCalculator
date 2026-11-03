@@ -1052,3 +1052,24 @@ against your printed standard.
   - On lbltest, every wall is 15 ft, so its studs are 14'-7 1/2": design required.
   - Checked in the app on lbltest: SW2-11 (Level 2, 2x6 default) offers 2x6 and 2x8; picking 2x8 redraws the studs, plates, posts and blocking as 2x8 (7 1/4" sill); Ctrl+Z puts it back to the default and Ctrl+Y brings it back. SW3-10 (Level 3) offers 2x4, 2x6 and 2x8 and reads "the roof and ceiling only". Every wall there is 15 ft, so it shows "design required".
 - Ctrl+Z and Ctrl+Y (Ctrl+Shift+Z) in the construction window undo and redo the model, as on the plan (they did nothing there before).
+
+### Wall framing moved out of the calculator (building model + shared libraries)
+Wall framing isn't only a shear-wall matter, so it moved out of the calculator. The building model is the backbone for every app: wind, this calculator, the gravity load path to come, and the foundation.
+- **The building model** (C:\Programming\BuildingModel, file format 5) stores each wall's studs per story, keyed by the level on top of the story. `Wall.Framing` holds `StudFraming { StudSize, StudSpacing }`. The project defaults are in ModelDefaults: `StudSizeFirstStory` 2x6, `StudSizeAbove` 2x4, `StudSpacing` 16".
+  - `Building.StudSizeOf` and `StudSpacingOf` give the wall's own value, else the project's. `IsFirstStory` tells which default applies.
+  - `BuildingEdits.SetStudFraming` sets a size and spacing, or clears them back to the default.
+  - An older file reads the defaults.
+  - Tests: FramingTests.
+- **WoodFraming** (new local repo, C:\Programming\WoodFraming; no UI). It has WallFraming (the pieces, sheets and nails), FtIn, StudRules (the IRC/IBC stud table check) and SillAnchorage, with their tests.
+  - WallFraming.Build now takes the stud size and spacing; the hard-coded 2x6/2x4 is gone.
+  - A size it can't draw, or no spacing, is refused.
+- **NDS_WoodLibrary** (C:\Programming\NDS_WoodLibrary, local branch dev/nds2018). It is now an SDK-style project, and the 2021 files still build. The 2018 NDS is in NDS2018\:
+  - Species: DF-L, HF, SPF, SP, with their G values.
+  - Table 12E: sill-to-concrete Z∥ for 1/2" and 5/8" bolts, for all four species.
+  - Tests: NDS_WoodLibrary.Tests.
+- **The calculator** keeps only the shear-wall part: ShearWallFraming has SDPWS 4.3.7.1 item 5 (a 3x face at panel joints) and item 6 (24" max).
+  - WallDesignInputs.StudSize was removed. A stud size picked in the construction window is now an undoable edit of the model through the sketch, so every app sees it.
+  - The picker's first item is the project default for the story.
+  - The sill bolts use the NDS library's Z, with the calculator's species group mapped to DF-L or SPF, the same values as before.
+- Not yet: a defaults page for the stud defaults in the Building Model editor (the editor has no defaults page yet); per-wall spacing in the UI. The model stores spacing and the framing uses it, but there's no picker yet.
+- The app check of the new wiring is still to do. The screen was locked when it was built. The builds and tests pass: SWC 219, WoodFraming 22, NDS 2, BuildingModel 145.

@@ -1,6 +1,7 @@
 using ShearWallCalculator;
 using ShearWallCalculator.Design;
 using ShearWallVisualizer.Controls;
+using WoodFraming;
 using System;
 using System.Collections.Generic;
 using System.Linq;

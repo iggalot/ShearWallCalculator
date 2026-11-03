@@ -44,15 +44,19 @@ namespace ShearWallVisualizer
                 wallBuild = new Dialogs.WallBuildWindow { Owner = this, OpenOnPick = wallBuildOnPick };
                 wallBuild.Closed += (s, e) => { wallBuildOnPick = wallBuild?.OpenOnPick ?? wallBuildOnPick; wallBuild = null; };
                 wallBuild.UndoRedo += redo => { if (redo) Sketch.Redo(); else Sketch.Undo(); };
-                // a stud size picked there is the wall's design input, as an edit on the card: recalculated, saved, undoable, logged
+                // a stud size picked there is the wall's, in the building model (every app reads it): an edit through the
+                // sketch, so it is saved, undoable and logged like any other model edit
                 wallBuild.StudSizeChosen += size =>
                 {
-                    if (selectedKind != "Wall" || Calculator == null || !Calculator._wall_system._walls.TryGetValue(selectedId, out var w)) return;
-                    w.Design = w.Design ?? new WallDesignInputs();
-                    if (w.Design.StudSize == size) return;
-                    w.Design.StudSize = size;
-                    Log.Info("Design", $"{CurrentStory?.Level.Name} wall {selectedId}: studs {size ?? "by story (default)"} (from the construction window)");
-                    Dispatcher.BeginInvoke(new Action(UpdateShearWallUI), System.Windows.Threading.DispatcherPriority.Input);
+                    var d = wallBuild?.Data;
+                    if (selectedKind != "Wall" || building == null || d?.ModelWallId == null || d.TopLevelId == null) return;
+                    var mw = building.Find(d.ModelWallId) as Wall;
+                    if (mw == null || (Building.OwnFraming(mw, d.TopLevelId)?.StudSize ?? null) == size) return;
+                    double spacing = Building.OwnFraming(mw, d.TopLevelId)?.StudSpacing ?? 0;
+                    string what = $"{d.Name}: studs {size ?? $"{d.DefaultStudSize} (project default)"}.";
+                    Dispatcher.BeginInvoke(new Action(() =>
+                        Sketch.Edit(what, b => BuildingModel.Edits.BuildingEdits.SetStudFraming(b, d.ModelWallId, d.TopLevelId, size, spacing))),
+                        System.Windows.Threading.DispatcherPriority.Input);
                 };
                 wallBuild.Show();
                 Log.Info("Construction", $"Construction window opened for {selectedKind} {selectedModelId ?? selectedId.ToString()}.");
@@ -124,6 +128,25 @@ namespace ShearWallVisualizer
                 Exposure = windLoadsLinked && windLoadParams != null ? windLoadParams.ExposureCategory.ToString().Substring(windLoadParams.ExposureCategory.ToString().Length - 1) : null,
             };
             if (r != null) d.Lines = DetailCalcs.Wall(w, r, d.Own);
+            // its studs, from the building model: the wall's own size and spacing on this story, else the project's
+            string modelId = i < stories.Count && stories[i].Walls.TryGetValue(key, out var mid) ? mid : null;
+            var mw = modelId != null ? building?.Find(modelId) as Wall : null;
+            string top = i < stories.Count ? stories[i].Level?.Id : null;
+            var defaults = building?.Defaults ?? new ModelDefaults();
+            d.ModelWallId = mw?.Id;
+            d.TopLevelId = top;
+            bool first = building != null && top != null ? building.IsFirstStory(top) : d.FirstStory;
+            d.DefaultStudSize = first ? defaults.StudSizeFirstStory : defaults.StudSizeAbove;
+            string size = mw != null && top != null ? building.StudSizeOf(mw, top) : d.DefaultStudSize;
+            d.OwnStudSize = mw != null && !string.IsNullOrEmpty(Building.OwnFraming(mw, top)?.StudSize);
+            // a size the program cannot draw (a hand-edited file): the smallest it can, said in the log
+            if (!WoodFraming.WallFraming.IsStudSize(size))
+            {
+                Log.Warning("Construction", $"{d.Name}: stud size \"{size}\" is not one of {string.Join(", ", WoodFraming.WallFraming.StudSizes)}; drawn as {WoodFraming.WallFraming.StudSizes[0]}.", null);
+                size = WoodFraming.WallFraming.StudSizes[0];
+            }
+            d.StudSize = size;
+            d.StudSpacing = mw != null && top != null ? building.StudSpacingOf(mw, top) : defaults.StudSpacing;
             // what the story above stands on this wall: its hold-downs (and beam ends or column bases) landing on it
             string UpperWall(HoldownLanding x)
             {

@@ -87,9 +87,7 @@
     <Compile Include="NDSProvisions\SDPWS_Table4_3_4.cs" />
     <Compile Include="NDSProvisions\SdpwsSource.cs" />
     <Compile Include="Design\HoldownPictures.cs" />
-    <Compile Include="Design\WallFraming.cs" />
-    <Compile Include="Design\SillAnchorage.cs" />
-    <Compile Include="Design\StudRules.cs" />
+    <Compile Include="Design\ShearWallFraming.cs" />
     <Compile Include="Design\ShearWallDesign.cs" />
     <Compile Include="Design\Sheathing.cs" />
     <Compile Include="Design\WallSchedule.cs" />

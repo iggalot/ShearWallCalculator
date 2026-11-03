@@ -195,6 +195,13 @@
     <ProjectReference Include="..\..\ASCE7-Wind-Load-Calculator\ASCE7Wind.ModelAdapter\ASCE7Wind.ModelAdapter.csproj">
       <Name>ASCE7Wind.ModelAdapter</Name>
     </ProjectReference>
+    <!-- wood wall framing (pieces, stud check, sill bolts) and the NDS values: shared libraries, not the shear wall program's -->
+    <ProjectReference Include="..\..\WoodFraming\WoodFraming\WoodFraming.csproj">
+      <Name>WoodFraming</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\NDS_WoodLibrary\NDS_WoodLibrary.csproj">
+      <Name>NDS_WoodLibrary</Name>
+    </ProjectReference>
     <!-- the Building Model editor: referenced so BuildingModel.exe is copied next to this program (Model > Edit building) -->
     <ProjectReference Include="..\..\BuildingModel\BuildingModel.App\BuildingModel.App.csproj">
       <Name>BuildingModel.App</Name>
