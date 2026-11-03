@@ -346,7 +346,7 @@ namespace ShearWallVisualizer
                 g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
                 foreach (var e in schedule)
                 {
-                    string walls = e.WallIds.Count == 1 ? $"wall {e.WallIds[0]}" : $"walls {string.Join(", ", e.WallIds)}";
+                    string walls = e.Holdown ?? "no hold-down"; // the mark names the wall; its hold-down completes its design
                     string cap = e.Capacity > 0 ? $"{e.Capacity:0} plf" : "no capacity";
                     g.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
                     var m = T(e.Mark, Controls.Ui.Ink, 12, true); m.Margin = new Thickness(0, 1, 10, 1);

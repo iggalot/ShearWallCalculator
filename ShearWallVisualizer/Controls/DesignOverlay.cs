@@ -173,7 +173,7 @@ namespace ShearWallVisualizer.Controls
             var lines = new List<(FormattedText mark, FormattedText text)>();
             foreach (var e in schedule.Take(LegendRows))
             {
-                string walls = e.WallIds.Count == 1 ? $"wall {e.WallIds[0]}" : $"walls {string.Join(", ", e.WallIds)}";
+                string walls = e.Holdown ?? "no hold-down"; // the mark names the wall; its hold-down completes its design
                 string cap = e.Capacity > 0 ? $"{e.Capacity:0} plf" : "no capacity";
                 lines.Add((Text(e.Mark, 11, Ui.Ink, dip, bold: true), Text($"{e.Sheathing}  ·  {cap}  ·  {walls}", 11, Ui.InkSecondary, dip)));
             }

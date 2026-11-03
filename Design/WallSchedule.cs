@@ -6,7 +6,7 @@ using calculator;
 
 namespace ShearWallCalculator.Design
 {
-    /// <summary>One line of the shear wall schedule: a mark (SW1, SW2, ...) for each different construction.</summary>
+    /// <summary>One line of the shear wall schedule: a mark (SW2-1, SW2-2, ...) for each wall, its own design.</summary>
     public sealed class ScheduleEntry
     {
         public string Mark { get; set; }
@@ -14,15 +14,18 @@ namespace ShearWallCalculator.Design
         /// <summary>The sheathing, as in the Design tab (e.g. "Structural I 15/32", 8d @ 4", both faces").</summary>
         public string Sheathing { get; set; }
 
-        /// <summary>Design capacity of this construction, plf (the smallest over its walls: the aspect factor can lower it).</summary>
+        /// <summary>Design unit shear capacity of the wall, plf (its aspect factor included).</summary>
         public double Capacity { get; set; }
+
+        /// <summary>The wall's hold-down model (null: none).</summary>
+        public string Holdown { get; set; }
 
         public List<int> WallIds { get; } = new List<int>();
     }
 
     /// <summary>
-    /// What the drawing shows of the design: the shear wall schedule (one mark per sheathing construction, weakest
-    /// first, as on a drawing set) and where the hold-downs sit at each wall end.
+    /// What the drawing shows of the design: the shear wall schedule (one mark per wall, its own design: SW{level}-{wall})
+    /// and where the hold-downs sit at each wall end.
     /// </summary>
     public static class WallSchedule
     {
@@ -32,32 +35,25 @@ namespace ShearWallCalculator.Design
         public const double DefaultPostAlongWall = 3.0;
 
         /// <summary>
-        /// Groups the walls by sheathing construction and numbers the groups SW1, SW2, ... from the weakest (lowest
-        /// design capacity of any of its walls) up; ties by name. Walls with no result are left out.
-        /// <paramref name="level"/>: the level the walls are drawn on ("2" for the Level 2 plan); the marks are then
-        /// SW2-1, SW2-2, ..., unique across the project and saying which plan to look on. Null: SW1, SW2, ...
+        /// One mark per wall, its own design (sheathing, nailing, hold-down), made of the wall's level and its number: wall 9
+        /// drawn on the Level 2 plan is SW2-9 (unique across the project; it says which plan to look on and which wall).
+        /// <paramref name="level"/>: the level part ("2" for the Level 2 plan; <see cref="LevelTag"/>). Null: SW9.
+        /// Walls with no result are left out; in wall-number order.
         /// </summary>
         public static List<ScheduleEntry> Build(IReadOnlyDictionary<int, WallDesignResult> design, string level = null)
         {
             if (design == null) return new List<ScheduleEntry>();
-            var groups = design.Values
-                .Where(r => r != null)
-                .GroupBy(r => r.Panel ?? "")
-                .Select(g => new
-                {
-                    Sheathing = g.Key,
-                    Capacity = g.Min(r => double.IsNaN(r.Capacity) ? 0 : r.Capacity),
-                    Ids = g.Select(r => r.WallId).OrderBy(i => i).ToList(),
-                })
-                .OrderBy(g => g.Capacity).ThenBy(g => g.Sheathing, StringComparer.Ordinal)
-                .ToList();
-
             var list = new List<ScheduleEntry>();
-            int n = 0;
-            foreach (var g in groups)
+            foreach (var r in design.Values.Where(r => r != null).OrderBy(r => r.WallId))
             {
-                var e = new ScheduleEntry { Mark = string.IsNullOrEmpty(level) ? "SW" + (++n) : $"SW{level}-{++n}", Sheathing = g.Sheathing, Capacity = g.Capacity };
-                e.WallIds.AddRange(g.Ids);
+                var e = new ScheduleEntry
+                {
+                    Mark = Mark(level, r.WallId),
+                    Sheathing = r.Panel ?? "",
+                    Capacity = double.IsNaN(r.Capacity) ? 0 : r.Capacity,
+                    Holdown = r.Holdown?.Model,
+                };
+                e.WallIds.Add(r.WallId);
                 list.Add(e);
             }
             return list;
@@ -76,6 +72,9 @@ namespace ShearWallCalculator.Design
             char initial = name.FirstOrDefault(char.IsLetterOrDigit);
             return initial != default(char) ? char.ToUpperInvariant(initial).ToString() : (story + 1).ToString();
         }
+
+        /// <summary>A wall's mark: SW{level}-{wall number} (SW2-9: wall 9 on the Level 2 plan); no level: SW9.</summary>
+        public static string Mark(string level, int wallId) => string.IsNullOrEmpty(level) ? $"SW{wallId}" : $"SW{level}-{wallId}";
 
         /// <summary>The schedule mark of each wall.</summary>
         public static Dictionary<int, string> MarksByWall(IEnumerable<ScheduleEntry> schedule)

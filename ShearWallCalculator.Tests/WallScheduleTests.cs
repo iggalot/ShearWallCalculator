@@ -16,39 +16,33 @@ namespace ShearWallCalculator.Tests
             new WallDesignResult { WallId = id, Panel = panel, Capacity = capacity };
 
         [TestMethod]
-        public void Schedule_OneMarkPerConstruction_WeakestFirst()
+        public void Schedule_OneMarkPerWall_ItsLevelAndNumber()
         {
             var design = new Dictionary<int, WallDesignResult>
             {
-                [0] = R(0, "Structural I 15/32\", 8d @ 4\"", 602.5),
-                [1] = R(1, "Gyp. wallboard 1/2\", both faces", 200),
-                [2] = R(2, "Structural I 15/32\", 8d @ 4\"", 560),   // tall wall: aspect factor lowers it
-                [3] = R(3, "Structural I 15/32\", 8d @ 6\"", 392.5),
+                [9] = R(9, "Structural I 15/32\", 8d @ 6\"", 392.5),
+                [2] = R(2, "Structural I 15/32\", 8d @ 6\"", 392.5), // the same construction: still its own mark
+                [4] = R(4, "Gyp. wallboard 1/2\", both faces", 200),
             };
-            var s = WallSchedule.Build(design);
-            CollectionAssert.AreEqual(new[] { "SW1", "SW2", "SW3" }, s.Select(e => e.Mark).ToList());
-            Assert.AreEqual("Gyp. wallboard 1/2\", both faces", s[0].Sheathing);
-            Assert.AreEqual("Structural I 15/32\", 8d @ 6\"", s[1].Sheathing);
-            CollectionAssert.AreEqual(new[] { 0, 2 }, s[2].WallIds);
-            Assert.AreEqual(560, s[2].Capacity, Tol, "the smallest capacity of the group");
-
+            var s = WallSchedule.Build(design, "2");
+            // wall 9 on the Level 2 plan is SW2-9; in wall-number order
+            CollectionAssert.AreEqual(new[] { "SW2-2", "SW2-4", "SW2-9" }, s.Select(e => e.Mark).ToList());
+            Assert.IsTrue(s.All(e => e.WallIds.Count == 1));
+            Assert.AreEqual("Gyp. wallboard 1/2\", both faces", s[1].Sheathing);
+            Assert.AreEqual(200, s[1].Capacity, Tol);
             var marks = WallSchedule.MarksByWall(s);
-            Assert.AreEqual("SW3", marks[2]);
-            Assert.AreEqual("SW1", marks[1]);
+            Assert.AreEqual("SW2-9", marks[9]);
+            Assert.AreEqual("SW3-9", WallSchedule.Mark("3", 9));
+            Assert.AreEqual("SW9", WallSchedule.Build(design).Last().Mark, "no level: SW and the wall number");
         }
 
         [TestMethod]
-        public void Schedule_MarksNameTheirLevel_UniqueAcrossTheProject()
+        public void Schedule_LevelTag_FromTheLevelName()
         {
-            var design = new Dictionary<int, WallDesignResult>
-            {
-                [0] = R(0, "Structural I 15/32\", 8d @ 6\"", 392.5),
-                [1] = R(1, "Gyp. wallboard 1/2\", both faces", 200),
-            };
-            // the same constructions on two plans: SW2-1 is mark 1 on the Level 2 plan, SW3-1 on Level 3
-            CollectionAssert.AreEqual(new[] { "SW2-1", "SW2-2" }, WallSchedule.Build(design, "2").Select(e => e.Mark).ToList());
-            CollectionAssert.AreEqual(new[] { "SW3-1", "SW3-2" }, WallSchedule.Build(design, "3").Select(e => e.Mark).ToList());
-            Assert.AreEqual("SW2-2", WallSchedule.MarksByWall(WallSchedule.Build(design, "2"))[0]);
+            Assert.AreEqual("2", WallSchedule.LevelTag("Level 2", 0));
+            Assert.AreEqual("12", WallSchedule.LevelTag("Floor 12", 10));
+            Assert.AreEqual("R", WallSchedule.LevelTag("Roof", 1), "no number: the initial, not the story number");
+            Assert.AreEqual("2", WallSchedule.LevelTag("", 1), "no name: the story number");
         }
 
         [TestMethod]

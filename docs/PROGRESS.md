@@ -948,3 +948,7 @@ against your printed standard.
 - The Design tab has a Mark column (after Wall): each wall's schedule mark, as tagged on the plan (SW2-1). One rule for
   both: WallSchedule.Build(results, WallSchedule.LevelTag(level name, story)). A mark is a construction several walls
   share, so it is a column beside Level and Wall, not in their place.
+- Correction: a mark is one wall's own design, made of its level and its number: SW{level}-{wall} (wall 9 on the
+  Level 2 plan is SW2-9). Two walls with the same sheathing keep their own marks. The drawing key lists each mark with
+  its sheathing, capacity and hold-down. WallSchedule.Mark / Build; tests Schedule_OneMarkPerWall_ItsLevelAndNumber,
+  Schedule_LevelTag_FromTheLevelName.
