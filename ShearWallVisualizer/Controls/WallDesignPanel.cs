@@ -975,6 +975,7 @@ namespace ShearWallVisualizer.Controls
                     var d = r.Inputs.Clone();
                     d.DeadLoad = 0;
                     d.HoldownKey = null; // a new wall sizes its own hold-down
+                    d.StudSize = null;   // and takes its own story's studs
                     foreach (var calc in stories.Select(x => x.Calculator).Where(c => c?.DesignSettings != null))
                     {
                         if (exterior) calc.DesignSettings.NewWallDesign = d.Clone();

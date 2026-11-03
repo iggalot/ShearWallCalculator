@@ -48,9 +48,17 @@ namespace ShearWallVisualizer.Dialogs
             return EastWest ? (p.X - Math.Min(Wall.Start.X, Wall.End.X)) * 12 : (p.Y - Math.Min(Wall.Start.Y, Wall.End.Y)) * 12;
         }
 
+        /// <summary>The design wind speed (ultimate, mph) and exposure ("B", "C", "D") when the loads come from the wind model.</summary>
+        public double? WindMph { get; set; }
+        public string Exposure { get; set; }
+
+        /// <summary>The code check of the wall's studs: carrying the floors above it and the roof, studs the wall's height less the plates.</summary>
+        public StudCheck Studs(WallFraming f) =>
+            StudRules.Check(f.StudSize, f.Spacing, f.StudTop / 12.0 - WallFraming.Ply / 12.0, Math.Max(0, Stories - 1 - Story), WindMph, Exposure, WallFraming.StudSizes);
+
         public WallFraming Framing() =>
             WallFraming.Build(Wall?.WallLength ?? 0, Wall?.WallHeight ?? 0, FirstStory, WallSchedule.PostAlongWall(Result?.Holdown),
-                              Above.Select(a => a.Along));
+                              Above.Select(a => a.Along), studSize: Wall?.Design?.StudSize);
 
         /// <summary>
         /// A first-story wall's sill anchor bolts (null above the first story or before a design): for the ASD wind shear
@@ -94,7 +102,13 @@ namespace ShearWallVisualizer.Dialogs
         private readonly CheckBox follow = new CheckBox { Content = "Open when a wall, beam or column is picked", VerticalAlignment = VerticalAlignment.Center, Foreground = Ui.InkSecondary };
         private WallBuildData data;
         private WallFraming framing;
-        private readonly StackPanel elevBar, bar3;
+        private readonly StackPanel elevBar, bar3, studBar;
+        private readonly ComboBox studs = new ComboBox { MinWidth = 150 };
+        private void NameStuds() => System.Windows.Automation.AutomationProperties.SetName(studs, "Studs");
+        private bool fillingStuds;
+
+        /// <summary>The engineer picked a stud size for the shown wall (null: the story's default). The host saves it.</summary>
+        public event Action<string> StudSizeChosen;
 
         /// <summary>Open this window whenever a wall is picked (the host reads it).</summary>
         public bool OpenOnPick { get => follow.IsChecked == true; set => follow.IsChecked = value; }
@@ -122,8 +136,19 @@ namespace ShearWallVisualizer.Dialogs
 
             var root = new DockPanel { Margin = new Thickness(14, 10, 14, 12) };
             var head = new DockPanel();
-            DockPanel.SetDock(follow, Dock.Right);
-            head.Children.Add(follow);
+            // the wall's stud size: the story's default, or larger (the engineer's choice, saved with the wall's design)
+            studs.SelectionChanged += (s, e) =>
+            {
+                if (fillingStuds || data?.Wall == null || !(studs.SelectedItem is ComboBoxItem it)) return;
+                StudSizeChosen?.Invoke(it.Tag as string);
+            };
+            studBar = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 6, 0, 0) };
+            studBar.Children.Add(new TextBlock { Text = "Studs ", VerticalAlignment = VerticalAlignment.Center });
+            NameStuds();
+            studBar.Children.Add(studs);
+            var right = new StackPanel { Children = { follow, studBar } };
+            DockPanel.SetDock(right, Dock.Right);
+            head.Children.Add(right);
             head.Children.Add(new StackPanel { Children = { title, subtitle } });
             DockPanel.SetDock(head, Dock.Top);
             root.Children.Add(head);
@@ -164,6 +189,35 @@ namespace ShearWallVisualizer.Dialogs
             Content = root;
         }
 
+        /// <summary>The stud choices for the shown wall: the story's default, then each size not smaller than it.</summary>
+        private void FillStuds(WallBuildData d)
+        {
+            fillingStuds = true;
+            try
+            {
+                studs.Items.Clear();
+                studBar.Visibility = d?.Wall == null ? Visibility.Collapsed : Visibility.Visible;
+                if (d?.Wall == null) return;
+                string def = WallFraming.StudSizeFor(d.FirstStory);
+                string chosen = d.Wall.Design?.StudSize;
+                // the code's smallest here (IRC Table R602.3(5)); sizes under it and under the default are not offered
+                var check = framing == null ? null : StudRules.Check(def, framing.Spacing, (framing.StudTop - WallFraming.Ply) / 12.0,
+                                                                      Math.Max(0, d.Stories - 1 - d.Story), d.WindMph, d.Exposure, WallFraming.StudSizes);
+                bool defFails = check != null && !check.DesignRequired && !check.Passes;
+                studs.Items.Add(new ComboBoxItem
+                {
+                    Content = $"{def} (default, {(d.FirstStory ? "first story" : "upper story")}){(defFails ? $": under the code's {check.Minimum}" : "")}",
+                    Tag = null, Foreground = defFails ? Ui.FailInk : Ui.Ink,
+                });
+                int min = Math.Max(Array.IndexOf(WallFraming.StudSizes, def), check?.Minimum == null ? 0 : Array.IndexOf(WallFraming.StudSizes, check.Minimum));
+                foreach (var s in WallFraming.StudSizes.Skip(Math.Max(0, min)))
+                    studs.Items.Add(new ComboBoxItem { Content = s, Tag = s });
+                studs.SelectedItem = studs.Items.Cast<ComboBoxItem>().FirstOrDefault(i => (i.Tag as string) == chosen) ?? studs.Items[0];
+                studs.ToolTip = "The wall's studs, plates and posts; the plates are as wide as the studs. Saved with the wall's design (Ctrl+Z undoes it).";
+            }
+            finally { fillingStuds = false; }
+        }
+
         /// <summary>Pick a tab: 0 Elevation, 1 3D, 2 Pieces, 3 Calculation.</summary>
         public void ShowTab(int i) { if (i >= 0 && i < tabs.Items.Count) tabs.SelectedIndex = i; }
 
@@ -172,7 +226,7 @@ namespace ShearWallVisualizer.Dialogs
         {
             data = null;
             framing = null;
-            elevBar.Visibility = bar3.Visibility = Visibility.Collapsed;
+            elevBar.Visibility = bar3.Visibility = studBar.Visibility = Visibility.Collapsed;
             elevationHost.Children.Clear();
             if (v == null)
             {
@@ -202,6 +256,7 @@ namespace ShearWallVisualizer.Dialogs
             elevBar.Visibility = bar3.Visibility = Visibility.Visible;
             data = d;
             framing = d?.Wall == null ? null : d.Framing();
+            FillStuds(d);
             if (d?.Wall == null)
             {
                 Title = "Wall";
@@ -220,6 +275,8 @@ namespace ShearWallVisualizer.Dialogs
             subtitle.Text = $"{(d.EastWest ? "East-west" : "North-south")} wall, {FtIn.Of(framing.Length)} long × {FtIn.Of(framing.Height)} high (story {d.Story + 1} of {d.Stories}). " +
                             (r == null ? "Not designed yet (no shear on it)." :
                              $"{r.Status}: v = {r.Demand:0} plf of {r.Capacity:0} plf" + (r.HoldownNeeded ? $", hold-downs {r.Holdown?.Model ?? "none strong enough"} for T = {r.TensionAsd:N0} lb (ASD)." : ", no uplift."));
+            var sc = d.Studs(framing);
+            subtitle.Text += $" Studs {framing.StudSize}: " + (sc.DesignRequired ? "design required (outside the code's stud table; see Pieces)." : sc.Passes ? "meet the code's stud table." : $"under the code's stud table, use {sc.Minimum}.");
             int faces = Faces().Count;
             face2In3D.IsEnabled = faces > 1;
             ShowElevation();
@@ -276,6 +333,7 @@ namespace ShearWallVisualizer.Dialogs
             var blocks = f.Pieces.Where(x => x.Kind == FramingKind.Blocking).ToList();
             if (blocks.Count > 0) rows.Add(new[] { "Blocking at the horizontal sheet joint", sz, blocks.Count.ToString(), $"{FtIn.Of(blocks.Sum(b => b.Length))} total", $"At {FtIn.Of(WallFraming.SheetHeight)} up: every sheet edge is blocked (the capacities are for blocked walls)." });
             p.Children.Add(Table(new[] { "Piece", "Size", "Qty", "Length (each)", "Notes" }, rows));
+            StudSection(p, data.Studs(f), f, Faces());
 
             var faces = Faces();
             for (int i = 0; i < faces.Count; i++)
@@ -363,6 +421,41 @@ namespace ShearWallVisualizer.Dialogs
             })
                 p.Children.Add(new TextBlock { Text = "•  " + s, TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkSecondary, Margin = new Thickness(6, 1, 0, 1) });
             return p;
+        }
+
+        /// <summary>The studs against the code's table (IRC R602.3(5) / IBC 2308.9.1) and SDPWS's shear wall framing, with the quoted text.</summary>
+        private static void StudSection(Panel p, StudCheck c, WallFraming f, List<FaceResult> faces)
+        {
+            string head = c.DesignRequired ? $"Design required: {c.Size} studs are outside the prescriptive table here."
+                        : c.Passes ? $"{c.Size} at {f.Spacing:0}\" o.c. meets the table (smallest allowed here: {c.Minimum})."
+                        : $"{c.Size} at {f.Spacing:0}\" o.c. does not meet the table: use {c.Minimum ?? "a designed stud"} (Studs, top right).";
+            Section(p, "Studs: code check", head);
+            var rows = new List<string[]>
+            {
+                new[] { "Stud length (unsupported)", FtIn.Of(c.StudHeightFt * 12), $"Table limit for bearing walls {StudRules.TableHeightFt:0} ft (note a: points of lateral support; sheathed on one side at least)." },
+                new[] { "Carries", c.Carries, "The stories above this one (the roof on top), as a bearing wall." },
+                new[] { "Spacing", $"{f.Spacing:0}\" o.c.", c.MaxSpacingIn is double m ? (m == 0 ? $"{c.Size}: not permitted for this load" : $"{c.Size}: up to {m:0}\" o.c.") : "outside the table" },
+            };
+            foreach (var r in c.Reasons) rows.Add(new[] { "", "", r });
+            foreach (var fr in faces)
+            {
+                var fs = fr.Face;
+                if (fs == null || fr.Option == null || !fr.Option.UsesEdgeSpacing) continue;
+                bool ten = fs.Nail == CommonNailSizes.NAILSIZE_10D;
+                if (StudRules.WideFaceAtPanelJoints(fs.EdgeSpacing, ten))
+                {
+                    rows.Add(new[] { "Panel joints", "3x (or 2-2x fastened)", $"SDPWS 4.3.7.1 item 5: {ShearWallDesigner.NailName(fs.Nail)} at {fs.EdgeSpacing}\" o.c. needs a 3\" nominal nailed face at adjoining panel edges, nailing staggered; two 2x fastened together per 4.3.6.1.1 may be used." });
+                    break;
+                }
+            }
+            p.Children.Add(Table(new[] { "Item", "Value", "Notes" }, rows));
+            var src = new Expander { Header = "Sources (quoted)", IsExpanded = false, Margin = new Thickness(0, 4, 0, 0) };
+            var sp = new StackPanel();
+            foreach (var s in StudRules.Citations)
+                sp.Children.Add(new TextBlock { Text = "•  " + s, TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkSecondary, FontSize = 11.5, Margin = new Thickness(6, 2, 0, 2) });
+            sp.Children.Add(new TextBlock { Text = "Text from the 2025 California Residential and Building Codes (the 2024 IRC and IBC); the stud table cells are the same in the 2018 and 2021 editions (not checked against those texts here). Design per NDS 3.9 (bending and compression) is not done here.", TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkMuted, FontSize = 11, Margin = new Thickness(6, 4, 0, 2) });
+            src.Content = sp;
+            p.Children.Add(src);
         }
 
         /// <summary>The sill plate's anchor bolts: what to install, how it was found, and the code text it rests on.</summary>

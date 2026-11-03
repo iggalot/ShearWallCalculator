@@ -118,6 +118,12 @@ namespace ShearWallCalculator.Design
         /// <summary>Hold-down on the inside face of the end post (SDPWS 2021 Table 4.3A footnote 10, with 10d nails).</summary>
         public bool HoldownOnInsideFace { get; set; } = true;
 
+        /// <summary>
+        /// The engineer's stud size for this wall ("2x4", "2x6", "2x8"); null (the default): by story, see
+        /// <see cref="WallFraming.StudSizeFor"/>. The plates are as wide as the studs.
+        /// </summary>
+        public string StudSize { get; set; }
+
         /// <summary>Face 1 sheathing (any table). Null in projects saved before faces: then the panel fields above are face 1.</summary>
         public FaceSheathing Face1 { get; set; }
 

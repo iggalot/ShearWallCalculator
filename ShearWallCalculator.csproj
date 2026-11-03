@@ -89,6 +89,7 @@
     <Compile Include="Design\HoldownPictures.cs" />
     <Compile Include="Design\WallFraming.cs" />
     <Compile Include="Design\SillAnchorage.cs" />
+    <Compile Include="Design\StudRules.cs" />
     <Compile Include="Design\ShearWallDesign.cs" />
     <Compile Include="Design\Sheathing.cs" />
     <Compile Include="Design\WallSchedule.cs" />

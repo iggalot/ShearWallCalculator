@@ -80,6 +80,21 @@ namespace ShearWallCalculator.Tests
         }
 
         [TestMethod]
+        public void ChosenStudSize_SetsStudsAndPlates()
+        {
+            // an upper-story wall given 2x6: studs, posts and plates 2x6, 5 1/2" deep; the layout is unchanged (5 studs on 8 ft)
+            var f = WallFraming.Build(8, 8, false, 1.5, studSize: "2x6");
+            Assert.AreEqual("2x6", f.StudSize);
+            Assert.AreEqual(5.5, f.StudDepth);
+            Assert.IsTrue(f.Pieces.All(p => p.Size == "2x6"));
+            Assert.AreEqual(5, f.Pieces.Count(p => p.Kind == FramingKind.Stud));
+            Assert.AreEqual(7.25, WallFraming.Build(8, 8, true, 1.5, studSize: "2x8").StudDepth);
+            // unknown or none: the story's default
+            Assert.AreEqual("2x6", WallFraming.Build(8, 8, true, 1.5, studSize: "2x5").StudSize);
+            Assert.AreEqual("2x4", WallFraming.Build(8, 8, false, 1.5).StudSize);
+        }
+
+        [TestMethod]
         public void PliesFor_FillTheMinimumPost()
         {
             Assert.AreEqual(2, WallFraming.PliesFor(1.5));

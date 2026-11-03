@@ -43,6 +43,16 @@ namespace ShearWallVisualizer
                 if (!(wall || member) || !(open || (wallBuildOnPick && selectionCardOpen))) return;
                 wallBuild = new Dialogs.WallBuildWindow { Owner = this, OpenOnPick = wallBuildOnPick };
                 wallBuild.Closed += (s, e) => { wallBuildOnPick = wallBuild?.OpenOnPick ?? wallBuildOnPick; wallBuild = null; };
+                // a stud size picked there is the wall's design input, as an edit on the card: recalculated, saved, undoable, logged
+                wallBuild.StudSizeChosen += size =>
+                {
+                    if (selectedKind != "Wall" || Calculator == null || !Calculator._wall_system._walls.TryGetValue(selectedId, out var w)) return;
+                    w.Design = w.Design ?? new WallDesignInputs();
+                    if (w.Design.StudSize == size) return;
+                    w.Design.StudSize = size;
+                    Log.Info("Design", $"{CurrentStory?.Level.Name} wall {selectedId}: studs {size ?? "by story (default)"} (from the construction window)");
+                    Dispatcher.BeginInvoke(new Action(UpdateShearWallUI), System.Windows.Threading.DispatcherPriority.Input);
+                };
                 wallBuild.Show();
                 Log.Info("Construction", $"Construction window opened for {selectedKind} {selectedModelId ?? selectedId.ToString()}.");
             }
@@ -108,6 +118,9 @@ namespace ShearWallVisualizer
                 Name = mark != null ? $"{mark} ({modelName})" : modelName,
                 LevelName = LevelName(i), Story = i, Stories = Math.Max(1, calcs.Count), Wall = w, Result = r,
                 Own = OwnLandings(i, key), Footnote = ShearWallDesigner.CatalogFootnote,
+                // the wind model's speed and exposure test the prescriptive framing limits (none with manual loads)
+                WindMph = windLoadsLinked && windLoadParams != null ? windLoadParams.WindSpeed : (double?)null,
+                Exposure = windLoadsLinked && windLoadParams != null ? windLoadParams.ExposureCategory.ToString().Substring(windLoadParams.ExposureCategory.ToString().Length - 1) : null,
             };
             if (r != null) d.Lines = DetailCalcs.Wall(w, r, d.Own);
             // what the story above stands on this wall: its hold-downs (and beam ends or column bases) landing on it

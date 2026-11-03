@@ -76,6 +76,13 @@ namespace ShearWallCalculator.Design
         /// <summary>Actual depth (in) of a nominal 2x size: 2x4 3.5, 2x6 5.5, 2x8 7.25.</summary>
         public static double DepthOf(string size) => size == "2x6" ? 5.5 : size == "2x8" ? 7.25 : 3.5;
 
+        /// <summary>The stud sizes a wall may be given, smallest first.</summary>
+        public static readonly string[] StudSizes = { "2x4", "2x6", "2x8" };
+
+        /// <summary>A size from the list (a chosen one), else the story's default.</summary>
+        public static string StudSizeOr(string chosen, bool firstStory) =>
+            Array.IndexOf(StudSizes, chosen) >= 0 ? chosen : StudSizeFor(firstStory);
+
         /// <summary>Plies of 2x in a post at least <paramref name="postAlongWall"/> in. along the wall, at least two.</summary>
         public static int PliesFor(double postAlongWall) => Math.Max(2, (int)Math.Ceiling(postAlongWall / Ply - 0.05));
 
@@ -83,14 +90,15 @@ namespace ShearWallCalculator.Design
         /// Lays out a wall <paramref name="lengthFt"/> long and <paramref name="heightFt"/> high (sill to top of the top
         /// plates). <paramref name="postAlongWall"/>: the hold-down's minimum post (in, along the wall).
         /// <paramref name="postsUnderAt"/>: where hold-downs from above land (in from the low end), each gets a post.
+        /// <paramref name="studSize"/>: the engineer's size (null: the story's default).
         /// </summary>
         public static WallFraming Build(double lengthFt, double heightFt, bool firstStory, double postAlongWall,
-                                        IEnumerable<double> postsUnderAt = null, double spacing = 16)
+                                        IEnumerable<double> postsUnderAt = null, double spacing = 16, string studSize = null)
         {
             var f = new WallFraming
             {
                 Length = Math.Max(0, lengthFt * 12), Height = Math.Max(0, heightFt * 12), Spacing = spacing > 0 ? spacing : 16,
-                StudSize = StudSizeFor(firstStory),
+                StudSize = StudSizeOr(studSize, firstStory),
             };
             f.StudDepth = DepthOf(f.StudSize);
             double L = f.Length, H = f.Height;
