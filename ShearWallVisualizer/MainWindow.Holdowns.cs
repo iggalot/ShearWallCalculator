@@ -230,7 +230,9 @@ namespace ShearWallVisualizer
                 {
                     var p = WorldToScreen(new Point(c.At.X, c.At.Y), m_layers);
                     double half = Math.Max(4, 0.25 * Sketch.Zoom);
-                    labelsTaken.Add(new Rect(p.X - half - 2, p.Y - half - 4 - 13 * s, half * 2 + 10 + 8 * s * c.Id.Length, half * 2 + 6 + 13 * s));
+                    // the square and its label up and to the right: no margin on the left, so a wall tag beside a column at the
+                    // wall's middle stays at the middle
+                    labelsTaken.Add(new Rect(p.X - half, p.Y - half - 4 - 13 * s, half * 2 + 8 + 8 * s * c.Id.Length, half * 2 + 6 + 13 * s));
                 }
             }
             foreach (var w in Calculator._wall_system._walls.Values)
@@ -268,11 +270,18 @@ namespace ShearWallVisualizer
                 at = new Point(Math.Max(2, leader is Point lp ? lp.X - (at.X - lp.X) - ft.Width : m_layers.ActualWidth - ft.Width - 6), at.Y);
             var box = new Rect(at.X - 2, at.Y, ft.Width + 4, ft.Height);
             double step = ft.Height + 2, dir = above ? -1 : 1;
-            for (int k = 1; k <= 6 && labelsTaken.Any(t => t.IntersectsWith(box)); k++)
+            if (labelsTaken.Any(t => Controls.DesignOverlay.Overlaps(t, box)))
             {
-                double dy = ((k + 1) / 2) * step * (k % 2 == 1 ? dir : -dir); // away from the mark first, then the other way
-                var tryBox = new Rect(at.X - 2, at.Y + dy, ft.Width + 4, ft.Height);
-                if (!labelsTaken.Any(t => t.IntersectsWith(tryBox))) { box = tryBox; break; }
+                // away from the mark first, then the other way; with no clear spot, the one covering the least (not the first:
+                // that can lie across a wall's tag)
+                var tries = new List<Rect> { box };
+                for (int k = 1; k <= 6; k++)
+                {
+                    double dy = ((k + 1) / 2) * step * (k % 2 == 1 ? dir : -dir);
+                    tries.Add(new Rect(at.X - 2, at.Y + dy, ft.Width + 4, ft.Height));
+                }
+                var clear = tries.Where(x => !labelsTaken.Any(t => Controls.DesignOverlay.Overlaps(t, x))).ToList();
+                box = clear.Count > 0 ? clear[0] : tries.OrderBy(x => Controls.DesignOverlay.Covered(x, labelsTaken)).First();
             }
             labelsTaken.Add(box);
             if (leader is Point from)

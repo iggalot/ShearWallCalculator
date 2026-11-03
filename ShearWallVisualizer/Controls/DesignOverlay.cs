@@ -80,22 +80,27 @@ namespace ShearWallVisualizer.Controls
                 var tag = Tag(mark, hd, pixelsPerDip);
                 bool vertical = Math.Abs(along.X) < Math.Abs(along.Y);
                 Point mid = a + along / 2;
-                // the preferred side, the other side, then slid along the wall both ways: the first spot on the canvas that
-                // touches no tag already drawn (walls close together put their tags on top of each other otherwise)
+                // the preferred side, the other side, then slid along the wall both ways in small steps, never past the wall's
+                // ends: the first spot on the canvas that covers no label or tag already placed; else the one covering least
                 var tries = new List<Rect>();
-                Vector slide = vertical ? new Vector(0, tag.size.Width * 0.6) : new Vector(tag.size.Width * 0.6, 0);
-                for (int k = 0; k <= 4; k++)
+                double tagLength = tag.size.Width;
+                Vector slide = vertical ? new Vector(0, tagLength * 0.25) : new Vector(tagLength * 0.25, 0);
+                double lo = vertical ? Math.Min(a.Y, b.Y) : Math.Min(a.X, b.X), hi = vertical ? Math.Max(a.Y, b.Y) : Math.Max(a.X, b.X);
+                for (int k = 0; k <= 8; k++)
                     foreach (int sgn in k == 0 ? new[] { 1 } : new[] { 1, -1 })
                         foreach (var side in new[] { n, -n })
                         {
                             var bx = TagBox(mid, side, tag.size, vertical);
                             bx.Offset(slide * k * sgn);
+                            double s0 = vertical ? bx.Top : bx.Left, s1 = vertical ? bx.Bottom : bx.Right;
+                            if (k > 0 && (s0 < lo - 1 || s1 > hi + 1)) continue; // stays along its own wall
                             tries.Add(bx);
                         }
                 var inView = tries.Where(x => bounds.Contains(x)).ToList();
                 if (inView.Count == 0) continue;
-                Rect box = inView.FirstOrDefault(x => !taken.Any(t => t.IntersectsWith(x)));
-                if (box.IsEmpty) box = inView[0];
+                // (a Rect's default is a zero box at 0,0, not Rect.Empty: test with Any)
+                var clear = inView.Where(x => !taken.Any(t => Overlaps(t, x))).ToList();
+                Rect box = clear.Count > 0 ? clear[0] : inView.OrderBy(x => Covered(x, taken)).First(); // stable: the preferred spot on a tie
                 DrawTag(ctx, box, tag, r.State, vertical);
                 taken.Add(box);
                 drawn.Union(box);
@@ -104,6 +109,17 @@ namespace ShearWallVisualizer.Controls
             // the schedule on the plan, unless the window shows it beside the plan (the drawing key)
             if (schedule) DrawLegend(ctx, entries, view, drawn, pixelsPerDip, taken);
         }
+
+        /// <summary>True when the boxes share some area (a shared edge is not an overlap: a tag may sit against a column's mark).</summary>
+        public static bool Overlaps(Rect a, Rect b)
+        {
+            var i = Rect.Intersect(a, b);
+            return !i.IsEmpty && i.Width > 0.5 && i.Height > 0.5;
+        }
+
+        /// <summary>The area of <paramref name="r"/> covered by the boxes (pixels²; overlaps between them counted twice).</summary>
+        public static double Covered(Rect r, IEnumerable<Rect> boxes) =>
+            boxes.Sum(t => { var i = Rect.Intersect(r, t); return i.IsEmpty ? 0 : i.Width * i.Height; });
 
         private static void DrawHoldown(DrawingContext ctx, Point p, bool found)
         {
