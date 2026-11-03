@@ -267,6 +267,12 @@
 
                 </TabControl>
 
+                <!-- The drawing key: the shear wall schedule and the Loads legend, beside the plan instead of over it (MainWindow.Loads) -->
+                <Border x:Name="drawingKey" Grid.Column="2" VerticalAlignment="Bottom" Margin="4 0 0 0" Padding="12 8"
+                        BorderThickness="1" CornerRadius="4" Visibility="Collapsed">
+                    <WrapPanel x:Name="drawingKeyPanel" Orientation="Horizontal"/>
+                </Border>
+
                 <!-- Optional Logging + Scroll -->
                 <!--
                 <TextBlock Name="m_log" Height="600" Width="150" Margin="10 0 0 0"/>

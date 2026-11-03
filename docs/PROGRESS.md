@@ -2,6 +2,15 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-03 — The drawing key beside the plan
+
+- The shear wall schedule and the Loads legend are no longer drawn over the plan. They sit in a drawing key under the
+  right-hand tabs (schedule left, Loads right; the "From Level 3" line in orange, the wall-top note in blue). The key shows
+  only on the Shear walls page, only for what is switched on (SHOW Design, SHOW Loads), and the tabs end above it. It is
+  rebuilt only when its text changes (MainWindow.Loads `UpdateDrawingKey`). `DesignOverlay.Draw(..., schedule: false)`.
+- Loads arrows (wall tops and the upper walls' shears) slide along their wall to the first spot clear of tags, labels and
+  the schedule; the wind arrow shortens before it is pushed onto the building.
+
 ## 2026-11-02 — Load cases, wall by wall; the Loads overlay; columns on the foundation plan (BuildingModel 266db64)
 
 - **Checked: every load case is its own simultaneous Vx, Vy, Mt, solved on its own,** in the rigid and the flexible

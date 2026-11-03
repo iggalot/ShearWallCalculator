@@ -658,7 +658,8 @@ namespace ShearWallVisualizer
         {
             if (!showDesign || Calculator?._wall_system == null) return;
             DesignOverlay.Draw(ctx, Calculator._wall_system._walls, designResults, p => WorldToScreen(p, m_layers),
-                               new Size(m_layers.ActualWidth, m_layers.ActualHeight), VisualTreeHelper.GetDpi(this).PixelsPerDip, LabelScale, labelsTaken);
+                               new Size(m_layers.ActualWidth, m_layers.ActualHeight), VisualTreeHelper.GetDpi(this).PixelsPerDip, LabelScale, labelsTaken,
+                               schedule: false); // the schedule is in the drawing key, beside the plan
         }
 
         private static Pen FrozenPen(Color c, double thickness)
@@ -1536,6 +1537,7 @@ namespace ShearWallVisualizer
             if (!(MainTabControl.SelectedItem is TabItem current) || current.Visibility != Visibility.Visible)
                 MainTabControl.SelectedItem = wind ? tabWindSetupTabItem : (TabItem)tabCalculationsTabItem;
             if (!wind) Draw();
+            UpdateDrawingKey(); // the drawing key belongs to the Shear walls workspace
         }
 
         private void MainTabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)

@@ -43,13 +43,14 @@ namespace ShearWallVisualizer.Controls
 
         /// <summary>Draws the overlay. <paramref name="toScreen"/> maps world ft to canvas pixels.</summary>
         public static void Draw(DrawingContext ctx, IEnumerable<KeyValuePair<int, WallData>> walls, IReadOnlyDictionary<int, WallDesignResult> design,
-                                Func<Point, Point> toScreen, Size view, double pixelsPerDip, double labelScale = 1, List<Rect> taken = null)
+                                Func<Point, Point> toScreen, Size view, double pixelsPerDip, double labelScale = 1, List<Rect> taken = null,
+                                bool schedule = true)
         {
             taken = taken ?? new List<Rect>();
             scale = labelScale > 0 ? labelScale : 1; // the plan's text size (the sketch's LabelScale)
             if (walls == null || design == null || design.Count == 0) return;
-            var schedule = WallSchedule.Build(design);
-            var marks = WallSchedule.MarksByWall(schedule);
+            var entries = WallSchedule.Build(design);
+            var marks = WallSchedule.MarksByWall(entries);
             var bounds = new Rect(view);
             Rect drawn = Rect.Empty; // screen extent of the walls and their tags, kept clear by the schedule
 
@@ -100,7 +101,8 @@ namespace ShearWallVisualizer.Controls
                 drawn.Union(box);
             }
 
-            DrawLegend(ctx, schedule, view, drawn, pixelsPerDip, taken);
+            // the schedule on the plan, unless the window shows it beside the plan (the drawing key)
+            if (schedule) DrawLegend(ctx, entries, view, drawn, pixelsPerDip, taken);
         }
 
         private static void DrawHoldown(DrawingContext ctx, Point p, bool found)

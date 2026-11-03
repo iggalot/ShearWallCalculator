@@ -106,6 +106,7 @@ namespace ShearWallVisualizer
         private void DrawLoads(DrawingContext ctx)
         {
             windRect = Rect.Empty;
+            loadsKey = null;
             if (!showLoads || foundationView || Calculator?._wall_system == null) return;
             double dip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
             string name = LoadsCaseHere();
@@ -300,28 +301,82 @@ namespace ShearWallVisualizer
             Label(ctx, label, c + perp * (side > 0 ? 4 : -4) + new Vector(4, 0), ink, dip, above: side < 0);
         }
 
-        /// <summary>The overlay's legend, bottom left of the plan.</summary>
-        private void Legend(DrawingContext ctx, IList<string> lines, double dip)
+        /// <summary>The Loads legend lines this frame (null when Loads is off): shown in the drawing key beside the plan.</summary>
+        private IList<string> loadsKey;
+
+        /// <summary>The overlay's legend: kept for the drawing key beside the plan, not drawn over it.</summary>
+        private void Legend(DrawingContext ctx, IList<string> lines, double dip) => loadsKey = lines;
+
+        private string drawingKeyShown;
+
+        /// <summary>
+        /// The drawing key under the tabs, right of the plan: the shear wall schedule (SHOW Design) and the Loads legend
+        /// (SHOW Loads), so neither covers the plan. Rebuilt only when what it says changes; called after each plan draw.
+        /// </summary>
+        private void UpdateDrawingKey()
         {
-            var texts = lines.Select((t, i) => new FormattedText(t, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"),
-                                                                 (i == 0 ? 12 : 11) * LabelScale, i == 0 ? Controls.Ui.Ink : Controls.Ui.InkSecondary, dip)).ToList();
-            if (texts.Count > 0) texts[0].SetFontWeight(FontWeights.SemiBold);
-            double w = texts.Max(t => t.Width) + 16, h = texts.Sum(t => t.Height + 2) + 12;
-            // the corner that covers the least of what is drawn (the wind arrow, labels, tags, the schedule) and of the building
-            double W = m_layers.ActualWidth, H = m_layers.ActualHeight;
-            var corners = new[]
+            if (drawingKey == null) return;
+            var schedule = showDesign && !foundationView && !InWindWorkspace && designResults != null && designResults.Count > 0
+                ? ShearWallCalculator.Design.WallSchedule.Build(designResults) : new List<ShearWallCalculator.Design.ScheduleEntry>();
+            var loads = InWindWorkspace ? null : loadsKey;
+            string sig = string.Join("\n", schedule.Select(e => $"{e.Mark}|{e.Sheathing}|{e.Capacity}|{string.Join(",", e.WallIds)}"))
+                         + "\n#\n" + (loads == null ? "" : string.Join("\n", loads));
+            if (sig == drawingKeyShown) return;
+            drawingKeyShown = sig;
+            // not during the plan's render: the layout change waits for it to finish
+            Dispatcher.BeginInvoke(new Action(() => BuildDrawingKey(schedule, loads)));
+        }
+
+        private void BuildDrawingKey(List<ShearWallCalculator.Design.ScheduleEntry> schedule, IList<string> loads)
+        {
+            drawingKeyPanel.Children.Clear();
+            TextBlock T(string text, Brush ink, double size = 12, bool bold = false) =>
+                new TextBlock { Text = text, Foreground = ink, FontSize = size, FontWeight = bold ? FontWeights.SemiBold : FontWeights.Normal, TextWrapping = TextWrapping.Wrap };
+
+            if (schedule.Count > 0)
             {
-                new Rect(36, H - h - 40, w, h), new Rect(36, 40, w, h), new Rect(W - w - 10, 40, w, h), new Rect(W - w - 10, H - h - 40, w, h),
-            };
-            var bb = Calculator.BoundingBoxWorld;
-            var building = bb.IsEmpty ? Rect.Empty : new Rect(WorldToScreen(bb.TopLeft, m_layers), WorldToScreen(bb.BottomRight, m_layers));
-            double Area(Rect a, Rect b) { var i = Rect.Intersect(a, b); return i.IsEmpty ? 0 : i.Width * i.Height; }
-            // the wind arrow counts most: the legend gives way to it, then to labels, then to the building
-            var box = corners.OrderBy(r => Area(r, windRect) * 100 + labelsTaken.Sum(t => Area(r, t)) * 10 + (building.IsEmpty ? 0 : Area(r, building))).First();
-            labelsTaken.Add(box);
-            ctx.DrawRectangle(LabelBack, MakePen(Controls.Ui.Hairline, 1), box);
-            double ty = box.Y + 6;
-            foreach (var t in texts) { ctx.DrawText(t, new Point(box.X + 8, ty)); ty += t.Height + 2; }
+                var sp = new StackPanel { Margin = new Thickness(0, 0, 28, 6), MaxWidth = 520 };
+                sp.Children.Add(T("SHEAR WALL SCHEDULE", Controls.Ui.InkMuted, 11, true));
+                var g = new Grid { Margin = new Thickness(0, 2, 0, 0) };
+                g.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                foreach (var e in schedule)
+                {
+                    string walls = e.WallIds.Count == 1 ? $"wall {e.WallIds[0]}" : $"walls {string.Join(", ", e.WallIds)}";
+                    string cap = e.Capacity > 0 ? $"{e.Capacity:0} plf" : "no capacity";
+                    g.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                    var m = T(e.Mark, Controls.Ui.Ink, 12, true); m.Margin = new Thickness(0, 1, 10, 1);
+                    var t = T($"{e.Sheathing}  ·  {cap}  ·  {walls}", Controls.Ui.InkSecondary); t.Margin = new Thickness(0, 1, 0, 1);
+                    Grid.SetRow(m, g.RowDefinitions.Count - 1); Grid.SetRow(t, g.RowDefinitions.Count - 1); Grid.SetColumn(t, 1);
+                    g.Children.Add(m); g.Children.Add(t);
+                }
+                sp.Children.Add(g);
+                var hd = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 3, 0, 0) };
+                hd.Children.Add(new Border { Width = 8, Height = 8, Background = Controls.Ui.Ink, Margin = new Thickness(0, 0, 6, 0), VerticalAlignment = VerticalAlignment.Center });
+                hd.Children.Add(T("hold-down at the post centerline (both ends)", Controls.Ui.InkMuted, 11));
+                sp.Children.Add(hd);
+                drawingKeyPanel.Children.Add(sp);
+            }
+            if (loads != null && loads.Count > 0)
+            {
+                var sp = new StackPanel { Margin = new Thickness(0, 0, 0, 6), MaxWidth = 520 };
+                sp.Children.Add(T(loads[0].ToUpperInvariant(), Controls.Ui.InkMuted, 11, true));
+                foreach (var line in loads.Skip(1))
+                {
+                    var ink = line.Contains("(orange)") ? AboveInk : Controls.Ui.InkSecondary;
+                    var t = T(line, ink); t.Margin = new Thickness(0, 1, 0, 1);
+                    sp.Children.Add(t);
+                }
+                if (loads.Count > 1) { var t = T("Blue: what the top of each wall here receives", TopInk); t.Margin = new Thickness(0, 1, 0, 1); sp.Children.Add(t); }
+                drawingKeyPanel.Children.Add(sp);
+            }
+            bool any = drawingKeyPanel.Children.Count > 0;
+            drawingKey.Background = Controls.Ui.Surface;
+            drawingKey.BorderBrush = Controls.Ui.Hairline;
+            drawingKey.Visibility = any ? Visibility.Visible : Visibility.Collapsed;
+            // the tabs end above the key
+            drawingKey.UpdateLayout();
+            MainTabControl.Margin = new Thickness(2, 0, 0, any ? drawingKey.ActualHeight + 6 : 0);
         }
 
     }
