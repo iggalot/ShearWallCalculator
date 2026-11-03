@@ -307,6 +307,7 @@ namespace ShearWallVisualizer
                 if (empty) Log.Info("Wind", "No wind geometry yet: " + note);
                 else Log.Warning("Wind", "No wind geometry from the model: " + note, null);
                 buildingData = null;
+                if (windSetup.BuildingPreview != null) windSetup.BuildingPreview = null; // nothing to show: the wind viewer's own message
                 windLoadCalculator_CC = windLoadCalculator_MWFRS_Length = windLoadCalculator_MWFRS_Width = null;
                 CreateAndAssignResultControls();
                 ApplyLinkedWindLoads();
@@ -314,6 +315,7 @@ namespace ShearWallVisualizer
             }
             if (hadNone) ShowStatusMessage(LogLevel.Info, $"Wind geometry from the model: {geometry.BuildingLength:0.#} × {geometry.BuildingWidth:0.#} ft, {geometry.NumberOfStories} stor{(geometry.NumberOfStories == 1 ? "y" : "ies")}.");
             windSetup.SetModelGeometry(geometry, note);
+            ShowWindPreview(); // the Building page shows the model in 3D (the Shear walls 3D view), roof included
             buildingData = windSetup.Building.Clone();
             Log.Info("Wind", $"Building from the model: L {geometry.BuildingLength:0.##} ft, B {geometry.BuildingWidth:0.##} ft, {geometry.NumberOfStories} stor{(geometry.NumberOfStories == 1 ? "y" : "ies")} " +
                              $"(plates {string.Join(", ", geometry.StoryPlateHeights.Select(h => h.ToString("0.##")))} ft), roof {geometry.RoofType} {geometry.RoofPitch:0.#}°, " +

@@ -494,6 +494,17 @@ namespace ShearWallVisualizer
             window3D.Activate();
         }
 
+        /// <summary>The Wind Setup's Building page: the model in 3D (Building3DView, as the 3D button shows it).</summary>
+        private Building3DView windPreview;
+
+        private void ShowWindPreview()
+        {
+            if (windSetup == null || building == null) return;
+            if (windPreview == null) windPreview = new Building3DView();
+            windPreview.Show(building);
+            if (windSetup.BuildingPreview != windPreview) windSetup.BuildingPreview = windPreview;
+        }
+
         private void Update3D()
         {
             if (view3D == null) return;
