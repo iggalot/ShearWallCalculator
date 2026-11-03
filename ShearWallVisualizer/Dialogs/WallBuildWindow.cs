@@ -52,6 +52,19 @@ namespace ShearWallVisualizer.Dialogs
             WallFraming.Build(Wall?.WallLength ?? 0, Wall?.WallHeight ?? 0, FirstStory, WallSchedule.PostAlongWall(Result?.Holdown),
                               Above.Select(a => a.Along));
 
+        /// <summary>
+        /// A first-story wall's sill anchor bolts (null above the first story or before a design): for the ASD wind shear
+        /// 0.6 V / L, the wall's nominal capacity, aspect ratio and whether its hold-downs count on dead load (the washer).
+        /// </summary>
+        public SillAnchorage Anchors()
+        {
+            var r = Result;
+            if (!FirstStory || r == null || r.Length <= 0) return null;
+            double vAsd = 0.6 * r.V * 1000.0 / r.Length;
+            double nominal = r.CombinedNominal > 0 ? r.CombinedNominal : r.Nominal;
+            return SillAnchorage.Design(r.Length, vAsd, r.Inputs?.Species ?? WoodTypes.WOODTYPE_DF_SP, nominal, r.AspectRatio, r.DeadLoadLb > 0);
+        }
+
         /// <summary>The hold-down at the low (left) or high (right) end, as traced.</summary>
         public HoldownLanding OwnAt(bool low) =>
             Own.FirstOrDefault(l => (DetailCalcs.EndName(Wall, l.At) == (EastWest ? "West" : "South")) == low);
@@ -78,9 +91,10 @@ namespace ShearWallVisualizer.Dialogs
         private readonly CheckBox face1In3D = new CheckBox { Content = "Face 1 sheathing", IsChecked = true, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 12, 0) };
         private readonly CheckBox face2In3D = new CheckBox { Content = "Face 2 sheathing", IsChecked = true, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 12, 0) };
         private readonly CheckBox cutaway = new CheckBox { Content = "Cut away the right half", IsChecked = true, VerticalAlignment = VerticalAlignment.Center };
-        private readonly CheckBox follow = new CheckBox { Content = "Open when a wall is picked", VerticalAlignment = VerticalAlignment.Center, Foreground = Ui.InkSecondary };
+        private readonly CheckBox follow = new CheckBox { Content = "Open when a wall, beam or column is picked", VerticalAlignment = VerticalAlignment.Center, Foreground = Ui.InkSecondary };
         private WallBuildData data;
         private WallFraming framing;
+        private readonly StackPanel elevBar, bar3;
 
         /// <summary>Open this window whenever a wall is picked (the host reads it).</summary>
         public bool OpenOnPick { get => follow.IsChecked == true; set => follow.IsChecked = value; }
@@ -111,7 +125,7 @@ namespace ShearWallVisualizer.Dialogs
             face.SelectionChanged += (s, e) => ShowElevation();
             nails.Checked += (s, e) => ShowElevation();
             nails.Unchecked += (s, e) => ShowElevation();
-            var elevBar = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 4, 0, 6) };
+            elevBar = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 4, 0, 6) };
             elevBar.Children.Add(new TextBlock { Text = "Show ", VerticalAlignment = VerticalAlignment.Center });
             elevBar.Children.Add(face);
             elevBar.Children.Add(nails);
@@ -121,7 +135,7 @@ namespace ShearWallVisualizer.Dialogs
             elevPage.Children.Add(elevBar);
             elevPage.Children.Add(elevationHost);
 
-            var bar3 = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 4, 0, 6) };
+            bar3 = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 4, 0, 6) };
             foreach (var cb in new[] { face1In3D, face2In3D, cutaway })
             {
                 cb.Checked += (s, e) => Show3D();
@@ -144,8 +158,39 @@ namespace ShearWallVisualizer.Dialogs
         /// <summary>Pick a tab: 0 Elevation, 1 3D, 2 Pieces, 3 Calculation.</summary>
         public void ShowTab(int i) { if (i >= 0 && i < tabs.Items.Count) tabs.SelectedIndex = i; }
 
+        /// <summary>A beam or a column: its own elevation, 3D model, pieces and calculation (the wall's toolbars hidden).</summary>
+        public void ShowMember(MemberView v)
+        {
+            data = null;
+            framing = null;
+            elevBar.Visibility = bar3.Visibility = Visibility.Collapsed;
+            elevationHost.Children.Clear();
+            if (v == null)
+            {
+                Title = "Member";
+                title.Text = "Pick a wall, beam or column on the plan";
+                subtitle.Text = "";
+                pieces.Content = null;
+                calc.Content = null;
+                view3D.ShowModel(new Model3DGroup(), null);
+                return;
+            }
+            Title = v.WindowTitle;
+            title.Text = v.Title;
+            subtitle.Text = v.Subtitle;
+            var e = v.Elevation?.Invoke();
+            if (e != null) elevationHost.Children.Add(e);
+            view3D.ShowModel(v.Model?.Invoke() ?? new Model3DGroup(), v.Key);
+            pieces.Content = v.Pieces?.Invoke();
+            var cp = new StackPanel { Margin = new Thickness(4) };
+            cp.Children.Add(CalcTable.Build(v.Lines ?? new List<CalcLine>()));
+            if (!string.IsNullOrEmpty(v.Footnote)) cp.Children.Add(new TextBlock { Text = v.Footnote, Foreground = Ui.InkMuted, FontSize = 11, Margin = new Thickness(0, 10, 0, 0), TextWrapping = TextWrapping.Wrap });
+            calc.Content = cp;
+        }
+
         public void Show(WallBuildData d)
         {
+            elevBar.Visibility = bar3.Visibility = Visibility.Visible;
             data = d;
             framing = d?.Wall == null ? null : d.Framing();
             if (d?.Wall == null)
@@ -209,7 +254,7 @@ namespace ShearWallVisualizer.Dialogs
             Section(p, "Framing", $"Studs and plates {sz} ({(data.FirstStory ? "first story" : "above the first story")}); the plates are laid flat, as wide as the studs ({FtIn.Inches(f.StudDepth)} in).");
             var rows = new List<string[]>
             {
-                new[] { "Sill plate (flat)", sz, "1", FtIn.Of(f.Length), data.FirstStory ? "On the foundation: preservative-treated, anchored (anchor bolts not designed here)." : "On the floor sheathing of the story below." },
+                new[] { "Sill plate (flat)", sz, "1", FtIn.Of(f.Length), data.FirstStory ? "On the foundation: preservative-treated; anchor bolts below (Sill anchors)." :"On the floor sheathing of the story below." },
                 new[] { "Top plates (flat, double)", sz, "2", FtIn.Of(f.Length), "Splices in the two plies 4 ft apart at least." },
             };
             var studs = f.Pieces.Where(x => x.Kind == FramingKind.Stud).ToList();
@@ -262,13 +307,16 @@ namespace ShearWallVisualizer.Dialogs
                     var l = data.OwnAt(low);
                     string end = low ? (data.EastWest ? "West (left)" : "South (left)") : (data.EastWest ? "East (right)" : "North (right)");
                     string model = l?.Model ?? r.Holdown?.Model ?? "none strong enough";
-                    string fasteners = l?.Choice?.Fasteners ?? r.Holdown?.Fasteners ?? "";
+                    string fasteners = Fast(l?.Choice?.Fasteners ?? r.Holdown?.Fasteners);
                     double allow = l?.Choice?.Allowable ?? r.Holdown?.Allowable ?? 0;
                     string to = l == null ? (data.FirstStory ? "the foundation" : "") : DetailCalcs.Support(l);
                     hrows.Add(new[] { end, model, fasteners, allow > 0 ? $"{allow:N0}" : "", $"{(l?.TensionAsd ?? r.TensionAsd):N0}", to, Anchor(l) });
                 }
                 p.Children.Add(Table(new[] { "End", "Hold-down", "Fasteners into the post", "Allowable (lb)", "T (lb)", "Anchors to", "Anchor" }, hrows));
             }
+
+            var an = data.Anchors();
+            if (an != null) SillAnchorSection(p, an, f);
 
             Section(p, "Connections at the top (from the story above)", data.Above.Count == 0 ? "Nothing from above stands on this wall." :
                     "Each hold-down above pulls up on this wall's top at its post: it is carried by the post under it to this wall's bottom.");
@@ -301,10 +349,47 @@ namespace ShearWallVisualizer.Dialogs
                 $"Studs {f.Spacing:0}\" o.c.; 2x6 on the first story and 2x4 above; plates flat, as wide as the studs.",
                 "4 × 8 sheets long side up from the low end, so the vertical joints fall on studs; a wall over 8 ft blocked at the horizontal joint (or use 9 or 10 ft sheets).",
                 "Field nailing 12\" o.c.; edge nails 3/8\" from the sheet edges; nails into the framing behind every edge.",
-                "Hold-down anchor bolts, sill anchors and the foundation are not designed here.",
+                data.FirstStory ? "Sill anchors: dry, normal-temperature service (CM = Ct = 1), full NDS end and edge distances (CΔ = 1), f'c ≥ 2,500 psi; the hold-down anchor bolts and the foundation are not designed here."
+                                : "The sill's nailing to the floor below and the hold-down anchorage are not designed here.",
             })
                 p.Children.Add(new TextBlock { Text = "•  " + s, TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkSecondary, Margin = new Thickness(6, 1, 0, 1) });
             return p;
+        }
+
+        /// <summary>The sill plate's anchor bolts: what to install, how it was found, and the code text it rests on.</summary>
+        private static void SillAnchorSection(Panel p, SillAnchorage a, WallFraming f)
+        {
+            string dia = a.BoltDia == 0.5 ? "1/2\"" : "5/8\"";
+            Section(p, "Sill anchors (to the foundation)", a.Count == 0 ? a.Note :
+                    $"{a.Count} anchor bolts, {dia} dia., at {FtIn.Of(a.SpacingIn)} o.c. at most, " +
+                    (a.ShearGoverns ? "set by the wall's shear (NDS)." : "set by the prescriptive 6 ft (the wall's shear needs less)."));
+            if (a.Count == 0) return;
+            var gaps = a.PositionsIn.Zip(a.PositionsIn.Skip(1), (x, y) => y - x).ToList();
+            var rows = new List<string[]>
+            {
+                new[] { "Anchor bolts", $"{dia} dia., headed or J, with nut", a.Count.ToString(),
+                        "Into the concrete " + FtIn.Of(a.EmbedmentIn) + " at least (IRC R403.1.6); in the middle third of the plate's " + FtIn.Inches(f.StudDepth) + " in width." },
+                new[] { "Spacing", gaps.Count > 0 ? $"{FtIn.Of(gaps.Max())} as laid out" : "", "",
+                        $"{FtIn.Of(a.SpacingIn)} o.c. at most: the less of 6'-0\" (IRC R403.1.6, IBC 2308.3.1) and Z'/v = {a.ZPrime:N0} / {a.ShearAsdPlf:0} plf = {(double.IsInfinity(a.SpacingByShearIn) ? "no limit" : FtIn.Of(a.SpacingByShearIn))} (SDPWS 4.3.6.4.1)." },
+                new[] { "End bolts", $"{FtIn.Of(a.PositionsIn[0])} from each end", "",
+                        $"Not more than {FtIn.Of(a.EndMaxIn)}" + (a.EndMaxIn < 12 ? " (half the spacing: the end bolt takes its share)" : "") + $" nor less than 7 diameters ({FtIn.Of(a.EndMinIn)}) from each end (IRC R403.1.6)." },
+                new[] { "Washers", a.PlateWasher ? "0.229\" × 3\" × 3\" plate" : "standard cut (plate optional)", a.Count.ToString(), a.WasherReason },
+            };
+            if (a.Note != null) rows.Add(new[] { "Note", "", "", a.Note });
+            p.Children.Add(Table(new[] { "Piece", "Size", "Qty", "Notes" }, rows));
+            p.Children.Add(Table(new[] { "Check (ASD)", "Value" }, new List<string[]>
+            {
+                new[] { "Wall shear", $"v = 0.6 V / L = {a.ShearAsdPlf:0} plf; over {FtIn.Of(a.LengthFt * 12)}: {a.DemandLb:N0} lb" },
+                new[] { "Bolt value", $"Z = {a.Z:0} lb (NDS-2018 Table 12E, {dia} bolt, 1-1/2\" sill, {a.SpeciesGroup}, Z∥); Z' = Z × CD = {a.Z:0} × {a.CD:0.0} = {a.ZPrime:N0} lb" },
+                new[] { "Bolt group", $"{a.Count} × {a.ZPrime:N0} = {a.CapacityLb:N0} lb ≥ {a.DemandLb:N0} lb ({(a.DemandLb > 0 ? a.DemandLb / a.CapacityLb : 0):0.00})" },
+            }));
+            var src = new Expander { Header = "Sources (quoted)", IsExpanded = false, Margin = new Thickness(0, 4, 0, 0) };
+            var sp = new StackPanel();
+            foreach (var c in SillAnchorage.Citations)
+                sp.Children.Add(new TextBlock { Text = "•  " + c, TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkSecondary, FontSize = 11.5, Margin = new Thickness(6, 2, 0, 2) });
+            sp.Children.Add(new TextBlock { Text = "Over two stories in SDC D0–D2 (IRC R403.1.6.1), bolts go to 4 ft o.c. with 3 × 3 plate washers on braced wall lines: seismic, not checked here.", TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkSecondary, FontSize = 11.5, Margin = new Thickness(6, 2, 0, 2) });
+            src.Content = sp;
+            p.Children.Add(src);
         }
 
         private static string NailSize(CommonNailSizes n) =>
@@ -321,13 +406,21 @@ namespace ShearWallVisualizer.Dialogs
             }
         }
 
-        private static void Section(Panel p, string head, string note)
+        /// <summary>A catalog's fastener text for the drawing: a bare nail diameter ("28 0.162") gets its unit and kind.</summary>
+        internal static string Fast(string s)
+        {
+            if (string.IsNullOrWhiteSpace(s)) return "";
+            var m = System.Text.RegularExpressions.Regex.Match(s.Trim(), @"^(\d+)\s+(0?\.\d+)$");
+            return m.Success ? $"{m.Groups[1].Value} {m.Groups[2].Value}\" nails" : s;
+        }
+
+        internal static void Section(Panel p, string head, string note)
         {
             p.Children.Add(new TextBlock { Text = head, FontSize = 14, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 14, 0, 2) });
             if (!string.IsNullOrEmpty(note)) p.Children.Add(new TextBlock { Text = note, Foreground = Ui.InkSecondary, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 4) });
         }
 
-        private static FrameworkElement Table(string[] head, List<string[]> rows)
+        internal static FrameworkElement Table(string[] head, List<string[]> rows)
         {
             var g = new Grid { Margin = new Thickness(0, 2, 0, 2) };
             for (int c = 0; c < head.Length; c++)
@@ -372,7 +465,7 @@ namespace ShearWallVisualizer.Dialogs
 
         private static readonly Brush StudFill = Ui.Frozen("#EAD7B5"), PlateFill = Ui.Frozen("#D9B98C"), PostFill = Ui.Frozen("#C99A5B"),
                                       UnderFill = Ui.Frozen("#E9A15C"), SheetFill = Ui.Frozen("#4D9DB8D9"), GypsumFill = Ui.Frozen("#55E5E7EB"),
-                                      EdgeNail = Ui.Frozen("#B42318"), FieldNail = Ui.Frozen("#3F3F46"), AboveInk = Ui.Frozen("#C2410C");
+                                      EdgeNail = Ui.Frozen("#B42318"), FieldNail = Ui.Frozen("#3F3F46"), AboveInk = Ui.Frozen("#C2410C"), AnchorInk = Ui.Frozen("#1F5F8B");
         private static readonly Pen Edge = DetailInk.P(DetailInk.Timber, 0.7), SheetEdge = DetailInk.P(Ui.Frozen("#3B6EA8"), 1.3);
 
         public FramingElevation(WallBuildData data, WallFraming framing, FaceResult shown, string note, bool showNails)
@@ -463,7 +556,7 @@ namespace ShearWallVisualizer.Dialogs
                     }
                     var ink = l == null ? Ui.Ink : !l.Supported || l.Model == null ? Ui.FailInk : l.Note != null ? Ui.CloseInk : Ui.Ink;
                     string model = l?.Model ?? r.Holdown?.Model ?? "none strong enough";
-                    string fast = l?.Choice?.Fasteners ?? r.Holdown?.Fasteners ?? "";
+                    string fast = WallBuildWindow.Fast(l?.Choice?.Fasteners ?? r.Holdown?.Fasteners);
                     string to = l == null ? "" : !l.Supported ? "→ nothing under it" : $"→ {DetailCalcs.Support(l)}";
                     double tx = low ? X(0) : X(L);
                     double ty = yb + 34;
@@ -471,6 +564,16 @@ namespace ShearWallVisualizer.Dialogs
                     if (fast != "") DetailInk.Label(dc, this, "fasteners " + fast, new Point(tx, ty + 16), ink, 10.5, rightAligned: !low);
                     DetailInk.Label(dc, this, $"T = {(l?.TensionAsd ?? r.TensionAsd):N0} lb", new Point(tx, ty + 30), ink, 10.5, rightAligned: !low);
                     if (to != "") DetailInk.Label(dc, this, to, new Point(tx, ty + 44), ink, 10.5, rightAligned: !low);
+                }
+
+            // the sill's anchor bolts (first story): each down into the concrete, a washer and nut on the sill
+            var an = d.Anchors();
+            if (an != null)
+                foreach (double ax in an.PositionsIn)
+                {
+                    dc.DrawLine(DetailInk.P(AnchorInk, 2), new Point(X(ax), Y(WallFraming.Ply) - 3), new Point(X(ax), yb + 17));
+                    dc.DrawLine(DetailInk.P(AnchorInk, 2), new Point(X(ax), yb + 17), new Point(X(ax) + 5, yb + 17)); // the hook
+                    dc.DrawRectangle(AnchorInk, null, new Rect(X(ax) - Math.Max(3, 1.5 * s), Y(WallFraming.Ply) - 1.5, 2 * Math.Max(3, 1.5 * s), 1.5));
                 }
 
             // what comes down from above: the hold-downs of the story above standing on the top plates, each over its post
@@ -516,6 +619,8 @@ namespace ShearWallVisualizer.Dialogs
             var blk = f.Pieces.FirstOrDefault(p => p.Kind == FramingKind.Blocking);
             if (blk != null) Callout($"{sz} blocking at the sheet joint", Y(blk.Y0 + 0.75), X(f.Pieces.Last(p => p.Kind == FramingKind.Blocking).CenterX));
             Callout($"Sill plate, {sz} flat", Y(WallFraming.Ply / 2), X(L - 2));
+            if (an != null && an.Count > 0)
+                DetailInk.Label(dc, this, $"{an.Count} anchor bolts {(an.BoltDia == 0.5 ? "1/2\"" : "5/8\"")} @ {FtIn.Of(an.SpacingIn)} max, {FtIn.Of(an.PositionsIn[0])} from the ends", new Point(cx, Y(WallFraming.Ply / 2) + 8), AnchorInk, 10);
             if (face != null)
             {
                 var o = face.Option;
@@ -644,6 +749,16 @@ namespace ShearWallVisualizer.Dialogs
             // straps from above at their posts
             foreach (var a in d.Above)
                 g.Children.Add(Box(a.Along - 0.625, H - 2, D + 0.05, a.Along + 0.625, H + 18, D + 0.15, Strap));
+            // the sill's anchor bolts: a rod through the sill's middle, its washer and nut on top
+            var an = d.Anchors();
+            if (an != null)
+                foreach (double ax in an.PositionsIn)
+                {
+                    double r2 = an.BoltDia / 2;
+                    g.Children.Add(Box(ax - r2, -7, D / 2 - r2, ax + r2, WallFraming.Ply + 1.2, D / 2 + r2, Steel));
+                    double w = an.PlateWasher ? 1.5 : 0.9;
+                    g.Children.Add(Box(ax - w, WallFraming.Ply, D / 2 - w, ax + w, WallFraming.Ply + 0.23, D / 2 + w, Steel));
+                }
             if (d.FirstStory) g.Children.Add(Box(-8, -14, -4, L + 8, 0, D + 4, Concrete));
             content.Content = g;
             target = new Point3D(L / 2, H / 2, D / 2);
@@ -651,6 +766,31 @@ namespace ShearWallVisualizer.Dialogs
             if (newWall) moved = false;
             if (!moved) Fit(); else PlaceCamera();
         }
+
+        /// <summary>Any model (a beam, a column): shown fitted, unless the same member is shown again and the view was turned.</summary>
+        public void ShowModel(Model3DGroup g, string key)
+        {
+            shownFraming = null;
+            if (key != shownKey) moved = false;
+            shownKey = key;
+            content.Content = g;
+            var b = g?.Bounds ?? Rect3D.Empty;
+            if (b.IsEmpty) return;
+            target = new Point3D(b.X + b.SizeX / 2, b.Y + b.SizeY / 2, b.Z + b.SizeZ / 2);
+            radius = 0.5 * Math.Sqrt(b.SizeX * b.SizeX + b.SizeY * b.SizeY + b.SizeZ * b.SizeZ);
+            if (!moved) Fit(); else PlaceCamera();
+        }
+
+        private string shownKey;
+
+        // the pieces a member model is built of (shared with MemberViews)
+        internal static Material StudMaterial => Stud;
+        internal static Material PostMaterial => Post;
+        internal static Material SteelMaterial => Steel;
+        internal static Material ConcreteMaterial => Concrete;
+        internal static Material StrapMaterial => Strap;
+        internal static Material PlateMaterial => Plate;
+        internal static GeometryModel3D BoxModel(double x0, double y0, double z0, double x1, double y1, double z1, Material m) => Box(x0, y0, z0, x1, y1, z1, m);
 
         /// <summary>A face's sheathing thickness (in), from its nominal thickness ("15/32\"" → 0.469); 1/2 in. when not known.</summary>
         private static double Thickness(List<FaceResult> faces, int i)

@@ -37,17 +37,59 @@ namespace ShearWallVisualizer
         private void RefreshWallBuild(bool open = false)
         {
             bool wall = selectedKind == "Wall" && selectedId >= 0 && !foundationView;
+            bool member = (selectedKind == "Beam" || selectedKind == "Column") && selectedModelId != null;
             if (wallBuild == null)
             {
-                if (!wall || !(open || (wallBuildOnPick && selectionCardOpen))) return;
+                if (!(wall || member) || !(open || (wallBuildOnPick && selectionCardOpen))) return;
                 wallBuild = new Dialogs.WallBuildWindow { Owner = this, OpenOnPick = wallBuildOnPick };
                 wallBuild.Closed += (s, e) => { wallBuildOnPick = wallBuild?.OpenOnPick ?? wallBuildOnPick; wallBuild = null; };
                 wallBuild.Show();
-                Log.Info("Wall", $"Construction window opened for wall {selectedId}.");
+                Log.Info("Construction", $"Construction window opened for {selectedKind} {selectedModelId ?? selectedId.ToString()}.");
             }
             else wallBuildOnPick = wallBuild.OpenOnPick;
             if (wall) wallBuild.Show(WallBuildFor(Math.Max(0, currentLevel), selectedId));
+            else if (member) wallBuild.ShowMember(selectedKind == "Beam" ? BeamViewFor(selectedModelId) : ColumnViewFor(selectedModelId));
             if (open) wallBuild.Activate();
+        }
+
+        /// <summary>A beam's construction view: its span, the hold-downs on it, each end's reaction, connection and support.</summary>
+        private Dialogs.MemberView BeamViewFor(string id)
+        {
+            var bm = building?.Find(id) as Beam;
+            if (bm == null) return null;
+            var br = loadPath?.Beams.FirstOrDefault(x => x.Beam.Id == id)
+                     ?? new BeamReactions { Beam = new FramingBeam { Id = id, Start = new Point(bm.Start.X, bm.Start.Y), End = new Point(bm.End.X, bm.End.Y) } };
+            var landings = AllLandings();
+            var cols = Framing().columns;
+            Dialogs.BeamEndInfo End(string which, Point at, double asd)
+            {
+                var l = landings.FirstOrDefault(x => x.Kind == PathPointKind.BeamEnd && x.From == $"beam {id} {which}");
+                // what it bears on: as traced; with no uplift (no landing), a column at the end, if there is one
+                string under = l != null ? DetailCalcs.Support(l)
+                             : cols.FirstOrDefault(fc => (fc.At - at).Length <= 0.5) is FramingColumn under0 ? $"column {under0.Id}" : "a wall or beam (no uplift here)";
+                return new Dialogs.BeamEndInfo { Which = which, Reaction = asd, Landing = l, Under = under };
+            }
+            var level = building.Level(bm.LevelId);
+            var ends = landings.Where(l => l.Kind == PathPointKind.BeamEnd && l.From.StartsWith($"beam {id} ")).ToList();
+            return Dialogs.MemberViews.Beam(id, level?.Name, br, End("start", br.Beam.Start, br.StartAsd), End("end", br.Beam.End, br.EndAsd),
+                                            DetailCalcs.Beam(br, ends), "The beam itself is not sized here: these are the uplift reactions its end connections and supports must take.");
+        }
+
+        /// <summary>A column's construction view: the levels it passes, what lands on its top, its base connection.</summary>
+        private Dialogs.MemberView ColumnViewFor(string id)
+        {
+            var col = building?.Find(id) as Column;
+            if (col == null) return null;
+            var lo = building.Level(col.BaseLevelId);
+            var hi = building.Level(col.TopLevelId);
+            var fc = Framing().columns.FirstOrDefault(x => x.Id == id) ?? new FramingColumn { Id = id, At = new Point(col.At.X, col.At.Y) };
+            var all = AllLandings();
+            var onIt = all.Where(l => l.Support == SupportKind.Column && l.SupportId == $"column {id}").ToList();
+            var bottom = all.FirstOrDefault(l => l.Kind == PathPointKind.ColumnBase && l.From == $"column {id} base");
+            string span = $"from {(lo?.Elevation == 0 ? "the foundation" : lo?.Name)} up to {hi?.Name}" + (col.BaseFixed ? " (base set by hand)" : "");
+            var levelList = building.LevelsBottomUp.Select(l => (l.Name, l.Elevation)).ToList();
+            return Dialogs.MemberViews.Column(id, lo?.Elevation ?? 0, hi?.Elevation ?? 0, levelList, onIt, bottom, span,
+                                              DetailCalcs.Column(fc, span, onIt, bottom), "The column itself is not sized here: this is the uplift its connections must take.");
         }
 
         /// <summary>What the construction window shows for wall <paramref name="key"/> of story <paramref name="i"/>.</summary>
@@ -297,7 +339,7 @@ namespace ShearWallVisualizer
                 foreach (var e in ends)
                     rows.Add((e.From.EndsWith("start") ? "Start" : "End", e.Supported ? $"{DetailCalcs.Support(e)}: {e.Model ?? "none strong enough"}" : "nothing under it", !e.Supported || e.Model == null));
                 selectionCard.ShowMember($"Beam {bm.Id}", $"{building.Level(bm.LevelId)?.Name} · {bm.Length:0.##} ft", rows,
-                    () => OpenDetail("Beam", -1, -1, bm.Id), () => Sketch.Edit($"Deleted {bm.Id}.  Ctrl+Z brings it back.", b => BuildingModel.Edits.BuildingEdits.Delete(b, bm.Id)));
+                    () => RefreshWallBuild(open: true), () => Sketch.Edit($"Deleted {bm.Id}.  Ctrl+Z brings it back.", b => BuildingModel.Edits.BuildingEdits.Delete(b, bm.Id)));
             }
             else if (o is Column col)
             {
@@ -308,7 +350,7 @@ namespace ShearWallVisualizer
                 rows.Add(("Carries", onIt.Count == 0 ? "nothing" : $"{onIt.Sum(l => l.TensionAsd):N0} lb up from {onIt.Count} point{(onIt.Count == 1 ? "" : "s")}", false));
                 if (bottom != null) rows.Add(("Base", bottom.Supported ? $"{DetailCalcs.FamilyName(bottom.Family)} {bottom.Model ?? "none strong enough"}" : "nothing under it", !bottom.Supported || bottom.Model == null));
                 selectionCard.ShowMember($"Column {col.Id}", $"up to {building.Level(col.TopLevelId)?.Name}", rows,
-                    () => OpenDetail("Column", -1, -1, col.Id), () => Sketch.Edit($"Deleted {col.Id}.  Ctrl+Z brings it back.", b => BuildingModel.Edits.BuildingEdits.Delete(b, col.Id)));
+                    () => RefreshWallBuild(open: true), () => Sketch.Edit($"Deleted {col.Id}.  Ctrl+Z brings it back.", b => BuildingModel.Edits.BuildingEdits.Delete(b, col.Id)));
             }
             else selectionCard.Show(Calculator, null, -1, designResults);
         }
