@@ -1072,4 +1072,5 @@ Wall framing isn't only a shear-wall matter, so it moved out of the calculator. 
   - The picker's first item is the project default for the story.
   - The sill bolts use the NDS library's Z, with the calculator's species group mapped to DF-L or SPF, the same values as before.
 - Not yet: a defaults page for the stud defaults in the Building Model editor (the editor has no defaults page yet); per-wall spacing in the UI. The model stores spacing and the framing uses it, but there's no picker yet.
-- The app check of the new wiring is still to do. The screen was locked when it was built. The builds and tests pass: SWC 219, WoodFraming 22, NDS 2, BuildingModel 145.
+- The builds and tests pass: SWC 219, WoodFraming 22, NDS 2, BuildingModel 145.
+- Checked in the app on lbltest. SW2-11 offers "2x6 (project default, first story)", 2x6 and 2x8; picking 2x8 redraws the wall as 2x8 (logged "SW2-11 (W11): studs 2x8."). Ctrl+Z goes back to the default and Ctrl+Y returns 2x8. SW3-10 offers "2x4 (project default, upper story)" and up. Saving writes `"Framing": {"L2": {"StudSize": "2x8"}}` to the version 5 file, with the stud defaults.
