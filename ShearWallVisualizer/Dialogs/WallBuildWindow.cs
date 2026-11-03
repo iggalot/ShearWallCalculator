@@ -73,8 +73,12 @@ namespace ShearWallVisualizer.Dialogs
         public string StudWindNote { get; set; }
         /// <summary>A function of the stud's length and spacing (in) giving its wind (psf, note); null with manual loads.</summary>
         public Func<double, double, (double psf, string note)?> StudWind { get; set; }
-        /// <summary>The gravity loads on the wall's top (plf, the LoadManager's "Loads" in the project file); null: none entered.</summary>
+        /// <summary>The gravity loads on the wall's top used (plf): the ones entered, else the gravity load path's; null: none.</summary>
         public LoadManager.LineLoad TopLoad { get; set; }
+        /// <summary>The loads entered by hand on the wall's top (the LoadManager's "Loads"); null: none (the load path's apply).</summary>
+        public LoadManager.LineLoad TopLoadEntered { get; set; }
+        /// <summary>What the gravity load path works out for the wall's top (from the floor and roof loads), or null.</summary>
+        public LoadManager.WallTopLoad TopLoadPath { get; set; }
         /// <summary>The project's stud lumber and wall deflection limit (the building model's defaults).</summary>
         public Species StudSpecies { get; set; }
         public Grade StudGrade { get; set; }
@@ -570,13 +574,13 @@ namespace ShearWallVisualizer.Dialogs
             string verdict = !d.SlendernessOk ? $"{f.StudSize} is too slender (le/d = {d.Slenderness:0.0} > 50): use a deeper stud (Studs, top right)."
                            : d.Passes ? $"{lumber} {f.StudSize} at {f.Spacing:0}\" o.c. works: {g?.Name} governs at {g?.Ratio:0.00}."
                            : $"{lumber} {f.StudSize} at {f.Spacing:0}\" o.c. does not work: " + Worst(d) + " Use a deeper stud or closer spacing.";
-            Section(p, "Studs: NDS design", verdict + (loads ? "" : " No loads on the wall's top entered yet: wind (or 5 psf) and the studs' own capacity only."));
+            Section(p, "Studs: NDS design", verdict + (loads ? "" : " No gravity loads on the wall's top yet (Loads > Floor and roof loads, or enter them below): wind (or 5 psf) only."));
             if (!d.Passes) ((TextBlock)p.Children[p.Children.Count - 1]).Foreground = Ui.FailInk;
 
             // the loads on the wall's top, entered here, saved in the project file's loads, not the model (the gravity load path will fill them in later)
             var bar = new WrapPanel { Margin = new Thickness(0, 4, 0, 6) };
-            bar.Children.Add(new TextBlock { Text = "Loads on the wall's top (plf, service):", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0), Foreground = Ui.InkSecondary });
-            var t = data.TopLoad;
+            bar.Children.Add(new TextBlock { Text = "Loads on the wall's top entered by hand (plf, service):", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0), Foreground = Ui.InkSecondary });
+            var t = data.TopLoadEntered;
             var boxes = new List<TextBox>();
             foreach (var (label, v) in new[] { ("D", t?.Dead ?? 0), ("L", t?.Live ?? 0), ("Lr", t?.RoofLive ?? 0), ("S", t?.Snow ?? 0) })
             {
@@ -590,7 +594,7 @@ namespace ShearWallVisualizer.Dialogs
             {
                 double Num(TextBox b) => double.TryParse(b.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var x) && x > 0 ? x : 0;
                 var next = new LoadManager.LineLoad { Dead = Num(boxes[0]), Live = Num(boxes[1]), RoofLive = Num(boxes[2]), Snow = Num(boxes[3]) };
-                if (next.SameAs(data.TopLoad ?? new LoadManager.LineLoad())) return;
+                if (next.SameAs(data.TopLoadEntered ?? new LoadManager.LineLoad())) return;
                 TopLoadChanged?.Invoke(next);
             }
             foreach (var b in boxes)
@@ -598,8 +602,18 @@ namespace ShearWallVisualizer.Dialogs
                 b.LostFocus += (o, e) => Apply();
                 b.KeyDown += (o, e) => { if (e.Key == System.Windows.Input.Key.Enter) { Apply(); e.Handled = true; } };
             }
-            bar.Children.Add(new TextBlock { Text = "Enter or leave a box to apply (saved in the project's loads; Ctrl+Z undoes it).", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(10, 0, 0, 0), Foreground = Ui.InkMuted, FontSize = 11 });
+            bar.Children.Add(new TextBlock { Text = "Entered values replace the load path's; clear them all to go back to it (Ctrl+Z undoes).", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(10, 0, 0, 0), Foreground = Ui.InkMuted, FontSize = 11 });
             p.Children.Add(bar);
+
+            // what the gravity load path works out from the floor and roof loads (Loads > Floor and roof loads)
+            var path = data.TopLoadPath;
+            string pathText = path == null || (path.Load.IsEmpty && path.TributaryMax <= 0 && path.Above.Count == 0)
+                ? "From the floor and roof loads: nothing reaches this wall (no area loads entered, or no floor or roof bears on it). Loads > Floor and roof loads."
+                : $"From the floor and roof loads: D {path.Load.Dead:0}, L {path.Load.Live:0}, Lr {path.Load.RoofLive:0}, S {path.Load.Snow:0} plf ({path.Describe()})"
+                  + (data.TopLoadEntered != null ? " — not used: the values entered replace it." : " — used.");
+            p.Children.Add(new TextBlock { Text = pathText, TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkSecondary, Margin = new Thickness(0, 0, 0, 4) });
+            foreach (var note in path?.Notes ?? new List<string>())
+                p.Children.Add(new TextBlock { Text = "• " + note, TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkMuted, Margin = new Thickness(0, 0, 0, 4) });
 
             var s = d.Section;
             var info = new List<string[]>
@@ -610,7 +624,8 @@ namespace ShearWallVisualizer.Dialogs
                 new[] { "FcE", $"0.822 × {d.EminPrime:N0} / {d.Slenderness:0.0}² = {(g?.FcE ?? 0):0} psi", "Eq. 3.7-1; Emin' = Emin (dry, normal temperature)." },
                 new[] { "Lateral", d.Exterior ? $"Wind {d.Input.WindPressurePsf:0.0} psf (C&C, strength)" : $"Interior {d.Input.InteriorPressurePsf:0} psf (IBC 1607.16)",
                         d.Exterior ? data.StudWindNote ?? "" : "A live-load duration (CD 1.0)." },
-                new[] { "Top loads per stud", loads ? $"D {data.TopLoad.Dead:0}, L {data.TopLoad.Live:0}, Lr {data.TopLoad.RoofLive:0}, S {data.TopLoad.Snow:0} plf × {f.Spacing:0}/12" : "none entered", "Service loads on the wall's top, carried by each stud over its spacing." },
+                new[] { "Top loads per stud", loads ? $"D {data.TopLoad.Dead:0}, L {data.TopLoad.Live:0}, Lr {data.TopLoad.RoofLive:0}, S {data.TopLoad.Snow:0} plf × {f.Spacing:0}/12" : "none",
+                        (data.TopLoadEntered != null ? "Entered by hand. " : loads ? "From the gravity load path. " : "") + "Service loads on the wall's top, carried by each stud over its spacing." },
             };
             p.Children.Add(Table(new[] { "Item", "Value", "Notes" }, info));
 

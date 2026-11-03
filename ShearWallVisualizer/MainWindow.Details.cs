@@ -159,7 +159,12 @@ namespace ShearWallVisualizer
             d.StudSize = size;
             d.StudSpacing = mw != null && top != null ? building.StudSpacingOf(mw, top) : defaults.StudSpacing;
             // the NDS stud design: the loads on its top, its lumber and deflection limit (the model's), the wind on its studs
-            d.TopLoad = LoadManager.LoadSection.Read(building).WallTop(mw?.Id, top);
+            // the loads on its top: entered by hand, else what the gravity load path works out from the floor and roof loads
+            var loadSection = LoadManager.LoadSection.Read(building);
+            d.TopLoadEntered = loadSection.WallTop(mw?.Id, top);
+            LoadManager.WallTopLoad computed = null;
+            d.TopLoad = mw != null && top != null ? LoadManager.GravityLoadPath.Effective(building, loadSection, mw.Id, top, out computed) : null;
+            d.TopLoadPath = computed;
             d.Exterior = mw != null && building.IsExterior(mw);
             d.StudSpecies = Enum.TryParse(defaults.StudSpecies, out NDS_WoodLibrary.NDS2018.Species sp) ? sp : NDS_WoodLibrary.NDS2018.Species.DouglasFirLarch;
             d.StudGrade = Enum.TryParse(defaults.StudGrade, out NDS_WoodLibrary.NDS2018.Grade gr) ? gr : NDS_WoodLibrary.NDS2018.Grade.No2;
@@ -501,6 +506,21 @@ namespace ShearWallVisualizer
             }
             if (members.Count > 0) sections.Add(new ReportSection("Beams and columns carrying hold-downs", members));
             return sections;
+        }
+
+        /// <summary>
+        /// Loads > Floor and roof loads: the load manager's window; its loads are saved in the project file as one edit
+        /// through the sketch (undoable, logged), and the gravity load path carries them to the wall tops.
+        /// </summary>
+        private void AreaLoads_Click(object sender, RoutedEventArgs e)
+        {
+            if (building == null) { MessageBox.Show(this, "Open a project first.", "Floor and roof loads"); return; }
+            var w = new LoadManager.Wpf.AreaLoadsWindow(building) { Owner = this };
+            if (w.ShowDialog() != true) return;
+            var levels = w.Levels;
+            double wallDead = w.WallDead;
+            string what = "Floor and roof loads: " + string.Join("; ", building.LevelsBottomUp.Where(l => levels.ContainsKey(l.Id)).Select(l => $"{l.Name} {levels[l.Id]} psf")) + $"; walls {wallDead:0.##} psf.";
+            Sketch.Edit(what, b => LoadManager.LoadSection.SetAreaLoads(b, levels, wallDead));
         }
     }
 }

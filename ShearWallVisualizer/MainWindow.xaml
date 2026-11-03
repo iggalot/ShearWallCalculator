@@ -63,6 +63,10 @@
                           ToolTip="What was added, moved or deleted since the project was opened or saved, as a change set another copy of the model can apply"/>
                 <MenuItem Header="_Apply a change set..." Click="ApplyChanges_Click"/>
             </MenuItem>
+            <MenuItem Header="_Loads">
+                <MenuItem Header="_Floor and roof loads..." Click="AreaLoads_Click"
+                          ToolTip="Each level's area loads (D, L, Lr, S psf) and the walls' own weight: the gravity load path takes them to the wall tops (the load manager's, saved in the project file)"/>
+            </MenuItem>
             <MenuItem Header="_Help">
                 <MenuItem Header="Open _log folder" Click="OpenLogFolder_Click"/>
                 <MenuItem Header="_Two-face sheathing rule..." Click="TwoFaceRule_Click"/>

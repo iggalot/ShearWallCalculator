@@ -1117,7 +1117,7 @@ Loads aren't the building model's. Like the wind calculator's "Wind" section, th
   - LoadCombinations.Asce7Asd(): ASCE 7-22 2.4, Eq. 1a to 10, with (W or WT), (Lr or 0.7S or R) and Ev/Eh (0.6D − 0.7Ev + 0.7Eh) written out. Asce7Strength(): 2.3, Eq. 1a to 7. Asd(): both ASD sets, the stud design's default.
   - The ASCE 7-22 equations are as printed in ICC, "Demystifying Loads for Building Officials – 2024 IBC / ASCE 7-22", slides 62–64 (the standard itself is paywalled; not checked against it). That PDF's text was read with a .NET decoder (FlateDecode + ToUnicode CMaps).
   - The construction window lists every ASD combination with its equations ("ASCE 4a, 6a; IBC 16-1"). SW2-1 shows the same governing D + L + 0.6W + 0.7S/2 at 0.89; ASCE 6a D + 0.75L + 0.75(0.6W) + 0.75(0.7S) gives P = 975 lb, as by hand.
-  - Floor and roof area loads, and the gravity load path that turns them into wall-top loads, come next.
+  - Floor and roof area loads, and the gravity load path that turns them into wall-top loads: see the next section.
 - **BuildingModel**: WallTopLoad, Wall.TopLoads, TopLoadOf and SetTopLoad are removed. The stud lumber and deflection defaults stay.
 - **WoodFraming.StudDesign** takes LineLoad and the LoadManager's combinations (the IBC set by default, or the caller's). Durations follow NDS Table 2.3.2 (StudDesign.Duration); rain isn't in the table and throws. The interior 5 psf is a live load (L), so it goes with L.
 - **SWC** reads and writes the wall-top loads through LoadSection.
@@ -1126,3 +1126,26 @@ Loads aren't the building model's. Like the wind calculator's "Wind" section, th
   - SW2-1 with D 300 / L 400 / S 250 gives the same ten combinations, with D + L + 0.6W + 0.7S/2 governing at 0.89.
   - Ctrl+Z and Ctrl+Y step through the edits.
   - The saved file holds `"Loads": {"WallTops": {"W1": {"L2": {...}}}}` beside "Wind", and nothing on the wall itself.
+
+### Floor and roof loads and the gravity load path (first pass)
+- **BuildingModel (format 6)**: a diaphragm's span direction, which way its joists or rafters span (Auto: the shorter way of its pieces). SetDiaphragmSpan. It's construction, so it's in the model. No editor UI for it yet; Auto applies.
+- **LoadManager**:
+  - LoadSection.Levels holds area loads per level (D, L, Lr, S in psf, on the plan). LoadSection.WallDead is the walls' own weight (psf of wall). SetLevel, SetWallDead and SetAreaLoads (one edit). LineLoad and AreaLoad share GravityLoad.
+  - GravityLoadPath.Run works top-down:
+    - The framing spans one way: the diaphragm's span, or for a sloped roof across the ridge, eaves included.
+    - Each bearing wall or beam line takes half the distance to the next one on each side, or all of it to the edge where there is none.
+    - It's sampled every 0.25 ft along the wall, and the most along the wall is kept.
+    - A wall standing on a wall below (the same wall going on up, or a wall on its line) brings its load plus its weight (WallDead × story height).
+  - Notes: a side with no support past an eave ("a cantilever, or a support not drawn"), and a wall standing on the floor framing (not traced).
+  - Not traced yet: beam reactions, columns, point loads, and walls on the floor framing.
+  - GravityLoadPath.Effective: the wall-top load entered by hand wins, else the load path's.
+  - LoadManager.Wpf (new): AreaLoadsWindow, a code-only WPF window with a row per level (its framing described), D/L/Lr/S boxes and the walls' weight.
+- **SWC**:
+  - Loads > Floor and roof loads... opens the window. OK applies it as one sketch edit (undoable).
+  - The construction window's NDS section shows the load path's wall-top load and how it was found (tributary, walls above, notes). The boxes are now the hand override; clearing them all goes back to the load path.
+- Tests: LoadManager 19 (hand calculations: one story 6/10/4 ft tributaries, a partial interior wall 6–10 ft, a span set by hand, two stories D 312 = 72 + 150 + 90, a continuous wall, a gable with 2 ft eaves = 12 ft, missing support, a wall on framing, the hand entry winning, round trip), BuildingModel 148, WoodFraming 31, SWC 219.
+- Checked on lbltwo (the screen was locked, so through UI Automation and the saved file):
+  - The window took D 15 / Lr 20 / S 30 (Level 3, the roof) and D 12 / L 40 (Level 2), walls 10 psf. The file saved them (version 6).
+  - The load path on that building: the gable rafters (ridge W-E) put 19.5 ft on W6 and W8, giving D 292.5, Lr 390, S 585. W2 and W4 get D 234 + 292.5 + 150 = 676.5 and L 780, as by hand.
+  - It notes W3 standing on the Level 2 framing.
+  - The construction window's display is still to be seen on screen.

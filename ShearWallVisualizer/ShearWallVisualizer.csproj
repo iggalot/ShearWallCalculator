@@ -206,6 +206,9 @@
     <ProjectReference Include="..\..\LoadManager\LoadManager\LoadManager.csproj">
       <Name>LoadManager</Name>
     </ProjectReference>
+    <ProjectReference Include="..\..\LoadManager\LoadManager.Wpf\LoadManager.Wpf.csproj">
+      <Name>LoadManager.Wpf</Name>
+    </ProjectReference>
     <!-- the Building Model editor: referenced so BuildingModel.exe is copied next to this program (Model > Edit building) -->
     <ProjectReference Include="..\..\BuildingModel\BuildingModel.App\BuildingModel.App.csproj">
       <Name>BuildingModel.App</Name>
