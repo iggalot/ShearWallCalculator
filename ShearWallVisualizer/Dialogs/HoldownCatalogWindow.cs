@@ -149,6 +149,16 @@ namespace ShearWallVisualizer.Dialogs
             Col("Source", nameof(Row.Source2));
             Col("Conditions (STHD)", nameof(Row.Conditions));
             Col("Used on walls", nameof(Row.Used));
+            // the picked row's product picture, beside the table (a local file: never from the web)
+            var pictureBox = new Border
+            {
+                Width = 300, Margin = new Thickness(12, 0, 0, 0), Padding = new Thickness(10), BorderThickness = new Thickness(1),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(0xE4, 0xE2, 0xDC)), Background = Brushes.White, VerticalAlignment = VerticalAlignment.Top,
+                Child = new StackPanel { Children = { pictureTitle, picture, pictureNote } },
+            };
+            DockPanel.SetDock(pictureBox, Dock.Right);
+            root.Children.Add(pictureBox);
+            grid.SelectionChanged += (s, e) => ShowPicture();
             root.Children.Add(grid);
             Content = root;
 
@@ -167,6 +177,42 @@ namespace ShearWallVisualizer.Dialogs
             designer.StandardList.Changed += OnStandardListChanged;
             Closed += (s, e) => designer.StandardList.Changed -= OnStandardListChanged;
             Refilter();
+            ShowPicture();
+        }
+
+        private readonly TextBlock pictureTitle = new TextBlock { FontSize = 15, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 8), TextWrapping = TextWrapping.Wrap };
+        private readonly Image picture = new Image { MaxWidth = 280, MaxHeight = 280, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Center };
+        private readonly TextBlock pictureNote = new TextBlock { Foreground = Brushes.DimGray, FontSize = 11, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 0) };
+
+        /// <summary>The folder of the product pictures: HoldownPictures beside the program (copied there by the build).</summary>
+        private static string PictureFolder => System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "HoldownPictures");
+
+        /// <summary>The picked row's product line picture (else the first row shown), or a note that there is none yet.</summary>
+        private void ShowPicture()
+        {
+            var row = grid.SelectedItem as Row ?? view?.Cast<Row>().FirstOrDefault();
+            string file = HoldownPictures.FileFor(row?.Model);
+            string line = HoldownPictures.LineOf(row?.Model);
+            pictureTitle.Text = row == null ? "No option shown" : line.Length > 0 ? $"{line}  ({row.Model})" : row.Model;
+            picture.Source = null;
+            string path = file == null ? null : System.IO.Path.Combine(PictureFolder, file);
+            if (path != null && System.IO.File.Exists(path))
+            {
+                try
+                {
+                    var bmp = new System.Windows.Media.Imaging.BitmapImage();
+                    bmp.BeginInit();
+                    bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad; // the file is not kept open
+                    bmp.UriSource = new Uri(path);
+                    bmp.EndInit();
+                    bmp.Freeze();
+                    picture.Source = bmp;
+                    pictureNote.Text = "Product picture: Simpson Strong-Tie. The catalog's figure gives the dimensions.";
+                    return;
+                }
+                catch (Exception ex) { pictureNote.Text = $"The picture {file} could not be read: {ex.Message}"; return; }
+            }
+            pictureNote.Text = file == null ? "" : $"No picture of the {line} yet. Add one with HoldownPictures\\crop.ps1 in the source code (it saves {file}).";
         }
 
         private static readonly DependencyProperty ToggleButton_IsChecked = System.Windows.Controls.Primitives.ToggleButton.IsCheckedProperty;
@@ -280,6 +326,7 @@ namespace ShearWallVisualizer.Dialogs
         {
             view.Refresh();
             UpdateCount();
+            if (grid.SelectedItem == null) ShowPicture(); // the first row shown, as the filter changes
         }
 
         private void UpdateCount()

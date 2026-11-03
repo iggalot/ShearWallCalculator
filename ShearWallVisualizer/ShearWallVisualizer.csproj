@@ -161,6 +161,11 @@
     <None Include="HoldownStandardList.default.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <!-- the catalog's product pictures (local, cropped with HoldownPictures\crop.ps1): any PNG added there is copied -->
+    <Content Include="HoldownPictures\*.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <None Include="HoldownPictures\crop.ps1" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\ASCE7-Wind-Load-Calculator\ASCE7WindLoadCalculator.csproj">
