@@ -37,7 +37,7 @@ _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`
   Untouched defaults follow a wall on or off the outside edge (the interior default is gypsum on both faces); growing D1
   to 59 ft did that to W3 and W11 at 17:46:27 with nothing in the log saying why. Now logged: the adapter says when a wall
   takes or switches to a default and why, and the Design tab logs any wall whose nailing cell has no choice and why (the
-  cell reads "7\" fixed", with the reason on hover).
+  cell reads "7" fixed", with the reason on hover).
 - **Start-up status:** "No wind geometry from the model" before the project loads is now a note, not a warning that stays
   in the status bar; the bar says when the geometry arrives.
 - **Foundation plan:** a column run down to the foundation is drawn there ("C1 base", outlined square) and can be picked.
