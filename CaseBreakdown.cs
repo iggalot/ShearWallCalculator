@@ -1,6 +1,7 @@
 using calculator;
 using System.Collections.Generic;
 using System.Linq;
+using System.Windows;
 
 namespace ShearWallCalculator
 {
@@ -66,6 +67,26 @@ namespace ShearWallCalculator
                 else if (run is ShearWallCalculator_FlexibleDiaphragm f) names.AddRange(f.CaseResults.Select(c => Listed(calc, c.Name, tag)));
             }
             return names;
+        }
+
+        /// <summary>The direction the case's wind blows (this level's own wind; the total when it has none), a unit plan vector; null: no load.</summary>
+        public static Vector? WindDir(LateralLoadCase lc)
+        {
+            if (lc == null) return null;
+            var v = new Vector(lc.Vx - lc.AboveVx, lc.Vy - lc.AboveVy);
+            if (v.Length < 1e-6) v = new Vector(lc.Vx, lc.Vy);
+            if (v.Length < 1e-6) return null;
+            v.Normalize();
+            return v;
+        }
+
+        /// <summary>Where the case's wind comes from: +x blows from the west, +y from the south; the oblique cases both ("SW").</summary>
+        public static string WindFrom(LateralLoadCase lc)
+        {
+            if (!(WindDir(lc) is Vector d)) return null;
+            string ns = d.Y > 1e-6 ? "S" : d.Y < -1e-6 ? "N" : "";
+            string ew = d.X > 1e-6 ? "W" : d.X < -1e-6 ? "E" : "";
+            return ns + ew;
         }
 
         /// <summary>Every wall in every case (wall order, then case order).</summary>

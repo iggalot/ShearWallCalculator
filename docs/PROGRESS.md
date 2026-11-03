@@ -20,6 +20,9 @@ _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`
   - Blue: what the top of each wall here receives.
   - The legend gives the case's own wind, the part from above, the total on the diaphragm and Mt,comb.
   - With no case picked, it shows the case that designs the most walls on the level.
+  - The wind: a broad arrow outside the windward side pointing at the building ("WIND from SW" for the oblique cases;
+    +x is from the west, +y from the south, `CaseBreakdown.WindFrom`), and for Cases 2 and 4 a curl at the center with
+    the case torsion (CCW for + Mt).
 - **Foundation plan:** a column run down to the foundation is drawn there ("C1 base", outlined square) and can be picked.
   The same holds on any level a column stands on.
 

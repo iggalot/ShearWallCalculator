@@ -92,6 +92,20 @@ namespace ShearWallCalculator.Tests
             Assert.IsNull(CaseBreakdown.Case(floor, "nope"));
         }
 
+        /// <summary>+x is wind from the west, +y from the south; the own wind decides, not what comes from above.</summary>
+        [TestMethod]
+        public void WindFrom_TheCaseDirection()
+        {
+            Assert.AreEqual("W", CaseBreakdown.WindFrom(new LateralLoadCase("a", 10, 0)));
+            Assert.AreEqual("E", CaseBreakdown.WindFrom(new LateralLoadCase("a", -10, 0)));
+            Assert.AreEqual("S", CaseBreakdown.WindFrom(new LateralLoadCase("a", 0, 8)));
+            Assert.AreEqual("N", CaseBreakdown.WindFrom(new LateralLoadCase("a", 0, -8)));
+            Assert.AreEqual("SW", CaseBreakdown.WindFrom(new LateralLoadCase("a", 5.6, 4.5, 30)));
+            Assert.AreEqual("NE", CaseBreakdown.WindFrom(new LateralLoadCase("a", -5.6, -4.5)));
+            Assert.AreEqual("W", CaseBreakdown.WindFrom(new LateralLoadCase("a", 12, 3) { AboveVx = 2, AboveVy = 3 }), "own: 10, 0");
+            Assert.IsNull(CaseBreakdown.WindFrom(new LateralLoadCase("a", 0, 0)));
+        }
+
         [TestMethod]
         public void Envelope_ListsBothRuns_Tagged()
         {

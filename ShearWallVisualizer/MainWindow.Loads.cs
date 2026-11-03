@@ -123,7 +123,7 @@ namespace ShearWallVisualizer
             string upperName = currentLevel + 1 < stories.Count ? stories[currentLevel + 1].Level.Name : "the level above";
             var lines = new List<string>
             {
-                $"Loads · {name}",
+                $"Loads · {name}" + (CaseBreakdown.WindFrom(lc) is string from ? $"  ·  wind from {from}" : ""),
                 $"This level's wind:  Vx {Num(lc?.Vx - lc?.AboveVx)} k,  Vy {Num(lc?.Vy - lc?.AboveVy)} k,  Mt {Num(lc?.Mt - lc?.AboveMt, "0.0")} k·ft",
                 above.Count > 0
                     ? $"From {upperName} (orange, its walls on this floor):  Vx {Num(lc?.AboveVx)} k,  Vy {Num(lc?.AboveVy)} k,  Mt {Num(lc?.AboveMt, "0.0")} k·ft about the CM"
@@ -131,10 +131,85 @@ namespace ShearWallVisualizer
                 $"On the diaphragm:  Vx {Num(lc?.Vx)} k,  Vy {Num(lc?.Vy)} k" + (row?.MtComb != null ? $";  Mt,comb {Num(row.MtComb, "0.0")} k·ft about the CR" : ""),
                 "Blue: what the top of each wall here receives (it passes it down to its base).",
             };
+            DrawWind(ctx, lc, dip);
             Legend(ctx, lines, dip);
         }
 
         private static string Num(double? v, string f = "0.00") => v.HasValue ? v.Value.ToString(f, CultureInfo.CurrentCulture) : "–";
+
+        private static readonly Brush WindInk = Controls.Ui.Frozen("#B01E5A8C");
+        private static readonly Pen WindPen = MakePen(WindInk, 7), CurlPen = MakePen(WindInk, 3);
+
+        /// <summary>
+        /// The wind: a broad arrow outside the windward side of the building pointing at it ("WIND from SW"), and the case's
+        /// torsion as a curl at the building's center, counter-clockwise for + Mt.
+        /// </summary>
+        private void DrawWind(DrawingContext ctx, LateralLoadCase lc, double dip)
+        {
+            if (!(CaseBreakdown.WindDir(lc) is Vector d)) return;
+            var box = Calculator.BoundingBoxWorld;
+            if (box.IsEmpty || box.Width <= 0 || box.Height <= 0) return;
+            var a = WorldToScreen(box.TopLeft, m_layers);
+            var b = WorldToScreen(box.BottomRight, m_layers);
+            var screenBox = new Rect(a, b);
+            var c = new Point(screenBox.X + screenBox.Width / 2, screenBox.Y + screenBox.Height / 2);
+            var sd = WorldToScreen(new Point(box.X + box.Width / 2, box.Y + box.Height / 2) + d, m_layers) - WorldToScreen(new Point(box.X + box.Width / 2, box.Y + box.Height / 2), m_layers);
+            if (sd.Length < 1e-9) return;
+            sd.Normalize();
+            // from the center back against the wind to the box edge, then clear of it
+            double tx = Math.Abs(sd.X) > 1e-9 ? screenBox.Width / 2 / Math.Abs(sd.X) : double.MaxValue;
+            double ty = Math.Abs(sd.Y) > 1e-9 ? screenBox.Height / 2 / Math.Abs(sd.Y) : double.MaxValue;
+            var head = c - sd * (Math.Min(tx, ty) + 28);
+            var tail = head - sd * 95;
+            var perp = new Vector(-sd.Y, sd.X);
+            ctx.DrawLine(WindPen, tail, head - sd * 14);
+            var g = new StreamGeometry();
+            using (var o = g.Open())
+            {
+                o.BeginFigure(head, true, true);
+                o.PolyLineTo(new[] { head - sd * 22 + perp * 13, head - sd * 22 - perp * 13 }, true, false);
+            }
+            g.Freeze();
+            ctx.DrawGeometry(WindInk, null, g);
+            var label = new FormattedText($"WIND from {CaseBreakdown.WindFrom(lc)}", CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+                                          new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal), 13, WindInk, dip);
+            var at = tail - sd * 8 - new Vector(label.Width / 2, label.Height / 2) + new Vector(-sd.X * label.Width / 2, -sd.Y * label.Height / 2);
+            ctx.DrawRectangle(LabelBack, null, new Rect(at.X - 3, at.Y, label.Width + 6, label.Height));
+            ctx.DrawText(label, at);
+
+            // the case's own torsion (Cases 2 and 4): + is counter-clockwise on the plan
+            double mt = lc.Mt - lc.AboveMt;
+            if (Math.Abs(mt) < 1e-6) return;
+            bool ccwPlan = mt > 0;
+            // y is up in the plan and down on the screen, so a counter-clockwise plan turn is clockwise on the screen
+            var flipped = WorldToScreen(new Point(0, 1), m_layers).Y < WorldToScreen(new Point(0, 0), m_layers).Y;
+            bool ccwScreen = flipped ? ccwPlan : !ccwPlan;
+            double r = 30;
+            Point P(double deg) { double t = deg * Math.PI / 180; return new Point(c.X + r * Math.Cos(t), c.Y - r * Math.Sin(t)); } // screen, y down
+            double start = ccwScreen ? -60 : 240, end = ccwScreen ? 210 : -30;
+            var arc = new StreamGeometry();
+            using (var o = arc.Open())
+            {
+                o.BeginFigure(P(start), false, false);
+                o.ArcTo(P(end), new Size(r, r), 0, true, ccwScreen ? SweepDirection.Counterclockwise : SweepDirection.Clockwise, true, false);
+            }
+            arc.Freeze();
+            ctx.DrawGeometry(null, CurlPen, arc);
+            // the arrowhead at the end, along the tangent
+            double te = end * Math.PI / 180;
+            var tangent = ccwScreen ? new Vector(-Math.Sin(te), -Math.Cos(te)) : new Vector(Math.Sin(te), Math.Cos(te));
+            var e = P(end);
+            var n = new Vector(-tangent.Y, tangent.X);
+            var hg = new StreamGeometry();
+            using (var o = hg.Open())
+            {
+                o.BeginFigure(e + tangent * 8, true, true);
+                o.PolyLineTo(new[] { e - tangent * 5 + n * 6, e - tangent * 5 - n * 6 }, true, false);
+            }
+            hg.Freeze();
+            ctx.DrawGeometry(WindInk, null, hg);
+            Label(ctx, $"Mt {Math.Abs(mt):0.0} k·ft {(ccwPlan ? "CCW" : "CW")}", new Point(c.X + r + 6, c.Y - r - 4), WindInk, dip);
+        }
 
         /// <summary>An arrow of <paramref name="px"/> pixels centered on a plan point, along a plan direction, set off the line by <paramref name="side"/> px.</summary>
         private void Arrow(DrawingContext ctx, Point at, Vector dir, double px, double side, Pen pen, Brush ink, string label, double dip)
