@@ -985,3 +985,5 @@ against your printed standard.
 - Detailed calculations, 3D Wind and the "Wind loads (auto)" table at the top are hidden on Site and Building. They appear on the Results page, after the inputs have been gone through. Going back hides them again.
 - The Shear walls workspace always shows the loads table, because those are the loads its walls are using.
 - Driven by WindSetupControl.StepChanged / OnResults (ASCE7 repo). MainWindow.WindStepChanged applies it.
+- Wind Setup page 2 (Building) shows the building only: the model's box, roof, floors and north mark, redrawn as the numbers change. There are no pressures, legend, wind modes, wind arrow, windward/leeward labels or result cards. Those are on Results. Wind3DViewerControl.GeometryOnly (ASCE7 repo).
+- When the wind inputs can't be calculated, the building is still drawn (no pressures) instead of an empty view.
