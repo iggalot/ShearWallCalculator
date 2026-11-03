@@ -1050,4 +1050,5 @@ against your printed standard.
   - Sources: the 2025 California Residential and Building Codes (2024 IRC and IBC) on gocodebook.com, and AWC SDPWS-2021 Ch. 4. The table cells were checked against the downloaded text. The 2018 and 2021 editions could not be opened; their cells are believed to be the same.
   - Not done: the NDS 3.9 stud design (bending and compression), and IRC R602.3.1 Exceptions 2 and 3 (tall 2x6, Table R602.3(6)), which are cited only.
   - On lbltest, every wall is 15 ft, so its studs are 14'-7 1/2": design required.
-  - Checked by unit tests only. The screen was locked when the app check was due, so the window itself is not checked yet.
+  - Checked in the app on lbltest: SW2-11 (Level 2, 2x6 default) offers 2x6 and 2x8; picking 2x8 redraws the studs, plates, posts and blocking as 2x8 (7 1/4" sill); Ctrl+Z puts it back to the default and Ctrl+Y brings it back. SW3-10 (Level 3) offers 2x4, 2x6 and 2x8 and reads "the roof and ceiling only". Every wall there is 15 ft, so it shows "design required".
+- Ctrl+Z and Ctrl+Y (Ctrl+Shift+Z) in the construction window undo and redo the model, as on the plan (they did nothing there before).

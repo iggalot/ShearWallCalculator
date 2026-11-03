@@ -43,6 +43,7 @@ namespace ShearWallVisualizer
                 if (!(wall || member) || !(open || (wallBuildOnPick && selectionCardOpen))) return;
                 wallBuild = new Dialogs.WallBuildWindow { Owner = this, OpenOnPick = wallBuildOnPick };
                 wallBuild.Closed += (s, e) => { wallBuildOnPick = wallBuild?.OpenOnPick ?? wallBuildOnPick; wallBuild = null; };
+                wallBuild.UndoRedo += redo => { if (redo) Sketch.Redo(); else Sketch.Undo(); };
                 // a stud size picked there is the wall's design input, as an edit on the card: recalculated, saved, undoable, logged
                 wallBuild.StudSizeChosen += size =>
                 {

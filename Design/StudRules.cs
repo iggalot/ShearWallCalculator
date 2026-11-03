@@ -66,7 +66,7 @@ namespace ShearWallCalculator.Design
             if (studHeightFt > TableHeightFt + 1e-9)
             {
                 c.DesignRequired = true;
-                c.Reasons.Add($"Studs {studHeightFt:0.##} ft long: over the table's 10 ft laterally unsupported height (IRC Table R602.3(5) note a, IBC 2308.2.2). Design them (NDS 3.9), or use IRC R602.3.1 Exception 2 or 3 where it applies.");
+                c.Reasons.Add($"Studs {FtIn.Of(studHeightFt * 12)} long: over the table's 10 ft laterally unsupported height (IRC Table R602.3(5) note a, IBC 2308.2.2). Design them (NDS 3.9), or use IRC R602.3.1 Exception 2 or 3 where it applies.");
             }
             if (c.FloorsAbove > 2)
             {

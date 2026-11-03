@@ -110,6 +110,9 @@ namespace ShearWallVisualizer.Dialogs
         /// <summary>The engineer picked a stud size for the shown wall (null: the story's default). The host saves it.</summary>
         public event Action<string> StudSizeChosen;
 
+        /// <summary>Ctrl+Z (false) or Ctrl+Y (true) pressed here: the host undoes or redoes the model.</summary>
+        public event Action<bool> UndoRedo;
+
         /// <summary>Open this window whenever a wall is picked (the host reads it).</summary>
         public bool OpenOnPick { get => follow.IsChecked == true; set => follow.IsChecked = value; }
 
@@ -127,6 +130,14 @@ namespace ShearWallVisualizer.Dialogs
             // Esc closes it and goes back to the calculator (an open drop-down takes its own Esc first: KeyDown bubbles)
             KeyDown += (s, e) =>
             {
+                // Ctrl+Z / Ctrl+Y (Ctrl+Shift+Z) here are the model's undo and redo, as on the plan
+                var mods = System.Windows.Input.Keyboard.Modifiers;
+                if (!e.Handled && (mods & System.Windows.Input.ModifierKeys.Control) != 0 && (e.Key == System.Windows.Input.Key.Z || e.Key == System.Windows.Input.Key.Y))
+                {
+                    e.Handled = true;
+                    UndoRedo?.Invoke(e.Key == System.Windows.Input.Key.Y || (mods & System.Windows.Input.ModifierKeys.Shift) != 0);
+                    return;
+                }
                 if (e.Key != System.Windows.Input.Key.Escape || e.Handled) return;
                 e.Handled = true;
                 var owner = Owner;
