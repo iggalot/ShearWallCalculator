@@ -122,9 +122,8 @@ namespace ShearWallVisualizer
                 {
                     var list = grp.ToList();
                     var p = WorldToScreen(list[0].At, m_layers);
-                    var box = new Rect(p.X - 4.5, p.Y - 4.5, 9, 9);
                     bool missing = list.Any(a => a.Model == null);
-                    ctx.DrawRectangle(missing ? Brushes.White : LandFill, missing ? MissingEdge : LandEdge, box);
+                    Controls.DesignOverlay.DrawHoldownIcon(ctx, p, missing ? Controls.DesignOverlay.HoldownMark.Missing : Controls.DesignOverlay.HoldownMark.Sized); // the plans' one marker
                     string Line(HoldownLanding a)
                     {
                         // short: "W1 HDUE5-SDS3 4,655", "C2 DTT1Z 870" (lb ASD, in the caption)
@@ -143,6 +142,7 @@ namespace ShearWallVisualizer
             // Each end of every beam on its own (SHOW Reactions): its reaction along the beam and its own connection, pointing
             // at that end; two beams on one column are two connections, never one label
             if (showReactions) DrawBeamEnds(ctx, onto.Where(l => l.Kind == PathPointKind.BeamEnd).ToList(), outline, dip);
+            foreach (var ic in planIcons) PlaceIconLabel(ctx, ic, outline, dip); // each hold-down marker's label, an arrow to it
             if (!showDesign || onto.Count == 0) return;
             // Everything else at one point gets one label: the hold-downs landing there from above ("↓ 1.0k + 0.6k on column C2")
             // and the column bases there with their connection. The beam's own summary is on the Members tab and its selection
@@ -234,7 +234,7 @@ namespace ShearWallVisualizer
                 // just inside the end on the side away from its name; taken (another beam's end at the same column): the
                 // name's side, then further in along the beam; with no clear spot, the one covering least
                 var spots = new List<(Point c, Point tip, Rect bounds)>();
-                foreach (double gap in new[] { 8.0, 8 + rsize.Width * 0.6, 8 + rsize.Width * 1.2 })
+                foreach (double gap in new[] { 15.0, 15 + rsize.Width * 0.6, 15 + rsize.Width * 1.2 })
                     foreach (bool nameSide in new[] { false, true })
                     {
                         var (sc, st) = ShearWallCalculator.Drawing.PlanLabels.BeamEnd(end, other, rsize, gap, ang, nameSide);
@@ -253,49 +253,111 @@ namespace ShearWallVisualizer
                 ctx.Pop();
                 labelsTaken.Add(turn.TransformBounds(rbox));
 
-                // its own connection: a small label, an arrow at this beam's end
-                string conn = l == null ? "None" : !l.Supported ? "nothing under it" : l.Model ?? "none strong enough";
-                var cft = new FormattedText(conn, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 9.5 * LabelScale, ink, dip);
-                var csize = new Size(cft.Width + 4, cft.Height);
-                var u = other - end; u.Normalize();
-                double t = ang * Math.PI / 180;
-                var down = new Vector(-Math.Sin(t), Math.Cos(t));
-                // outside the building first when the beam is on its edge (the reactions are inside)
-                var sides = new[] { down, -down };
-                if (outline is Rect o && o.Contains(end + down * 20) && !o.Contains(end - down * 20)) sides = new[] { -down, down };
-                var tries = new List<Rect>();
-                foreach (double along in new[] { 22.0, 40, 60, 80 })
-                    foreach (var s in sides)
-                    {
-                        double reach = 16 + (Math.Abs(s.X) * csize.Width + Math.Abs(s.Y) * csize.Height) / 2;
-                        var m = end + u * along + s * reach;
-                        tries.Add(new Rect(m.X - csize.Width / 2, m.Y - csize.Height / 2, csize.Width, csize.Height));
-                    }
-                var box = tries.FirstOrDefault(x => !labelsTaken.Any(tk => Controls.DesignOverlay.Overlaps(tk, x)));
-                if (box.Width == 0) box = tries.OrderBy(x => Controls.DesignOverlay.Covered(x, labelsTaken)).First(); // default is a zero box
-                labelsTaken.Add(box);
-                labelReach.Union(box);
-                var from = new Point(Math.Max(box.Left, Math.Min(box.Right, tip.X)), Math.Max(box.Top, Math.Min(box.Bottom, tip.Y)));
-                var d = tip - from;
-                if (d.Length > 6)
-                {
-                    var pen = new Pen(ink, 0.9);
-                    pen.Freeze();
-                    d.Normalize();
-                    ctx.DrawLine(pen, from, tip - d * 4);
-                    var n = new Vector(-d.Y, d.X);
-                    var head = new StreamGeometry();
-                    using (var g = head.Open())
-                    {
-                        g.BeginFigure(tip, true, true);
-                        g.PolyLineTo(new[] { tip - d * 5 + n * 2.5, tip - d * 5 - n * 2.5 }, true, false);
-                    }
-                    head.Freeze();
-                    ctx.DrawGeometry(ink, null, head);
-                }
-                if (heldLabels != null) heldLabels.Add((box, cft));
-                else { ctx.DrawRectangle(LabelBack, null, box); ctx.DrawText(cft, new Point(box.X + 2, box.Y)); }
+                // its own connection: the marker at this end (DrawPlanHoldowns) and its label (PlaceIconLabel)
             }
+        }
+
+        /// <summary>A hold-down marker on the plan, drawn before the tags and labels, waiting for its own label.</summary>
+        private readonly List<(Point icon, Vector inward, string text, Brush ink)> planIcons = new List<(Point, Vector, string, Brush)>();
+
+        /// <summary>
+        /// The level plan's hold-down markers, one at each end of each member that acts there, on the member just in from its
+        /// end: the walls' hold-downs (SHOW Design) and each beam end's connection (SHOW Reactions; an open square, "None",
+        /// where no hold-down is needed). Drawn and kept clear first, so the tags and labels keep off them; each gets its
+        /// label with an arrow later (PlaceIconLabel).
+        /// </summary>
+        private void DrawPlanHoldowns(DrawingContext ctx)
+        {
+            planIcons.Clear();
+            double size = Controls.DesignOverlay.HoldownSize;
+            void Mark(Point end, Point other, Controls.DesignOverlay.HoldownMark mark, string text, Brush ink)
+            {
+                var u = other - end;
+                if (u.Length < 20) return;
+                u.Normalize();
+                var c = ShearWallCalculator.Drawing.PlanLabels.IconAt(end, other, size);
+                var box = Controls.DesignOverlay.DrawHoldownIcon(ctx, c, mark);
+                box.Inflate(1, 1);
+                labelsTaken.Add(box);
+                planIcons.Add((c, u, text, ink));
+            }
+            if (showDesign && Calculator?._wall_system != null)
+                foreach (var kv in Calculator._wall_system._walls)
+                {
+                    if (!designResults.TryGetValue(kv.Key, out var r) || !r.HoldownNeeded) continue;
+                    Point a = WorldToScreen(kv.Value.Start, m_layers), b = WorldToScreen(kv.Value.End, m_layers);
+                    var mark = r.Holdown != null ? Controls.DesignOverlay.HoldownMark.Sized : Controls.DesignOverlay.HoldownMark.Missing;
+                    var ink = r.Holdown != null ? LandText : Controls.Ui.FailInk;
+                    string text = r.Holdown?.Model ?? "no HD";
+                    Mark(a, b, mark, text, ink);
+                    Mark(b, a, mark, text, ink);
+                }
+            var lv = Sketch.ActiveLevel;
+            if (showReactions && building != null && lv != null)
+            {
+                var onto = landingsOnto.TryGetValue(currentLevel, out var here) ? here : new List<HoldownLanding>();
+                foreach (var bm in building.BeamsOn(lv))
+                foreach (bool atStart in new[] { true, false })
+                {
+                    string endName = $"beam {bm.Id} {(atStart ? "start" : "end")}";
+                    var l = onto.FirstOrDefault(x => x.Kind == PathPointKind.BeamEnd && x.From == endName); // null: no uplift here
+                    var ink = l == null ? BeamInk : l.Supported && l.Choice != null ? (l.Note != null ? Controls.Ui.CloseInk : BeamInk) : Controls.Ui.FailInk;
+                    var mark = l == null ? Controls.DesignOverlay.HoldownMark.None
+                             : l.Supported && l.Model != null ? Controls.DesignOverlay.HoldownMark.Sized : Controls.DesignOverlay.HoldownMark.Missing;
+                    string text = l == null ? "None" : !l.Supported ? "nothing under it" : l.Model ?? "none strong enough";
+                    Mark(Sketch.ToScreen(atStart ? bm.Start : bm.End), Sketch.ToScreen(atStart ? bm.End : bm.Start), mark, text, ink);
+                }
+            }
+        }
+
+        /// <summary>
+        /// A hold-down marker's label: beside its member a little in from the end, outside the building first when the
+        /// member is on its edge, kept off the other labels; with an arrow to the marker.
+        /// </summary>
+        private void PlaceIconLabel(DrawingContext ctx, (Point icon, Vector inward, string text, Brush ink) ic, Rect? outline, double dip)
+        {
+            var ft = new FormattedText(ic.text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 9.5 * LabelScale, ic.ink, dip);
+            var size = new Size(ft.Width + 4, ft.Height);
+            var u = ic.inward;
+            var side = new Vector(-u.Y, u.X);
+            var sides = new[] { side, -side };
+            if (outline is Rect o && o.Contains(ic.icon + side * 20) && !o.Contains(ic.icon - side * 20)) sides = new[] { -side, side }; // outside first
+            var tries = new List<Rect>();
+            foreach (double along in new[] { 14.0, 30, 48, 68 })
+                foreach (var s in sides)
+                {
+                    double reach = 16 + (Math.Abs(s.X) * size.Width + Math.Abs(s.Y) * size.Height) / 2;
+                    var m = ic.icon + u * along + s * reach;
+                    tries.Add(new Rect(m.X - size.Width / 2, m.Y - size.Height / 2, size.Width, size.Height));
+                }
+            var box = tries.FirstOrDefault(x => !labelsTaken.Any(tk => Controls.DesignOverlay.Overlaps(tk, x)));
+            if (box.Width == 0) box = tries.OrderBy(x => Controls.DesignOverlay.Covered(x, labelsTaken)).First(); // default is a zero box
+            labelsTaken.Add(box);
+            labelReach.Union(box);
+            // the arrow: from the label's nearest edge to the marker's edge
+            var from = new Point(Math.Max(box.Left, Math.Min(box.Right, ic.icon.X)), Math.Max(box.Top, Math.Min(box.Bottom, ic.icon.Y)));
+            var d = ic.icon - from;
+            double half = Controls.DesignOverlay.HoldownSize / 2 + 1;
+            if (d.Length > half + 6)
+            {
+                d.Normalize();
+                double edge = half / Math.Max(Math.Abs(d.X), Math.Abs(d.Y)); // to the square's side
+                var tip = ic.icon - d * edge;
+                var pen = new Pen(ic.ink, 0.9);
+                pen.Freeze();
+                ctx.DrawLine(pen, from, tip - d * 4);
+                var n = new Vector(-d.Y, d.X);
+                var head = new StreamGeometry();
+                using (var g = head.Open())
+                {
+                    g.BeginFigure(tip, true, true);
+                    g.PolyLineTo(new[] { tip - d * 5 + n * 2.5, tip - d * 5 - n * 2.5 }, true, false);
+                }
+                head.Freeze();
+                ctx.DrawGeometry(ic.ink, null, head);
+            }
+            if (heldLabels != null) heldLabels.Add((box, ft));
+            else { ctx.DrawRectangle(LabelBack, null, box); ctx.DrawText(ft, new Point(box.X + 2, box.Y)); }
         }
 
         /// <summary>The level's drawing on screen (as Zoom to the drawing frames it); null when there is none.</summary>

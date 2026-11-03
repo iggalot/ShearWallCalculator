@@ -24,7 +24,13 @@ namespace ShearWallVisualizer.Controls
                                     HoldownEdge = Frozen(Brushes.White, 1), HoldownMissing = Frozen(Ui.FailInk, 2);
 
         private const double TagOffset = 15;   // px from the wall line to the tag center
-        private const double HoldownSize = 8;  // px, the hold-down square
+        /// <summary>The hold-down marker's size (px): one size on every plan (walls, beam ends, the foundation's anchors).</summary>
+        public const double HoldownSize = 10;
+
+        /// <summary>What a hold-down marker shows: sized, none strong enough, or none needed (an open square).</summary>
+        public enum HoldownMark { Sized, Missing, None }
+
+        private static readonly Pen HoldownNone = Frozen(Ui.Frozen("#8B4A14"), 1.6);
         private const int LegendRows = 8;
 
         private static Pen Frozen(Brush b, double t)
@@ -44,7 +50,7 @@ namespace ShearWallVisualizer.Controls
         /// <summary>Draws the overlay. <paramref name="toScreen"/> maps world ft to canvas pixels.</summary>
         public static void Draw(DrawingContext ctx, IEnumerable<KeyValuePair<int, WallData>> walls, IReadOnlyDictionary<int, WallDesignResult> design,
                                 Func<Point, Point> toScreen, Size view, double pixelsPerDip, double labelScale = 1, List<Rect> taken = null,
-                                bool schedule = true, string markLevel = null, IDictionary<int, Rect> tagBoxes = null)
+                                bool schedule = true, string markLevel = null, IDictionary<int, Rect> tagBoxes = null, bool holdowns = true)
         {
             taken = taken ?? new List<Rect>();
             scale = labelScale > 0 ? labelScale : 1; // the plan's text size (the sketch's LabelScale)
@@ -64,7 +70,7 @@ namespace ShearWallVisualizer.Controls
                 drawn.Union(a);
                 drawn.Union(b);
 
-                if (r.HoldownNeeded)
+                if (holdowns && r.HoldownNeeded) // (else the host draws them, each with its own label)
                 {
                     var (h1, h2) = WallSchedule.HoldownPoints(w, r.Holdown);
                     foreach (var p in new[] { toScreen(h1), toScreen(h2) })
@@ -76,7 +82,7 @@ namespace ShearWallVisualizer.Controls
                 var n = new Vector(-along.Y, along.X);
                 n.Normalize();
                 if (n.Y > 1e-9 || (Math.Abs(n.Y) <= 1e-9 && n.X > 0)) n = -n;
-                string hd = !r.HoldownNeeded ? null : r.Holdown?.Model ?? "no HD";
+                string hd = !holdowns || !r.HoldownNeeded ? null : r.Holdown?.Model ?? "no HD"; // the host labels each hold-down itself
                 var tag = Tag(mark, hd, pixelsPerDip);
                 bool vertical = Math.Abs(along.X) < Math.Abs(along.Y);
                 Point mid = a + along / 2;
@@ -122,16 +128,23 @@ namespace ShearWallVisualizer.Controls
         public static double Covered(Rect r, IEnumerable<Rect> boxes) =>
             boxes.Sum(t => { var i = Rect.Intersect(r, t); return i.IsEmpty ? 0 : i.Width * i.Height; });
 
-        private static void DrawHoldown(DrawingContext ctx, Point p, bool found)
+        private static void DrawHoldown(DrawingContext ctx, Point p, bool found) => DrawHoldownIcon(ctx, p, found ? HoldownMark.Sized : HoldownMark.Missing);
+
+        /// <summary>The hold-down marker centred at <paramref name="p"/>: a dark square; none strong enough, an open red square
+        /// crossed; none needed, an open brown square. Returns its box.</summary>
+        public static Rect DrawHoldownIcon(DrawingContext ctx, Point p, HoldownMark mark)
         {
             var box = new Rect(p.X - HoldownSize / 2, p.Y - HoldownSize / 2, HoldownSize, HoldownSize);
-            if (found)
+            if (mark == HoldownMark.Sized)
                 ctx.DrawRectangle(HoldownFill, HoldownEdge, box);
+            else if (mark == HoldownMark.None)
+                ctx.DrawRectangle(TagFill, HoldownNone, box);
             else
             {
                 ctx.DrawRectangle(TagFill, HoldownMissing, box);   // no hold-down strong enough: open red square
                 ctx.DrawLine(HoldownMissing, box.TopLeft, box.BottomRight);
             }
+            return box;
         }
 
         private static FormattedText Text(string s, double size, Brush ink, double dip, bool bold = false) =>

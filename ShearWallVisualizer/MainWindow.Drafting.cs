@@ -89,6 +89,7 @@ namespace ShearWallVisualizer
                 if (!foundationView)
                 {
                     DrawBracedWallLines(e.Context);
+                    DrawPlanHoldowns(e.Context); // the markers first: the tags and labels keep off them
                     DrawWallDesign(e.Context);
                     DrawCOMandCOR(e.Context);
                 }

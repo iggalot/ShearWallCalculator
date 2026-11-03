@@ -708,7 +708,7 @@ namespace ShearWallVisualizer
             if (!showDesign || Calculator?._wall_system == null) return;
             DesignOverlay.Draw(ctx, Calculator._wall_system._walls, designResults, p => WorldToScreen(p, m_layers),
                                new Size(m_layers.ActualWidth, m_layers.ActualHeight), VisualTreeHelper.GetDpi(this).PixelsPerDip, LabelScale, labelsTaken,
-                               schedule: false, markLevel: MarkLevel(currentLevel), tagBoxes: tagHits); // the schedule is in the drawing key, beside the plan
+                               schedule: false, markLevel: MarkLevel(currentLevel), tagBoxes: tagHits, holdowns: false); // (the hold-downs: DrawPlanHoldowns, each labelled) the schedule is in the drawing key, beside the plan
         }
 
         private static Pen FrozenPen(Color c, double thickness)
