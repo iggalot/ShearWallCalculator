@@ -138,6 +138,7 @@ namespace ShearWallVisualizer
                 return;
             }
             if (!landingsOnto.TryGetValue(currentLevel, out var onto)) return;
+            var outline = BuildingOutline(); // the labels go outside it, each with an arrow to its point
             // Everything at one point gets one label: the hold-downs landing there from above ("↓ 1.0k + 0.6k on column C2") and
             // the beam ends or column bases there with their connection ("BM2 end ↑ 0.4k HRS6"). The beam's own summary is on the
             // Members tab and its selection card, not on the plan.
@@ -161,9 +162,9 @@ namespace ShearWallVisualizer
                     var q = WorldToScreen(l.At, m_layers);
                     var r = new Rect(q.X - 5, q.Y - 5, 10, 10);
                     ctx.DrawRectangle(l.Supported ? BeamInk : Controls.Ui.FailFill, l.Supported ? LandEdge : MissingEdge, r);
-                    string who = l.From.StartsWith("beam ") ? l.From.Substring(5) : l.From;
-                    string up = l.Supported ? $"{who} ↑ {l.TensionAsd / 1000:0.0}k {l.Model ?? "none strong enough"}|{l.SupportId}"
-                                            : $"{who} ↑ {l.TensionAsd / 1000:0.0}k, nothing under it|";
+                    // short: "BM2 ↑ 2.7k MSTI26" (the leader shows which end; the column under it is labelled at the point)
+                    string up = l.Supported ? $"{ShearWallCalculator.Drawing.PlanLabels.ShortFrom(l.From)} ↑ {l.TensionAsd / 1000:0.0}k {l.Model ?? "none strong enough"}|"
+                                            : $"{ShearWallCalculator.Drawing.PlanLabels.ShortFrom(l.From)} ↑ {l.TensionAsd / 1000:0.0}k, nothing under it|";
                     Add(l.At, q, null, up, l.Supported && l.Choice != null ? (l.Note != null ? Controls.Ui.CloseInk : LandText) : Controls.Ui.FailInk);
                     continue;
                 }
@@ -194,11 +195,71 @@ namespace ShearWallVisualizer
                     rest.StartsWith(" on ") && cases.TryGetValue((kv.Key, rest), out var cl) && cl.Count > 1 && LoadPathTrace.SumByCase(cl) is Dictionary<string, double> sum && sum.Count > 0
                         ? $" (at once {Math.Max(0, sum.Values.Max()) / 1000:0.0}k)" : "";
                 var parts = g.downs.Select(t => t.Split('|')).GroupBy(t => t[1]).Select(x => "↓ " + string.Join(" + ", x.Select(t => t[0])) + Together(x.Key) + x.Key).ToList();
-                // a beam end's support is named only when the loads from above have not already named it
-                string said = string.Join(" ", parts);
-                parts.AddRange(g.ups.Select(t => t.Split('|')).Select(t => t[1].Length == 0 || said.Contains(t[1]) ? t[0] : $"{t[0]} on {t[1]}"));
-                Label(ctx, string.Join("   ", parts), new Point(g.p.X + 8, g.p.Y - 10), g.ink, dip, above: true, leader: g.p);
+                parts.AddRange(g.ups.Select(t => t.Split('|')[0])); // "BM2 ↑ 2.7k MSTI26": the column is labelled at the point
+                string text = string.Join("   ", parts);
+                if (outline is Rect o) LabelOutside(ctx, text, g.p, o, g.ink, dip);
+                else Label(ctx, text, new Point(g.p.X + 8, g.p.Y - 10), g.ink, dip, above: true, leader: g.p);
             }
+        }
+
+        /// <summary>The level's drawing on screen (as Zoom to the drawing frames it); null when there is none.</summary>
+        private Rect? BuildingOutline()
+        {
+            var ext = BuildingEdits.Extents(Sketch.Building, Sketch.ActiveLevel) ?? BuildingEdits.Extents(Sketch.Building);
+            if (ext == null) return null;
+            var a = Sketch.ToScreen(new Point2(ext.Value.X0, ext.Value.Y0 + ext.Value.Height));
+            var b = Sketch.ToScreen(new Point2(ext.Value.X0 + ext.Value.Width, ext.Value.Y0));
+            return new Rect(a, b);
+        }
+
+        /// <summary>
+        /// A label outside the building, past its side nearest <paramref name="p"/>, with a leader ending in an arrow at the
+        /// point. Kept off the other labels and tags: along the side first, then a row further out; with no clear spot, the
+        /// one covering the least.
+        /// </summary>
+        private void LabelOutside(DrawingContext ctx, string text, Point p, Rect outline, Brush ink, double dip)
+        {
+            var ft = new FormattedText(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 10.5 * LabelScale, ink, dip);
+            var size = new Size(ft.Width + 4, ft.Height);
+            var canvas = new Rect(2, 2, Math.Max(4, (m_layers?.ActualWidth ?? 4) - 4), Math.Max(4, (m_layers?.ActualHeight ?? 4) - 4));
+            var (first, outward) = ShearWallCalculator.Drawing.PlanLabels.OutsideSpot(p, outline, size, 16 * LabelScale, canvas);
+            labelReach.Union(first); // Zoom to the drawing leaves room for it
+            var along = new Vector(Math.Abs(outward.Y), Math.Abs(outward.X)); // along the side
+            double alongStep = outward.Y != 0 ? size.Width * 0.5 + 4 : size.Height + 2, outStep = outward.Y != 0 ? size.Height + 2 : size.Width + 6;
+            var tries = new List<Rect>();
+            for (int row = 0; row <= 3; row++)
+                foreach (int k in new[] { 0, 1, -1, 2, -2 })
+                    tries.Add(Rect.Offset(first, along * (k * alongStep) + outward * (row * outStep)));
+            if (tries.Any(canvas.Contains)) tries = tries.Where(canvas.Contains).ToList(); // none slid off the plan
+            var box = tries.FirstOrDefault(x => !labelsTaken.Any(t => Controls.DesignOverlay.Overlaps(t, x)));
+            if (box.Width == 0) box = tries.OrderBy(x => Controls.DesignOverlay.Covered(x, labelsTaken)).First(); // default is a zero box
+            labelsTaken.Add(box);
+
+            // the leader: from the label's edge, outside the building, to the point, an arrow at the point
+            var path = ShearWallCalculator.Drawing.PlanLabels.Leader(p, outline, box, 16 * LabelScale);
+            var last = path[path.Length - 2];
+            var d = p - last;
+            if (d.Length > 8)
+            {
+                var pen = new Pen(ink, 0.9);
+                pen.Freeze();
+                for (int i = 0; i + 2 < path.Length; i++) ctx.DrawLine(pen, path[i], path[i + 1]);
+                d.Normalize();
+                var tip = p - d * 5; // stops at the mark's edge
+                ctx.DrawLine(pen, last, tip);
+                var n = new Vector(-d.Y, d.X);
+                var head = new StreamGeometry();
+                using (var g = head.Open())
+                {
+                    g.BeginFigure(tip, true, true);
+                    g.PolyLineTo(new[] { tip - d * 6 + n * 3, tip - d * 6 - n * 3 }, true, false);
+                }
+                head.Freeze();
+                ctx.DrawGeometry(ink, null, head);
+            }
+            if (heldLabels != null) { heldLabels.Add((box, ft)); return; }
+            ctx.DrawRectangle(LabelBack, null, box);
+            ctx.DrawText(ft, new Point(box.X + 2, box.Y));
         }
 
         /// <summary>
@@ -209,6 +270,11 @@ namespace ShearWallVisualizer
         {
             if (Calculator?._wall_system == null) return;
             double s = LabelScale;
+            // the sketch's own marks at the plan's edges: the scale bar, the grid's numbers along the bottom and the left
+            var bar = Sketch.ScaleBarArea();
+            if (!bar.IsEmpty) labelsTaken.Add(bar);
+            labelsTaken.Add(new Rect(0, Sketch.ActualHeight - 16, Sketch.ActualWidth, 16));
+            labelsTaken.Add(new Rect(0, 0, 28, Sketch.ActualHeight));
             void Around(Point world, double w, double h)
             {
                 if (double.IsNaN(world.X) || double.IsNaN(world.Y)) return;
@@ -309,11 +375,9 @@ namespace ShearWallVisualizer
 
         private void MeasureLabelRoom()
         {
-            var ext = BuildingEdits.Extents(Sketch.Building, Sketch.ActiveLevel) ?? BuildingEdits.Extents(Sketch.Building); // as ZoomExtents
-            if (ext == null || labelReach.IsEmpty) { labelRoom = new Thickness(); return; }
-            var a = Sketch.ToScreen(new Point2(ext.Value.X0, ext.Value.Y0 + ext.Value.Height));
-            var b = Sketch.ToScreen(new Point2(ext.Value.X0 + ext.Value.Width, ext.Value.Y0));
-            var d = new Rect(a, b);
+            var outline = BuildingOutline(); // as ZoomExtents
+            if (outline == null || labelReach.IsEmpty) { labelRoom = new Thickness(); return; }
+            var d = outline.Value;
             const double gap = 12;
             labelRoom = new Thickness(Math.Max(0, d.Left - labelReach.Left) + gap, Math.Max(0, d.Top - labelReach.Top) + gap,
                                       Math.Max(0, labelReach.Right - d.Right) + gap, Math.Max(0, labelReach.Bottom - d.Bottom) + gap);

@@ -102,7 +102,7 @@ namespace ShearWallVisualizer
             s.WallStyle = DesignPen;
             s.ExtraSnapPoints = HoldownSnapPoints;
             s.LevelCaption = l => ""; // no tag on the plan: the strip above it says the level and what is shown
-            s.FitPadding = () => foundationView ? labelRoom : new Thickness(); // the foundation's anchor labels; the level plans fit as before
+            s.FitPadding = () => labelRoom; // room for the labels outside the building (the foundation's anchors, a level's hold-down landings)
             s.Escaped += (o, e) =>
             {
                 if (selectionCardOpen) CloseSelectionCard();

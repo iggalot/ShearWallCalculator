@@ -871,6 +871,7 @@ namespace ShearWallVisualizer
                         VisualTreeHelper.GetDpi(this).PixelsPerDip);
 
                     ctx.DrawText(idLabel, new Point(p1_screen.X - 40, p1_screen.Y - 7));
+                    labelsTaken.Add(new Rect(p1_screen.X - 40, p1_screen.Y - 7, idLabel.Width, idLabel.Height)); // the hold-down labels keep off it
 
                     bwl_count++;
                 }
@@ -900,6 +901,8 @@ namespace ShearWallVisualizer
                     ctx.PushTransform(new RotateTransform(90, p1_screen.X, p1_screen.Y + 10));
                     ctx.DrawText(idLabel, new Point(p1_screen.X, p1_screen.Y));
                     ctx.Pop();  // remember to pop the transform after its been used.
+                    // turned a quarter about (x, y + 10): it runs down from there, its height to the left
+                    labelsTaken.Add(new Rect(p1_screen.X - (idLabel.Height - 10), p1_screen.Y + 10, idLabel.Height, idLabel.Width));
                 }
             }
         }
