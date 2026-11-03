@@ -153,13 +153,24 @@ namespace ShearWallVisualizer
             var b = WorldToScreen(box.BottomRight, m_layers);
             var screenBox = new Rect(a, b);
             var c = new Point(screenBox.X + screenBox.Width / 2, screenBox.Y + screenBox.Height / 2);
-            var sd = WorldToScreen(new Point(box.X + box.Width / 2, box.Y + box.Height / 2) + d, m_layers) - WorldToScreen(new Point(box.X + box.Width / 2, box.Y + box.Height / 2), m_layers);
+            // Cases 3 and 4 (both directions at once) are the quartering wind: at 45° onto the windward corner. Cases 1 and 2
+            // blow square onto the middle of the windward side.
+            bool oblique = Math.Abs(d.X) > 1e-6 && Math.Abs(d.Y) > 1e-6;
+            var mid = new Point(box.X + box.Width / 2, box.Y + box.Height / 2);
+            var aim = oblique ? new Point(d.X > 0 ? box.Left : box.Right, d.Y > 0 ? box.Top : box.Bottom) : mid; // Rect.Top is the least y: the south side
+            var wd = oblique ? new Vector(Math.Sign(d.X), Math.Sign(d.Y)) : d;
+            var sd = WorldToScreen(aim + wd, m_layers) - WorldToScreen(aim, m_layers);
             if (sd.Length < 1e-9) return;
             sd.Normalize();
-            // from the center back against the wind to the box edge, then clear of it
-            double tx = Math.Abs(sd.X) > 1e-9 ? screenBox.Width / 2 / Math.Abs(sd.X) : double.MaxValue;
-            double ty = Math.Abs(sd.Y) > 1e-9 ? screenBox.Height / 2 / Math.Abs(sd.Y) : double.MaxValue;
-            var head = c - sd * (Math.Min(tx, ty) + 28);
+            Point head;
+            if (oblique) head = WorldToScreen(aim, m_layers) - sd * 16; // just off the corner
+            else
+            {
+                // from the center back against the wind to the box edge, then clear of it
+                double tx = Math.Abs(sd.X) > 1e-9 ? screenBox.Width / 2 / Math.Abs(sd.X) : double.MaxValue;
+                double ty = Math.Abs(sd.Y) > 1e-9 ? screenBox.Height / 2 / Math.Abs(sd.Y) : double.MaxValue;
+                head = c - sd * (Math.Min(tx, ty) + 28);
+            }
             var tail = head - sd * 95;
             var perp = new Vector(-sd.Y, sd.X);
             ctx.DrawLine(WindPen, tail, head - sd * 14);
@@ -171,7 +182,7 @@ namespace ShearWallVisualizer
             }
             g.Freeze();
             ctx.DrawGeometry(WindInk, null, g);
-            var label = new FormattedText($"WIND from {CaseBreakdown.WindFrom(lc)}", CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+            var label = new FormattedText($"WIND from {CaseBreakdown.WindFrom(lc)}{(oblique ? " (quartering, on the corner)" : "")}", CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
                                           new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal), 13, WindInk, dip);
             var at = tail - sd * 8 - new Vector(label.Width / 2, label.Height / 2) + new Vector(-sd.X * label.Width / 2, -sd.Y * label.Height / 2);
             ctx.DrawRectangle(LabelBack, null, new Rect(at.X - 3, at.Y, label.Width + 6, label.Height));
