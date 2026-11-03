@@ -89,6 +89,7 @@
     <Compile Include="Design\ShearWallDesign.cs" />
     <Compile Include="Design\Sheathing.cs" />
     <Compile Include="Design\WallSchedule.cs" />
+    <Compile Include="Design\FoundationForces.cs" />
     <Compile Include="Design\DetailCalcs.cs" />
     <Compile Include="Diagnostics\ModelChangeLog.cs" />
     <Compile Include="Drawing\Snapping.cs" />

@@ -30,6 +30,12 @@ namespace ShearWallVisualizer
         /// <summary>The first story's hold-downs: the foundation anchors.</summary>
         private List<HoldownLanding> foundationAnchors = new List<HoldownLanding>();
 
+        /// <summary>
+        /// The foundation at each anchor point: the walls (and column bases) meeting there added case by case; the worst
+        /// uplift (0.6D) and the worst bearing (1.0D), each in its own case.
+        /// </summary>
+        private List<ShearWallCalculator.Design.FoundationPoint> foundationPoints = new List<ShearWallCalculator.Design.FoundationPoint>();
+
         /// <summary>True while the plan shows the ground (the foundation view).</summary>
         private bool foundationView;
 
@@ -42,6 +48,7 @@ namespace ShearWallVisualizer
             foreach (var kv in loadPath.ByLevel)
                 if (kv.Key < 0) foundationAnchors = kv.Value;
                 else landingsOnto[kv.Key] = kv.Value;
+            foundationPoints = FoundationLoads();
             RefreshDetail(); // an open detail follows the design
             int open = landingsOnto.Values.Sum(l => l.Count(x => !x.Supported));
             if (open > 0) Log.Info("Hold-downs", $"{open} hold-down{(open == 1 ? "" : "s")} from an upper story land where there is no wall below.");
@@ -117,12 +124,23 @@ namespace ShearWallVisualizer
                     ctx.DrawRectangle(missing ? Brushes.White : LandFill, missing ? MissingEdge : LandEdge, box);
                     string Line(HoldownLanding a)
                     {
-                        string wallId = a.Kind != PathPointKind.WallHoldown ? a.From
+                        // short: "W1 HDUE5-SDS3 4,655", "C2 DTT1Z 870" (lb ASD, in the caption)
+                        string wallId = a.Kind != PathPointKind.WallHoldown ? (a.From ?? "").Replace("column ", "").Replace(" base", "")
                                       : stories.Count > 0 && stories[0].Walls.TryGetValue(a.WallId, out var id) ? id : $"W{a.WallId}";
-                        return $"{wallId}  {a.Model ?? "no HD"}  {a.TensionAsd:N0} lb";
+                        return $"{wallId}  {a.Model ?? "no HD"}  {a.TensionAsd:N0}";
                     }
                     var ink = missing ? Controls.Ui.FailInk : list.Any(a => a.Note != null) ? Controls.Ui.CloseInk : LandText;
-                    Label(ctx, string.Join("\n", list.Select(Line)), new Point(p.X + 10, p.Y - 10), ink, dip, above: true, leader: p);
+                    // what the foundation takes here: every wall and column meeting at the point, added case by case
+                    var key = ShearWallCalculator.Design.FoundationForces.Key(list[0].At);
+                    var fp = foundationPoints.FirstOrDefault(x => ShearWallCalculator.Design.FoundationForces.Key(x.At) == key);
+                    var lines = list.Select(Line).ToList();
+                    if (fp != null)
+                    {
+                        // bearing comes from the walls (their overturning and dead load); a column's gravity load is not calculated here
+                        bool walls = list.Any(a => a.Kind == PathPointKind.WallHoldown);
+                        lines.Add($"Σ T {fp.UpliftAsd:N0}" + (walls ? $"   C {fp.BearingAsd:N0}" : "")); // T uplift, C bearing; a column's gravity is not calculated: no C
+                    }
+                    Label(ctx, string.Join("\n", lines), new Point(p.X + 10, p.Y - 10), ink, dip, above: true, leader: p);
                 }
                 return;
             }
@@ -319,9 +337,41 @@ namespace ShearWallVisualizer
         private string FoundationCaption()
         {
             int missing = foundationAnchors.Count(a => a.Model == null);
-            double max = foundationAnchors.Count == 0 ? 0 : foundationAnchors.Max(a => a.TensionAsd);
-            return $"Foundation  ·  {foundationAnchors.Count} hold-down anchor{(foundationAnchors.Count == 1 ? "" : "s")} of {LevelName(0)}'s walls" +
-                   (foundationAnchors.Count > 0 ? $", largest uplift {max:N0} lb (ASD)" : "") + (missing > 0 ? $"  ·  {missing} without a hold-down strong enough" : "");
+            // at one point, the walls meeting there added case by case (not each wall's own worst)
+            double up = foundationPoints.Count == 0 ? 0 : foundationPoints.Max(p => p.UpliftAsd);
+            double down = foundationPoints.Count == 0 ? 0 : foundationPoints.Max(p => p.BearingAsd);
+            return "Foundation" + (foundationPoints.Count > 0 ? $"  ·  max at a point: T {up:N0}  C {down:N0} lb ASD" : "") +
+                   (missing > 0 ? $"  ·  {missing} hold-down{(missing == 1 ? "" : "s")} too weak" : "");
+        }
+
+        /// <summary>
+        /// What the first story puts on the foundation: both ends of every wall (its hold-down points), per load case, and
+        /// the column bases' uplift; added where they meet (<see cref="ShearWallCalculator.Design.FoundationForces"/>).
+        /// </summary>
+        private List<ShearWallCalculator.Design.FoundationPoint> FoundationLoads()
+        {
+            var loads = new List<ShearWallCalculator.Design.FoundationLoad>();
+            if (levels.Count == 0 || allDesignResults.Count == 0 || levels[0]?._wall_system == null) return new List<ShearWallCalculator.Design.FoundationPoint>();
+            var design = allDesignResults[0];
+            foreach (var kv in levels[0]._wall_system._walls)
+            {
+                if (design == null || !design.TryGetValue(kv.Key, out var r) || r?.EndForceByCase == null) continue;
+                var w = kv.Value;
+                var (s, e) = ShearWallCalculator.Design.WallSchedule.HoldownPoints(w, r.Holdown);
+                bool lowIsStart = w.WallDir == calculator.WallDirs.EastWest ? w.Start.X <= w.End.X : w.Start.Y <= w.End.Y;
+                string name = stories.Count > 0 && stories[0].Walls.TryGetValue(kv.Key, out var id) ? id : $"W{kv.Key}";
+                loads.AddRange(ShearWallCalculator.Design.FoundationForces.OfWall(name, lowIsStart ? s : e, lowIsStart ? e : s, r.EndForceByCase));
+            }
+            foreach (var a in foundationAnchors.Where(a => a.Kind == PathPointKind.ColumnBase))
+                loads.Add(new ShearWallCalculator.Design.FoundationLoad
+                {
+                    At = a.At, From = a.From, Envelope = a.TensionAsd,
+                    With06D = a.CaseAsd == null ? null : new Dictionary<string, double>(a.CaseAsd),
+                });
+            var points = ShearWallCalculator.Design.FoundationForces.Combine(loads);
+            foreach (var p in points.Where(p => p.From.Count > 1))
+                Log.Debug($"Foundation at ({p.At.X:0.##}, {p.At.Y:0.##}): {string.Join(" + ", p.From)}: uplift {p.UpliftAsd:0} lb ({p.UpliftCase}), bearing {p.BearingAsd:0} lb ({p.BearingCase}), case by case");
+            return points;
         }
 
         /// <summary>FOUNDATION: the ground plan with the first story's hold-down anchors.</summary>

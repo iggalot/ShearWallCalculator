@@ -83,6 +83,7 @@ namespace ShearWallVisualizer
             s.DrawOver += (o, e) =>
             {
                 labelsTaken.Clear(); // the overlays keep their labels off each other, this frame
+                if (m_layers != null) labelsTaken.Add(new Rect(0, 0, m_layers.ActualWidth, 38 * LabelScale)); // the plan's caption across the top
                 if (!foundationView) ReservePlanMarks(); // and off the centers of mass and rigidity and the wall labels
                 if (!foundationView)
                 {

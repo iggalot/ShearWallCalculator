@@ -41,6 +41,45 @@ namespace ShearWallCalculator.Tests
         }
 
         [TestMethod]
+        public void EndForces_ByHand_UpliftAndBearing()
+        {
+            // as above: V = 10 k, h = 10 ft, d = 9.75 ft, D = 2000 lb, walls above 500 lb at the design shear
+            var r = new WallDesignResult { V = 10, Height = 10, HoldownArm = 9.75, DeadLoadLb = 2000, AboveTensionAsd = 500, AboveTensionLrfd = 800 };
+            r.SetCaseTensions(new[] { new KeyValuePair<string, double>("A", -10) }); // the low end lifts
+            // couple = 0.6 × 10 × 1000 × 10 / 9.75 + 500 = 6653.846 lb
+            var f = r.EndForceByCase["A"];
+            Assert.AreEqual(6653.846 - 600, f[0], 1e-3, "low end, 0.6D: up (= the hold-down tension)");
+            Assert.AreEqual(-(6653.846 + 600), f[1], 1e-3, "high end, 0.6D: down");
+            Assert.AreEqual(6653.846 - 1000, f[2], 1e-3, "low end, 1.0D");
+            Assert.AreEqual(-(6653.846 + 1000), f[3], 1e-3, "high end, 1.0D: the bearing");
+            Assert.AreEqual(r.TensionByCase["A"][0], f[0], 1e-9);
+        }
+
+        [TestMethod]
+        public void Foundation_WallsMeetingAtAPoint_AddCaseByCase_UpliftAndBearingSeparately()
+        {
+            var p = new Point(0, 0);
+            var loads = new[]
+            {
+                new FoundationLoad { At = p, From = "W1", With06D = new Dictionary<string, double> { ["A"] = 1000, ["B"] = -800 }, With10D = new Dictionary<string, double> { ["A"] = 600, ["B"] = -1200 } },
+                new FoundationLoad { At = new Point(0.1, 0), From = "W2", With06D = new Dictionary<string, double> { ["A"] = -300, ["B"] = 900 }, With10D = new Dictionary<string, double> { ["A"] = -700, ["B"] = 500 } },
+                new FoundationLoad { At = new Point(20, 0), From = "W3", With06D = new Dictionary<string, double> { ["A"] = 50 }, With10D = new Dictionary<string, double> { ["A"] = -40 } },
+            };
+            var pts = FoundationForces.Combine(loads);
+            Assert.AreEqual(2, pts.Count, "W1 and W2 are one point (within 3 in)");
+            var corner = pts.Single(x => x.From.Count == 2);
+            // uplift (0.6D): A 1000 − 300 = 700, B −800 + 900 = 100 → 700 in A (not 1000 + 900 = 1900, each wall's worst)
+            Assert.AreEqual(700, corner.UpliftAsd, 1e-9);
+            Assert.AreEqual("A", corner.UpliftCase);
+            // bearing (1.0D): A −(600 − 700) = 100, B −(−1200 + 500) = 700 → 700 in B
+            Assert.AreEqual(700, corner.BearingAsd, 1e-9);
+            Assert.AreEqual("B", corner.BearingCase);
+            var alone = pts.Single(x => x.From.Count == 1);
+            Assert.AreEqual(50, alone.UpliftAsd, 1e-9);
+            Assert.AreEqual(40, alone.BearingAsd, 1e-9);
+        }
+
+        [TestMethod]
         public void CaseTension_TheGoverningCase_IsTheDesignTension()
         {
             var r = new WallDesignResult { V = 7.5, Height = 9, HoldownArm = 11.5, DeadLoadLb = 1200, AboveTensionAsd = 300, AboveTensionLrfd = 450 };

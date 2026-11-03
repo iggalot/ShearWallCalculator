@@ -539,6 +539,7 @@ namespace ShearWallCalculator.Design
         public void SetCaseTensions(IEnumerable<KeyValuePair<string, double>> forceByCase)
         {
             TensionByCase = new Dictionary<string, double[]>();
+            EndForceByCase = new Dictionary<string, double[]>();
             double arm = HoldownArm, V = Math.Abs(this.V);
             if (!(arm > 0) || double.IsInfinity(arm)) return;
             foreach (var kv in forceByCase)
@@ -548,8 +549,23 @@ namespace ShearWallCalculator.Design
                 double lrfd = Math.Max(0, 1.0 * M / arm - 0.9 * DeadLoadLb / 2 + AboveTensionLrfd * share);
                 bool lowLifts = kv.Value < 0;
                 TensionByCase[kv.Key] = lowLifts ? new[] { asd, 0, lrfd, 0 } : new[] { 0, asd, 0, lrfd };
+
+                // both ends on the foundation, + up / − down (ASD): the overturning couple ± and the dead load down, with
+                // 0.6D (uplift, 0.6D + 0.6W) and with 1.0D (bearing, D + 0.6W). The walls above add their couple at both
+                // ends (taken equal at the compression end: a wall stacked end to end)
+                double couple = 0.6 * M / arm + AboveTensionAsd * share;
+                double up06 = couple - 0.6 * DeadLoadLb / 2, down06 = -(couple + 0.6 * DeadLoadLb / 2);
+                double up10 = couple - DeadLoadLb / 2, down10 = -(couple + DeadLoadLb / 2);
+                EndForceByCase[kv.Key] = lowLifts ? new[] { up06, down06, up10, down10 } : new[] { down06, up06, down10, up10 };
             }
         }
+
+        /// <summary>
+        /// The force each end puts on what is under it in each load case, lb ASD, + up (uplift) / − down (bearing):
+        /// [low end with 0.6D, high end with 0.6D, low end with 1.0D, high end with 1.0D]. The foundation adds these where
+        /// walls meet (<see cref="FoundationForces"/>): uplift from the 0.6D values, bearing from the 1.0D values.
+        /// </summary>
+        public Dictionary<string, double[]> EndForceByCase { get; set; }
 
         /// <summary>Where the load path anchors this wall's hold-down with another type than its own (e.g. "ST9 strap on beam BM2"): set by the load path.</summary>
         public List<string> HoldownElsewhere { get; } = new List<string>();

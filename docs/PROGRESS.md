@@ -956,3 +956,10 @@ against your printed standard.
   the short names as in the marks) and SHOW (Image ▾, Design, Loads ▾, 3D, issues); the top toolbar keeps the project's
   Floors… and Loads. The Design tab's banner says what its Floors filter lists ("ALL FLOORS · 10 walls · Floors picks
   what this table lists") and its rows no longer mark the plan's level: the level buttons change the view only.
+- Foundation: what the walls meeting at a point put on it together, case by case (FoundationForces). Each first-story
+  wall's ends per case (EndForceByCase, + up / − down, ASD): the couple 0.6 V h / d (+ the walls above, taken equal at
+  the compression end) less the dead load, with 0.6D for uplift (T) and 1.0D for bearing (C). At each point the sum in
+  each case, the worst T and the worst C (in their own cases). Junk's W1 + W2 corner: T 6,854 lb together, not 4,655 +
+  3,999. Column bases add their uplift; their gravity is not calculated (no C). Labels short: "Σ T 6,854  C 6,854";
+  caption "max at a point: T … C … lb ASD". Tests: EndForces_ByHand_UpliftAndBearing,
+  Foundation_WallsMeetingAtAPoint_AddCaseByCase_UpliftAndBearingSeparately.
