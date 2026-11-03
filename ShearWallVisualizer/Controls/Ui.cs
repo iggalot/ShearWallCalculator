@@ -15,14 +15,14 @@ namespace ShearWallVisualizer.Controls
     /// </summary>
     internal static class Ui
     {
-        // Status colours: pass is a quiet slate blue, close to the limit a light golden yellow, fail a strong crimson red. Close
-        // and fail differ in hue AND lightness (yellow is light, crimson dark), so they stay apart for colour-blind users too;
-        // each also has a mark (✓ ▲ ✗) and failing walls are drawn dashed, so a status never depends on colour alone.
-        // The drawing pens (MainWindow.Drafting) and the status-line error ink read these brushes: change a colour here only.
+        // Status colours: pass (acceptable) is green, close to the limit a light golden yellow, fail a strong crimson red. Each
+        // has a mark (✓ ▲ ✗) and failing walls are drawn dashed, so a status never depends on colour alone (red and green look
+        // alike to many colour-blind users). The drawing pens (MainWindow.Drafting), the issues button and the status-line
+        // inks read these brushes: change a colour here only.
         public static readonly Brush Ink = Frozen("#0B0B0B"), InkSecondary = Frozen("#52514E"), InkMuted = Frozen("#7A7974"),
                                      Hairline = Frozen("#D5DAE1"), HeaderFill = Frozen("#EEF1F5"), Surface = Frozen("#F7F8FA"),
-                                     SelectedFill = Frozen("#E4EDFA"), PassInk = Frozen("#2B4C7E"), FailInk = Frozen("#A50E1F"),
-                                     PassFill = Frozen("#EEF2F8"), FailFill = Frozen("#FAD4D8"), CloseInk = Frozen("#6E5200"), CloseFill = Frozen("#FFF5C7"),
+                                     SelectedFill = Frozen("#E4EDFA"), PassInk = Frozen("#1E7B34"), FailInk = Frozen("#A50E1F"),
+                                     PassFill = Frozen("#E6F4EA"), PassStripe = Frozen("#2E9E4F"), FailFill = Frozen("#FAD4D8"), CloseInk = Frozen("#6E5200"), CloseFill = Frozen("#FFF5C7"),
                                      FailStripe = Frozen("#C8102E"), CloseStripe = Frozen("#F2C200"), FailRowFill = Frozen("#FDEDEF"),
                                      WarnInk = Frozen("#8A5300"), WarnFill = Frozen("#FDF3E1"), InfoFill = Frozen("#EEF4FC"), InfoLine = Frozen("#2A78D6");
 

@@ -348,6 +348,7 @@ namespace ShearWallVisualizer
 
         private static readonly Pen ClosePen = FrozenPen(((SolidColorBrush)Controls.Ui.CloseStripe).Color, 4);
         private static readonly Pen FailPen = DashedPen(((SolidColorBrush)Controls.Ui.FailStripe).Color, 5);
+        private static readonly Pen PassPen = FrozenPen(((SolidColorBrush)Controls.Ui.PassStripe).Color, 4);
 
         private static Pen DashedPen(Color c, double thickness)
         {
@@ -366,7 +367,7 @@ namespace ShearWallVisualizer
         {
             var key = CurrentStory?.Key(w.Id);
             if (key == null || !designResults.TryGetValue(key.Value, out var check)) return null;
-            return check.State == DesignState.Fail ? FailPen : check.State == DesignState.Close ? ClosePen : null;
+            return check.State == DesignState.Fail ? FailPen : check.State == DesignState.Close ? ClosePen : PassPen;
         }
 
 
@@ -416,7 +417,7 @@ namespace ShearWallVisualizer
         // The issues button in the top bar, on every workspace and tab: solid red with errors (it flashes when there are
         // more than before), solid amber with warnings only, green when clear.
         private static readonly Brush IssueErrorFill = Controls.Ui.Frozen("#C62828"), IssueWarnFill = Controls.Ui.Frozen("#F2B233"), IssueWarnInk = Controls.Ui.Frozen("#3D2A00"),
-                                      IssueOkFill = Controls.Ui.Frozen("#E6F4EA"), IssueOkInk = Controls.Ui.Frozen("#1E7B34");
+                                      IssueOkFill = Controls.Ui.PassFill, IssueOkInk = Controls.Ui.PassInk;
         private int shownErrors;
 
 
