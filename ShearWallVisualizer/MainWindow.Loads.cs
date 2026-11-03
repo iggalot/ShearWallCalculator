@@ -26,7 +26,7 @@ namespace ShearWallVisualizer
         private string loadsCase; // as listed ("Case 2, ..." or, for an envelope, "Case 2, ... (rigid)"); null: the governing one
 
         private static readonly Brush AboveInk = Controls.Ui.Frozen("#D9480F"), TopInk = Controls.Ui.Frozen("#0B7285");
-        private static readonly Pen AboveArrowPen = MakePen(AboveInk, 2.2), TopArrowPen = MakePen(TopInk, 2.2);
+        private static readonly Pen AboveArrowPen = MakePen(AboveInk, 2.2), TopArrowPen = MakePen(TopInk, 2.2), LegendEdge = MakePen(Controls.Ui.Frozen("#C8C8C8"), 1);
 
         /// <summary>The case the overlay shows on this level: the one picked if this level has it, else the one designing the most walls.</summary>
         private string LoadsCaseHere()
@@ -116,6 +116,8 @@ namespace ShearWallVisualizer
             var walls = Calculator._wall_system._walls;
             var upper = currentLevel + 1 < stories.Count ? stories[currentLevel + 1] : null;
 
+            ArrowLegend(ctx, above.Count > 0, upper?.Level.Name, dip); // first: the arrows keep off it
+
             double max = above.Select(p => Math.Sqrt(p.Fx * p.Fx + p.Fy * p.Fy)).Concat(totals.Values.Select(Math.Abs)).DefaultIfEmpty(0).Max();
             double Len(double f) => 18 + 52 * Math.Abs(f) / Math.Max(max, 1e-9);
 
@@ -154,6 +156,49 @@ namespace ShearWallVisualizer
             };
             DrawWind(ctx, lc, dip);
             Legend(ctx, lines, dip);
+        }
+
+        /// <summary>
+        /// What the arrow colours mean, in a small box in the plan's clearest corner (the corners past the grid's numbers and
+        /// the scale bar): a short arrow in each colour and a few words.
+        /// </summary>
+        private void ArrowLegend(DrawingContext ctx, bool fromAbove, string upperName, double dip)
+        {
+            if (m_layers == null) return;
+            var rows = new List<(Brush ink, Pen pen, string text)> { (TopInk, TopArrowPen, "Wall top: the floor's push on this level's wall") };
+            if (fromAbove) rows.Add((AboveInk, AboveArrowPen, $"From the wall above ({upperName ?? "level above"}) into this floor"));
+            var fts = rows.Select(r => new FormattedText(r.text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 10.5 * LabelScale, Controls.Ui.Ink, dip)).ToList();
+            const double arrowLen = 26, pad = 6;
+            double rowH = fts.Max(f => f.Height) + 3;
+            var size = new Size(pad + arrowLen + 6 + fts.Max(f => f.Width) + pad, pad + rowH * rows.Count + pad - 3);
+            double W = m_layers.ActualWidth, H = m_layers.ActualHeight;
+            var corners = new[]
+            {
+                new Rect(W - size.Width - 8, 8, size.Width, size.Height),                // top right
+                new Rect(34, 8, size.Width, size.Height),                                // top left, past the grid's numbers
+                new Rect(34, H - size.Height - 20, size.Width, size.Height),             // bottom left, above the grid's numbers
+                new Rect(W - size.Width - 8, H - size.Height - 48, size.Width, size.Height), // bottom right, above the scale bar
+            };
+            var box = corners.FirstOrDefault(r => !labelsTaken.Any(t => Controls.DesignOverlay.Overlaps(t, r)));
+            if (box.Width == 0) box = corners.OrderBy(r => Controls.DesignOverlay.Covered(r, labelsTaken)).First(); // default is a zero box
+            labelsTaken.Add(box);
+            ctx.DrawRoundedRectangle(LabelBack, LegendEdge, box, 3, 3);
+            for (int i = 0; i < rows.Count; i++)
+            {
+                double y = box.Y + pad + rowH * i + rowH / 2 - 1.5;
+                var tail = new Point(box.X + pad, y);
+                var head = new Point(box.X + pad + arrowLen, y);
+                ctx.DrawLine(rows[i].pen, tail, head);
+                var g = new StreamGeometry();
+                using (var o = g.Open())
+                {
+                    o.BeginFigure(head, true, true);
+                    o.PolyLineTo(new[] { new Point(head.X - 9, y - 4.5), new Point(head.X - 9, y + 4.5) }, true, false);
+                }
+                g.Freeze();
+                ctx.DrawGeometry(rows[i].ink, null, g);
+                ctx.DrawText(fts[i], new Point(head.X + 6, y - fts[i].Height / 2));
+            }
         }
 
         private static string Num(double? v, string f = "0.00") => v.HasValue ? v.Value.ToString(f, CultureInfo.CurrentCulture) : "–";
