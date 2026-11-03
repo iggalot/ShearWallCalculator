@@ -82,6 +82,7 @@ namespace ShearWallVisualizer
             var s = Sketch;
             s.DrawOver += (o, e) =>
             {
+                labelsTaken.Clear(); // the overlays keep their labels off each other, this frame
                 if (!foundationView)
                 {
                     DrawBracedWallLines(e.Context);

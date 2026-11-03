@@ -297,16 +297,22 @@ namespace ShearWallVisualizer
                 : string.Join("|", geometry.BuildingLength, geometry.BuildingWidth, geometry.NumberOfStories, string.Join(",", geometry.StoryPlateHeights),
                               geometry.RoofType, geometry.RoofPitch, geometry.RidgeDirection, geometry.OverhangWidth, geometry.ParapetHeight);
             if (key == modelWindKey) return;
+            bool hadNone = modelWindKey == null || modelWindKey.StartsWith("none:", StringComparison.Ordinal);
             modelWindKey = key;
             if (geometry == null)
             {
-                Log.Warning("Wind", "No wind geometry from the model: " + note, null);
+                // an empty building (the start, before a project opens, or nothing drawn above the ground yet) is expected:
+                // a note, not a warning that stays in the status bar after the project's geometry arrives
+                bool empty = building == null || (building.Diaphragms?.Count ?? 0) == 0;
+                if (empty) Log.Info("Wind", "No wind geometry yet: " + note);
+                else Log.Warning("Wind", "No wind geometry from the model: " + note, null);
                 buildingData = null;
                 windLoadCalculator_CC = windLoadCalculator_MWFRS_Length = windLoadCalculator_MWFRS_Width = null;
                 CreateAndAssignResultControls();
                 ApplyLinkedWindLoads();
                 return;
             }
+            if (hadNone) ShowStatusMessage(LogLevel.Info, $"Wind geometry from the model: {geometry.BuildingLength:0.#} × {geometry.BuildingWidth:0.#} ft, {geometry.NumberOfStories} stor{(geometry.NumberOfStories == 1 ? "y" : "ies")}.");
             windSetup.SetModelGeometry(geometry, note);
             buildingData = windSetup.Building.Clone();
             Log.Info("Wind", $"Building from the model: L {geometry.BuildingLength:0.##} ft, B {geometry.BuildingWidth:0.##} ft, {geometry.NumberOfStories} stor{(geometry.NumberOfStories == 1 ? "y" : "ies")} " +

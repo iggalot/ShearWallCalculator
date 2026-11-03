@@ -43,8 +43,9 @@ namespace ShearWallVisualizer.Controls
 
         /// <summary>Draws the overlay. <paramref name="toScreen"/> maps world ft to canvas pixels.</summary>
         public static void Draw(DrawingContext ctx, IEnumerable<KeyValuePair<int, WallData>> walls, IReadOnlyDictionary<int, WallDesignResult> design,
-                                Func<Point, Point> toScreen, Size view, double pixelsPerDip, double labelScale = 1)
+                                Func<Point, Point> toScreen, Size view, double pixelsPerDip, double labelScale = 1, List<Rect> taken = null)
         {
+            taken = taken ?? new List<Rect>();
             scale = labelScale > 0 ? labelScale : 1; // the plan's text size (the sketch's LabelScale)
             if (walls == null || design == null || design.Count == 0) return;
             var schedule = WallSchedule.Build(design);
@@ -78,14 +79,28 @@ namespace ShearWallVisualizer.Controls
                 var tag = Tag(mark, hd, pixelsPerDip);
                 bool vertical = Math.Abs(along.X) < Math.Abs(along.Y);
                 Point mid = a + along / 2;
-                Rect box = TagBox(mid, n, tag.size, vertical);
-                if (!bounds.Contains(box)) box = TagBox(mid, -n, tag.size, vertical);
-                if (!bounds.Contains(box)) continue;
+                // the preferred side, the other side, then slid along the wall both ways: the first spot on the canvas that
+                // touches no tag already drawn (walls close together put their tags on top of each other otherwise)
+                var tries = new List<Rect>();
+                Vector slide = vertical ? new Vector(0, tag.size.Height + 3) : new Vector(tag.size.Width * 0.6, 0);
+                for (int k = 0; k <= 4; k++)
+                    foreach (int sgn in k == 0 ? new[] { 1 } : new[] { 1, -1 })
+                        foreach (var side in new[] { n, -n })
+                        {
+                            var bx = TagBox(mid, side, tag.size, vertical);
+                            bx.Offset(slide * k * sgn);
+                            tries.Add(bx);
+                        }
+                var inView = tries.Where(x => bounds.Contains(x)).ToList();
+                if (inView.Count == 0) continue;
+                Rect box = inView.FirstOrDefault(x => !taken.Any(t => t.IntersectsWith(x)));
+                if (box.IsEmpty) box = inView[0];
                 DrawTag(ctx, box, tag, r.State);
+                taken.Add(box);
                 drawn.Union(box);
             }
 
-            DrawLegend(ctx, schedule, view, drawn, pixelsPerDip);
+            DrawLegend(ctx, schedule, view, drawn, pixelsPerDip, taken);
         }
 
         private static void DrawHoldown(DrawingContext ctx, Point p, bool found)
@@ -150,7 +165,7 @@ namespace ShearWallVisualizer.Controls
         /// The shear wall schedule: mark, sheathing, capacity and walls; then the hold-down symbol. In the canvas corner
         /// that covers the least of the drawing (lower-left first).
         /// </summary>
-        private static void DrawLegend(DrawingContext ctx, List<ScheduleEntry> schedule, Size view, Rect drawn, double dip)
+        private static void DrawLegend(DrawingContext ctx, List<ScheduleEntry> schedule, Size view, Rect drawn, double dip, List<Rect> taken)
         {
             if (schedule.Count == 0) return;
             var lines = new List<(FormattedText mark, FormattedText text)>();
@@ -166,17 +181,19 @@ namespace ShearWallVisualizer.Controls
             var title = Text("SHEAR WALL SCHEDULE", 10, Ui.InkMuted, dip, bold: true);
             var key = Text("hold-down at the post centerline (both ends)", 10, Ui.InkMuted, dip);
             double markW = lines.Max(l => l.mark.Width) + 8;
-            double rowH = 16, pad = 8;
+            // rows as tall as their text (the text size follows the plan's label scale)
+            double rowH = lines.Max(l => Math.Max(l.mark.Height, l.text.Height)) + 1, pad = 8;
             double width = Math.Max(Math.Max(title.Width, key.Width + HoldownSize + 6), markW + lines.Max(l => l.text.Width)) + 2 * pad;
             width = Math.Min(width, Math.Max(120, view.Width - 20));
-            double height = pad + 14 + lines.Count * rowH + 4 + 14 + pad;
+            double height = pad + title.Height + 2 + lines.Count * rowH + 4 + key.Height + pad;
             var box = LegendPlace(new Size(width, height), view, drawn);
+            taken.Add(box);
 
             ctx.PushClip(new RectangleGeometry(box));
             ctx.DrawRoundedRectangle(LegendFill, HairlinePen, box, 4, 4);
             double y = box.Y + pad;
             ctx.DrawText(title, new Point(box.X + pad, y));
-            y += 14;
+            y += title.Height + 2;
             foreach (var (mark, text) in lines)
             {
                 ctx.DrawText(mark, new Point(box.X + pad, y));
@@ -184,21 +201,24 @@ namespace ShearWallVisualizer.Controls
                 y += rowH;
             }
             y += 4;
-            DrawHoldown(ctx, new Point(box.X + pad + HoldownSize / 2, y + 7), true);
+            DrawHoldown(ctx, new Point(box.X + pad + HoldownSize / 2, y + key.Height / 2), true);
             ctx.DrawText(key, new Point(box.X + pad + HoldownSize + 6, y));
             ctx.Pop();
         }
 
-        /// <summary>The canvas corner (10 px in) where the schedule covers the least of <paramref name="drawn"/>; lower-left on a tie.</summary>
+        /// <summary>
+        /// The canvas corner where the schedule covers the least of <paramref name="drawn"/>; lower-left on a tie. Kept in
+        /// from the edges past the plan's grid numbers (left and bottom) and the scale bar (bottom left).
+        /// </summary>
         internal static Rect LegendPlace(Size s, Size view, Rect drawn)
         {
-            const double m = 10;
+            const double m = 10, left = 34, bottom = 40, top = 40;
             var corners = new[]
             {
-                new Rect(m, view.Height - s.Height - m, s.Width, s.Height),                       // lower-left
-                new Rect(m, m, s.Width, s.Height),                                                 // upper-left
+                new Rect(left, view.Height - s.Height - bottom, s.Width, s.Height),                // lower-left
+                new Rect(left, top, s.Width, s.Height),                                            // upper-left (below the level caption)
                 new Rect(view.Width - s.Width - m, m, s.Width, s.Height),                          // upper-right
-                new Rect(view.Width - s.Width - m, view.Height - s.Height - m, s.Width, s.Height), // lower-right
+                new Rect(view.Width - s.Width - m, view.Height - s.Height - bottom, s.Width, s.Height), // lower-right
             };
             if (drawn.IsEmpty) return corners[0];
             double Covered(Rect r)

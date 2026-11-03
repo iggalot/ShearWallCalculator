@@ -738,16 +738,36 @@ namespace ShearWallVisualizer.Controls
         /// <summary>Edge spacing for a Table 4.3A/B face (only the spacings the table has); the row's own spacing for Table 4.3C.</summary>
         private UIElement SpacingCell(SheathingOption o, FaceSheathing f, Action<int> apply, int id)
         {
-            if (o == null) return new TextBlock { Text = "-", Margin = new Thickness(4, 0, 4, 0), VerticalAlignment = VerticalAlignment.Center };
+            if (o == null)
+            {
+                NoNailing(id, $"its face ({f?.Table} {f?.Material} {f?.Thickness}, {f?.Nail}, row {f?.Row}) matches no sheathing option. Pick a sheathing to fix it.");
+                return new TextBlock { Text = "-", Margin = new Thickness(4, 0, 4, 0), VerticalAlignment = VerticalAlignment.Center, ToolTip = "This face matches no sheathing option: pick a sheathing" };
+            }
             if (!o.UsesEdgeSpacing)
+            {
+                NoNailing(id, $"{o.Name} is a Table 4.3C row: its fastener spacing ({o.RowSpacing}) is fixed by the row. Pick a wood panel (Table 4.3A/B) to choose the edge nailing.");
                 return new TextBlock
                 {
-                    Text = string.IsNullOrEmpty(o.RowSpacing) ? "-" : o.RowSpacing.Split(' ', '\n')[0] + (o.RowSpacing.All(ch => char.IsDigit(ch) || ch == '.') ? "\"" : ""),
+                    Text = (string.IsNullOrEmpty(o.RowSpacing) ? "-" : o.RowSpacing.Split(' ', '\n')[0] + (o.RowSpacing.All(ch => char.IsDigit(ch) || ch == '.') ? "\"" : "")) + " fixed",
                     Foreground = InkSecondary, Margin = new Thickness(4, 0, 4, 0), VerticalAlignment = VerticalAlignment.Center,
-                    ToolTip = "Fastener spacing of this Table 4.3C row: " + o.RowSpacing,
+                    ToolTip = $"{o.Name}: a Table 4.3C row, its fastener spacing is set by the row ({o.RowSpacing}), so there is no edge-nailing choice. " +
+                              "Pick a wood panel (Table 4.3A/B) as the sheathing to choose the edge nailing.",
                 };
-            var spacings = ShearWallDesigner.EdgeSpacings.Where(s => !double.IsNaN(o.NominalWind(s))).Select(s => (object)$"{s}\"");
+            }
+            var spacings = ShearWallDesigner.EdgeSpacings.Where(s => !double.IsNaN(o.NominalWind(s))).Select(s => (object)$"{s}\"").ToList();
+            if (spacings.Count == 0) NoNailing(id, $"{o.Name} has no capacity at any edge spacing ({string.Join(", ", ShearWallDesigner.EdgeSpacings)}\").");
             return Combo(spacings, $"{f.EdgeSpacing}\"", v => apply(int.Parse(((string)v).TrimEnd('"'), CultureInfo.InvariantCulture)), id);
+        }
+
+        /// <summary>The walls whose nailing cell has no choice, with why, already logged (logged again only when the reason changes).</summary>
+        private readonly Dictionary<int, string> noNailingLogged = new Dictionary<int, string>();
+
+        /// <summary>Diagnostics: a wall's nailing cell offers no choice; logs why, once per wall and reason.</summary>
+        private void NoNailing(int id, string why)
+        {
+            if (noNailingLogged.TryGetValue(id, out var was) && was == why) return;
+            noNailingLogged[id] = why;
+            BuildingModel.Diagnostics.Log.Info("Design", $"{Story(id)?.Name} wall {id % KeyStride}: no edge-nailing choice: {why}");
         }
 
         private TextBox DeadLoadBox(WallDesignInputs d, int id)

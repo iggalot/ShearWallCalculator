@@ -147,13 +147,32 @@ namespace ShearWallVisualizer
         /// <summary>The plan's text size against the base sizes: the sketch's, so the overlays match the plan's own labels.</summary>
         private double LabelScale => Sketch?.LabelScale ?? 1;
 
-        /// <summary>A label on a light back, top-left at <paramref name="at"/>; <paramref name="above"/>: bottom-left there (it grows upward, off the mark under it).</summary>
+        /// <summary>
+        /// What the overlays have drawn so far this frame (wall tags, the schedule, labels): a label that would land on one
+        /// is moved off it. Cleared at the start of each drawing of the plan.
+        /// </summary>
+        private readonly List<Rect> labelsTaken = new List<Rect>();
+
+        /// <summary>
+        /// A label on a light back, top-left at <paramref name="at"/>; <paramref name="above"/>: bottom-left there (it grows
+        /// upward, off the mark under it). Moved by its own height down or up (the nearest first) when it would cover a tag,
+        /// the schedule or another label.
+        /// </summary>
         private void Label(DrawingContext ctx, string text, Point at, Brush ink, double dip, bool above = false)
         {
             var ft = new FormattedText(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 10.5 * LabelScale, ink, dip);
             if (above) at = new Point(at.X, at.Y - ft.Height);
-            ctx.DrawRectangle(LabelBack, null, new Rect(at.X - 2, at.Y, ft.Width + 4, ft.Height));
-            ctx.DrawText(ft, at);
+            var box = new Rect(at.X - 2, at.Y, ft.Width + 4, ft.Height);
+            double step = ft.Height + 2, dir = above ? -1 : 1;
+            for (int k = 1; k <= 6 && labelsTaken.Any(t => t.IntersectsWith(box)); k++)
+            {
+                double dy = ((k + 1) / 2) * step * (k % 2 == 1 ? dir : -dir); // away from the mark first, then the other way
+                var tryBox = new Rect(at.X - 2, at.Y + dy, ft.Width + 4, ft.Height);
+                if (!labelsTaken.Any(t => t.IntersectsWith(tryBox))) { box = tryBox; break; }
+            }
+            labelsTaken.Add(box);
+            ctx.DrawRectangle(LabelBack, null, box);
+            ctx.DrawText(ft, new Point(box.X + 2, box.Y));
         }
 
         /// <summary>

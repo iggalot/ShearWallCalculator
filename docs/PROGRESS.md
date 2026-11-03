@@ -28,8 +28,18 @@ _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`
   + torsion before −. Each is labelled with its direction first ("SW · Case 4, torsion +267.6 k·ft CCW"), in the Show list
   (with group headers), the Loads ▾ menu (a submenu per direction), the background table and the design table's Case
   columns. The case names stay the keys between levels.
-- **Plan text 1.5× larger** (BuildingModel `SketchCanvas.LabelScale`, one number): the sketch's IDs, lengths and notes and
+- **Plan text 1.2× the original** (1.5 crowded the plan; BuildingModel `SketchCanvas.LabelScale`, one number): the sketch's IDs, lengths and notes and
   this app's overlays (loads, hold-downs, schedule marks and schedule, legend, wind). Labels above a mark grow upward.
+- **Overlaps:** wall-mark tags try the other side and then slide along the wall to clear tags already drawn; the
+  overlay labels (hold-downs, loads, reactions) step off the tags, the schedule and each other. The schedule's rows are as
+  tall as their text, and it keeps clear of the grid numbers and scale bar (lower corners) and the level caption.
+- **Junk, Level 3 W10 has no nailing dropdown:** its face 1 is gypsum wallboard (Table 4.3C row 6, fasteners fixed at 7").
+  Untouched defaults follow a wall on or off the outside edge (the interior default is gypsum on both faces); growing D1
+  to 59 ft did that to W3 and W11 at 17:46:27 with nothing in the log saying why. Now logged: the adapter says when a wall
+  takes or switches to a default and why, and the Design tab logs any wall whose nailing cell has no choice and why (the
+  cell reads "7\" fixed", with the reason on hover).
+- **Start-up status:** "No wind geometry from the model" before the project loads is now a note, not a warning that stays
+  in the status bar; the bar says when the geometry arrives.
 - **Foundation plan:** a column run down to the foundation is drawn there ("C1 base", outlined square) and can be picked.
   The same holds on any level a column stands on.
 

@@ -184,14 +184,43 @@ namespace ShearWallCalculator.ModelAdapter
                     data.Design = design;
                     // an untouched default follows the wall: it moved onto or off the outside edge
                     if (extras.AutoExterior != null && extras.AutoExterior.TryGetValue(level.Id, out bool wasExterior) && wasExterior != b.IsExterior(w))
+                    {
                         data.Design = NewWallDesign(b, w, calc.DesignSettings);
+                        DefaultNote(w, level, b.IsExterior(w), data.Design, switched: true);
+                    }
                 }
-                else data.Design = NewWallDesign(b, w, calc.DesignSettings); // a new wall: the project's exterior or interior default
+                else
+                {
+                    data.Design = NewWallDesign(b, w, calc.DesignSettings); // a new wall: the project's exterior or interior default
+                    DefaultNote(w, level, b.IsExterior(w), data.Design, switched: false);
+                }
                 calc._wall_system._walls[key] = data;
                 map.Walls[key] = w.Id;
             }
             calc._wall_system.Update();
             calc._diaphragm_system.Update();
+        }
+
+        private static readonly HashSet<string> defaultNotes = new HashSet<string>();
+
+        /// <summary>
+        /// Diagnostics: a wall given the exterior or interior default (new, or its untouched default following it on or off the
+        /// outside edge, e.g. when a floor grows past it). Logged once per wall, level and kind: why its sheathing changed
+        /// without being picked, and that the interior default's gypsum has no edge-nailing choice.
+        /// </summary>
+        private static void DefaultNote(Wall w, Level level, bool exterior, WallDesignInputs design, bool switched)
+        {
+            if (!defaultNotes.Add($"{w.Id}|{level.Id}|{exterior}|{switched}")) return;
+            var f1 = design?.EffectiveFace1();
+            var f2 = design?.EffectiveFace2();
+            string face = f1 == null ? "none" : $"{f1.Material} {f1.Thickness}".Replace("SHEATH_MAT_", "").Replace("THICKNESS_", "") +
+                          (f1.Table != SheathingTable.WoodPanels ? $" (Table 4.3C row {f1.Row}: its fastener spacing is fixed, no edge-nailing choice)" : $", edge nailing {f1.EdgeSpacing}\"") +
+                          (f2 != null ? ", both faces" : ", one face");
+            string kind = exterior ? "exterior" : "interior";
+            BuildingModel.Diagnostics.Log.Info("Design", switched
+                ? $"{w.Id} ({level.Name}) is now an {kind} wall ({(exterior ? "it reaches" : "it no longer reaches")} the building's outside edge) and its sheathing was " +
+                  $"still the {(exterior ? "interior" : "exterior")} default, so it follows: now the {kind} default, {face}. Pick a sheathing on the Design tab to keep one."
+                : $"{w.Id} ({level.Name}) starts with the {kind} default: {face}.");
         }
 
         /// <summary>
