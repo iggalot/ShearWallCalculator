@@ -110,6 +110,15 @@ namespace ShearWallVisualizer.Dialogs
             Background = Brushes.White;
             ShowInTaskbar = false;
             ShowActivated = false; // picking a wall on the plan keeps the plan active
+            // Esc closes it and goes back to the calculator (an open drop-down takes its own Esc first: KeyDown bubbles)
+            KeyDown += (s, e) =>
+            {
+                if (e.Key != System.Windows.Input.Key.Escape || e.Handled) return;
+                e.Handled = true;
+                var owner = Owner;
+                Close();
+                owner?.Activate();
+            };
 
             var root = new DockPanel { Margin = new Thickness(14, 10, 14, 12) };
             var head = new DockPanel();

@@ -92,6 +92,15 @@ namespace ShearWallVisualizer
 
             this.KeyDown += MainWindow_KeyDown;
             this.PreviewKeyDown += FileShortcuts; // Ctrl+N, O, S, P
+            // Esc with the construction window open (a pick leaves the plan active): it closes first, before the plan's own
+            // Esc (which clears the selection); an open drop-down or a text box keeps its Esc
+            this.PreviewKeyDown += (s, e) =>
+            {
+                if (e.Key != Key.Escape || Keyboard.Modifiers != ModifierKeys.None || wallBuild == null) return;
+                if (e.OriginalSource is System.Windows.Controls.Primitives.TextBoxBase || (e.OriginalSource is ComboBox cb && cb.IsDropDownOpen)) return;
+                wallBuild.Close();
+                e.Handled = true;
+            };
             this.Closing += MainWindow_Closing; // asks to save unsaved changes
             Log.Written += OnLogWritten;      // warnings and errors show on the status line
             this.TextInput += RouteTypingToCommand;  // typing a number while drawing goes to the Point box
