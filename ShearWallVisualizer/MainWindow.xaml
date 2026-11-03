@@ -258,6 +258,8 @@
                                     ToolTip="One load case on the plan: the shear each wall of the level above puts into this floor (orange) and what the top of each wall here receives (blue). Pick the case with ▾ or on the Calculations tab"/>
                             <Button x:Name="btnLoadsOptions" Style="{StaticResource ViewLevel}" Content="▾" Padding="5,3" MinWidth="0" Click="btnLoadsOptions_Click"
                                     ToolTip="The load case the Loads overlay shows"/>
+                            <Button x:Name="btnReactions" Style="{StaticResource ViewLevel}" Content="Reactions" Tag="on" Click="btnReactions_Click" Visibility="Collapsed"
+                                    ToolTip="The foundation (G): what it takes at each point, +C compression / −T tension, kips ASD; the walls meeting at a point added load case by load case"/>
                             <Button x:Name="btn3D" Style="{StaticResource ViewLevel}" Content="3D" Click="Show3D_Click"
                                     ToolTip="The building in 3D from the model: every level's diaphragm and the walls (shear walls blue); the level shown is stronger"/>
                             <Button x:Name="btnIssues" Style="{StaticResource ViewLevel}" Content="✓" Click="Issues_Click"

@@ -963,3 +963,6 @@ against your printed standard.
   3,999. Column bases add their uplift; their gravity is not calculated (no C). Labels short: "Σ T 6,854  C 6,854";
   caption "max at a point: T … C … lb ASD". Tests: EndForces_ByHand_UpliftAndBearing,
   Foundation_WallsMeetingAtAPoint_AddCaseByCase_UpliftAndBearingSeparately.
+- Foundation reactions are their own overlay (SHOW Reactions, shown on G only, on by default): one label per point,
+  "+6.9k (C) / −6.9k (T)" (+ compression, − tension, kips ASD), below right with a leader; the Design overlay keeps the
+  hold-downs only. A column-only point shows its T only (its gravity is not calculated). Caption in the same format.

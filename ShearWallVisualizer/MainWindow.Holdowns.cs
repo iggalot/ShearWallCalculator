@@ -130,17 +130,8 @@ namespace ShearWallVisualizer
                         return $"{wallId}  {a.Model ?? "no HD"}  {a.TensionAsd:N0}";
                     }
                     var ink = missing ? Controls.Ui.FailInk : list.Any(a => a.Note != null) ? Controls.Ui.CloseInk : LandText;
-                    // what the foundation takes here: every wall and column meeting at the point, added case by case
-                    var key = ShearWallCalculator.Design.FoundationForces.Key(list[0].At);
-                    var fp = foundationPoints.FirstOrDefault(x => ShearWallCalculator.Design.FoundationForces.Key(x.At) == key);
-                    var lines = list.Select(Line).ToList();
-                    if (fp != null)
-                    {
-                        // bearing comes from the walls (their overturning and dead load); a column's gravity load is not calculated here
-                        bool walls = list.Any(a => a.Kind == PathPointKind.WallHoldown);
-                        lines.Add($"Σ T {fp.UpliftAsd:N0}" + (walls ? $"   C {fp.BearingAsd:N0}" : "")); // T uplift, C bearing; a column's gravity is not calculated: no C
-                    }
-                    Label(ctx, string.Join("\n", lines), new Point(p.X + 10, p.Y - 10), ink, dip, above: true, leader: p);
+                    // the hold-downs only; what the foundation takes at the point is its own overlay (SHOW Reactions)
+                    Label(ctx, string.Join("\n", list.Select(Line)), new Point(p.X + 10, p.Y - 10), ink, dip, above: true, leader: p);
                 }
                 return;
             }
@@ -340,7 +331,7 @@ namespace ShearWallVisualizer
             // at one point, the walls meeting there added case by case (not each wall's own worst)
             double up = foundationPoints.Count == 0 ? 0 : foundationPoints.Max(p => p.UpliftAsd);
             double down = foundationPoints.Count == 0 ? 0 : foundationPoints.Max(p => p.BearingAsd);
-            return "Foundation" + (foundationPoints.Count > 0 ? $"  ·  max at a point: T {up:N0}  C {down:N0} lb ASD" : "") +
+            return "Foundation" + (foundationPoints.Count > 0 ? $"  ·  max at a point +{down / 1000:0.0}k (C) / −{up / 1000:0.0}k (T) ASD" : "") +
                    (missing > 0 ? $"  ·  {missing} hold-down{(missing == 1 ? "" : "s")} too weak" : "");
         }
 
@@ -372,6 +363,39 @@ namespace ShearWallVisualizer
             foreach (var p in points.Where(p => p.From.Count > 1))
                 Log.Debug($"Foundation at ({p.At.X:0.##}, {p.At.Y:0.##}): {string.Join(" + ", p.From)}: uplift {p.UpliftAsd:0} lb ({p.UpliftCase}), bearing {p.BearingAsd:0} lb ({p.BearingCase}), case by case");
             return points;
+        }
+
+        /// <summary>SHOW Reactions (the foundation view): what the foundation takes at each point.</summary>
+        private bool showReactions = true;
+
+        private static readonly Brush ReactionInk = Controls.Ui.Frozen("#5B2C83");
+
+        /// <summary>
+        /// The foundation reactions, one short label per point, below right of it with a leader: "+6.8k (C) / −7.6k (T)",
+        /// + compression (bearing, D + 0.6W), − tension (uplift, 0.6D + 0.6W), kips ASD; the walls (and column bases)
+        /// meeting at the point added case by case, each the worst in its own case. A column's gravity is not calculated: T only.
+        /// </summary>
+        private void DrawReactions(DrawingContext ctx)
+        {
+            if (!foundationView || !showReactions || foundationPoints.Count == 0) return;
+            double dip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
+            var wallsAt = new HashSet<(long, long)>(foundationAnchors.Where(a => a.Kind == PathPointKind.WallHoldown)
+                                                                       .Select(a => ShearWallCalculator.Design.FoundationForces.Key(a.At)));
+            foreach (var fp in foundationPoints)
+            {
+                var p = WorldToScreen(fp.At, m_layers);
+                bool walls = fp.From.Any(f => !f.StartsWith("column")) || wallsAt.Contains(ShearWallCalculator.Design.FoundationForces.Key(fp.At));
+                string text = (walls ? $"+{fp.BearingAsd / 1000:0.0}k (C) / " : "") + $"−{fp.UpliftAsd / 1000:0.0}k (T)";
+                Label(ctx, text, new Point(p.X + 10, p.Y + 8), ReactionInk, dip, above: false, leader: p);
+            }
+        }
+
+        private void btnReactions_Click(object sender, RoutedEventArgs e)
+        {
+            showReactions = !showReactions;
+            btnReactions.Tag = showReactions ? "on" : null;
+            Log.Info($"Reactions overlay {(showReactions ? "on" : "off")}.");
+            RedrawDrawing();
         }
 
         /// <summary>FOUNDATION: the ground plan with the first story's hold-down anchors.</summary>
