@@ -917,3 +917,7 @@ against your printed standard.
 - **M3:** a single `BuildingModel` with 3D surfaces and local frames (the zones are already per-surface
   polygons).
 - **M4:** the `Viewport3D` viewer with mouse orbit, pan and zoom, and pressure-colored zones.
+- The workspace loads line names the level: "Level 3: its own X 8.2 k, Y 13.6 k (whole building X 31.4 k, Y 51.9 k)";
+  a lower level adds what its walls take with the levels above (the bottom story: the whole building's base shear). The
+  toolbar says "Wind loads (auto) on this level". Each level's wind is its strip of the building, so the level shown is
+  less than the wind calculator's total; nothing was lost (Level 2's walls: 23.2 + 8.2 = 31.4 k).
