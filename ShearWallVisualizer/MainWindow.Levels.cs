@@ -35,6 +35,20 @@ namespace ShearWallVisualizer
         private string LevelName(int i) => i >= 0 && i < stories.Count ? stories[i].Level.Name : $"Level {i + 2}";
 
         /// <summary>
+        /// The level part of a schedule mark (SW2-1 is mark 1 on the Level 2 plan): the number ending the level's name, so the
+        /// mark says which plan to look on; a level named otherwise gets its initial ("Roof": SWR-1), not its story number,
+        /// which could be another level's name number.
+        /// </summary>
+        private string MarkLevel(int story)
+        {
+            string name = (LevelName(story) ?? "").Trim();
+            var m = System.Text.RegularExpressions.Regex.Match(name, @"(\d+)\s*$");
+            if (m.Success) return m.Groups[1].Value;
+            var initial = name.FirstOrDefault(char.IsLetterOrDigit);
+            return initial != default(char) ? char.ToUpperInvariant(initial).ToString() : (story + 1).ToString();
+        }
+
+        /// <summary>
         /// The loads table beside the workspace buttons, roof first: the wind on each level's strip of the building, what
         /// that level's walls carry (its strip plus every level above), and the foundation's total (the base shear, which
         /// is the wind calculator's building total). The level shown (or the foundation) is highlighted.

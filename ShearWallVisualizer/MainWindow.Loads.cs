@@ -321,7 +321,7 @@ namespace ShearWallVisualizer
             // tab already, so with nothing picked the key stays out of the way
             bool picked = Sketch?.Selection.Count > 0;
             var schedule = picked && showDesign && !foundationView && !InWindWorkspace && designResults != null && designResults.Count > 0
-                ? ShearWallCalculator.Design.WallSchedule.Build(designResults) : new List<ShearWallCalculator.Design.ScheduleEntry>();
+                ? ShearWallCalculator.Design.WallSchedule.Build(designResults, MarkLevel(currentLevel)) : new List<ShearWallCalculator.Design.ScheduleEntry>();
             var loads = InWindWorkspace || !picked ? null : loadsKey;
             string sig = string.Join("\n", schedule.Select(e => $"{e.Mark}|{e.Sheathing}|{e.Capacity}|{string.Join(",", e.WallIds)}"))
                          + "\n#\n" + (loads == null ? "" : string.Join("\n", loads));

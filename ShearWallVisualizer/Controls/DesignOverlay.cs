@@ -44,12 +44,12 @@ namespace ShearWallVisualizer.Controls
         /// <summary>Draws the overlay. <paramref name="toScreen"/> maps world ft to canvas pixels.</summary>
         public static void Draw(DrawingContext ctx, IEnumerable<KeyValuePair<int, WallData>> walls, IReadOnlyDictionary<int, WallDesignResult> design,
                                 Func<Point, Point> toScreen, Size view, double pixelsPerDip, double labelScale = 1, List<Rect> taken = null,
-                                bool schedule = true)
+                                bool schedule = true, string markLevel = null)
         {
             taken = taken ?? new List<Rect>();
             scale = labelScale > 0 ? labelScale : 1; // the plan's text size (the sketch's LabelScale)
             if (walls == null || design == null || design.Count == 0) return;
-            var entries = WallSchedule.Build(design);
+            var entries = WallSchedule.Build(design, markLevel);
             var marks = WallSchedule.MarksByWall(entries);
             var bounds = new Rect(view);
             Rect drawn = Rect.Empty; // screen extent of the walls and their tags, kept clear by the schedule

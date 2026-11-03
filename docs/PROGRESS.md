@@ -941,3 +941,7 @@ against your printed standard.
 - Level notes that are information (an approximation of the method, StoryCascade.InfoMark) show as a blue note,
   "Note (information, not an error): ...", not a yellow warning: the flexible run spreads the walls above over the floor
   as a uniform load plus their torsion, not at each wall.
+- Schedule marks are unique across the project and name their plan: SW{level}-{n}, numbered weakest first on each level
+  (SW2-1 is mark 1 on the Level 2 plan). The level part is the number ending the level's name; a level named otherwise
+  gets its initial (Roof: SWR-1), not its story number, which could be another level's. Test:
+  WallScheduleTests.Schedule_MarksNameTheirLevel_UniqueAcrossTheProject.

@@ -34,8 +34,10 @@ namespace ShearWallCalculator.Design
         /// <summary>
         /// Groups the walls by sheathing construction and numbers the groups SW1, SW2, ... from the weakest (lowest
         /// design capacity of any of its walls) up; ties by name. Walls with no result are left out.
+        /// <paramref name="level"/>: the level the walls are drawn on ("2" for the Level 2 plan); the marks are then
+        /// SW2-1, SW2-2, ..., unique across the project and saying which plan to look on. Null: SW1, SW2, ...
         /// </summary>
-        public static List<ScheduleEntry> Build(IReadOnlyDictionary<int, WallDesignResult> design)
+        public static List<ScheduleEntry> Build(IReadOnlyDictionary<int, WallDesignResult> design, string level = null)
         {
             if (design == null) return new List<ScheduleEntry>();
             var groups = design.Values
@@ -54,7 +56,7 @@ namespace ShearWallCalculator.Design
             int n = 0;
             foreach (var g in groups)
             {
-                var e = new ScheduleEntry { Mark = "SW" + (++n), Sheathing = g.Sheathing, Capacity = g.Capacity };
+                var e = new ScheduleEntry { Mark = string.IsNullOrEmpty(level) ? "SW" + (++n) : $"SW{level}-{++n}", Sheathing = g.Sheathing, Capacity = g.Capacity };
                 e.WallIds.AddRange(g.Ids);
                 list.Add(e);
             }

@@ -38,6 +38,20 @@ namespace ShearWallCalculator.Tests
         }
 
         [TestMethod]
+        public void Schedule_MarksNameTheirLevel_UniqueAcrossTheProject()
+        {
+            var design = new Dictionary<int, WallDesignResult>
+            {
+                [0] = R(0, "Structural I 15/32\", 8d @ 6\"", 392.5),
+                [1] = R(1, "Gyp. wallboard 1/2\", both faces", 200),
+            };
+            // the same constructions on two plans: SW2-1 is mark 1 on the Level 2 plan, SW3-1 on Level 3
+            CollectionAssert.AreEqual(new[] { "SW2-1", "SW2-2" }, WallSchedule.Build(design, "2").Select(e => e.Mark).ToList());
+            CollectionAssert.AreEqual(new[] { "SW3-1", "SW3-2" }, WallSchedule.Build(design, "3").Select(e => e.Mark).ToList());
+            Assert.AreEqual("SW2-2", WallSchedule.MarksByWall(WallSchedule.Build(design, "2"))[0]);
+        }
+
+        [TestMethod]
         public void Schedule_EmptyOrMissing()
         {
             Assert.AreEqual(0, WallSchedule.Build(null).Count);
