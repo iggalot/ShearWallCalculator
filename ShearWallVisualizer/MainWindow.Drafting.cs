@@ -83,6 +83,7 @@ namespace ShearWallVisualizer
             s.DrawOver += (o, e) =>
             {
                 labelsTaken.Clear(); // the overlays keep their labels off each other, this frame
+                if (!foundationView) ReservePlanMarks(); // and off the centers of mass and rigidity and the wall labels
                 if (!foundationView)
                 {
                     DrawBracedWallLines(e.Context);

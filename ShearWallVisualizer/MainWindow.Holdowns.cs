@@ -114,6 +114,8 @@ namespace ShearWallVisualizer
                 var mid = WorldToScreen(new Point((br.Beam.Start.X + br.Beam.End.X) / 2, (br.Beam.Start.Y + br.Beam.End.Y) / 2), m_layers);
                 Label(ctx, $"{br.Beam.Id}: {br.Loads.Count} hold-down{(br.Loads.Count == 1 ? "" : "s")}, R {br.StartAsd / 1000:0.0}k / {br.EndAsd / 1000:0.0}k", new Point(mid.X + 6, mid.Y + 6), BeamInk, dip);
             }
+            // the hold-downs from above at one point (two upper walls meeting at a corner): one label, the loads side by side
+            var atPoint = new Dictionary<(long, long), (Point p, List<string> texts, Brush ink)>();
             foreach (var l in onto)
             {
                 if (l.Kind != PathPointKind.WallHoldown)
@@ -137,10 +139,65 @@ namespace ShearWallVisualizer
                 }
                 tri.Freeze();
                 ctx.DrawGeometry(l.Supported ? LandFill : Controls.Ui.FailFill, l.Supported ? LandEdge : MissingEdge, tri);
-                string text = !l.Supported ? $"↓ {l.TensionAsd / 1000:0.0}k  nothing below: draw a beam (B) or a column (P)"
-                            : l.Support == SupportKind.Wall ? $"↓ {l.TensionAsd / 1000:0.0}k" : $"↓ {l.TensionAsd / 1000:0.0}k on {l.SupportId}";
-                if (l.Note != null) text += $"  · {l.Model ?? "none"} ({HoldownRules.Name(l.Family)} here)";
-                Label(ctx, text, new Point(p.X + 8, p.Y - 10), !l.Supported ? Controls.Ui.FailInk : l.Note != null ? Controls.Ui.CloseInk : LandText, dip, above: true);
+                // "load|what it lands on": loads landing on the same thing at one point are listed once ("↓ 1.0k + 0.6k on column C2")
+                string rest = !l.Supported ? "  nothing below: draw a beam (B) or a column (P)" : l.Support == SupportKind.Wall ? "" : $" on {l.SupportId}";
+                if (l.Note != null) rest += $"  · {l.Model ?? "none"} ({HoldownRules.Name(l.Family)} here)";
+                string text = $"{l.TensionAsd / 1000:0.0}k|{rest}";
+                var ink = !l.Supported ? Controls.Ui.FailInk : l.Note != null ? Controls.Ui.CloseInk : LandText;
+                var k = ((long)Math.Round(l.At.X * 4), (long)Math.Round(l.At.Y * 4)); // within 3 in
+                if (!atPoint.TryGetValue(k, out var g0)) atPoint[k] = (p, new List<string> { text }, ink);
+                else
+                {
+                    g0.texts.Add(text);
+                    atPoint[k] = (g0.p, g0.texts, ReferenceEquals(g0.ink, Controls.Ui.FailInk) || ReferenceEquals(ink, Controls.Ui.FailInk) ? Controls.Ui.FailInk
+                                                 : ReferenceEquals(g0.ink, Controls.Ui.CloseInk) || ReferenceEquals(ink, Controls.Ui.CloseInk) ? Controls.Ui.CloseInk : LandText);
+                }
+            }
+            foreach (var g in atPoint.Values)
+            {
+                var parts = g.texts.Select(t => t.Split('|')).GroupBy(t => t[1]).Select(x => "↓ " + string.Join(" + ", x.Select(t => t[0])) + x.Key);
+                Label(ctx, string.Join("   ", parts), new Point(g.p.X + 8, g.p.Y - 10), g.ink, dip, above: true);
+            }
+        }
+
+        /// <summary>
+        /// Marks the overlays' labels must keep off, drawn later or by the sketch: the center of mass and of rigidity (markers
+        /// and captions) and the sketch's wall labels ("W9  39'", beside a N-S wall, under an E-W wall).
+        /// </summary>
+        private void ReservePlanMarks()
+        {
+            if (Calculator?._wall_system == null) return;
+            double s = LabelScale;
+            void Around(Point world, double w, double h)
+            {
+                if (double.IsNaN(world.X) || double.IsNaN(world.Y)) return;
+                var p = WorldToScreen(world, m_layers);
+                labelsTaken.Add(new Rect(p.X - 14, p.Y - 14, w, h));
+            }
+            Around(Calculator._diaphragm_system?.CtrMass ?? new Point(double.NaN, double.NaN), 60, 30);
+            Around(Calculator._wall_system.CtrRigidity, 60, 30);
+            // the sketch's beam labels (at the middle, below right) and column labels (above right), on this level
+            var lv = Sketch.ActiveLevel;
+            if (building != null && lv != null)
+            {
+                foreach (var bm in building.BeamsOn(lv))
+                {
+                    var m = WorldToScreen(new Point((bm.Start.X + bm.End.X) / 2, (bm.Start.Y + bm.End.Y) / 2), m_layers);
+                    labelsTaken.Add(new Rect(m.X + 2, m.Y + 1, 12 + 8 * s * bm.Id.Length, 15 * s));
+                }
+                foreach (var c in building.ColumnsUnder(lv))
+                {
+                    var p = WorldToScreen(new Point(c.At.X, c.At.Y), m_layers);
+                    double half = Math.Max(4, 0.25 * Sketch.Zoom);
+                    labelsTaken.Add(new Rect(p.X - half - 2, p.Y - half - 4 - 13 * s, half * 2 + 10 + 8 * s * c.Id.Length, half * 2 + 6 + 13 * s));
+                }
+            }
+            foreach (var w in Calculator._wall_system._walls.Values)
+            {
+                var m = WorldToScreen(new Point((w.Start.X + w.End.X) / 2, (w.Start.Y + w.End.Y) / 2), m_layers);
+                labelsTaken.Add(w.WallDir == calculator.WallDirs.NorthSouth
+                    ? new Rect(m.X + 4, m.Y - 7 * s - 2, 58 * s, 15 * s)
+                    : new Rect(m.X - 16, m.Y + 3, 58 * s, 15 * s));
             }
         }
 
@@ -162,6 +219,8 @@ namespace ShearWallVisualizer
         {
             var ft = new FormattedText(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 10.5 * LabelScale, ink, dip);
             if (above) at = new Point(at.X, at.Y - ft.Height);
+            // kept on the canvas: a label by the right edge goes to the left of its point instead of off the plan
+            if (m_layers != null && at.X + ft.Width + 4 > m_layers.ActualWidth) at = new Point(Math.Max(2, m_layers.ActualWidth - ft.Width - 6), at.Y);
             var box = new Rect(at.X - 2, at.Y, ft.Width + 4, ft.Height);
             double step = ft.Height + 2, dir = above ? -1 : 1;
             for (int k = 1; k <= 6 && labelsTaken.Any(t => t.IntersectsWith(box)); k++)

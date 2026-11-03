@@ -46,7 +46,7 @@ namespace ShearWallVisualizer.Controls
         private readonly SortState envelopeSort = new SortState(), caseSort = new SortState(), flexSort = new SortState(), linesSort = new SortState();
 
         private readonly StackPanel top = new StackPanel();
-        private readonly ComboBox cbCase = new ComboBox { Width = 360, Margin = new Thickness(0, 0, 12, 0), MaxDropDownHeight = 640 };
+        private readonly ComboBox cbCase = new ComboBox { Width = 360, Margin = new Thickness(0, 0, 12, 0), MaxDropDownHeight = 640, VerticalAlignment = VerticalAlignment.Center };
 
         /// <summary>The case picked in Show (its listed name), or <see cref="EnvelopeName"/>.</summary>
         private string SelectedName => (cbCase.SelectedItem as ComboBoxItem)?.Tag as string;

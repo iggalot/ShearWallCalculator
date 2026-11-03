@@ -100,8 +100,12 @@ namespace ShearWallVisualizer
             return upper != null && upper.Walls.TryGetValue(k, out var id) ? id : $"wall {k}";
         }
 
+        /// <summary>The wind arrow and its label on screen this frame (the legend keeps off it); empty when none.</summary>
+        private Rect windRect = Rect.Empty;
+
         private void DrawLoads(DrawingContext ctx)
         {
+            windRect = Rect.Empty;
             if (!showLoads || foundationView || Calculator?._wall_system == null) return;
             double dip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
             string name = LoadsCaseHere();
@@ -139,12 +143,11 @@ namespace ShearWallVisualizer
             var lines = new List<string>
             {
                 $"Loads · {CaseLabel(name)}",
-                $"This level's wind:  Vx {Num(lc?.Vx - lc?.AboveVx)} k,  Vy {Num(lc?.Vy - lc?.AboveVy)} k,  Mt {Num(lc?.Mt - lc?.AboveMt, "0.0")} k·ft",
+                $"Own wind   Vx {Num(lc?.Vx - lc?.AboveVx, "0.0")}  Vy {Num(lc?.Vy - lc?.AboveVy, "0.0")} k  Mt {Num(lc?.Mt - lc?.AboveMt, "0")} k·ft",
                 above.Count > 0
-                    ? $"From {upperName} (orange, its walls on this floor):  Vx {Num(lc?.AboveVx)} k,  Vy {Num(lc?.AboveVy)} k,  Mt {Num(lc?.AboveMt, "0.0")} k·ft about the CM"
-                    : $"Nothing from above ({(currentLevel + 1 < stories.Count ? upperName + " has no walls in this case" : "the roof level")}).",
-                $"On the diaphragm:  Vx {Num(lc?.Vx)} k,  Vy {Num(lc?.Vy)} k" + (row?.MtComb != null ? $";  Mt,comb {Num(row.MtComb, "0.0")} k·ft about the CR" : ""),
-                "Blue: what the top of each wall here receives (it passes it down to its base).",
+                    ? $"From {upperName} (orange)   Vx {Num(lc?.AboveVx, "0.0")}  Vy {Num(lc?.AboveVy, "0.0")} k  Mt {Num(lc?.AboveMt, "0")} k·ft"
+                    : $"Nothing from above{(currentLevel + 1 < stories.Count ? "" : " (roof level)")}",
+                $"Diaphragm   Vx {Num(lc?.Vx, "0.0")}  Vy {Num(lc?.Vy, "0.0")} k" + (row?.MtComb != null ? $"   Mt,comb {Num(row.MtComb, "0")} k·ft" : ""),
             };
             DrawWind(ctx, lc, dip);
             Legend(ctx, lines, dip);
@@ -187,6 +190,9 @@ namespace ShearWallVisualizer
                 head = c - sd * (Math.Min(tx, ty) + 28);
             }
             var tail = head - sd * 95;
+            // kept on the canvas (the building may fill the view): slid toward the building until the tail and its label fit
+            var inner = new Rect(40, 40, Math.Max(1, m_layers.ActualWidth - 80), Math.Max(1, m_layers.ActualHeight - 80));
+            for (int k = 0; k < 200 && !inner.Contains(tail); k++) { head += sd * 4; tail += sd * 4; }
             var perp = new Vector(-sd.Y, sd.X);
             ctx.DrawLine(WindPen, tail, head - sd * 14);
             var g = new StreamGeometry();
@@ -200,8 +206,15 @@ namespace ShearWallVisualizer
             var label = new FormattedText($"WIND from {CaseBreakdown.WindFrom(lc)}{(oblique ? " (quartering, on the corner)" : "")}", CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
                                           new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal), 13 * LabelScale, WindInk, dip);
             var at = tail - sd * 8 - new Vector(label.Width / 2, label.Height / 2) + new Vector(-sd.X * label.Width / 2, -sd.Y * label.Height / 2);
+            at = new Point(Math.Max(4, Math.Min(at.X, m_layers.ActualWidth - label.Width - 8)), Math.Max(4, Math.Min(at.Y, m_layers.ActualHeight - label.Height - 4)));
             ctx.DrawRectangle(LabelBack, null, new Rect(at.X - 3, at.Y, label.Width + 6, label.Height));
             ctx.DrawText(label, at);
+            // the legend and the labels keep off the arrow and its label
+            var arrow = new Rect(tail, head);
+            arrow.Inflate(14, 14);
+            labelsTaken.Add(arrow);
+            windRect = Rect.Union(arrow, new Rect(at.X - 3, at.Y, label.Width + 6, label.Height));
+            labelsTaken.Add(new Rect(at.X - 3, at.Y, label.Width + 6, label.Height));
 
             // the case's own torsion (Cases 2 and 4): + is counter-clockwise on the plan
             double mt = lc.Mt - lc.AboveMt;
@@ -268,10 +281,21 @@ namespace ShearWallVisualizer
                                                                  (i == 0 ? 12 : 11) * LabelScale, i == 0 ? Controls.Ui.Ink : Controls.Ui.InkSecondary, dip)).ToList();
             if (texts.Count > 0) texts[0].SetFontWeight(FontWeights.SemiBold);
             double w = texts.Max(t => t.Width) + 16, h = texts.Sum(t => t.Height + 2) + 12;
-            double y = Math.Max(8, m_layers.ActualHeight - h - 12);
-            ctx.DrawRectangle(LabelBack, MakePen(Controls.Ui.Hairline, 1), new Rect(10, y, w, h));
-            double ty = y + 6;
-            foreach (var t in texts) { ctx.DrawText(t, new Point(18, ty)); ty += t.Height + 2; }
+            // the corner that covers the least of what is drawn (the wind arrow, labels, tags, the schedule) and of the building
+            double W = m_layers.ActualWidth, H = m_layers.ActualHeight;
+            var corners = new[]
+            {
+                new Rect(36, H - h - 40, w, h), new Rect(36, 40, w, h), new Rect(W - w - 10, 40, w, h), new Rect(W - w - 10, H - h - 40, w, h),
+            };
+            var bb = Calculator.BoundingBoxWorld;
+            var building = bb.IsEmpty ? Rect.Empty : new Rect(WorldToScreen(bb.TopLeft, m_layers), WorldToScreen(bb.BottomRight, m_layers));
+            double Area(Rect a, Rect b) { var i = Rect.Intersect(a, b); return i.IsEmpty ? 0 : i.Width * i.Height; }
+            // the wind arrow counts most: the legend gives way to it, then to labels, then to the building
+            var box = corners.OrderBy(r => Area(r, windRect) * 100 + labelsTaken.Sum(t => Area(r, t)) * 10 + (building.IsEmpty ? 0 : Area(r, building))).First();
+            labelsTaken.Add(box);
+            ctx.DrawRectangle(LabelBack, MakePen(Controls.Ui.Hairline, 1), box);
+            double ty = box.Y + 6;
+            foreach (var t in texts) { ctx.DrawText(t, new Point(box.X + 8, ty)); ty += t.Height + 2; }
         }
 
     }

@@ -217,7 +217,7 @@ namespace ShearWallVisualizer.Controls
             {
                 new Rect(left, view.Height - s.Height - bottom, s.Width, s.Height),                // lower-left
                 new Rect(left, top, s.Width, s.Height),                                            // upper-left (below the level caption)
-                new Rect(view.Width - s.Width - m, m, s.Width, s.Height),                          // upper-right
+                new Rect(view.Width - s.Width - m, top, s.Width, s.Height),                        // upper-right (below the level caption, which can be wide)
                 new Rect(view.Width - s.Width - m, view.Height - s.Height - bottom, s.Width, s.Height), // lower-right
             };
             if (drawn.IsEmpty) return corners[0];
