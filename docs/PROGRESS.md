@@ -945,3 +945,6 @@ against your printed standard.
   (SW2-1 is mark 1 on the Level 2 plan). The level part is the number ending the level's name; a level named otherwise
   gets its initial (Roof: SWR-1), not its story number, which could be another level's. Test:
   WallScheduleTests.Schedule_MarksNameTheirLevel_UniqueAcrossTheProject.
+- The Design tab has a Mark column (after Wall): each wall's schedule mark, as tagged on the plan (SW2-1). One rule for
+  both: WallSchedule.Build(results, WallSchedule.LevelTag(level name, story)). A mark is a construction several walls
+  share, so it is a column beside Level and Wall, not in their place.

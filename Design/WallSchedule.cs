@@ -63,6 +63,20 @@ namespace ShearWallCalculator.Design
             return list;
         }
 
+        /// <summary>
+        /// The level part of a mark (SW2-1 is mark 1 on the Level 2 plan): the number ending the level's name, so the mark says
+        /// which plan to look on; a level named otherwise gets its initial ("Roof": SWR-1), not its story number, which could
+        /// be another level's name number. <paramref name="story"/> (0 = the first story) only when the name is empty.
+        /// </summary>
+        public static string LevelTag(string levelName, int story)
+        {
+            string name = (levelName ?? "").Trim();
+            var m = System.Text.RegularExpressions.Regex.Match(name, @"(\d+)\s*$");
+            if (m.Success) return m.Groups[1].Value;
+            char initial = name.FirstOrDefault(char.IsLetterOrDigit);
+            return initial != default(char) ? char.ToUpperInvariant(initial).ToString() : (story + 1).ToString();
+        }
+
         /// <summary>The schedule mark of each wall.</summary>
         public static Dictionary<int, string> MarksByWall(IEnumerable<ScheduleEntry> schedule)
         {

@@ -480,6 +480,8 @@ namespace ShearWallVisualizer.Controls
         {
             ("Level", 64, "The floor or roof the wall holds up (its story). Pick one floor in Floors to list only its walls.", 0),
             ("Wall", 50, "Wall number and direction", 0),
+            ("Mark", 54, "The wall's mark in the shear wall schedule, as tagged on the plan: SW2-1 is construction 1 on the Level 2 plan " +
+                         "(walls with the same sheathing and nailing share a mark; numbered weakest first)", 0),
             ("Check", 62, "✓ passes · ▲ passes at 90 % or more of its shear capacity · ✗ fails. The number is the shear ratio (demand / capacity); " +
                           "h/b: the wall is too slender; HD: no hold-down is strong enough. Why it fails is in the Status column.", 0),
             ("L (ft)", 42, "Wall length", 2),
@@ -540,6 +542,8 @@ namespace ShearWallVisualizer.Controls
                 sorter.Header(c, h);
             }
 
+            // the schedule marks, by story: the same as the plan's tags (one rule, WallSchedule)
+            var markOf = stories.ToDictionary(s => s.Index, s => WallSchedule.MarksByWall(WallSchedule.Build(s.Results, WallSchedule.LevelTag(s.Name, s.Index))));
             int row = 1;
             foreach (var id in results.Keys.OrderBy(k => k)) // bottom story first, then by wall number
             {
@@ -567,6 +571,8 @@ namespace ShearWallVisualizer.Controls
                 Cell(row, col, story.Name, id, story.Index == currentStory ? Ink : InkSecondary, bold: story.Index == currentStory);
                 sorter.Key(row, col++, story.Index); // sorts by story, not by name
                 Cell(row, col++, $"{wallId} ({(wall.WallDir == WallDirs.EastWest ? "E-W" : "N-S")})", id);
+                string mark = markOf.TryGetValue(story.Index, out var mk) && mk.TryGetValue(wallId, out var m) ? m : "–";
+                Cell(row, col++, mark, id, bold: true);
                 var badge = new Border
                 {
                     Background = Ui.StateFill(state), CornerRadius = new CornerRadius(4), Margin = new Thickness(3, 3, 3, 3), Padding = new Thickness(5, 1, 5, 1),

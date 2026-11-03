@@ -39,14 +39,7 @@ namespace ShearWallVisualizer
         /// mark says which plan to look on; a level named otherwise gets its initial ("Roof": SWR-1), not its story number,
         /// which could be another level's name number.
         /// </summary>
-        private string MarkLevel(int story)
-        {
-            string name = (LevelName(story) ?? "").Trim();
-            var m = System.Text.RegularExpressions.Regex.Match(name, @"(\d+)\s*$");
-            if (m.Success) return m.Groups[1].Value;
-            var initial = name.FirstOrDefault(char.IsLetterOrDigit);
-            return initial != default(char) ? char.ToUpperInvariant(initial).ToString() : (story + 1).ToString();
-        }
+        private string MarkLevel(int story) => ShearWallCalculator.Design.WallSchedule.LevelTag(LevelName(story), story);
 
         /// <summary>
         /// The loads table beside the workspace buttons, roof first: the wind on each level's strip of the building, what
