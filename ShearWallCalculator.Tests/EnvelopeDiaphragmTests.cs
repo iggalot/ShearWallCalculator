@@ -145,18 +145,18 @@ namespace ShearWallCalculator.Tests
             }
 
             var s = ShearWallAdapter.ToCalculators(b);
-            Assert.IsTrue(s.All(x => x.Calculator is ShearWallCalculator_RigidDiaphragm), "the default (and older projects): rigid");
+            Assert.IsTrue(s.All(x => x.Calculator is ShearWallCalculator_Envelope), "the default: the envelope of rigid and flexible");
             s[0].Calculator.V_x = 7;
-            s[0].Calculator.DesignSettings.Diaphragm = DiaphragmAssumption.Envelope;
+            s[0].Calculator.DesignSettings.Diaphragm = DiaphragmAssumption.Rigid;
             Assert.IsTrue(ShearWallAdapter.StoreDesign(b, s));
 
             var reused = ShearWallAdapter.ToCalculators(b, s.Select(x => x.Calculator).ToList());
-            Assert.IsTrue(reused.All(x => x.Calculator is ShearWallCalculator_Envelope));
+            Assert.IsTrue(reused.All(x => x.Calculator is ShearWallCalculator_RigidDiaphragm));
             Assert.AreEqual(7, reused[0].Calculator.V_x, 1e-12, "the level's load stays");
 
             var reopened = ShearWallAdapter.ToCalculators(ModelFile.Clone(b));
-            Assert.AreEqual(DiaphragmAssumption.Envelope, reopened[0].Calculator.DesignSettings.Diaphragm);
-            Assert.IsTrue(reopened.All(x => x.Calculator is ShearWallCalculator_Envelope));
+            Assert.AreEqual(DiaphragmAssumption.Rigid, reopened[0].Calculator.DesignSettings.Diaphragm, "a project keeps the one it saved");
+            Assert.IsTrue(reopened.All(x => x.Calculator is ShearWallCalculator_RigidDiaphragm));
 
             reopened[0].Calculator.DesignSettings.Diaphragm = DiaphragmAssumption.Flexible;
             ShearWallAdapter.StoreDesign(b, reopened);

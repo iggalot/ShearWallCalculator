@@ -935,3 +935,9 @@ against your printed standard.
   clear of others (it moves as the zoom changes) still shows its point. Leaders are drawn first and the labels over them,
   so no leader crosses text. On the foundation, the anchors at one point share one label (a line each); by the plan's
   right edge a label goes wholly to the left of its own point, not beside the next point.
+- The Diaphragm choice (Envelope / Rigid / Flexible) moved to the top of the Calculations tab, where its results show,
+  with a line saying what it does; the Design tab names the one in use ("Envelope (rigid and flexible) (set on
+  Calculations)"). Envelope is the default for a new project (DesignSettings.Diaphragm); a project keeps the one it saved.
+- Level notes that are information (an approximation of the method, StoryCascade.InfoMark) show as a blue note,
+  "Note (information, not an error): ...", not a yellow warning: the flexible run spreads the walls above over the floor
+  as a uniform load plus their torsion, not at each wall.

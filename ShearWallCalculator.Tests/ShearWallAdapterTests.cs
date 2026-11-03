@@ -113,7 +113,7 @@ namespace ShearWallCalculator.Tests
         public void ExistingCalculators_AreReused()
         {
             var b = Box(out _, out _);
-            var mine = new ShearWallCalculatorBase[] { new ShearWallCalculator_RigidDiaphragm { V_x = 5 } };
+            var mine = new ShearWallCalculatorBase[] { new ShearWallCalculator_Envelope { V_x = 5 } };
             var s = ShearWallAdapter.ToCalculators(b, mine);
             Assert.AreSame(mine[0], s[0].Calculator);
             Assert.AreEqual(5, s[0].Calculator.V_x);

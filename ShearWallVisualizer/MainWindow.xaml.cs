@@ -254,6 +254,14 @@ namespace ShearWallVisualizer
             resultsPanel.WallSelected += id => SelectFromTable("Wall", id);
             resultsPanel.WallDeleteRequested += id => DeleteFromTable("Wall", id);
             resultsPanel.CaseChosen += name => ShowLoadsCase(name, fromPanel: true); // the plan's Loads overlay follows the case shown
+            resultsPanel.DiaphragmChosen += kind =>
+            {
+                // one setting for the project (every level shares the settings object); a model change, so Ctrl+Z undoes it
+                if (Calculator?.DesignSettings == null || Calculator.DesignSettings.Diaphragm == kind) return;
+                Log.Info($"Diaphragm: {Calculator.DesignSettings.Diaphragm} → {kind} (Calculations tab).");
+                foreach (var l in levels) if (l.DesignSettings != null) l.DesignSettings.Diaphragm = kind;
+                UpdateShearWallUI();
+            };
             tabCalculationsTabItem.Content = WithLevelBanner(resultsPanel);
 
             designPanel = new WallDesignPanel();

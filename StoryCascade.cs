@@ -23,6 +23,14 @@ namespace ShearWallCalculator
         /// <summary>Two walls are on the same line when they are this close across it (ft).</summary>
         public const double LineTolerance = 0.25;
 
+        /// <summary>
+        /// Starts a note that is information (an approximation the method makes), not something to fix: shown as a note, not a
+        /// warning. <see cref="IsInfo"/> and <see cref="Text"/> read it.
+        /// </summary>
+        public const string InfoMark = "ⓘ ";
+        public static bool IsInfo(string note) => note != null && note.StartsWith(InfoMark);
+        public static string Text(string note) => IsInfo(note) ? note.Substring(InfoMark.Length) : note;
+
         /// <summary>Calculates every level, top first. <paramref name="levels"/> runs bottom to top. Returns what to check (per level).</summary>
         /// <param name="beamsOn">The beams in the framing on top of story i (under the walls of story i + 1), as segments; null: none.</param>
         /// <param name="nameOf">
@@ -59,7 +67,8 @@ namespace ShearWallCalculator
                     else
                         calc.LoadsFromAbove = Reactions(upper, i + 2);
                     if ((calc is ShearWallCalculator_FlexibleDiaphragm || env != null) && calc.LoadsFromAbove.Count > 0)
-                        notes.Add($"{Cap(Name(i))}{(env != null ? ", flexible run of the envelope" : " is a flexible diaphragm")}: the walls above are spread as a uniform load plus torsion (an approximation).");
+                        notes.Add(InfoMark + $"{Cap(Name(i))}{(env != null ? ", flexible run of the envelope" : " is a flexible diaphragm")}: the forces of the walls above are spread over " +
+                                  "this floor as a uniform load plus their torsion, not applied where each wall stands (an approximation of the flexible method; the rigid run applies them at the walls).");
                     notes.AddRange(Unsupported(upper, calc, i + 2, beamsOn?.Invoke(i), Cap(Name(i + 1)), Name(i)));
                 }
                 calc.PerformCalculations();

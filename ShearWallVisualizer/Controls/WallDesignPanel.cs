@@ -96,13 +96,11 @@ namespace ShearWallVisualizer.Controls
         private readonly RadioButton rbAsd = new RadioButton { Content = "ASD (0.6W)", Margin = new Thickness(0, 0, 12, 0), VerticalAlignment = VerticalAlignment.Center };
         private readonly RadioButton rbLrfd = new RadioButton { Content = "LRFD (1.0W)", Margin = new Thickness(0, 0, 20, 0), VerticalAlignment = VerticalAlignment.Center };
         private readonly ComboBox cbEdition = new ComboBox { Width = 130, Margin = new Thickness(0, 0, 20, 0) };
-        private readonly ComboBox cbDiaphragm = new ComboBox
+        /// <summary>Which diaphragm calculation the wall shears come from: chosen on the Calculations tab, named here.</summary>
+        private readonly TextBlock tbDiaphragm = new TextBlock
         {
-            Width = 190, Margin = new Thickness(0, 0, 20, 0),
-            ToolTip = "How the floor and roof diaphragms share the wind among the shear walls (one choice for the project; you decide which applies).\n" +
-                      "Rigid: by wall rigidity, plus torsion about the center of rigidity.\n" +
-                      "Flexible: each wall line takes its tributary load, plus torsion by equivalent tributary weights.\n" +
-                      "Envelope: both, and each wall is designed for the larger shear.",
+            VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 20, 0), FontWeight = FontWeights.SemiBold,
+            ToolTip = "The wall shears designed here come from this diaphragm calculation. Change it on the Calculations tab.",
         };
         private readonly Button btnAuto = new Button { Content = "Auto-select nailing (all walls)", Padding = new Thickness(10, 3, 10, 3) };
         private readonly Button btnSthd = new Button { Padding = new Thickness(8, 2, 8, 2), Margin = new Thickness(0, 0, 20, 0), VerticalAlignment = VerticalAlignment.Center };
@@ -151,9 +149,6 @@ namespace ShearWallVisualizer.Controls
             rbAsd.Checked += (s, e) => SettingsChanged();
             rbLrfd.Checked += (s, e) => SettingsChanged();
             cbEdition.SelectionChanged += (s, e) => SettingsChanged();
-            foreach (DiaphragmAssumption k in new[] { DiaphragmAssumption.Rigid, DiaphragmAssumption.Flexible, DiaphragmAssumption.Envelope })
-                cbDiaphragm.Items.Add(new ComboBoxItem { Content = DiaphragmAnalysis.Name(k), Tag = k });
-            cbDiaphragm.SelectionChanged += (s, e) => SettingsChanged();
             cbPool.Items.Add("Full catalog");
             cbPool.Items.Add("Standard list");
             cbPool.SelectionChanged += (s, e) => SettingsChanged();
@@ -170,7 +165,7 @@ namespace ShearWallVisualizer.Controls
             bar.Children.Add(Label("Floors:"));
             bar.Children.Add(cbFloors);
             bar.Children.Add(Label("Diaphragm:"));
-            bar.Children.Add(cbDiaphragm);
+            bar.Children.Add(tbDiaphragm);
             bar.Children.Add(Label("Design method:"));
             bar.Children.Add(rbAsd);
             bar.Children.Add(rbLrfd);
@@ -414,7 +409,7 @@ namespace ShearWallVisualizer.Controls
             var settings = calc?.DesignSettings ?? new DesignSettings();
             (settings.Method == DesignMethods.LRFD ? rbLrfd : rbAsd).IsChecked = true;
             cbEdition.SelectedItem = cbEdition.Items.OfType<ComboBoxItem>().First(i => (SdpwsEditions)i.Tag == settings.Edition);
-            cbDiaphragm.SelectedItem = cbDiaphragm.Items.OfType<ComboBoxItem>().First(i => (DiaphragmAssumption)i.Tag == settings.Diaphragm);
+            tbDiaphragm.Text = DiaphragmAnalysis.Name(settings.Diaphragm) + "  (set on Calculations)";
             int listed = designer?.StandardList.Count ?? 0;
             cbPool.Items[1] = $"Standard list ({listed})";
             cbPool.SelectedIndex = settings.HoldownsFromStandardList ? 1 : 0;
@@ -804,7 +799,6 @@ namespace ShearWallVisualizer.Controls
                 calc.DesignSettings = calc.DesignSettings ?? new DesignSettings();
                 calc.DesignSettings.Method = rbLrfd.IsChecked == true ? DesignMethods.LRFD : DesignMethods.ASD;
                 if (cbEdition.SelectedItem is ComboBoxItem item) calc.DesignSettings.Edition = (SdpwsEditions)item.Tag;
-                if (cbDiaphragm.SelectedItem is ComboBoxItem dItem) calc.DesignSettings.Diaphragm = (DiaphragmAssumption)dItem.Tag;
                 calc.DesignSettings.HoldownsFromStandardList = cbPool.SelectedIndex == 1;
             }
             DesignChanged?.Invoke(this, EventArgs.Empty);

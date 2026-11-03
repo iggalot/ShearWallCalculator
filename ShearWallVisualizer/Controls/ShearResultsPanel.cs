@@ -26,6 +26,20 @@ namespace ShearWallVisualizer.Controls
         /// <summary>A load case was picked in Show (its listed name; null: all load cases). The plan's Loads overlay follows it.</summary>
         public event Action<string> CaseChosen;
 
+        /// <summary>Rigid, flexible or envelope was picked (one choice for the project); the host recalculates every level.</summary>
+        public event Action<ShearWallCalculator.Design.DiaphragmAssumption> DiaphragmChosen;
+
+        /// <summary>How the diaphragms share the load among the walls: the project's choice, made here where its results show.</summary>
+        private readonly ComboBox cbDiaphragm = new ComboBox
+        {
+            Width = 210, Margin = new Thickness(0, 0, 12, 0), VerticalAlignment = VerticalAlignment.Center,
+            ToolTip = "How the floor and roof diaphragms share the wind among the shear walls (one choice for the project; you decide which applies).\n" +
+                      "Rigid: by wall rigidity, plus torsion about the center of rigidity.\n" +
+                      "Flexible: each wall line takes its tributary load, plus torsion by equivalent tributary weights.\n" +
+                      "Envelope (the default): both, and each wall is designed for the larger shear; the tables show each run's shear.",
+        };
+        private readonly TextBlock tbDiaphragmNote = new TextBlock { VerticalAlignment = VerticalAlignment.Center, Foreground = Ui.InkSecondary, TextWrapping = TextWrapping.Wrap };
+
         /// <summary>Shows one case (from the plan's Loads menu), without raising <see cref="CaseChosen"/>.</summary>
         public void ChooseCase(string listed)
         {
@@ -81,7 +95,24 @@ namespace ShearWallVisualizer.Controls
                 CaseChosen?.Invoke(n == EnvelopeName ? null : n);
             };
 
+            foreach (ShearWallCalculator.Design.DiaphragmAssumption k in new[] { ShearWallCalculator.Design.DiaphragmAssumption.Envelope, ShearWallCalculator.Design.DiaphragmAssumption.Rigid, ShearWallCalculator.Design.DiaphragmAssumption.Flexible })
+                cbDiaphragm.Items.Add(new ComboBoxItem { Content = DiaphragmAnalysis.Name(k), Tag = k });
+            cbDiaphragm.SelectionChanged += (s, e) =>
+            {
+                if (loading || !(cbDiaphragm.SelectedItem is ComboBoxItem it)) return;
+                DiaphragmChosen?.Invoke((ShearWallCalculator.Design.DiaphragmAssumption)it.Tag);
+            };
+            var dBar = new DockPanel { Margin = new Thickness(0, 0, 0, 8) };
+            var dLabel = new TextBlock { Text = "Diaphragm:", FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) };
+            DockPanel.SetDock(dLabel, Dock.Left);
+            DockPanel.SetDock(cbDiaphragm, Dock.Left);
+            dBar.Children.Add(dLabel);
+            dBar.Children.Add(cbDiaphragm);
+            dBar.Children.Add(tbDiaphragmNote);
+
             var root = new DockPanel { Margin = new Thickness(12, 10, 12, 10) };
+            DockPanel.SetDock(dBar, Dock.Top);
+            root.Children.Add(dBar);
             DockPanel.SetDock(top, Dock.Top);
             DockPanel.SetDock(caseBar, Dock.Top);
             root.Children.Add(top);
@@ -100,6 +131,15 @@ namespace ShearWallVisualizer.Controls
             selectedWall = selectedWallId;
             top.Children.Clear();
             tables.Children.Clear();
+
+            var kind = calc?.DesignSettings?.Diaphragm ?? new ShearWallCalculator.Design.DesignSettings().Diaphragm;
+            loading = true;
+            cbDiaphragm.SelectedItem = cbDiaphragm.Items.OfType<ComboBoxItem>().First(i => (ShearWallCalculator.Design.DiaphragmAssumption)i.Tag == kind);
+            loading = false;
+            tbDiaphragmNote.Text = kind == ShearWallCalculator.Design.DiaphragmAssumption.Envelope
+                ? "Both calculated; each wall is designed for the larger (the Rigid V and Flexible V columns; Show lists both runs' cases)."
+                : kind == ShearWallCalculator.Design.DiaphragmAssumption.Rigid ? "Shared by wall rigidity, plus torsion. Pick Envelope to see the flexible results too."
+                : "Each wall line takes its tributary load, plus torsion. Pick Envelope to see the rigid results too.";
 
             if (!string.IsNullOrEmpty(todo) || calc == null)
             {
@@ -186,8 +226,13 @@ namespace ShearWallVisualizer.Controls
             if (FlexibleRun is ShearWallCalculator_FlexibleDiaphragm flex)
                 foreach (var w in flex.Warnings.Distinct())
                     top.Children.Add(new Border { Margin = new Thickness(0, 8, 0, 0), Child = Ui.Banner(w, warning: true) });
+            // warnings (something to fix or check) in yellow; information (an approximation of the method) as a note
             foreach (var n in Notes ?? new List<string>())
-                top.Children.Add(new Border { Margin = new Thickness(0, 8, 0, 0), Child = Ui.Banner(n, warning: true) });
+                top.Children.Add(new Border
+                {
+                    Margin = new Thickness(0, 8, 0, 0),
+                    Child = Ui.Banner(StoryCascade.IsInfo(n) ? "Note (information, not an error): " + StoryCascade.Text(n) : n, warning: !StoryCascade.IsInfo(n)),
+                });
         }
 
         // ------------------------------------------------------------------ tables

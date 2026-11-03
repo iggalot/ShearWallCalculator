@@ -53,8 +53,8 @@ namespace ShearWallCalculator.Design
     /// <summary>Settings for the whole project.</summary>
     public class DesignSettings
     {
-        /// <summary>Rigid, flexible or the envelope of both (projects saved before this setting: rigid, as they were calculated).</summary>
-        public DiaphragmAssumption Diaphragm { get; set; } = DiaphragmAssumption.Rigid;
+        /// <summary>Rigid, flexible or the envelope of both: the envelope by default (a project keeps the one it saved). Chosen on the Calculations tab.</summary>
+        public DiaphragmAssumption Diaphragm { get; set; } = DiaphragmAssumption.Envelope;
 
         public DesignMethods Method { get; set; } = DesignMethods.ASD;
         public SdpwsEditions Edition { get; set; } = SdpwsEditions.SDPWS_2021;
