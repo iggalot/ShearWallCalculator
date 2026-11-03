@@ -104,7 +104,8 @@ namespace ShearWallVisualizer
         /// <summary>Over the plan: the hold-downs from the story above (a level view), or the foundation anchors (the foundation view).</summary>
         private void DrawLandings(DrawingContext ctx)
         {
-            if (!showDesign) return;
+            // a level plan's beam ends (their reactions and connections) follow SHOW Reactions; the rest, SHOW Design
+            if (!showDesign && (foundationView || !showReactions)) return;
             heldLabels = new List<(Rect, FormattedText)>(); // every leader first, then the labels over them
             try { DrawLandingMarks(ctx); }
             finally { FlushLabels(ctx); }
@@ -139,9 +140,13 @@ namespace ShearWallVisualizer
             }
             if (!landingsOnto.TryGetValue(currentLevel, out var onto)) return;
             var outline = BuildingOutline(); // the labels go outside it, each with an arrow to its point
-            // Everything at one point gets one label: the hold-downs landing there from above ("↓ 1.0k + 0.6k on column C2") and
-            // the beam ends or column bases there with their connection ("BM2 end ↑ 0.4k HRS6"). The beam's own summary is on the
-            // Members tab and its selection card, not on the plan.
+            // Each beam end on its own (SHOW Reactions): its reaction along the beam and its own connection, pointing at that
+            // end; two beams on one column are two connections, never one label
+            if (showReactions) DrawBeamEnds(ctx, onto.Where(l => l.Kind == PathPointKind.BeamEnd).ToList(), outline, dip);
+            if (!showDesign) return;
+            // Everything else at one point gets one label: the hold-downs landing there from above ("↓ 1.0k + 0.6k on column C2")
+            // and the column bases there with their connection. The beam's own summary is on the Members tab and its selection
+            // card, not on the plan.
             var atPoint = new Dictionary<(long, long), (Point p, List<string> downs, List<string> ups, Brush ink)>();
             var cases = new Dictionary<((long, long), string), List<Dictionary<string, double>>>(); // each down load's tension by case
             Brush Worse(Brush a, Brush b) => ReferenceEquals(a, Controls.Ui.FailInk) || ReferenceEquals(b, Controls.Ui.FailInk) ? Controls.Ui.FailInk
@@ -156,9 +161,10 @@ namespace ShearWallVisualizer
             }
             foreach (var l in onto)
             {
+                if (l.Kind == PathPointKind.BeamEnd) continue; // above (DrawBeamEnds)
                 if (l.Kind != PathPointKind.WallHoldown)
                 {
-                    // a beam end or a column base: a new hold-down point, sized for its reaction
+                    // a column base: a new hold-down point, sized for its reaction
                     var q = WorldToScreen(l.At, m_layers);
                     var r = new Rect(q.X - 5, q.Y - 5, 10, 10);
                     ctx.DrawRectangle(l.Supported ? BeamInk : Controls.Ui.FailFill, l.Supported ? LandEdge : MissingEdge, r);
@@ -195,10 +201,88 @@ namespace ShearWallVisualizer
                     rest.StartsWith(" on ") && cases.TryGetValue((kv.Key, rest), out var cl) && cl.Count > 1 && LoadPathTrace.SumByCase(cl) is Dictionary<string, double> sum && sum.Count > 0
                         ? $" (at once {Math.Max(0, sum.Values.Max()) / 1000:0.0}k)" : "";
                 var parts = g.downs.Select(t => t.Split('|')).GroupBy(t => t[1]).Select(x => "↓ " + string.Join(" + ", x.Select(t => t[0])) + Together(x.Key) + x.Key).ToList();
-                parts.AddRange(g.ups.Select(t => t.Split('|')[0])); // "BM2 ↑ 2.7k MSTI26": the column is labelled at the point
+                parts.AddRange(g.ups.Select(t => t.Split('|')[0])); // "C3 ↑ 2.7k DTT2Z": the column is labelled at the point
                 string text = string.Join("   ", parts);
                 if (outline is Rect o) LabelOutside(ctx, text, g.p, o, g.ink, dip);
                 else Label(ctx, text, new Point(g.p.X + 8, g.p.Y - 10), g.ink, dip, above: true, leader: g.p);
+            }
+        }
+
+        /// <summary>
+        /// Each beam end with uplift: its reaction "(2.7k)" along the beam just inside that end, and a small label of its own
+        /// connection ("MSTI26") with an arrow at that end, outside the building when the beam is on its edge. Red: nothing
+        /// under the end, or no connection strong enough; amber: a connection of another type than the wall's.
+        /// </summary>
+        private void DrawBeamEnds(DrawingContext ctx, List<HoldownLanding> ends, Rect? outline, double dip)
+        {
+            var lv = Sketch.ActiveLevel;
+            if (building == null || lv == null || ends.Count == 0) return;
+            var beams = building.BeamsOn(lv).ToList();
+            foreach (var l in ends)
+            {
+                string id = ShearWallCalculator.Drawing.PlanLabels.ShortFrom(l.From);
+                var bm = beams.FirstOrDefault(b => b.Id == id);
+                if (bm == null) continue;
+                bool atStart = (l.From ?? "").EndsWith(" start");
+                Point end = Sketch.ToScreen(atStart ? bm.Start : bm.End), other = Sketch.ToScreen(atStart ? bm.End : bm.Start);
+                if ((other - end).Length < 20) continue;
+                var ink = l.Supported && l.Choice != null ? (l.Note != null ? Controls.Ui.CloseInk : BeamInk) : Controls.Ui.FailInk;
+
+                // the reaction, along the beam just inside its end
+                var rft = new FormattedText($"({l.TensionAsd / 1000:0.0}k)", CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 9.5 * LabelScale, ink, dip);
+                double ang = BuildingModel.Sketch.SketchCanvas.MemberLabelAngle(other - end);
+                var rsize = new Size(rft.Width + 4, rft.Height);
+                var (c, tip) = ShearWallCalculator.Drawing.PlanLabels.BeamEnd(end, other, rsize, 8, ang);
+                var rbox = new Rect(c.X - rsize.Width / 2, c.Y - rsize.Height / 2, rsize.Width, rsize.Height);
+                var turn = new RotateTransform(ang, c.X, c.Y);
+                ctx.PushTransform(turn);
+                ctx.DrawRectangle(LabelBack, null, rbox);
+                ctx.DrawText(rft, new Point(rbox.X + 2, rbox.Y));
+                ctx.Pop();
+                labelsTaken.Add(turn.TransformBounds(rbox));
+
+                // its own connection: a small label, an arrow at this beam's end
+                string conn = !l.Supported ? "nothing under it" : l.Model ?? "none strong enough";
+                var cft = new FormattedText(conn, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 9.5 * LabelScale, ink, dip);
+                var csize = new Size(cft.Width + 4, cft.Height);
+                var u = other - end; u.Normalize();
+                double t = ang * Math.PI / 180;
+                var down = new Vector(-Math.Sin(t), Math.Cos(t));
+                // outside the building first when the beam is on its edge (the reactions are inside)
+                var sides = new[] { down, -down };
+                if (outline is Rect o && o.Contains(end + down * 20) && !o.Contains(end - down * 20)) sides = new[] { -down, down };
+                var tries = new List<Rect>();
+                foreach (double along in new[] { 22.0, 40, 60, 80 })
+                    foreach (var s in sides)
+                    {
+                        double reach = 16 + (Math.Abs(s.X) * csize.Width + Math.Abs(s.Y) * csize.Height) / 2;
+                        var m = end + u * along + s * reach;
+                        tries.Add(new Rect(m.X - csize.Width / 2, m.Y - csize.Height / 2, csize.Width, csize.Height));
+                    }
+                var box = tries.FirstOrDefault(x => !labelsTaken.Any(tk => Controls.DesignOverlay.Overlaps(tk, x)));
+                if (box.Width == 0) box = tries.OrderBy(x => Controls.DesignOverlay.Covered(x, labelsTaken)).First(); // default is a zero box
+                labelsTaken.Add(box);
+                labelReach.Union(box);
+                var from = new Point(Math.Max(box.Left, Math.Min(box.Right, tip.X)), Math.Max(box.Top, Math.Min(box.Bottom, tip.Y)));
+                var d = tip - from;
+                if (d.Length > 6)
+                {
+                    var pen = new Pen(ink, 0.9);
+                    pen.Freeze();
+                    d.Normalize();
+                    ctx.DrawLine(pen, from, tip - d * 4);
+                    var n = new Vector(-d.Y, d.X);
+                    var head = new StreamGeometry();
+                    using (var g = head.Open())
+                    {
+                        g.BeginFigure(tip, true, true);
+                        g.PolyLineTo(new[] { tip - d * 5 + n * 2.5, tip - d * 5 - n * 2.5 }, true, false);
+                    }
+                    head.Freeze();
+                    ctx.DrawGeometry(ink, null, head);
+                }
+                if (heldLabels != null) heldLabels.Add((box, cft));
+                else { ctx.DrawRectangle(LabelBack, null, box); ctx.DrawText(cft, new Point(box.X + 2, box.Y)); }
             }
         }
 
@@ -462,6 +546,7 @@ namespace ShearWallVisualizer
             else
             {
                 if (showDesign) parts.Add("Wall design");
+                if (showReactions && landingsOnto.TryGetValue(currentLevel, out var here) && here.Any(l => l.Kind == PathPointKind.BeamEnd)) parts.Add("Beam reactions");
                 if (showLoads) parts.Add("Wind loads");
             }
             string text = parts.Count == 0 ? "Plan only" : string.Join("  ·  ", parts);
@@ -473,7 +558,7 @@ namespace ShearWallVisualizer
                 : "What the plan shows: the shear wall design (marks, hold-downs) and, when on, one wind load case.";
         }
 
-        /// <summary>SHOW Reactions (the foundation view): what the foundation takes at each point.</summary>
+        /// <summary>SHOW Reactions: on the foundation, what it takes at each point; on a level, each beam end's reaction and connection.</summary>
         private bool showReactions = true;
 
         private static readonly Brush ReactionInk = Controls.Ui.Frozen("#5B2C83");

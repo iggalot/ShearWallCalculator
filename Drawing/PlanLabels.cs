@@ -74,6 +74,23 @@ namespace ShearWallCalculator.Drawing
             return new[] { Near(elbow), elbow, p };
         }
 
+        /// <summary>
+        /// A beam end's reaction label ("(2.7k)"), turned along the beam by <paramref name="angle"/> degrees (the beam's own
+        /// label angle): its middle just inside the end at <paramref name="end"/> (screen), <paramref name="gap"/> px in from
+        /// it, on the side away from the beam's name. Also the point a connection label's arrow ends at: on the beam, just
+        /// inside this end, so two beams meeting at one column each point at their own end.
+        /// </summary>
+        public static (Point center, Point tip) BeamEnd(Point end, Point other, Size text, double gap, double angle)
+        {
+            var u = other - end;
+            if (u.Length < 1e-9) return (end, end);
+            u.Normalize();
+            double t = angle * Math.PI / 180;
+            var up = new Vector(Math.Sin(t), -Math.Cos(t)); // above a level beam, left of an upright one (its name is on the other side)
+            var center = end + u * (gap + text.Width / 2) + up * (text.Height / 2 + 3);
+            return (center, end + u * 6);
+        }
+
         private static double Clamp(double v, double lo, double hi) => hi < lo ? lo : Math.Max(lo, Math.Min(hi, v));
     }
 }

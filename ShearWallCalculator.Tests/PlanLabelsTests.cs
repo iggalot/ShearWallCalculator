@@ -69,6 +69,24 @@ namespace ShearWallCalculator.Tests
         }
 
         [TestMethod]
+        public void BeamEnd_InsideTheEnd_AwayFromTheName_ArrowOnItsOwnBeam()
+        {
+            var text = new Size(30, 12);
+            // a level beam, its start at the left: the reaction above it, 6 px in from the end; the arrow 6 px in
+            var (c, tip) = PlanLabels.BeamEnd(new Point(100, 200), new Point(300, 200), text, 6, 0);
+            Assert.AreEqual(new Point(121, 191), c);
+            Assert.AreEqual(new Point(106, 200), tip);
+            // its other end: in from the right
+            (c, _) = PlanLabels.BeamEnd(new Point(300, 200), new Point(100, 200), text, 6, 0);
+            Assert.AreEqual(new Point(279, 191), c);
+            // two beams meeting at one column (C3: BM4 up from it, BM2 down from it): each arrow on its own beam
+            var (_, tipUp) = PlanLabels.BeamEnd(new Point(500, 300), new Point(500, 100), text, 6, -90);
+            var (_, tipDown) = PlanLabels.BeamEnd(new Point(500, 300), new Point(500, 500), text, 6, -90);
+            Assert.AreEqual(new Point(500, 294), tipUp);
+            Assert.AreEqual(new Point(500, 306), tipDown);
+        }
+
+        [TestMethod]
         public void OutsideSpot_ACorner_GoesAboveOrBelow()
         {
             Assert.AreEqual(new Vector(0, -1), PlanLabels.OutsideSpot(new Point(0, 0), B, S, 16, Wide).outward);

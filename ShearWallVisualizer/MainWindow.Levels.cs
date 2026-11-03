@@ -171,7 +171,12 @@ namespace ShearWallVisualizer
             }
             btnFoundation.Visibility = stories.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
             btnFoundation.Tag = foundationView ? "on" : null;
-            btnReactions.Visibility = foundationView ? Visibility.Visible : Visibility.Collapsed; // the foundation's own overlay
+            // the foundation's reactions, or on a level with beams their end reactions and connections
+            bool beamsHere = !foundationView && building != null && currentLevel >= 0 && currentLevel < stories.Count && building.BeamsOn(stories[currentLevel].Level).Any();
+            btnReactions.Visibility = foundationView || beamsHere ? Visibility.Visible : Visibility.Collapsed;
+            btnReactions.ToolTip = foundationView
+                ? "The foundation (G): what it takes at each point, +C compression / −T tension, kips ASD; the walls meeting at a point added load case by load case"
+                : "Each beam end's uplift reaction, kips ASD, along the beam at that end, and that end's own connection (an arrow at the end it acts on)";
             miCopyFromBelow.IsEnabled = currentLevel > 0 && !foundationView;
             btnFloors.ToolTip = $"FLOORS: {stories.Count} in the model. Floors are added, deleted and given their plate heights in the Building Model editor (the building's geometry is edited only there); this opens it on the project.";
             UpdateLevelBanners();
