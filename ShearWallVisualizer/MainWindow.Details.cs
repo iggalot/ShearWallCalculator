@@ -46,6 +46,16 @@ namespace ShearWallVisualizer
                 wallBuild.UndoRedo += redo => { if (redo) Sketch.Redo(); else Sketch.Undo(); };
                 // a stud size picked there is the wall's, in the building model (every app reads it): an edit through the
                 // sketch, so it is saved, undoable and logged like any other model edit
+                // the loads on the wall's top entered there: the model's too (the gravity load path will write them later)
+                wallBuild.TopLoadChanged += load =>
+                {
+                    var d = wallBuild?.Data;
+                    if (selectedKind != "Wall" || building == null || d?.ModelWallId == null || d.TopLevelId == null) return;
+                    string what = $"{d.Name}: loads on its top D {load.Dead:0.##}, L {load.Live:0.##}, Lr {load.RoofLive:0.##}, S {load.Snow:0.##} plf.";
+                    Dispatcher.BeginInvoke(new Action(() =>
+                        Sketch.Edit(what, b => BuildingModel.Edits.BuildingEdits.SetTopLoad(b, d.ModelWallId, d.TopLevelId, load))),
+                        System.Windows.Threading.DispatcherPriority.Input);
+                };
                 wallBuild.StudSizeChosen += size =>
                 {
                     var d = wallBuild?.Data;
@@ -147,6 +157,15 @@ namespace ShearWallVisualizer
             }
             d.StudSize = size;
             d.StudSpacing = mw != null && top != null ? building.StudSpacingOf(mw, top) : defaults.StudSpacing;
+            // the NDS stud design: the loads on its top, its lumber and deflection limit (the model's), the wind on its studs
+            d.TopLoad = Building.TopLoadOf(mw, top);
+            d.Exterior = mw != null && building.IsExterior(mw);
+            d.StudSpecies = Enum.TryParse(defaults.StudSpecies, out NDS_WoodLibrary.NDS2018.Species sp) ? sp : NDS_WoodLibrary.NDS2018.Species.DouglasFirLarch;
+            d.StudGrade = Enum.TryParse(defaults.StudGrade, out NDS_WoodLibrary.NDS2018.Grade gr) ? gr : NDS_WoodLibrary.NDS2018.Grade.No2;
+            if (!Enum.TryParse(defaults.StudSpecies, out sp) || !Enum.TryParse(defaults.StudGrade, out gr))
+                Log.Warning("Construction", $"The project's stud lumber \"{defaults.StudSpecies} {defaults.StudGrade}\" is not known; designed as DF-L No. 2.", null);
+            d.DeflectionLimit = defaults.WallDeflectionLimit;
+            if (mw != null && d.Exterior) d.StudWind = (len, spacing) => StudWind(mw, len, spacing);
             // what the story above stands on this wall: its hold-downs (and beam ends or column bases) landing on it
             string UpperWall(HoldownLanding x)
             {
@@ -163,6 +182,47 @@ namespace ShearWallVisualizer
                     From = x.Kind == PathPointKind.WallHoldown ? UpperWall(x) : ShearWallCalculator.Drawing.PlanLabels.ShortFrom(x.From),
                 });
             return d;
+        }
+
+        /// <summary>
+        /// The components and cladding wind pressure on a stud of an exterior wall (psf, strength), from the wind model's
+        /// own calculator (ASCE 7 Ch. 30 Part 1, the edition and inputs of the wind loads): p = qh Kd (GCp − (±GCpi)), the
+        /// larger of inward and outward, not less than the 16 psf minimum (30.2.2). GCp is the wall's (Fig. 30.3-1): Zone 5
+        /// where the wall comes within a of a corner of the building, else Zone 4; read at the stud's effective wind area,
+        /// span × the larger of its spacing and a third of the span (26.2). Null with manual loads (no wind model).
+        /// </summary>
+        private (double psf, string note)? StudWind(Wall w, double lengthIn, double spacingIn)
+        {
+            var cc = windLoadCalculator_CC;
+            if (!windLoadsLinked || cc?.extGCpCurve_Wall?.WallCurves_Pos == null || buildingData == null || building == null) return null;
+            try
+            {
+                double span = lengthIn / 12.0, width = Math.Max(spacingIn / 12.0, span / 3.0), area = span * width;
+                double a = EnvelopeLateralLoads.ZoneWidthA(buildingData);
+                var ext = BuildingModel.Edits.BuildingEdits.Extents(building);
+                bool corner = false;
+                if (ext is BuildingModel.Geometry.Rect2 e)
+                {
+                    double lo, hi, min, max;
+                    if (w.Direction == WallDirection.WestEast) { lo = Math.Min(w.Start.X, w.End.X); hi = Math.Max(w.Start.X, w.End.X); min = Math.Min(e.X0, e.X1); max = Math.Max(e.X0, e.X1); }
+                    else { lo = Math.Min(w.Start.Y, w.End.Y); hi = Math.Max(w.Start.Y, w.End.Y); min = Math.Min(e.Y0, e.Y1); max = Math.Max(e.Y0, e.Y1); }
+                    corner = lo < min + a - 1e-6 || hi > max - a + 1e-6;
+                }
+                string zone = corner ? "Zone5" : "Zone4";
+                double qh = cc.CalculateDynamicWindPressure(buildingData.MeanRoofHeight), kd = cc.PressureKd, gcpi = cc.GetGCpi();
+                double pos = cc.extGCpCurve_Wall.WallCurves_Pos[zone].Evaluate(area), neg = cc.extGCpCurve_Wall.WallCurves_Neg[zone].Evaluate(area);
+                double pIn = qh * kd * (pos + gcpi), pOut = Math.Abs(qh * kd * (neg - gcpi));
+                double p = Math.Max(Math.Max(pIn, pOut), WindLoadCalculator_CC.MinimumNetPressure);
+                string note = $"ASCE 7 Fig. 30.3-1 {(corner ? "Zone 5 (within a = " + a.ToString("0.#") + " ft of a corner)" : "Zone 4")}, " +
+                              $"A = {span:0.0} × {width:0.00} = {area:0} sq ft; qh = {qh:0.0} psf, Kd {kd:0.00}, GCp +{pos:0.00} / {neg:0.00}, GCpi ±{gcpi:0.00}: " +
+                              $"inward {pIn:0.0}, outward {pOut:0.0} psf" + (p > Math.Max(pIn, pOut) + 1e-9 ? $", the {WindLoadCalculator_CC.MinimumNetPressure:0} psf minimum (30.2.2)." : ".");
+                return (p, note);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning("Construction", "The wind on the studs could not be found: " + ex.Message, ex);
+                return null;
+            }
         }
 
         /// <summary>The beams and columns of the model, by story (for the load path and the details).</summary>

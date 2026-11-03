@@ -1074,3 +1074,36 @@ Wall framing isn't only a shear-wall matter, so it moved out of the calculator. 
 - Not yet: a defaults page for the stud defaults in the Building Model editor (the editor has no defaults page yet); per-wall spacing in the UI. The model stores spacing and the framing uses it, but there's no picker yet.
 - The builds and tests pass: SWC 219, WoodFraming 22, NDS 2, BuildingModel 145.
 - Checked in the app on lbltest. SW2-11 offers "2x6 (project default, first story)", 2x6 and 2x8; picking 2x8 redraws the wall as 2x8 (logged "SW2-11 (W11): studs 2x8."). Ctrl+Z goes back to the default and Ctrl+Y returns 2x8. SW3-10 offers "2x4 (project default, upper story)" and up. Saving writes `"Framing": {"L2": {"StudSize": "2x8"}}` to the version 5 file, with the stud defaults.
+
+### NDS stud design (walls outside the prescriptive table, e.g. over 10 ft)
+- **NDS_WoodLibrary** (branch dev/nds2018) adds:
+  - Table 4A for DF-L, HF and SPF in No. 2, No. 3 and Stud, with the size factors CF. Stud 8" and wider takes the No. 3 values, per the table's note.
+  - Table 4B for Southern Pine (size-specific values).
+  - Table 1B sections.
+  - CD from Table 2.3.2, with the shortest load in a combination governing (2.3.2.2).
+  - Cr = 1.15 (4.3.9), CP (Eq. 3.7-1, c = 0.8, le/d ≤ 50) and Eq. 3.9-3.
+  - Checked against the AWC 2018 PDFs.
+  - Tests are hand-checked, for example a DF-L No. 2 2x6 at le = 175.5" with CD 1.6 gives CP = 0.18833.
+- **WoodFraming.StudDesign** checks one stud:
+  - Axial load is the wall's top loads (D, L, Lr, S in plf) over the stud spacing.
+  - Bending is from the C&C wind (exterior) or 5 psf (interior, IBC 1607.16), simply supported between the plates. The sheathing braces the weak axis.
+  - Combinations are the 2024 IBC 1605.2 alternative ASD set (Eq. 16-1 to 16-4), each with the variable loads zeroed in turn. CD comes from the shortest load in the combination.
+  - Also checked: bearing on the plates (Fc⊥, Cb = 1), shear, and deflection (IBC Table 1604.3, ℓ/240 by default, wind at 0.42 × C&C per note f; E').
+  - Hand-checked: D + L + 0.6W for D 300, L 400, W 30 psf on a 2x6 gives 0.6876.
+- **The building model** holds each wall's top loads per story (WallTopLoad). The gravity load path will write them later; for now they're entered by hand. It also holds the project's stud species and grade (DF-L No. 2) and the wall deflection limit (240).
+- **Construction window, Pieces**: when the stud table doesn't apply, a "Studs: NDS design" section appears.
+  - It has D / L / Lr / S boxes. A change is saved to the model through the sketch, so it's undoable and logged.
+  - It shows the stud and its reference values, le/d and FcE, the lateral load and where it came from, a table of every combination (CD, P, fc, CP, Fc', fb, Fb', Eq. 3.9-3), the other checks, and the quoted sources.
+  - The subtitle gives the NDS result.
+- **Wind on the studs**: the wind model's own C&C calculator gives p = qh Kd (GCp ∓ GCpi), the larger of inward and outward, at least 16 psf.
+  - GCp is read from Fig. 30.3-1 at the stud's effective area: span × max(spacing, span/3).
+  - Zone 5 is used where the wall comes within a of a building corner, Zone 4 elsewhere.
+  - An exterior wall with manual loads isn't designed; the section says the wind model is needed.
+- Not checked against the printed text:
+  - Ke = 1.0. Table G1 is an image in the PDF.
+  - The effective wind area rule (ASCE 7 26.2) and the Fig. 30.3-1 zone width; the wind library uses the same a as Fig. 28.3-1.
+  - Snow is taken as ASCE 7-22 gives it, with 0.7 S, following the 2024 IBC.
+- Checked in the app on lbltest:
+  - SW2-11 (2x8, interior, D 300 / L 400): D + L + Li governs at 0.16. By hand: Fc' = 1417.5 × 0.483 = 685 psi, Fb' = 1242 psi, fb = 163 psi.
+  - SW2-1 (2x6, exterior): 37.2 psf from Zone 5 (34.2 × 0.85 × (1.10 + 0.18)). With D 300, L 400, S 250 all ten combinations appear and D + L + 0.6W + 0.7S/2 governs at 0.89 (P = 1,050 lb).
+  - Deflection 0.645" ≤ 0.731". Ctrl+Z restores the previous loads.
