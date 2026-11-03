@@ -550,7 +550,7 @@ namespace ShearWallVisualizer.Dialogs
 
         /// <summary>
         /// The studs designed per NDS-2018 3.9.2 (outside the prescriptive table): the loads on the wall's top (entered
-        /// here, saved in the project file's loads), the wind on the studs, each IBC 1605.2 combination, and the other checks.
+        /// here, saved in the project file's loads), the wind on the studs, every ASD combination (ASCE 7-22 2.4 and IBC 1605.2), and the other checks.
         /// </summary>
         private void NdsStudSection(Panel p, WallFraming f)
         {
@@ -616,10 +616,10 @@ namespace ShearWallVisualizer.Dialogs
 
             var rows = d.Combinations.Select(c => new[]
             {
-                c.Name, c.Equation, $"{c.CD:0.00}", $"{c.P:N0}", $"{c.fc:0}", $"{c.CP:0.000}", $"{c.FcPrime:0}", $"{c.fb:0}", $"{c.FbPrime:0}",
+                c.Name, ShortEquations(c.Equation), $"{c.CD:0.00}", $"{c.P:N0}", $"{c.fc:0}", $"{c.CP:0.000}", $"{c.FcPrime:0}", $"{c.fb:0}", $"{c.FbPrime:0}",
                 double.IsInfinity(c.Ratio) ? "fc ≥ FcE" : $"{c.Ratio:0.00}" + (ReferenceEquals(c, g) ? "  ◀" : ""),
             }).ToList();
-            p.Children.Add(Table(new[] { "Combination (IBC 1605.2)", "Eq.", "CD", "P (lb)", "fc", "CP", "Fc'", "fb", "Fb'", "Eq. 3.9-3" }, rows));
+            p.Children.Add(Table(new[] { "Combination (ASD)", "Equations", "CD", "P (lb)", "fc", "CP", "Fc'", "fb", "Fb'", "Eq. 3.9-3" }, rows));
 
             double sh = d.MaxShearRatio;
             var checks = new List<string[]>
@@ -641,6 +641,22 @@ namespace ShearWallVisualizer.Dialogs
             sp.Children.Add(new TextBlock { Text = "NDS-2018 and its Supplement from AWC's PDFs; IBC text from the 2025 California Building Code (2024 IBC). ASCE 7 wind: the wind model's (the same calculator as the wind loads).", TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkMuted, FontSize = 11, Margin = new Thickness(6, 4, 0, 2) });
             src.Content = sp;
             p.Children.Add(src);
+        }
+
+        /// <summary>"ASCE 7-22 2.4 Eq. 1a; ASCE 7-22 2.4 Eq. 3a; IBC Eq. 16-1" → "ASCE 1a, 3a; IBC 16-1".</summary>
+        internal static string ShortEquations(string equations)
+        {
+            var groups = new List<(string label, List<string> eqs)>();
+            foreach (var e in (equations ?? "").Split(new[] { "; " }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                int k = e.LastIndexOf("Eq. ", StringComparison.Ordinal);
+                string label = e.StartsWith("ASCE", StringComparison.Ordinal) ? "ASCE" : e.StartsWith("IBC", StringComparison.Ordinal) ? "IBC" : "";
+                string eq = k >= 0 ? e.Substring(k + 4) : e;
+                var g = groups.FirstOrDefault(x => x.label == label);
+                if (g.eqs == null) groups.Add(g = (label, new List<string>()));
+                g.eqs.Add(eq);
+            }
+            return string.Join("; ", groups.Select(g => (g.label.Length > 0 ? g.label + " " : "") + string.Join(", ", g.eqs)));
         }
 
         /// <summary>What fails, in a few words.</summary>

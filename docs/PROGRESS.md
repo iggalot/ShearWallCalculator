@@ -1113,12 +1113,15 @@ Loads aren't the building model's. Like the wind calculator's "Wind" section, th
 - **LoadManager** (C:\Programming\LoadManager, a new local repo with no remote) references only BuildingModel.Core.
   - LoadSection: the "Loads" section of the project file. For now it holds the wall-top line loads (D, L, Lr, S in plf) by model wall ID and the story's top level ID. SetWallTop is one edit, so it's undoable through the sketch. All zero removes the entry.
   - LoadCombinations.IbcAlternativeAsd(): the 2024 IBC 1605.2 alternative ASD set, Eq. 16-1 to 16-6, with the quoted source. Each equation is expanded with its variable loads zeroed in turn (the CA amendment's wording), without repeats.
-  - A combination another covers term by term is dropped (same loads, same dead factor, no larger variable loads: D + 0.6W/2 under D + 0.6W, D + 0.7S/2 under D + 0.7S). 0.9D + E/1.4 is kept.
+  - No combination is dropped (the user: "do not drop IBC and ASCE7 load combinations. All must be analyzed"). One that several equations give is listed once, with every equation it comes from.
+  - LoadCombinations.Asce7Asd(): ASCE 7-22 2.4, Eq. 1a to 10, with (W or WT), (Lr or 0.7S or R) and Ev/Eh (0.6D − 0.7Ev + 0.7Eh) written out. Asce7Strength(): 2.3, Eq. 1a to 7. Asd(): both ASD sets, the stud design's default.
+  - The ASCE 7-22 equations are as printed in ICC, "Demystifying Loads for Building Officials – 2024 IBC / ASCE 7-22", slides 62–64 (the standard itself is paywalled; not checked against it). That PDF's text was read with a .NET decoder (FlateDecode + ToUnicode CMaps).
+  - The construction window lists every ASD combination with its equations ("ASCE 4a, 6a; IBC 16-1"). SW2-1 shows the same governing D + L + 0.6W + 0.7S/2 at 0.89; ASCE 6a D + 0.75L + 0.75(0.6W) + 0.75(0.7S) gives P = 975 lb, as by hand.
   - Floor and roof area loads, and the gravity load path that turns them into wall-top loads, come next.
 - **BuildingModel**: WallTopLoad, Wall.TopLoads, TopLoadOf and SetTopLoad are removed. The stud lumber and deflection defaults stay.
 - **WoodFraming.StudDesign** takes LineLoad and the LoadManager's combinations (the IBC set by default, or the caller's). Durations follow NDS Table 2.3.2 (StudDesign.Duration); rain isn't in the table and throws. The interior 5 psf is a live load (L), so it goes with L.
 - **SWC** reads and writes the wall-top loads through LoadSection.
-- Tests: LoadManager 6, WoodFraming 30, BuildingModel 146, SWC 219.
+- Tests: LoadManager 9, WoodFraming 31, BuildingModel 146, SWC 219.
 - Checked in the app on a copy of lbltest (lbltwo):
   - SW2-1 with D 300 / L 400 / S 250 gives the same ten combinations, with D + L + 0.6W + 0.7S/2 governing at 0.89.
   - Ctrl+Z and Ctrl+Y step through the edits.
