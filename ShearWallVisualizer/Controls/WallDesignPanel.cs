@@ -905,6 +905,7 @@ namespace ShearWallVisualizer.Controls
                 Title = "STHD foundation conditions", Content = grid, SizeToContent = SizeToContent.WidthAndHeight, ResizeMode = ResizeMode.NoResize,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner, Owner = Window.GetWindow(this), ShowInTaskbar = false,
             };
+            BuildingModel.Sketch.WindowFit.Fit(dlg);
             ok.Click += (s, e) => dlg.DialogResult = true;
             if (dlg.ShowDialog() != true) return;
 

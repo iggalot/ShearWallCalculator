@@ -523,7 +523,7 @@ namespace ShearWallVisualizer
             if (window3D == null)
             {
                 view3D = new Building3DView();
-                window3D = new Window { Title = "Building 3D", Owner = this, Width = 900, Height = 640, WindowStartupLocation = WindowStartupLocation.CenterOwner, Content = view3D };
+                window3D = BuildingModel.Sketch.WindowFit.Fit(new Window { Title = "Building 3D", Owner = this, Width = 900, Height = 640, WindowStartupLocation = WindowStartupLocation.CenterOwner, Content = view3D });
                 window3D.Closed += (s, a) => { window3D = null; view3D = null; };
             }
             Update3D();

@@ -62,6 +62,7 @@ namespace ShearWallVisualizer.Dialogs
             bool onlyCases1And3 = false, bool manualNow = false)
         {
             InitializeComponent();
+            BuildingModel.Sketch.WindowFit.Fit(this); // on a smaller screen: fits, title bar on screen
 
             MagnitudeXBox.Text = initialMagX.ToString("0.##", CultureInfo.CurrentCulture);
             MagnitudeYBox.Text = initialMagY.ToString("0.##", CultureInfo.CurrentCulture);

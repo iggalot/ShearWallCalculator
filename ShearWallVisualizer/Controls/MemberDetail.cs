@@ -355,6 +355,7 @@ namespace ShearWallVisualizer.Controls
             Title = "Detail";
             Width = 760;
             Height = 820;
+            BuildingModel.Sketch.WindowFit.Fit(this); // a smaller screen: fits, title bar on screen
             FontFamily = new FontFamily("Segoe UI");
             FontSize = 12;
             Background = Brushes.White;

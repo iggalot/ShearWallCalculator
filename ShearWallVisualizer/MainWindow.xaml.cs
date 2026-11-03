@@ -87,6 +87,7 @@ namespace ShearWallVisualizer
         public MainWindow()
         {
             InitializeComponent();
+            BuildingModel.Sketch.WindowFit.Fit(this); // on a smaller screen: fits, title bar on screen
             LoadRecentFilesMenu();
 
             this.KeyDown += MainWindow_KeyDown;
@@ -665,7 +666,7 @@ namespace ShearWallVisualizer
         {
             var viewer = new Wind3DViewerControl();
             viewer.SetResults(buildingData, windLoadCalculator_CC, windLoadCalculator_MWFRS_Length, windLoadCalculator_MWFRS_Width);
-            new Window
+            BuildingModel.Sketch.WindowFit.Fit(new Window
             {
                 Title = "3D Wind View",
                 Owner = this,
@@ -673,7 +674,7 @@ namespace ShearWallVisualizer
                 Height = 800,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
                 Content = viewer,
-            }.Show();
+            }).Show();
         }
 
         #endregion

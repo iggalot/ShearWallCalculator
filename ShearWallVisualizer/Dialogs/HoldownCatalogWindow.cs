@@ -51,6 +51,7 @@ namespace ShearWallVisualizer.Dialogs
             Title = "Hold-down catalog";
             Width = 1280;
             Height = 760;
+            BuildingModel.Sketch.WindowFit.Fit(this); // a smaller screen: fits, title bar on screen
             WindowStartupLocation = WindowStartupLocation.CenterOwner;
             Background = Brushes.White;
 
