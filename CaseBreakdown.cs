@@ -89,6 +89,55 @@ namespace ShearWallCalculator
             return ns + ew;
         }
 
+        /// <summary>The directions the wind comes from, in the order the lists go round: W, SW, S, SE, E, NE, N, NW.</summary>
+        public static readonly string[] Directions = { "W", "SW", "S", "SE", "E", "NE", "N", "NW" };
+
+        /// <summary>One case as listed for the designer: its name (the key), its direction group and a label that starts with it.</summary>
+        public sealed class CaseItem
+        {
+            /// <summary>The listed name (<see cref="CaseNames"/>): what the tables and the overlay key on.</summary>
+            public string Name { get; set; }
+            /// <summary>"W", "SW", ... (where the wind comes from); "" for a case with no load.</summary>
+            public string From { get; set; }
+            /// <summary>"SW · Case 4, torsion +267.6 k·ft CCW" (an envelope adds the run).</summary>
+            public string Label { get; set; }
+            public int CaseNumber { get; set; }
+        }
+
+        /// <summary>
+        /// The cases grouped by where the wind comes from (<see cref="Directions"/> order), then by case number, then by the
+        /// torsion (+ before −); each labelled with its direction first, so a case is found by the side it blows on.
+        /// </summary>
+        public static List<CaseItem> Listing(ShearWallCalculatorBase calc)
+        {
+            var items = new List<(CaseItem item, int dir, double mt, int run, int order)>();
+            int order = 0, runIndex = 0;
+            foreach (var (run, tag) in Runs(calc))
+            {
+                var names = run is ShearWallCalculator_RigidDiaphragm r ? r.CaseResults.Select(c => c.Name)
+                          : run is ShearWallCalculator_FlexibleDiaphragm f ? f.CaseResults.Select(c => c.Name) : Enumerable.Empty<string>();
+                var cases = run.CasesToAnalyse().GroupBy(c => c.Name).ToDictionary(g => g.Key, g => g.First());
+                foreach (var name in names)
+                {
+                    cases.TryGetValue(name, out var lc);
+                    string from = WindFrom(lc) ?? "";
+                    var m = System.Text.RegularExpressions.Regex.Match(name, @"^Case (\d+)");
+                    int n = m.Success ? int.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture) : 0;
+                    double mt = lc == null ? 0 : lc.Mt - lc.AboveMt;
+                    string what = m.Success ? $"Case {n}" : name;
+                    if (m.Success && System.Math.Abs(mt) > 1e-6)
+                        what += $", torsion {(mt > 0 ? "+" : "−")}{System.Math.Abs(mt).ToString("0.0", System.Globalization.CultureInfo.CurrentCulture)} k·ft {(mt > 0 ? "CCW" : "CW")}";
+                    if (calc is ShearWallCalculator_Envelope) what += $" ({tag})";
+                    int dir = System.Array.IndexOf(Directions, from);
+                    items.Add((new CaseItem { Name = Listed(calc, name, tag), From = from, Label = (from.Length > 0 ? from + " · " : "") + what, CaseNumber = n },
+                               dir < 0 ? Directions.Length : dir, mt, runIndex, order++));
+                }
+                runIndex++;
+            }
+            return items.OrderBy(x => x.dir).ThenBy(x => x.item.CaseNumber == 0 ? int.MaxValue : x.item.CaseNumber)
+                        .ThenByDescending(x => x.mt).ThenBy(x => x.run).ThenBy(x => x.order).Select(x => x.item).ToList();
+        }
+
         /// <summary>Every wall in every case (wall order, then case order).</summary>
         public static List<WallCaseRow> Rows(ShearWallCalculatorBase calc)
         {

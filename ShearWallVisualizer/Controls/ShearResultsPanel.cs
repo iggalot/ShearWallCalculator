@@ -29,9 +29,10 @@ namespace ShearWallVisualizer.Controls
         /// <summary>Shows one case (from the plan's Loads menu), without raising <see cref="CaseChosen"/>.</summary>
         public void ChooseCase(string listed)
         {
-            if (listed == null || !cbCase.Items.Contains(listed) || Equals(cbCase.SelectedItem, listed)) return;
+            var item = ItemFor(listed);
+            if (item == null || ReferenceEquals(cbCase.SelectedItem, item)) return;
             loading = true;
-            cbCase.SelectedItem = listed;
+            cbCase.SelectedItem = item;
             loading = false;
             BuildTables();
         }
@@ -40,11 +41,18 @@ namespace ShearWallVisualizer.Controls
         private readonly SortState deepSort = new SortState();
         private bool deepOpen;
         private int deepWall = -2; // -2: follow the selected wall; -1: all walls; else the wall
+        private Dictionary<string, string> labels; // listed name → "SW · Case 4, ..." (the background table's case column)
 
         private readonly SortState envelopeSort = new SortState(), caseSort = new SortState(), flexSort = new SortState(), linesSort = new SortState();
 
         private readonly StackPanel top = new StackPanel();
-        private readonly ComboBox cbCase = new ComboBox { Width = 260, Margin = new Thickness(0, 0, 12, 0) };
+        private readonly ComboBox cbCase = new ComboBox { Width = 360, Margin = new Thickness(0, 0, 12, 0), MaxDropDownHeight = 640 };
+
+        /// <summary>The case picked in Show (its listed name), or <see cref="EnvelopeName"/>.</summary>
+        private string SelectedName => (cbCase.SelectedItem as ComboBoxItem)?.Tag as string;
+
+        private ComboBoxItem ItemFor(string name) =>
+            name == null ? null : cbCase.Items.OfType<ComboBoxItem>().FirstOrDefault(i => i.Tag as string == name);
         private readonly TextBlock tbCaseInfo = new TextBlock { VerticalAlignment = VerticalAlignment.Center, Foreground = Ui.InkSecondary, TextWrapping = TextWrapping.Wrap };
         private readonly Grid tables = new Grid();
         private readonly DockPanel caseBar = new DockPanel { Margin = new Thickness(0, 10, 0, 8) };
@@ -69,7 +77,7 @@ namespace ShearWallVisualizer.Controls
             {
                 if (loading) return;
                 BuildTables();
-                string n = cbCase.SelectedItem as string;
+                string n = SelectedName;
                 CaseChosen?.Invoke(n == EnvelopeName ? null : n);
             };
 
@@ -101,19 +109,32 @@ namespace ShearWallVisualizer.Controls
             }
             caseBar.Visibility = Visibility.Visible;
 
+            labels = CaseBreakdown.Listing(calc).ToDictionary(x => x.Name, x => x.Label);
             BuildSummary();
 
-            string keep = cbCase.SelectedItem as string;
+            string keep = SelectedName;
             loading = true;
             cbCase.Items.Clear();
-            cbCase.Items.Add(EnvelopeName);
-            foreach (var name in CaseNames()) cbCase.Items.Add(name);
-            cbCase.SelectedItem = keep != null && cbCase.Items.Contains(keep) ? keep : EnvelopeName;
+            cbCase.Items.Add(new ComboBoxItem { Content = EnvelopeName, Tag = EnvelopeName });
+            // grouped by where the wind comes from (W, SW, S, ...), then by case: each labelled with its direction first
+            foreach (var g in CaseBreakdown.Listing(calc).GroupBy(i => i.From))
+            {
+                cbCase.Items.Add(new ComboBoxItem
+                {
+                    Content = g.Key.Length > 0 ? $"Wind from {g.Key}" : "No load", IsEnabled = false, FontWeight = FontWeights.SemiBold,
+                    Foreground = Ui.InkSecondary, Margin = new Thickness(0, 4, 0, 0),
+                });
+                foreach (var i in g) cbCase.Items.Add(new ComboBoxItem { Content = i.Label, Tag = i.Name, ToolTip = i.Name, Padding = new Thickness(14, 2, 4, 2) });
+            }
+            cbCase.SelectedItem = ItemFor(keep) ?? ItemFor(EnvelopeName);
             loading = false;
             BuildTables();
         }
 
         private const string EnvelopeName = "All load cases (design shear)";
+
+        /// <summary>A case's label ("SW · Case 4, ..."), or the name when it has none.</summary>
+        private string Lab(string name) => name != null && labels != null && labels.TryGetValue(name, out var l) ? l : name ?? "";
 
         private bool Rigid => calc is ShearWallCalculator_RigidDiaphragm;
 
@@ -170,7 +191,7 @@ namespace ShearWallVisualizer.Controls
         {
             tables.Children.Clear();
             tables.RowDefinitions.Clear();
-            string name = cbCase.SelectedItem as string;
+            string name = SelectedName;
             if (name == null || name == EnvelopeName) { Envelope(); return; }
             if (Env != null)
             {
@@ -235,9 +256,9 @@ namespace ShearWallVisualizer.Controls
                 wallTable.Text(r, c++, Ui.Num(w.WallLength), id);
                 wallTable.Text(r, c++, Ui.Num(w.WallRigidity, "0.000"), id);
                 wallTable.Text(r, c++, range == null ? "–" : Ui.Num(range.MaxPositive), id);
-                wallTable.Text(r, c++, range?.MaxPositiveCase ?? "", id, Ui.InkSecondary, right: false, tip: range?.MaxPositiveCase);
+                wallTable.Text(r, c++, Lab(range?.MaxPositiveCase), id, Ui.InkSecondary, right: false, tip: range?.MaxPositiveCase);
                 wallTable.Text(r, c++, range == null ? "–" : Ui.Num(range.MaxNegative), id);
-                wallTable.Text(r, c++, range?.MaxNegativeCase ?? "", id, Ui.InkSecondary, right: false, tip: range?.MaxNegativeCase);
+                wallTable.Text(r, c++, Lab(range?.MaxNegativeCase), id, Ui.InkSecondary, right: false, tip: range?.MaxNegativeCase);
                 if (env != null)
                 {
                     string Run(ShearWallCalculatorBase run) => run.WallShearRange.TryGetValue(id, out var x) ? Ui.Num(x.Design) : "–";
@@ -246,7 +267,7 @@ namespace ShearWallVisualizer.Controls
                     wallTable.Text(r, c++, Run(env.Flexible), id, bold: !rigidGoverns && g != null);
                 }
                 wallTable.Text(r, c++, range == null ? "–" : Ui.Num(range.Design), id, bold: true,
-                    tip: range == null ? null : "Governing case: " + range.DesignCase);
+                    tip: range == null ? null : "Governing case: " + Lab(range.DesignCase));
                 AddDelete(wallTable, r, c, id);
             }
             // the design table at its own height (scrolling past 360 px), the background under it taking the rest when opened
@@ -263,7 +284,11 @@ namespace ShearWallVisualizer.Controls
         /// </summary>
         private Expander BackgroundCalcs()
         {
-            var rows = CaseBreakdown.Rows(calc);
+            // each wall's cases in the list order (by wind direction, then case), labelled with the direction first
+            var listing = CaseBreakdown.Listing(calc);
+            var at = listing.Select((x, i) => (x.Name, i)).ToDictionary(x => x.Name, x => x.i);
+
+            var rows = CaseBreakdown.Rows(calc).OrderBy(r => r.Wall).ThenBy(r => at.TryGetValue(r.Case, out var k) ? k : int.MaxValue).ToList();
             var wallIds = rows.Select(r => r.Wall).Distinct().OrderBy(i => i).ToList();
             int shown = deepWall == -2 ? (wallIds.Contains(selectedWall) ? selectedWall : -1) : deepWall;
             int nCases = rows.Select(r => r.Case).Distinct().Count();
@@ -332,7 +357,7 @@ namespace ShearWallVisualizer.Controls
                 int c = 0;
                 Brush ink = r.Governs ? Ui.Ink : Ui.InkSecondary;
                 t.Text(row, c++, r.Wall.ToString(), key, bold: true, right: false);
-                t.Text(row, c++, r.Case, key, ink, bold: r.Governs, right: false, tip: r.Case);
+                t.Text(row, c++, labels != null && labels.TryGetValue(r.Case, out var lab) ? lab : r.Case, key, ink, bold: r.Governs, right: false, tip: r.Case);
                 foreach (double v in new[] { r.OwnVx, r.OwnVy, r.OwnMt, r.AboveVx, r.AboveVy, r.AboveMt }) t.Text(row, c++, Ui.Num(v), key, ink);
                 t.Text(row, c++, r.EccX.HasValue ? Ui.Num(r.EccX.Value) : "–", key, ink);
                 t.Text(row, c++, r.EccY.HasValue ? Ui.Num(r.EccY.Value) : "–", key, ink);

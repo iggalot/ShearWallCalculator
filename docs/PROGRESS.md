@@ -24,6 +24,10 @@ _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`
     45° onto the windward corner ("WIND from SW";
     +x is from the west, +y from the south, `CaseBreakdown.WindFrom`), and for Cases 2 and 4 a curl at the center with
     the case torsion (CCW for + Mt).
+- **Cases listed by wind direction** (`CaseBreakdown.Listing`): grouped W, SW, S, SE, E, NE, N, NW, then by case number,
+  + torsion before −. Each is labelled with its direction first ("SW · Case 4, torsion +267.6 k·ft CCW"), in the Show list
+  (with group headers), the Loads ▾ menu (a submenu per direction), the background table and the design table's Case
+  columns. The case names stay the keys between levels.
 - **Foundation plan:** a column run down to the foundation is drawn there ("C1 base", outlined square) and can be picked.
   The same holds on any level a column stands on.
 

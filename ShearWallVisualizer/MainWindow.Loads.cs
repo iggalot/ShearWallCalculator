@@ -50,16 +50,31 @@ namespace ShearWallVisualizer
         {
             var menu = new ContextMenu { PlacementTarget = (UIElement)sender, Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom, MaxHeight = 600 };
             string now = LoadsCaseHere();
-            var names = CaseBreakdown.CaseNames(Calculator);
-            if (names.Count == 0) menu.Items.Add(new MenuItem { Header = "No load cases calculated on this level", IsEnabled = false });
-            foreach (var n in names)
+            var listing = CaseBreakdown.Listing(Calculator);
+            if (listing.Count == 0) menu.Items.Add(new MenuItem { Header = "No load cases calculated on this level", IsEnabled = false });
+            // one submenu per wind direction (W, SW, S, ...), its cases inside: a case is found by the side the wind is on
+            foreach (var g in listing.GroupBy(i => i.From))
             {
-                var mi = new MenuItem { Header = n, IsCheckable = true, IsChecked = n == now };
-                mi.Click += (s, a) => ShowLoadsCase(n, fromPanel: false);
-                menu.Items.Add(mi);
+                bool here = g.Any(i => i.Name == now);
+                var sub = new MenuItem
+                {
+                    Header = (g.Key.Length > 0 ? $"Wind from {g.Key}" : "No load") + $"   ({g.Count()})",
+                    FontWeight = here ? FontWeights.SemiBold : FontWeights.Normal,
+                };
+                foreach (var i in g)
+                {
+                    var mi = new MenuItem { Header = i.Label, IsCheckable = true, IsChecked = i.Name == now, ToolTip = i.Name, FontWeight = FontWeights.Normal };
+                    string name = i.Name;
+                    mi.Click += (s, a) => ShowLoadsCase(name, fromPanel: false);
+                    sub.Items.Add(mi);
+                }
+                menu.Items.Add(sub);
             }
             menu.IsOpen = true;
         }
+
+        /// <summary>The case's label on this level ("SW · Case 4, torsion ..."), or its name.</summary>
+        private string CaseLabel(string name) => CaseBreakdown.Listing(Calculator).FirstOrDefault(i => i.Name == name)?.Label ?? name;
 
         /// <summary>Shows a case on the plan (from the ▾ menu, or the case picked on the Calculations tab).</summary>
         private void ShowLoadsCase(string listed, bool fromPanel)
@@ -72,7 +87,7 @@ namespace ShearWallVisualizer
                 btnLoads.Tag = "on";
                 resultsPanel?.ChooseCase(listed);
             }
-            Log.Info("Loads", $"Loads overlay: {listed} on {LevelName(currentLevel)}.");
+            Log.Info("Loads", $"Loads overlay: {CaseLabel(listed)} on {LevelName(currentLevel)} ({listed}).");
             if (showLoads) RedrawDrawing();
         }
 
@@ -123,7 +138,7 @@ namespace ShearWallVisualizer
             string upperName = currentLevel + 1 < stories.Count ? stories[currentLevel + 1].Level.Name : "the level above";
             var lines = new List<string>
             {
-                $"Loads · {name}" + (CaseBreakdown.WindFrom(lc) is string from ? $"  ·  wind from {from}" : ""),
+                $"Loads · {CaseLabel(name)}",
                 $"This level's wind:  Vx {Num(lc?.Vx - lc?.AboveVx)} k,  Vy {Num(lc?.Vy - lc?.AboveVy)} k,  Mt {Num(lc?.Mt - lc?.AboveMt, "0.0")} k·ft",
                 above.Count > 0
                     ? $"From {upperName} (orange, its walls on this floor):  Vx {Num(lc?.AboveVx)} k,  Vy {Num(lc?.AboveVy)} k,  Mt {Num(lc?.AboveMt, "0.0")} k·ft about the CM"

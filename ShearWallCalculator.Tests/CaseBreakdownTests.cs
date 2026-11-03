@@ -92,6 +92,33 @@ namespace ShearWallCalculator.Tests
             Assert.IsNull(CaseBreakdown.Case(floor, "nope"));
         }
 
+        /// <summary>The list goes round from the west, then by case number, then + torsion before −; each label starts with the direction.</summary>
+        [TestMethod]
+        public void Listing_ByDirectionThenCase()
+        {
+            var calc = new ShearWallCalculator_RigidDiaphragm();
+            calc._diaphragm_system.AddDiaphragm(new DiaphragmData_Rectangular(new Point(0, 0), new Point(40, 30)));
+            foreach (var w in Box) calc._wall_system.AddWall(new WallData(9, w.Item1, w.Item2, w.Item3, w.Item4));
+            calc.SetLoadCases(new[]
+            {
+                new LateralLoadCase("Case 1, along length, + wind", 10, 0), new LateralLoadCase("Case 1, along length, - wind", -10, 0),
+                new LateralLoadCase("Case 1, along width, + wind", 0, 8),
+                new LateralLoadCase("Case 2, along length, + wind, - torsion", 7.5, 0, -40), new LateralLoadCase("Case 2, along length, + wind, + torsion", 7.5, 0, 40),
+                new LateralLoadCase("Case 3, both directions (+ length, + width)", 7.5, 6),
+                new LateralLoadCase("Case 4, both directions (- length, + width), torsion ++", -5.6, 4.5, 30),
+            });
+            calc.PerformCalculations();
+            var list = CaseBreakdown.Listing(calc);
+            CollectionAssert.AreEqual(new[] { "W", "W", "W", "SW", "S", "SE", "E" }, list.Select(i => i.From).ToArray());
+            CollectionAssert.AreEqual(new[]
+            {
+                "W · Case 1", "W · Case 2, torsion +40.0 k·ft CCW", "W · Case 2, torsion −40.0 k·ft CW", "SW · Case 3", "S · Case 1",
+                "SE · Case 4, torsion +30.0 k·ft CCW", "E · Case 1",
+            }, list.Select(i => i.Label).ToArray());
+            Assert.AreEqual("Case 2, along length, + wind, + torsion", list[1].Name, "the name stays the key");
+            Assert.AreEqual(7, CaseBreakdown.CaseNames(calc).Count);
+        }
+
         /// <summary>+x is wind from the west, +y from the south; the own wind decides, not what comes from above.</summary>
         [TestMethod]
         public void WindFrom_TheCaseDirection()
