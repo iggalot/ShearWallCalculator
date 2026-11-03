@@ -400,9 +400,7 @@ namespace ShearWallVisualizer
             LogIssues(list); // what the user is warned about, and where
             Sketch.Issues = list;
             int errors = list.Count(i => i.Severity == Severity.Error), warnings = list.Count - errors;
-            btnIssues.Content = errors > 0 ? $"✗ {errors}" + (warnings > 0 ? $"  ⚠ {warnings}" : "") : warnings > 0 ? $"⚠ {warnings}" : "✓";
-            btnIssues.Foreground = errors > 0 ? StatusErrorInk : warnings > 0 ? StatusWarnInk : Controls.Ui.PassInk;
-            btnIssues.ToolTip = list.Count == 0 ? "No errors or warnings in the model or the design." : $"{errors} errors, {warnings} warnings: click for the list (click one to find it on the plan).";
+            ShowIssueState(errors, warnings);
 
             // the Design tab lists what stops or bends the design, each going to its element on the plan: model errors and the
             // load path (hold-downs with nothing under them, a replaced type, beams and columns not connected). Failing walls are
@@ -413,6 +411,35 @@ namespace ShearWallVisualizer
             {
                 Text = i.Message, IsError = i.Severity == Severity.Error, LinkText = "Show on the plan", Go = () => GoToIssue(i),
             }).ToList(), () => { rbWorkspaceWalls.IsChecked = true; ShowIssueList(btnIssues); });
+        }
+
+        // The issues button in the top bar, on every workspace and tab: solid red with errors (it flashes when there are
+        // more than before), solid amber with warnings only, green when clear.
+        private static readonly Brush IssueErrorFill = Controls.Ui.Frozen("#C62828"), IssueWarnFill = Controls.Ui.Frozen("#F2B233"), IssueWarnInk = Controls.Ui.Frozen("#3D2A00"),
+                                      IssueOkFill = Controls.Ui.Frozen("#E6F4EA"), IssueOkInk = Controls.Ui.Frozen("#1E7B34");
+        private int shownErrors;
+
+
+        private void ShowIssueState(int errors, int warnings)
+        {
+            string E(int n) => n == 1 ? "1 error" : $"{n} errors";
+            string W(int n) => n == 1 ? "1 warning" : $"{n} warnings";
+            btnIssues.Content = errors > 0 ? "✗ " + E(errors) + (warnings > 0 ? "  ·  ⚠ " + W(warnings) : "")
+                              : warnings > 0 ? "⚠ " + W(warnings) : "✓ No issues";
+            btnIssues.Background = errors > 0 ? IssueErrorFill : warnings > 0 ? IssueWarnFill : IssueOkFill;
+            btnIssues.BorderBrush = errors > 0 ? IssueErrorFill : warnings > 0 ? IssueWarnFill : IssueOkInk;
+            btnIssues.Foreground = errors > 0 ? Brushes.White : warnings > 0 ? IssueWarnInk : IssueOkInk;
+            btnIssues.ToolTip = errors + warnings == 0 ? "No errors or warnings in the model or the design."
+                              : $"{E(errors)}, {W(warnings)} in the model and the design: click for the list (click one to find it on the plan).";
+            if (errors > shownErrors)
+            {
+                // a few flashes to catch the eye, then it stays solid red
+                var flash = new System.Windows.Media.Animation.DoubleAnimation(1, 0.25, TimeSpan.FromMilliseconds(350))
+                { AutoReverse = true, RepeatBehavior = new System.Windows.Media.Animation.RepeatBehavior(4) };
+                btnIssues.BeginAnimation(OpacityProperty, flash);
+                Log.Info("Issues", $"{E(errors)} now (was {shownErrors}), {W(warnings)}: the issues button flashes.");
+            }
+            shownErrors = errors;
         }
 
         /// <summary>The warnings that matter to the design (besides every error).</summary>
@@ -463,8 +490,16 @@ namespace ShearWallVisualizer
 
         private void ShowIssueList(UIElement target)
         {
+            // its own ink: a popup inherits from its placement target, and the button's text is white on red
             var list = new IssueList(Sketch) { Width = 420, MaxHeight = 360, Margin = new Thickness(8) };
+            System.Windows.Documents.TextElement.SetForeground(list, Controls.Ui.Ink);
             list.Show(issues);
+            // from any workspace: a row goes to the plan, so show it first (the Shear walls workspace, the PLAN side open)
+            list.PreviewMouseLeftButtonUp += (s, a) =>
+            {
+                rbWorkspaceWalls.IsChecked = true;
+                if (!planOpen) { planOpen = true; ApplyPanels(); }
+            };
             var popup = new Popup
             {
                 PlacementTarget = target,
@@ -473,6 +508,7 @@ namespace ShearWallVisualizer
                 AllowsTransparency = true,
                 Child = new Border { Background = Brushes.White, BorderBrush = new SolidColorBrush(Color.FromRgb(0xC3, 0xC2, 0xB7)), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(4), Child = list },
             };
+            list.Picked += (s, i) => { popup.IsOpen = false; Log.Info("Issues", $"Picked from the list: {i.Code} {string.Join(", ", i.Ids)} (zoomed to it on the plan)"); };
             popup.IsOpen = true;
         }
 

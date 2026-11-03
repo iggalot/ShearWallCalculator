@@ -990,3 +990,8 @@ against your printed standard.
 - With a building model, Wind Setup page 2 shows the model's geometry (size, floors and plate heights, roof, eave overhang, parapet) as a read-out under "From the building model", with Edit building…. The locked input boxes and roof buttons are gone. The wind's own inputs (parapet envelope, cladding components) stay editable.
 - The Building 3D view (the 3D button) draws the roof: gable or hip from the roof plan, widened by the eaves, up to the ridge height, or a flat roof's parapet. Its fit frames the whole building whatever the window's shape. Tests by hand: a 40 × 20 ft plan at 45° gives a ridge at 20 + 10 = 30 ft (BuildingModel.Sketch).
 - Wind Setup page 2 shows that same 3D view of the building model (WindSetupControl.BuildingPreview). The wind library's plain building view stays as the fallback when there is no model.
+
+### Issues button on every workspace; wall tags along their walls
+- The issues button sits in the top bar, so it shows on both workspaces and every tab. Solid red "✗ n errors" when there are errors (it flashes a few times when the count goes up), amber "⚠ n warnings" with warnings only, green "✓ No issues" when clear. The list popup has its own dark text (a popup inherits the button's white).
+- Clicking an issue in the list goes to it from anywhere: Shear walls workspace, PLAN opened, its level shown, the members selected (the selection card shows why they fail), and the view zoomed to frame them at least 25 ft across. The popup closes. SketchCanvas.ShowIssue / IssueBounds, IssueList.Picked (BuildingModel.Sketch, tests in IssueZoomTests).
+- Design tags (SW2-1 | HDU…) on N-S walls are turned 90° to run along the wall, read from the right; E-W walls are unchanged (DesignOverlay).

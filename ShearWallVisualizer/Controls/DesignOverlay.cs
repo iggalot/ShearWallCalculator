@@ -83,7 +83,7 @@ namespace ShearWallVisualizer.Controls
                 // the preferred side, the other side, then slid along the wall both ways: the first spot on the canvas that
                 // touches no tag already drawn (walls close together put their tags on top of each other otherwise)
                 var tries = new List<Rect>();
-                Vector slide = vertical ? new Vector(0, tag.size.Height + 3) : new Vector(tag.size.Width * 0.6, 0);
+                Vector slide = vertical ? new Vector(0, tag.size.Width * 0.6) : new Vector(tag.size.Width * 0.6, 0);
                 for (int k = 0; k <= 4; k++)
                     foreach (int sgn in k == 0 ? new[] { 1 } : new[] { 1, -1 })
                         foreach (var side in new[] { n, -n })
@@ -96,7 +96,7 @@ namespace ShearWallVisualizer.Controls
                 if (inView.Count == 0) continue;
                 Rect box = inView.FirstOrDefault(x => !taken.Any(t => t.IntersectsWith(x)));
                 if (box.IsEmpty) box = inView[0];
-                DrawTag(ctx, box, tag, r.State);
+                DrawTag(ctx, box, tag, r.State, vertical);
                 taken.Add(box);
                 drawn.Union(box);
             }
@@ -142,17 +142,31 @@ namespace ShearWallVisualizer.Controls
             return t;
         }
 
-        /// <summary>The tag beside the wall midpoint on side <paramref name="n"/>: centered over/under an E-W wall, beside a N-S wall.</summary>
+        /// <summary>
+        /// The tag's screen box beside the wall midpoint on side <paramref name="n"/>: centered over/under an E-W wall; beside a
+        /// N-S wall, turned to run along it (the box is the tag on its side).
+        /// </summary>
         private static Rect TagBox(Point mid, Vector n, Size s, bool vertical)
         {
             if (vertical)
-                return new Rect(n.X < 0 ? mid.X - TagOffset / 2 - s.Width : mid.X + TagOffset / 2, mid.Y - s.Height / 2, s.Width, s.Height);
+                return new Rect(mid.X + n.X * TagOffset - s.Height / 2, mid.Y - s.Width / 2, s.Height, s.Width);
             return new Rect(mid.X - s.Width / 2, mid.Y + n.Y * TagOffset - s.Height / 2, s.Width, s.Height);
         }
 
-        /// <summary>"SW2 | HDU2" in a rounded box, outlined slate blue (passes), yellow (close to the limit) or dashed crimson (fails).</summary>
-        private static void DrawTag(DrawingContext ctx, Rect box, TagText t, ShearWallCalculator.Design.DesignState state)
+        /// <summary>
+        /// "SW2 | HDU2" in a rounded box, outlined slate blue (passes), yellow (close to the limit) or dashed crimson (fails).
+        /// On a N-S wall the tag is turned 90° to run along the wall, read from the right (bottom to top), as on a drawing set.
+        /// </summary>
+        private static void DrawTag(DrawingContext ctx, Rect box, TagText t, ShearWallCalculator.Design.DesignState state, bool vertical = false)
         {
+            if (vertical)
+            {
+                var c = new Point(box.X + box.Width / 2, box.Y + box.Height / 2);
+                ctx.PushTransform(new RotateTransform(-90, c.X, c.Y));
+                DrawTag(ctx, new Rect(c.X - t.size.Width / 2, c.Y - t.size.Height / 2, t.size.Width, t.size.Height), t, state);
+                ctx.Pop();
+                return;
+            }
             ctx.DrawRoundedRectangle(TagFill, state == ShearWallCalculator.Design.DesignState.Fail ? TagFail : state == ShearWallCalculator.Design.DesignState.Close ? TagClose : TagPass, box, 4, 4);
             ctx.DrawText(t.Mark, new Point(box.X + 5, box.Y + (box.Height - t.Mark.Height) / 2));
             if (t.Holdown != null)
