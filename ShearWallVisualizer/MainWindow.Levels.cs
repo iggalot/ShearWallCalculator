@@ -159,11 +159,13 @@ namespace ShearWallVisualizer
             {
                 buttons[k].Visibility = k < stories.Count ? Visibility.Visible : Visibility.Collapsed;
                 buttons[k].Tag = k == currentLevel && !foundationView ? "on" : null;
-                buttons[k].Content = k < stories.Count ? stories[k].Level.Name : $"{k + 1}";
-                buttons[k].ToolTip = k < stories.Count ? $"Show and edit {LevelName(k)} at {stories[k].Level.Elevation:0.##} ft: the walls of story {k + 1} and the " +
-                                                         (k == stories.Count - 1 ? "roof" : "floor") + " on them" : null;
+                // the short name, as in the marks (2 for Level 2: SW2-9); the full name in the tooltip
+                buttons[k].Content = k < stories.Count ? MarkLevel(k) : $"{k + 1}";
+                buttons[k].ToolTip = k < stories.Count ? $"View {LevelName(k)} at {stories[k].Level.Elevation:0.##} ft: the walls of story {k + 1} and the " +
+                                                         (k == stories.Count - 1 ? "roof" : "floor") + " on them. The view only: the Design tab lists what its Floors filter picks." : null;
             }
             btnFoundation.Visibility = stories.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+            levelPicker.Visibility = stories.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
             btnFoundation.Tag = foundationView ? "on" : null;
             miCopyFromBelow.IsEnabled = currentLevel > 0 && !foundationView;
             btnFloors.ToolTip = $"FLOORS: {stories.Count} in the model. Floors are added, deleted and given their plate heights in the Building Model editor (the building's geometry is edited only there); this opens it on the project.";
@@ -202,13 +204,16 @@ namespace ShearWallVisualizer
 
         // ------------------------------------------------------------------ which level is shown
 
-        private readonly List<TextBlock> levelBanners = new List<TextBlock>();
+        private readonly List<(TextBlock text, Func<string> say)> levelBanners = new List<(TextBlock, Func<string>)>();
 
-        /// <summary>The level-specific tabs (walls &amp; diaphragms, calculations, design) with a banner naming the level shown.</summary>
-        private UIElement WithLevelBanner(UIElement content)
+        /// <summary>
+        /// A tab with a banner: by default naming the level shown (the Calculations tab: one level's calculation); <paramref name="say"/>
+        /// gives a tab its own text (the Design tab: what its Floors filter lists).
+        /// </summary>
+        private UIElement WithLevelBanner(UIElement content, Func<string> say = null)
         {
             var text = new TextBlock { FontSize = 14, FontWeight = FontWeights.SemiBold, Foreground = Brushes.White, TextTrimming = TextTrimming.CharacterEllipsis };
-            levelBanners.Add(text);
+            levelBanners.Add((text, say));
             var banner = new Border { Background = new SolidColorBrush(Color.FromRgb(0x2A, 0x78, 0xD6)), Padding = new Thickness(10, 5, 10, 5), Child = text };
             DockPanel.SetDock(banner, Dock.Top);
             var dock = new DockPanel { LastChildFill = true };
@@ -232,7 +237,7 @@ namespace ShearWallVisualizer
         private void UpdateLevelBanners()
         {
             string text = LevelDescription();
-            foreach (var t in levelBanners) t.Text = text;
+            foreach (var (t, say) in levelBanners) t.Text = say?.Invoke() ?? text;
         }
     }
 }

@@ -389,10 +389,29 @@ namespace ShearWallVisualizer.Controls
 
         private bool loadsFromWind;
 
+        /// <summary>
+        /// What the table lists, for the tab's banner: its own Floors filter ("ALL FLOORS · 10 walls"), not the level shown on the
+        /// plan (the level buttons change the plan only).
+        /// </summary>
+        public string ScopeDescription
+        {
+            get
+            {
+                int walls = shown.Sum(s => s.Results?.Count ?? 0);
+                string what = floorFilter < 0 ? (stories.Count > 1 ? "ALL FLOORS" : (stories.FirstOrDefault()?.Name ?? "").ToUpperInvariant())
+                                              : (stories.FirstOrDefault(s => s.Index == floorFilter)?.Name ?? "").ToUpperInvariant() + " ONLY";
+                return $"{what} · {walls} wall{(walls == 1 ? "" : "s")} · Floors picks what this table lists";
+            }
+        }
+
+        /// <summary>The floors listed changed (the banner follows).</summary>
+        public event EventHandler ScopeChanged;
+
         /// <summary>The table again for the floors picked (after Show or a change of Floors).</summary>
         private void Rebuild()
         {
             shown = stories.Where(s => floorFilter < 0 || s.Index == floorFilter).ToList();
+            ScopeChanged?.Invoke(this, EventArgs.Empty);
             showLevel = shown.Count > 1;
             results = new Dictionary<int, WallDesignResult>();
             foreach (var s in shown)
@@ -568,7 +587,7 @@ namespace ShearWallVisualizer.Controls
                 table.Children.Add(stripe);
 
                 int col = 0;
-                Cell(row, col, story.Name, id, story.Index == currentStory ? Ink : InkSecondary, bold: story.Index == currentStory);
+                Cell(row, col, story.Name, id); // the Floors filter decides what is listed; the plan's level is not marked here
                 sorter.Key(row, col++, story.Index); // sorts by story, not by name
                 Cell(row, col++, $"{wallId} ({(wall.WallDir == WallDirs.EastWest ? "E-W" : "N-S")})", id);
                 string mark = markOf.TryGetValue(story.Index, out var mk) && mk.TryGetValue(wallId, out var m) ? m : "–";

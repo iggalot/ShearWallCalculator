@@ -269,7 +269,8 @@ namespace ShearWallVisualizer
             designPanel.AutoSelectRequested += AutoSelectWalls;
             designPanel.WallSelected += (story, id) => SelectOnLevel(story, "Wall", id);
             designPanel.WallDeleteRequested += (story, id) => { SelectOnLevel(story, "Wall", id); DeleteFromTable("Wall", id); };
-            tabDesignTabItem.Content = WithLevelBanner(designPanel);
+            designPanel.ScopeChanged += (s, e) => UpdateLevelBanners();
+            tabDesignTabItem.Content = WithLevelBanner(designPanel, () => designPanel.ScopeDescription); // its own Floors filter, not the plan's level
         }
 
         /// <summary>A wall picked in a table of every floor: shows its floor first when it is another one.</summary>
