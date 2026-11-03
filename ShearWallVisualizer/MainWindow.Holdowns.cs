@@ -104,8 +104,8 @@ namespace ShearWallVisualizer
         /// <summary>Over the plan: the hold-downs from the story above (a level view), or the foundation anchors (the foundation view).</summary>
         private void DrawLandings(DrawingContext ctx)
         {
-            // a level plan's beam ends (their reactions and connections) follow SHOW Reactions; the rest, SHOW Design
-            if (!showDesign && (foundationView || !showReactions)) return;
+            // SHOW Hold-downs: the markers, what lands from above and the anchors; SHOW Reactions: a level's beam-end reactions
+            if (!showHoldowns && (foundationView || !showReactions)) return;
             heldLabels = new List<(Rect, FormattedText)>(); // every leader first, then the labels over them
             try { DrawLandingMarks(ctx); }
             finally { FlushLabels(ctx); }
@@ -116,6 +116,7 @@ namespace ShearWallVisualizer
             double dip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
             if (foundationView)
             {
+                if (!showHoldowns) return; // (the foundation's reactions: DrawReactions)
                 // the anchors at one point share one label (a line each), with a leader to the point: wherever the label has
                 // to go to keep clear of the others, it still says which point it is
                 foreach (var grp in foundationAnchors.GroupBy(a => ((long)Math.Round(a.At.X * 4), (long)Math.Round(a.At.Y * 4))))
@@ -143,7 +144,7 @@ namespace ShearWallVisualizer
             // at that end; two beams on one column are two connections, never one label
             if (showReactions) DrawBeamEnds(ctx, onto.Where(l => l.Kind == PathPointKind.BeamEnd).ToList(), outline, dip);
             foreach (var ic in planIcons) PlaceIconLabel(ctx, ic, outline, dip); // each hold-down marker's label, an arrow to it
-            if (!showDesign || onto.Count == 0) return;
+            if (!showHoldowns || onto.Count == 0) return;
             // Everything else at one point gets one label: the hold-downs landing there from above ("↓ 1.0k + 0.6k on column C2")
             // and the column bases there with their connection. The beam's own summary is on the Members tab and its selection
             // card, not on the plan.
@@ -281,7 +282,7 @@ namespace ShearWallVisualizer
                 labelsTaken.Add(box);
                 planIcons.Add((c, u, text, ink));
             }
-            if (showDesign && Calculator?._wall_system != null)
+            if (showHoldowns && Calculator?._wall_system != null)
                 foreach (var kv in Calculator._wall_system._walls)
                 {
                     if (!designResults.TryGetValue(kv.Key, out var r) || !r.HoldownNeeded) continue;
@@ -293,7 +294,7 @@ namespace ShearWallVisualizer
                     Mark(b, a, mark, text, ink);
                 }
             var lv = Sketch.ActiveLevel;
-            if (showReactions && building != null && lv != null)
+            if (showHoldowns && building != null && lv != null)
             {
                 var onto = landingsOnto.TryGetValue(currentLevel, out var here) ? here : new List<HoldownLanding>();
                 foreach (var bm in building.BeamsOn(lv))
@@ -613,13 +614,14 @@ namespace ShearWallVisualizer
             if (foundationView)
             {
                 // a word or two: these are the WIND forces only, not everything the foundation carries
-                if (showDesign && showReactions) parts.Add("Wind only");
-                else if (showDesign) parts.Add("Wind hold-downs");
+                if (showHoldowns && showReactions) parts.Add("Wind only");
+                else if (showHoldowns) parts.Add("Wind hold-downs");
                 else if (showReactions) parts.Add("Wind reactions");
             }
             else
             {
                 if (showDesign) parts.Add("Wall design");
+                if (showHoldowns) parts.Add("Hold-downs");
                 if (showReactions && building != null && Sketch.ActiveLevel != null && building.BeamsOn(Sketch.ActiveLevel).Any()) parts.Add("Beam reactions");
                 if (showLoads) parts.Add("Wind loads");
             }
@@ -655,6 +657,17 @@ namespace ShearWallVisualizer
                 string text = (walls ? $"+{fp.BearingAsd / 1000:0.0}k (C) / " : "") + $"−{fp.UpliftAsd / 1000:0.0}k (T)";
                 Label(ctx, text, new Point(p.X + 10, p.Y + 8), ReactionInk, dip, above: false, leader: p);
             }
+        }
+
+        /// <summary>SHOW Hold-downs: the hold-down markers and their labels, what lands on the floor from above, the foundation's anchors.</summary>
+        private bool showHoldowns = true;
+
+        private void btnHoldowns_Click(object sender, RoutedEventArgs e)
+        {
+            showHoldowns = !showHoldowns;
+            btnHoldowns.Tag = showHoldowns ? "on" : null;
+            Log.Info($"Hold-downs overlay {(showHoldowns ? "on" : "off")}.");
+            RedrawDrawing();
         }
 
         private void btnReactions_Click(object sender, RoutedEventArgs e)

@@ -1510,6 +1510,7 @@ namespace ShearWallVisualizer
         public void SetButtonModes()
         {
             btnShowDesign.Tag = showDesign ? "on" : null;
+            btnHoldowns.Tag = showHoldowns ? "on" : null;
             btnHideImage.Tag = hideImage ? null : "on";
         }
 
