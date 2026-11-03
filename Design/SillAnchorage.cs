@@ -38,6 +38,8 @@ namespace ShearWallCalculator.Design
         public double EndMinIn => 7 * BoltDia;       // IRC: 7 bolt diameters
         public double EndMaxIn { get; set; }         // 12", or half the spacing when that is less (the end bolt's share)
         public int Count { get; set; }
+        public double GapIn { get; set; }            // as laid out, between bolts (to 1/2")
+        public double EndIn { get; set; }            // as laid out, each end to its bolt
         public double EmbedmentIn { get; set; } = 7;
         public bool PlateWasher { get; set; } = true;   // 0.229 × 3 × 3 (else standard cut washers allowed)
         public bool WasherToSheathedEdge { get; set; }   // within 1/2" of the edge with > 400 plf nominal
@@ -104,7 +106,14 @@ namespace ShearWallCalculator.Design
             if (L <= 24) { a.Count = 1; a.PositionsIn.Add(L / 2); a.Note = "A plate section 24\" or shorter: one bolt in its middle third (IRC R403.1.6 exception)."; return a; }
             double e = a.EndMaxIn, run = L - 2 * e;
             a.Count = Math.Max(2, (int)Math.Ceiling(run / a.SpacingIn - 1e-9) + 1);
-            for (int i = 0; i < a.Count; i++) a.PositionsIn.Add(e + run * i / (a.Count - 1));
+            // a spacing a builder can tape: up to the next 1/2" (still within the maximum, a whole inch), the two ends
+            // taking what is left, equally (a little under the end maximum; never under 7 diameters)
+            double g = Math.Ceiling(run / (a.Count - 1) * 2 - 1e-9) / 2;
+            double e2 = (L - (a.Count - 1) * g) / 2;
+            if (g > a.SpacingIn + 1e-9 || e2 < a.EndMinIn - 1e-9) { g = run / (a.Count - 1); e2 = e; }
+            a.GapIn = g;
+            a.EndIn = e2;
+            for (int i = 0; i < a.Count; i++) a.PositionsIn.Add(e2 + g * i);
             return a;
         }
     }

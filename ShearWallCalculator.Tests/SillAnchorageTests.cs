@@ -53,6 +53,18 @@ namespace ShearWallCalculator.Tests
         }
 
         [TestMethod]
+        public void LaidOut_SpacingToHalfInch_EndsTakeTheRest()
+        {
+            // SW2-2 on lbltest: 45'-6" = 546", v = 247 plf → 1040 / 247 × 12 = 50.5 → 50"; run 546 − 24 = 522 → 12 bolts;
+            // 522 / 11 = 47.45 → 47 1/2"; ends (546 − 11 × 47.5) / 2 = 11 3/4"
+            var a = SillAnchorage.Design(45.5, 247, WoodTypes.WOODTYPE_DF_SP, 500, 0.33, false);
+            Assert.AreEqual(12, a.Count);
+            Assert.AreEqual(47.5, a.GapIn, 1e-9);
+            Assert.AreEqual(11.75, a.EndIn, 1e-9);
+            Assert.AreEqual(546 - 11.75, a.PositionsIn.Last(), 1e-9);
+        }
+
+        [TestMethod]
         public void Spf_LowerValue()
         {
             // 590 × 1.6 = 944; 944 / 200 × 12 = 56.6 → 56"

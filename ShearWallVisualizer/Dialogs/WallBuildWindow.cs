@@ -484,13 +484,51 @@ namespace ShearWallVisualizer.Dialogs
             InvalidateVisual();
         }
 
+        /// <summary>
+        /// The sill bolts' dimension chain at <paramref name="y"/>: each end to its bolt, and the bolt spacing, once with
+        /// "TYP." when every space is the same (else each one). An end too short for its text has it just outside the wall.
+        /// </summary>
+        private void AnchorChain(DrawingContext dc, SillAnchorage a, double L, Func<double, double> X, double y)
+        {
+            var pen = DetailInk.P(AnchorInk, 1);
+            var ticks = new List<double> { 0 };
+            ticks.AddRange(a.PositionsIn);
+            ticks.Add(L);
+            dc.DrawLine(pen, new Point(X(0), y), new Point(X(L), y));
+            foreach (double t in ticks)
+            {
+                bool bolt = t > 0 && t < L;
+                dc.DrawLine(pen, new Point(X(t) - 3, y + 3), new Point(X(t) + 3, y - 3)); // architectural tick
+                if (bolt) dc.DrawLine(DetailInk.P(AnchorInk, 0.6), new Point(X(t), y - 6), new Point(X(t), y + 4));
+            }
+            var gaps = a.PositionsIn.Zip(a.PositionsIn.Skip(1), (p, q) => (p, q)).ToList();
+            bool same = gaps.Count > 0 && gaps.All(g => Math.Abs((g.q - g.p) - (gaps[0].q - gaps[0].p)) < 1.0 / 16);
+            void Put(double from, double to, string text, int outside)
+            {
+                double w = DetailInk.Text(this, text, 10, AnchorInk, false).Width;
+                double px = X(to) - X(from);
+                if (w + 6 <= px || outside == 0) DetailInk.Label(dc, this, text, new Point((X(from) + X(to)) / 2, y - 8), AnchorInk, 10, centre: true);
+                else if (outside < 0) DetailInk.Label(dc, this, text, new Point(X(from) - 6, y - 15), AnchorInk, 10, rightAligned: true);
+                else DetailInk.Label(dc, this, text, new Point(X(to) + 6, y - 15), AnchorInk, 10);
+            }
+            Put(0, a.PositionsIn[0], FtIn.Of(a.PositionsIn[0]), -1);
+            Put(a.PositionsIn.Last(), L, FtIn.Of(L - a.PositionsIn.Last()), +1);
+            if (same)
+            {
+                var mid = gaps[gaps.Count / 2];
+                Put(mid.p, mid.q, $"{FtIn.Of(mid.q - mid.p)} TYP.", 0);
+            }
+            else foreach (var g in gaps) Put(g.p, g.q, FtIn.Of(g.q - g.p), 0);
+            DetailInk.Label(dc, this, $"Sill anchor bolts ({a.Count})", new Point(X(0), y + 5), AnchorInk, 9.5);
+        }
+
         protected override void OnRender(DrawingContext dc)
         {
             double W = ActualWidth, Hh = ActualHeight;
             dc.DrawRectangle(DetailInk.Paper, null, new Rect(0, 0, W, Hh));
             if (f == null || f.Length <= 0 || f.Height <= 0) return;
             double L = f.Length, H = f.Height;
-            double left = 96, right = 230, top = 120, bottom = 190;
+            double left = 96, right = 230, top = 120, bottom = 206;
             double s = Math.Min((W - left - right) / L, (Hh - top - bottom) / H);
             if (s <= 0) return;
             double x0 = left + Math.Max(0, ((W - left - right) - L * s) / 2), yb = top + H * s + Math.Max(0, ((Hh - top - bottom) - H * s) / 2);
@@ -592,7 +630,8 @@ namespace ShearWallVisualizer.Dialogs
             double yd = Y(H) - (d.Above.Count > 0 ? 96 : 26);
             foreach (var sh in f.Sheets.Where(x => x.Y0 < 0.01))
                 DetailInk.Dimension(dc, this, new Point(X(sh.X0), yd), new Point(X(sh.X1), yd), FtIn.Of(sh.Width));
-            DetailInk.Dimension(dc, this, new Point(X(0), yb + 108), new Point(X(L), yb + 108), FtIn.Of(L));
+            if (an != null && an.Count > 0) AnchorChain(dc, an, L, X, yb + 108);
+            DetailInk.Dimension(dc, this, new Point(X(0), yb + 130), new Point(X(L), yb + 130), FtIn.Of(L));
             DetailInk.Dimension(dc, this, new Point(X(0) - 48, Y(H)), new Point(X(0) - 48, Y(0)), FtIn.Of(H), vertical: true);
             var studs = f.Pieces.Where(p => p.Kind == FramingKind.Stud).OrderBy(p => p.X0).ToList();
             if (studs.Count >= 2)
@@ -601,7 +640,7 @@ namespace ShearWallVisualizer.Dialogs
                 DetailInk.Dimension(dc, this, new Point(X(studs[0].CenterX), ys), new Point(X(studs[1].CenterX), ys), $"{f.Spacing:0}\" o.c.");
             }
             if (r != null && r.HoldownNeeded)
-                DetailInk.Dimension(dc, this, new Point(X(post + 1.45), yb + 132), new Point(X(L - post - 1.45), yb + 132), $"d = {FtIn.Of(r.HoldownArm * 12)}");
+                DetailInk.Dimension(dc, this, new Point(X(post + 1.45), yb + 152), new Point(X(L - post - 1.45), yb + 152), $"d = {FtIn.Of(r.HoldownArm * 12)}");
             DetailInk.Label(dc, this, d.EastWest ? "W" : "S", new Point(X(0) - 16, Y(H) - 2), DetailInk.Dim, 11, bold: true);
             DetailInk.Label(dc, this, d.EastWest ? "E" : "N", new Point(X(L) + 6, Y(H) - 2), DetailInk.Dim, 11, bold: true);
 
