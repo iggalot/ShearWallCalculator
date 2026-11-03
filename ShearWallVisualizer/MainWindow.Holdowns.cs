@@ -236,7 +236,7 @@ namespace ShearWallVisualizer
             labelsTaken.Add(box);
 
             // the leader: from the label's edge, outside the building, to the point, an arrow at the point
-            var path = ShearWallCalculator.Drawing.PlanLabels.Leader(p, outline, box, 16 * LabelScale);
+            var path = ShearWallCalculator.Drawing.PlanLabels.Leader(p, outline, box, 34 * LabelScale); // out past the beam and column labels along the outline
             var last = path[path.Length - 2];
             var d = p - last;
             if (d.Length > 8)
@@ -264,12 +264,11 @@ namespace ShearWallVisualizer
 
         /// <summary>
         /// Marks the overlays' labels must keep off, drawn later or by the sketch: the center of mass and of rigidity (markers
-        /// and captions) and the sketch's wall labels ("W9  39'", beside a N-S wall, under an E-W wall).
+        /// and captions), the sketch's wall, beam and column labels and its marks at the plan's edges.
         /// </summary>
         private void ReservePlanMarks()
         {
             if (Calculator?._wall_system == null) return;
-            double s = LabelScale;
             // the sketch's own marks at the plan's edges: the scale bar, the grid's numbers along the bottom and the left
             var bar = Sketch.ScaleBarArea();
             if (!bar.IsEmpty) labelsTaken.Add(bar);
@@ -283,31 +282,17 @@ namespace ShearWallVisualizer
             }
             Around(Calculator._diaphragm_system?.CtrMass ?? new Point(double.NaN, double.NaN), 60, 30);
             Around(Calculator._wall_system.CtrRigidity, 60, 30);
-            // the sketch's beam labels (at the middle, below right) and column labels (above right), on this level
+            // the sketch's wall, beam and column labels, where it drew them this frame (along their members; a column's set
+            // off with a leader), and the column squares themselves
+            labelsTaken.AddRange(Sketch.MemberLabelBoxes);
             var lv = Sketch.ActiveLevel;
             if (building != null && lv != null)
-            {
-                foreach (var bm in building.BeamsOn(lv))
-                {
-                    var m = WorldToScreen(new Point((bm.Start.X + bm.End.X) / 2, (bm.Start.Y + bm.End.Y) / 2), m_layers);
-                    labelsTaken.Add(new Rect(m.X + 2, m.Y + 1, 12 + 8 * s * bm.Id.Length, 15 * s));
-                }
                 foreach (var c in building.ColumnsUnder(lv))
                 {
                     var p = WorldToScreen(new Point(c.At.X, c.At.Y), m_layers);
                     double half = Math.Max(4, 0.25 * Sketch.Zoom);
-                    // the square and its label up and to the right: no margin on the left, so a wall tag beside a column at the
-                    // wall's middle stays at the middle
-                    labelsTaken.Add(new Rect(p.X - half, p.Y - half - 4 - 13 * s, half * 2 + 8 + 8 * s * c.Id.Length, half * 2 + 6 + 13 * s));
+                    labelsTaken.Add(new Rect(p.X - half, p.Y - half, half * 2, half * 2));
                 }
-            }
-            foreach (var w in Calculator._wall_system._walls.Values)
-            {
-                var m = WorldToScreen(new Point((w.Start.X + w.End.X) / 2, (w.Start.Y + w.End.Y) / 2), m_layers);
-                labelsTaken.Add(w.WallDir == calculator.WallDirs.NorthSouth
-                    ? new Rect(m.X + 4, m.Y - 7 * s - 2, 58 * s, 15 * s)
-                    : new Rect(m.X - 16, m.Y + 3, 58 * s, 15 * s));
-            }
         }
 
         /// <summary>The plan's text size against the base sizes: the sketch's, so the overlays match the plan's own labels.</summary>

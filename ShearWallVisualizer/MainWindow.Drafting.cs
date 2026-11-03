@@ -78,6 +78,7 @@ namespace ShearWallVisualizer
             sketchView.ShowPlanButton = false;
             sketchView.PlanEditing = false;
             sketchView.ShowBuildingTools = false; // From size... and Roof...: the building's size and roof are edited only in the Building Model editor (Edit building)
+            Sketch.ShowWallLabels = false; // a wall picked on the plan opens its card (name, length and the rest)
             foreach (var t in new[] { SketchTool.Calibrate, SketchTool.PlanStraighten, SketchTool.PlanMove }) sketchView.HideTool(t);
             var s = Sketch;
             s.DrawOver += (o, e) =>

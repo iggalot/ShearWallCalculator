@@ -62,6 +62,10 @@ namespace ShearWallCalculator.Tests
             // a point on the right side with its label above the building: out past the right side first, then up to the label
             var around = PlanLabels.Leader(new Point(600, 240), B, new Rect(520, -30, 100, 14), 16);
             CollectionAssert.AreEqual(new[] { new Point(616, -16), new Point(616, 240), new Point(600, 240) }, around);
+            // a point on the right side with its label below the building, off to the left (BM2's strap on junk): out past
+            // the right side, down round the corner, then along under the building, never across it
+            var corner = PlanLabels.Leader(new Point(600, 350), B, new Rect(200, 496, 250, 14), 16);
+            CollectionAssert.AreEqual(new[] { new Point(450, 496), new Point(616, 496), new Point(616, 350), new Point(600, 350) }, corner);
         }
 
         [TestMethod]

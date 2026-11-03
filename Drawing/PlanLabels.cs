@@ -46,19 +46,32 @@ namespace ShearWallCalculator.Drawing
         /// <summary>
         /// The leader from the label to <paramref name="p"/>, as points from the label's edge to the point. A label past the
         /// point's nearest side: straight. Otherwise it first steps out past that side by <paramref name="off"/> and runs
-        /// outside the building, so it never lies along a wall or beam on the outline.
+        /// outside the building (round its corner to a label past the next side), so it never lies along a wall or beam on
+        /// the outline nor crosses the building.
         /// </summary>
         public static Point[] Leader(Point p, Rect outline, Rect box, double off)
         {
             double dl = p.X - outline.Left, dr = outline.Right - p.X, dt = p.Y - outline.Top, db = outline.Bottom - p.Y;
             double min = Math.Min(Math.Min(dt, db), Math.Min(dl, dr));
-            Point elbow; bool past;
-            if (dt <= min + 0.5) { elbow = new Point(p.X, outline.Top - off); past = box.Bottom <= outline.Top; }
-            else if (db <= min + 0.5) { elbow = new Point(p.X, outline.Bottom + off); past = box.Top >= outline.Bottom; }
-            else if (dl <= min + 0.5) { elbow = new Point(outline.Left - off, p.Y); past = box.Right <= outline.Left; }
-            else { elbow = new Point(outline.Right + off, p.Y); past = box.Left >= outline.Right; }
+            Point elbow; bool past, upright; // upright: the point's side runs up and down (left or right)
+            if (dt <= min + 0.5) { elbow = new Point(p.X, outline.Top - off); past = box.Bottom <= outline.Top; upright = false; }
+            else if (db <= min + 0.5) { elbow = new Point(p.X, outline.Bottom + off); past = box.Top >= outline.Bottom; upright = false; }
+            else if (dl <= min + 0.5) { elbow = new Point(outline.Left - off, p.Y); past = box.Right <= outline.Left; upright = true; }
+            else { elbow = new Point(outline.Right + off, p.Y); past = box.Left >= outline.Right; upright = true; }
             Point Near(Point q) => new Point(Clamp(q.X, box.Left, box.Right), Clamp(q.Y, box.Top, box.Bottom));
-            return past ? new[] { Near(p), p } : new[] { Near(elbow), elbow, p };
+            if (past) return new[] { Near(p), p };
+            // the label past a side next to the point's: round the corner between them, outside
+            Point? corner = null;
+            if (upright && box.Top >= outline.Bottom) corner = new Point(elbow.X, outline.Bottom + off);
+            else if (upright && box.Bottom <= outline.Top) corner = new Point(elbow.X, outline.Top - off);
+            else if (!upright && box.Left >= outline.Right) corner = new Point(outline.Right + off, elbow.Y);
+            else if (!upright && box.Right <= outline.Left) corner = new Point(outline.Left - off, elbow.Y);
+            if (corner is Point c)
+            {
+                var start = Near(c);
+                return (start - c).Length < 0.5 ? new[] { c, elbow, p } : new[] { start, c, elbow, p };
+            }
+            return new[] { Near(elbow), elbow, p };
         }
 
         private static double Clamp(double v, double lo, double hi) => hi < lo ? lo : Math.Max(lo, Math.Min(hi, v));
