@@ -979,3 +979,4 @@ against your printed standard.
 - The COM/COR coordinate text in the plan's corner is gone too. The markers stay on the plan, and the coordinates are on the Calculations card.
 - The badge uses 1–2 words: on G it's "Wind only", "Wind hold-downs" or "Wind reactions". The strip is one row, so the badge trims instead of wrapping.
 - Zoom to the drawing on G leaves room for the anchor and reaction labels. SWC measures how far the labels reach past the drawing on each frame and passes that to the sketch (SketchCanvas.FitPadding). Level plans fit as before.
+- The scale bar moved to the plan's bottom-right corner, one row above the grid's numbers, so it no longer overlaps them or the line tags along the bottom left (BuildingModel.Sketch).
