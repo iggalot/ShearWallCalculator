@@ -931,3 +931,7 @@ against your printed standard.
   tolerance over a shared height: junk's C3 / C5), BeamsOverlap (one level, one line, overlapping more than end to end),
   WallsOverlap (a wall that is not a shear wall on another wall; two shear walls stay the WallOverlap error).
   Test: EditsTests.Checks_ObjectsDrawnTwice_AreFlagged.
+- Hold-down labels have leaders: a thin line from the point to the label's nearest edge with a dot, so a label moved
+  clear of others (it moves as the zoom changes) still shows its point. Leaders are drawn first and the labels over them,
+  so no leader crosses text. On the foundation, the anchors at one point share one label (a line each); by the plan's
+  right edge a label goes wholly to the left of its own point, not beside the next point.

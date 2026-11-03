@@ -96,17 +96,33 @@ namespace ShearWallVisualizer
         private void DrawLandings(DrawingContext ctx)
         {
             if (!showDesign) return;
+            heldLabels = new List<(Rect, FormattedText)>(); // every leader first, then the labels over them
+            try { DrawLandingMarks(ctx); }
+            finally { FlushLabels(ctx); }
+        }
+
+        private void DrawLandingMarks(DrawingContext ctx)
+        {
             double dip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
             if (foundationView)
             {
-                foreach (var a in foundationAnchors)
+                // the anchors at one point share one label (a line each), with a leader to the point: wherever the label has
+                // to go to keep clear of the others, it still says which point it is
+                foreach (var grp in foundationAnchors.GroupBy(a => ((long)Math.Round(a.At.X * 4), (long)Math.Round(a.At.Y * 4))))
                 {
-                    var p = WorldToScreen(a.At, m_layers);
+                    var list = grp.ToList();
+                    var p = WorldToScreen(list[0].At, m_layers);
                     var box = new Rect(p.X - 4.5, p.Y - 4.5, 9, 9);
-                    ctx.DrawRectangle(a.Model != null ? LandFill : Brushes.White, a.Model != null ? LandEdge : MissingEdge, box);
-                    string wallId = a.Kind != PathPointKind.WallHoldown ? a.From
-                                  : stories.Count > 0 && stories[0].Walls.TryGetValue(a.WallId, out var id) ? id : $"W{a.WallId}";
-                    Label(ctx, $"{wallId}  {a.Model ?? "no HD"}  {a.TensionAsd:N0} lb", new Point(p.X + 7, p.Y - 5), a.Model == null ? Controls.Ui.FailInk : a.Note != null ? Controls.Ui.CloseInk : LandText, dip, above: true);
+                    bool missing = list.Any(a => a.Model == null);
+                    ctx.DrawRectangle(missing ? Brushes.White : LandFill, missing ? MissingEdge : LandEdge, box);
+                    string Line(HoldownLanding a)
+                    {
+                        string wallId = a.Kind != PathPointKind.WallHoldown ? a.From
+                                      : stories.Count > 0 && stories[0].Walls.TryGetValue(a.WallId, out var id) ? id : $"W{a.WallId}";
+                        return $"{wallId}  {a.Model ?? "no HD"}  {a.TensionAsd:N0} lb";
+                    }
+                    var ink = missing ? Controls.Ui.FailInk : list.Any(a => a.Note != null) ? Controls.Ui.CloseInk : LandText;
+                    Label(ctx, string.Join("\n", list.Select(Line)), new Point(p.X + 10, p.Y - 10), ink, dip, above: true, leader: p);
                 }
                 return;
             }
@@ -170,7 +186,7 @@ namespace ShearWallVisualizer
                 // a beam end's support is named only when the loads from above have not already named it
                 string said = string.Join(" ", parts);
                 parts.AddRange(g.ups.Select(t => t.Split('|')).Select(t => t[1].Length == 0 || said.Contains(t[1]) ? t[0] : $"{t[0]} on {t[1]}"));
-                Label(ctx, string.Join("   ", parts), new Point(g.p.X + 8, g.p.Y - 10), g.ink, dip, above: true);
+                Label(ctx, string.Join("   ", parts), new Point(g.p.X + 8, g.p.Y - 10), g.ink, dip, above: true, leader: g.p);
             }
         }
 
@@ -227,14 +243,17 @@ namespace ShearWallVisualizer
         /// <summary>
         /// A label on a light back, top-left at <paramref name="at"/>; <paramref name="above"/>: bottom-left there (it grows
         /// upward, off the mark under it). Moved by its own height down or up (the nearest first) when it would cover a tag,
-        /// the schedule or another label.
+        /// the schedule or another label. <paramref name="leader"/>: the point the label is about; a thin line runs from it
+        /// to the label's nearest edge, so a label moved off its point still shows which one it is.
         /// </summary>
-        private void Label(DrawingContext ctx, string text, Point at, Brush ink, double dip, bool above = false)
+        private void Label(DrawingContext ctx, string text, Point at, Brush ink, double dip, bool above = false, Point? leader = null)
         {
             var ft = new FormattedText(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 10.5 * LabelScale, ink, dip);
             if (above) at = new Point(at.X, at.Y - ft.Height);
             // kept on the canvas: a label by the right edge goes to the left of its point instead of off the plan
-            if (m_layers != null && at.X + ft.Width + 4 > m_layers.ActualWidth) at = new Point(Math.Max(2, m_layers.ActualWidth - ft.Width - 6), at.Y);
+            // (with a leader: wholly to the left of its point, mirrored, so it does not sit beside another point)
+            if (m_layers != null && at.X + ft.Width + 4 > m_layers.ActualWidth)
+                at = new Point(Math.Max(2, leader is Point lp ? lp.X - (at.X - lp.X) - ft.Width : m_layers.ActualWidth - ft.Width - 6), at.Y);
             var box = new Rect(at.X - 2, at.Y, ft.Width + 4, ft.Height);
             double step = ft.Height + 2, dir = above ? -1 : 1;
             for (int k = 1; k <= 6 && labelsTaken.Any(t => t.IntersectsWith(box)); k++)
@@ -244,8 +263,35 @@ namespace ShearWallVisualizer
                 if (!labelsTaken.Any(t => t.IntersectsWith(tryBox))) { box = tryBox; break; }
             }
             labelsTaken.Add(box);
+            if (leader is Point from)
+            {
+                // to the nearest point of the label's edge; a short tick when the label sits right at its point
+                var to = new Point(Math.Max(box.Left, Math.Min(box.Right, from.X)), Math.Max(box.Top, Math.Min(box.Bottom, from.Y)));
+                if ((to - from).Length > 3)
+                {
+                    var pen = new Pen(ink, 0.9);
+                    pen.Freeze();
+                    ctx.DrawLine(pen, from, to);
+                    ctx.DrawEllipse(ink, null, to, 1.6, 1.6);
+                }
+            }
+            if (heldLabels != null) { heldLabels.Add((box, ft)); return; } // drawn over every leader (FlushLabels)
             ctx.DrawRectangle(LabelBack, null, box);
             ctx.DrawText(ft, new Point(box.X + 2, box.Y));
+        }
+
+        /// <summary>Labels held back while a set of leaders is drawn, so no leader runs over a label's text; null: drawn at once.</summary>
+        private List<(Rect box, FormattedText ft)> heldLabels;
+
+        private void FlushLabels(DrawingContext ctx)
+        {
+            if (heldLabels != null)
+                foreach (var (box, ft) in heldLabels)
+                {
+                    ctx.DrawRectangle(LabelBack, null, box);
+                    ctx.DrawText(ft, new Point(box.X + 2, box.Y));
+                }
+            heldLabels = null;
         }
 
         /// <summary>
