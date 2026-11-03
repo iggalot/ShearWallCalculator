@@ -977,3 +977,5 @@ against your printed standard.
 - The Wind loads workspace has no flyouts. Code: MainWindow.Panels.cs.
 - The black caption on the plan is gone on every level. The level buttons and the "what's shown" badge (now filled purple) say the same thing. The foundation's max values stay in the status line.
 - The COM/COR coordinate text in the plan's corner is gone too. The markers stay on the plan, and the coordinates are on the Calculations card.
+- The badge uses 1–2 words: on G it's "Wind only", "Wind hold-downs" or "Wind reactions". The strip is one row, so the badge trims instead of wrapping.
+- Zoom to the drawing on G leaves room for the anchor and reaction labels. SWC measures how far the labels reach past the drawing on each frame and passes that to the sketch (SketchCanvas.FitPadding). Level plans fit as before.

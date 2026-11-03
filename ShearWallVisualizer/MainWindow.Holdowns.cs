@@ -1,3 +1,5 @@
+using BuildingModel.Edits;
+using BuildingModel.Geometry;
 using BuildingModel.Checks;
 using BuildingModel.Diagnostics;
 using BuildingModel.Model;
@@ -259,6 +261,7 @@ namespace ShearWallVisualizer
         {
             var ft = new FormattedText(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 10.5 * LabelScale, ink, dip);
             if (above) at = new Point(at.X, at.Y - ft.Height);
+            labelReach.Union(new Rect(at.X - 2, at.Y, ft.Width + 4, ft.Height)); // where it wants to be (before the canvas edge moves it)
             // kept on the canvas: a label by the right edge goes to the left of its point instead of off the plan
             // (with a leader: wholly to the left of its point, mirrored, so it does not sit beside another point)
             if (m_layers != null && at.X + ft.Width + 4 > m_layers.ActualWidth)
@@ -287,6 +290,24 @@ namespace ShearWallVisualizer
             if (heldLabels != null) { heldLabels.Add((box, ft)); return; } // drawn over every leader (FlushLabels)
             ctx.DrawRectangle(LabelBack, null, box);
             ctx.DrawText(ft, new Point(box.X + 2, box.Y));
+        }
+
+        /// <summary>Every label of this frame, where each wants to be (screen pixels).</summary>
+        private Rect labelReach = Rect.Empty;
+
+        /// <summary>How far the labels reach past the drawing on each side (pixels): Zoom to the drawing leaves this room.</summary>
+        private Thickness labelRoom;
+
+        private void MeasureLabelRoom()
+        {
+            var ext = BuildingEdits.Extents(Sketch.Building, Sketch.ActiveLevel) ?? BuildingEdits.Extents(Sketch.Building); // as ZoomExtents
+            if (ext == null || labelReach.IsEmpty) { labelRoom = new Thickness(); return; }
+            var a = Sketch.ToScreen(new Point2(ext.Value.X0, ext.Value.Y0 + ext.Value.Height));
+            var b = Sketch.ToScreen(new Point2(ext.Value.X0 + ext.Value.Width, ext.Value.Y0));
+            var d = new Rect(a, b);
+            const double gap = 12;
+            labelRoom = new Thickness(Math.Max(0, d.Left - labelReach.Left) + gap, Math.Max(0, d.Top - labelReach.Top) + gap,
+                                      Math.Max(0, labelReach.Right - d.Right) + gap, Math.Max(0, labelReach.Bottom - d.Bottom) + gap);
         }
 
         /// <summary>Labels held back while a set of leaders is drawn, so no leader runs over a label's text; null: drawn at once.</summary>
@@ -375,17 +396,17 @@ namespace ShearWallVisualizer
             var parts = new List<string>();
             if (foundationView)
             {
-                if (showDesign) parts.Add("hold-downs");
-                if (showReactions) parts.Add("reactions");
+                // a word or two: these are the WIND forces only, not everything the foundation carries
+                if (showDesign && showReactions) parts.Add("Wind only");
+                else if (showDesign) parts.Add("Wind hold-downs");
+                else if (showReactions) parts.Add("Wind reactions");
             }
             else
             {
                 if (showDesign) parts.Add("Wall design");
                 if (showLoads) parts.Add("Wind loads");
             }
-            string text = parts.Count == 0 ? "Plan only"
-                : foundationView ? "Wind only: " + string.Join(", ", parts)   // not everything the foundation carries
-                : string.Join("  ·  ", parts);
+            string text = parts.Count == 0 ? "Plan only" : string.Join("  ·  ", parts);
             if (tbShowing.Text == text) return;
             tbShowing.Text = text;
             showingBadge.ToolTip = foundationView

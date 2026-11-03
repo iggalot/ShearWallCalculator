@@ -83,6 +83,7 @@ namespace ShearWallVisualizer
             s.DrawOver += (o, e) =>
             {
                 labelsTaken.Clear(); // the overlays keep their labels off each other, this frame
+                labelReach = Rect.Empty;
                 if (!foundationView) ReservePlanMarks(); // and off the centers of mass and rigidity and the wall labels
                 if (!foundationView)
                 {
@@ -96,10 +97,12 @@ namespace ShearWallVisualizer
                 DrawDebug(e.Context);
                 UpdateDrawingKey(); // the schedule and the Loads legend, beside the plan
                 UpdateShowing();    // in a word or two, what the plan shows
+                MeasureLabelRoom(); // what Zoom to the drawing leaves around the plan for these labels
             };
             s.WallStyle = DesignPen;
             s.ExtraSnapPoints = HoldownSnapPoints;
             s.LevelCaption = l => ""; // no tag on the plan: the strip above it says the level and what is shown
+            s.FitPadding = () => foundationView ? labelRoom : new Thickness(); // the foundation's anchor labels; the level plans fit as before
             s.Escaped += (o, e) =>
             {
                 if (selectionCardOpen) CloseSelectionCard();
@@ -146,6 +149,8 @@ namespace ShearWallVisualizer
             baseModelJson = ModelFile.BuildingToJson(building);
             ModelToCalculators();
             Sketch.ZoomExtents();
+            // again once drawn: the labels' room is measured on the first frame
+            Dispatcher.BeginInvoke(new Action(() => Sketch.ZoomExtents()), System.Windows.Threading.DispatcherPriority.ContextIdle);
         }
 
         /// <summary>After New or Open: the undo history starts here, and Model > Export changes compares with this model.</summary>

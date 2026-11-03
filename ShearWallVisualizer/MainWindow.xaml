@@ -272,7 +272,7 @@
                                 </Setter>
                             </Style>
                         </Border.Resources>
-                        <WrapPanel Orientation="Horizontal">
+                        <DockPanel LastChildFill="True"> <!-- one row: each docks left (the default), the badge takes what is left and trims -->
                             <TextBlock Text="LEVEL" FontSize="11" FontWeight="SemiBold" Foreground="#7A7974" VerticalAlignment="Center" Margin="2,0,4,0"/>
                             <Button x:Name="btnFoundation" Style="{StaticResource ViewLevel}" Content="G" Click="Foundation_Click"
                                     ToolTip="G, the ground: the foundation plan with every hold-down anchor of the first story's walls (wall, model, uplift), for the foundation design."/>
@@ -299,10 +299,10 @@
                                     ToolTip="Errors and warnings in the model and the design (also marked on the plan)"/>
                             <!-- what the plan shows now, in a word or two per overlay (follows LEVEL and SHOW) -->
                             <Rectangle Width="1" Height="18" Fill="#D8D6CC" Margin="8,2,6,2"/>
-                            <Border x:Name="showingBadge" Background="#5B2C83" CornerRadius="10" Padding="10,3" VerticalAlignment="Center" Margin="0,0,4,0">
-                                <TextBlock x:Name="tbShowing" FontSize="12" Foreground="White" FontWeight="SemiBold"/>
+                            <Border x:Name="showingBadge" Background="#5B2C83" CornerRadius="10" Padding="10,3" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="0,0,4,0">
+                                <TextBlock x:Name="tbShowing" TextTrimming="CharacterEllipsis" FontSize="12" Foreground="White" FontWeight="SemiBold"/>
                             </Border>
-                        </WrapPanel>
+                        </DockPanel>
                     </Border>
                     <!-- The shared sketcher (BuildingModel.Sketch): its own tools, snaps, undo and status line; the building model is the source of truth -->
                     <sketch:SketchView x:Name="sketchView"/>
