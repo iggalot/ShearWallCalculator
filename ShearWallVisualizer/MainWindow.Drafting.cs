@@ -104,7 +104,7 @@ namespace ShearWallVisualizer
             };
             s.ModelChanged += (o, e) => { if (!storing) ModelToCalculators(); };
             s.ActiveLevelChanged += (o, e) => ActiveLevelChanged();
-            s.SelectionChanged += (o, e) => SelectionFromSketch();
+            s.SelectionChanged += (o, e) => { SelectionFromSketch(); UpdateDrawingKey(); };
             s.ObjectDoubleClicked += (o, id) =>
             {
                 var key = CurrentStory?.Key(id);

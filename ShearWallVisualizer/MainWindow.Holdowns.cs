@@ -108,14 +108,20 @@ namespace ShearWallVisualizer
                 return;
             }
             if (!landingsOnto.TryGetValue(currentLevel, out var onto)) return;
-            // the beams that carry hold-downs: their loads and the reactions at the ends
-            foreach (var br in loadPath?.Beams.Where(x => x.Beam.OnStory == currentLevel) ?? Enumerable.Empty<BeamReactions>())
+            // Everything at one point gets one label: the hold-downs landing there from above ("↓ 1.0k + 0.6k on column C2") and
+            // the beam ends or column bases there with their connection ("BM2 end ↑ 0.4k HRS6"). The beam's own summary is on the
+            // Members tab and its selection card, not on the plan.
+            var atPoint = new Dictionary<(long, long), (Point p, List<string> downs, List<string> ups, Brush ink)>();
+            Brush Worse(Brush a, Brush b) => ReferenceEquals(a, Controls.Ui.FailInk) || ReferenceEquals(b, Controls.Ui.FailInk) ? Controls.Ui.FailInk
+                                           : ReferenceEquals(a, Controls.Ui.CloseInk) || ReferenceEquals(b, Controls.Ui.CloseInk) ? Controls.Ui.CloseInk : LandText;
+            void Add(Point world, Point screen, string down, string up, Brush ink)
             {
-                var mid = WorldToScreen(new Point((br.Beam.Start.X + br.Beam.End.X) / 2, (br.Beam.Start.Y + br.Beam.End.Y) / 2), m_layers);
-                Label(ctx, $"{br.Beam.Id}: {br.Loads.Count} hold-down{(br.Loads.Count == 1 ? "" : "s")}, R {br.StartAsd / 1000:0.0}k / {br.EndAsd / 1000:0.0}k", new Point(mid.X + 6, mid.Y + 6), BeamInk, dip);
+                var k = ((long)Math.Round(world.X * 4), (long)Math.Round(world.Y * 4)); // within 3 in
+                if (!atPoint.TryGetValue(k, out var g0)) atPoint[k] = g0 = (screen, new List<string>(), new List<string>(), ink);
+                if (down != null) g0.downs.Add(down);
+                if (up != null) g0.ups.Add(up);
+                atPoint[k] = (g0.p, g0.downs, g0.ups, Worse(g0.ink, ink));
             }
-            // the hold-downs from above at one point (two upper walls meeting at a corner): one label, the loads side by side
-            var atPoint = new Dictionary<(long, long), (Point p, List<string> texts, Brush ink)>();
             foreach (var l in onto)
             {
                 if (l.Kind != PathPointKind.WallHoldown)
@@ -124,9 +130,10 @@ namespace ShearWallVisualizer
                     var q = WorldToScreen(l.At, m_layers);
                     var r = new Rect(q.X - 5, q.Y - 5, 10, 10);
                     ctx.DrawRectangle(l.Supported ? BeamInk : Controls.Ui.FailFill, l.Supported ? LandEdge : MissingEdge, r);
-                    string t = l.Supported ? $"{l.From}: ↑ {l.TensionAsd / 1000:0.0}k → {l.SupportId}, {l.Model ?? "none strong enough"}"
-                                           : $"{l.From}: ↑ {l.TensionAsd / 1000:0.0}k, nothing under it";
-                    Label(ctx, t, new Point(q.X + 8, q.Y + 4), l.Supported && l.Choice != null ? (l.Note != null ? Controls.Ui.CloseInk : LandText) : Controls.Ui.FailInk, dip);
+                    string who = l.From.StartsWith("beam ") ? l.From.Substring(5) : l.From;
+                    string up = l.Supported ? $"{who} ↑ {l.TensionAsd / 1000:0.0}k {l.Model ?? "none strong enough"}|{l.SupportId}"
+                                            : $"{who} ↑ {l.TensionAsd / 1000:0.0}k, nothing under it|";
+                    Add(l.At, q, null, up, l.Supported && l.Choice != null ? (l.Note != null ? Controls.Ui.CloseInk : LandText) : Controls.Ui.FailInk);
                     continue;
                 }
                 var p = WorldToScreen(l.At, m_layers);
@@ -142,20 +149,14 @@ namespace ShearWallVisualizer
                 // "load|what it lands on": loads landing on the same thing at one point are listed once ("↓ 1.0k + 0.6k on column C2")
                 string rest = !l.Supported ? "  nothing below: draw a beam (B) or a column (P)" : l.Support == SupportKind.Wall ? "" : $" on {l.SupportId}";
                 if (l.Note != null) rest += $"  · {l.Model ?? "none"} ({HoldownRules.Name(l.Family)} here)";
-                string text = $"{l.TensionAsd / 1000:0.0}k|{rest}";
-                var ink = !l.Supported ? Controls.Ui.FailInk : l.Note != null ? Controls.Ui.CloseInk : LandText;
-                var k = ((long)Math.Round(l.At.X * 4), (long)Math.Round(l.At.Y * 4)); // within 3 in
-                if (!atPoint.TryGetValue(k, out var g0)) atPoint[k] = (p, new List<string> { text }, ink);
-                else
-                {
-                    g0.texts.Add(text);
-                    atPoint[k] = (g0.p, g0.texts, ReferenceEquals(g0.ink, Controls.Ui.FailInk) || ReferenceEquals(ink, Controls.Ui.FailInk) ? Controls.Ui.FailInk
-                                                 : ReferenceEquals(g0.ink, Controls.Ui.CloseInk) || ReferenceEquals(ink, Controls.Ui.CloseInk) ? Controls.Ui.CloseInk : LandText);
-                }
+                Add(l.At, p, $"{l.TensionAsd / 1000:0.0}k|{rest}", null, !l.Supported ? Controls.Ui.FailInk : l.Note != null ? Controls.Ui.CloseInk : LandText);
             }
             foreach (var g in atPoint.Values)
             {
-                var parts = g.texts.Select(t => t.Split('|')).GroupBy(t => t[1]).Select(x => "↓ " + string.Join(" + ", x.Select(t => t[0])) + x.Key);
+                var parts = g.downs.Select(t => t.Split('|')).GroupBy(t => t[1]).Select(x => "↓ " + string.Join(" + ", x.Select(t => t[0])) + x.Key).ToList();
+                // a beam end's support is named only when the loads from above have not already named it
+                string said = string.Join(" ", parts);
+                parts.AddRange(g.ups.Select(t => t.Split('|')).Select(t => t[1].Length == 0 || said.Contains(t[1]) ? t[0] : $"{t[0]} on {t[1]}"));
                 Label(ctx, string.Join("   ", parts), new Point(g.p.X + 8, g.p.Y - 10), g.ink, dip, above: true);
             }
         }

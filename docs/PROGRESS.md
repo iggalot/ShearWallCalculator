@@ -10,6 +10,11 @@ _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`
   rebuilt only when its text changes (MainWindow.Loads `UpdateDrawingKey`). `DesignOverlay.Draw(..., schedule: false)`.
 - Loads arrows (wall tops and the upper walls' shears) slide along their wall to the first spot clear of tags, labels and
   the schedule; the wind arrow shortens before it is pushed onto the building.
+- The drawing key shows only while something is picked on the plan (the schedule is on the Design tab, each case on the
+  Calculations tab).
+- Beam and column labels on the plan: everything at one point is one label ("↓ 0.8k + 0.9k on column C1   BM2 start ↑ 0.4k
+  HRS6"); the beam's mid-span summary is gone from the plan (Members tab and its card). The Members tab's beam row names
+  each end's connection ("start 367 lb → column C1 HRS6, end 420 lb → column C3 HRS6").
 
 ## 2026-11-02 — Load cases, wall by wall; the Loads overlay; columns on the foundation plan (BuildingModel 266db64)
 

@@ -311,14 +311,18 @@ namespace ShearWallVisualizer
 
         /// <summary>
         /// The drawing key under the tabs, right of the plan: the shear wall schedule (SHOW Design) and the Loads legend
-        /// (SHOW Loads), so neither covers the plan. Rebuilt only when what it says changes; called after each plan draw.
+        /// (SHOW Loads), so neither covers the plan; shown only while something is picked on the plan. Rebuilt only when
+        /// what it says changes; called after each plan draw and when the selection changes.
         /// </summary>
         private void UpdateDrawingKey()
         {
             if (drawingKey == null) return;
-            var schedule = showDesign && !foundationView && !InWindWorkspace && designResults != null && designResults.Count > 0
+            // only while something is picked on the plan: the schedule is on the Design tab and each case on the Calculations
+            // tab already, so with nothing picked the key stays out of the way
+            bool picked = Sketch?.Selection.Count > 0;
+            var schedule = picked && showDesign && !foundationView && !InWindWorkspace && designResults != null && designResults.Count > 0
                 ? ShearWallCalculator.Design.WallSchedule.Build(designResults) : new List<ShearWallCalculator.Design.ScheduleEntry>();
-            var loads = InWindWorkspace ? null : loadsKey;
+            var loads = InWindWorkspace || !picked ? null : loadsKey;
             string sig = string.Join("\n", schedule.Select(e => $"{e.Mark}|{e.Sheathing}|{e.Capacity}|{string.Join(",", e.WallIds)}"))
                          + "\n#\n" + (loads == null ? "" : string.Join("\n", loads));
             if (sig == drawingKeyShown) return;

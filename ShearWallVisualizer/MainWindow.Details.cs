@@ -69,7 +69,7 @@ namespace ShearWallVisualizer
                         Id = b.Id, Level = level.Name, Elevation = level.Elevation, FromStory = b.OnStory, ToStory = b.OnStory,
                         Start = b.Start, End = b.End, Length = (b.End - b.Start).Length,
                         Carries = r == null || r.Loads.Count == 0 ? "nothing"
-                                : $"{r.Loads.Count} hold-down{(r.Loads.Count == 1 ? "" : "s")}; ends {r.StartAsd:N0} / {r.EndAsd:N0} lb",
+                                : $"{r.Loads.Count} hold-down{(r.Loads.Count == 1 ? "" : "s")}; " + EndsText(b.Id, r, landings),
                     });
                 }
                 foreach (var c in fc.OrderBy(x => x.TopStory).ThenBy(x => x.Id))
@@ -164,6 +164,18 @@ namespace ShearWallVisualizer
             c.Drawing = () => new WallElevation(w, r, own);
             c.Lines = DetailCalcs.Wall(w, r, own);
             return c;
+        }
+
+        /// <summary>A beam's end reactions and their connections: "start 367 lb → column C1 HRS6, end 420 lb → column C3 HRS6".</summary>
+        private static string EndsText(string beamId, BeamReactions r, IEnumerable<HoldownLanding> landings)
+        {
+            string End(string which, double asd)
+            {
+                var l = landings.FirstOrDefault(x => x.Kind == PathPointKind.BeamEnd && x.From == $"beam {beamId} {which}");
+                string to = l == null ? "" : !l.Supported ? " → nothing under it" : $" → {l.SupportId} {l.Model ?? "none strong enough"}";
+                return $"{which} {asd:N0} lb{to}";
+            }
+            return End("start", r.StartAsd) + ", " + End("end", r.EndAsd);
         }
 
         private DetailContent BeamDetail(string id)
