@@ -980,3 +980,8 @@ against your printed standard.
 - The badge uses 1–2 words: on G it's "Wind only", "Wind hold-downs" or "Wind reactions". The strip is one row, so the badge trims instead of wrapping.
 - Zoom to the drawing on G leaves room for the anchor and reaction labels. SWC measures how far the labels reach past the drawing on each frame and passes that to the sketch (SketchCanvas.FitPadding). Level plans fit as before.
 - The scale bar moved to the plan's bottom-right corner, one row above the grid's numbers, so it no longer overlaps them or the line tags along the bottom left (BuildingModel.Sketch).
+
+### Wind loads workspace: results only on the Results page
+- Detailed calculations, 3D Wind and the "Wind loads (auto)" table at the top are hidden on Site and Building. They appear on the Results page, after the inputs have been gone through. Going back hides them again.
+- The Shear walls workspace always shows the loads table, because those are the loads its walls are using.
+- Driven by WindSetupControl.StepChanged / OnResults (ASCE7 repo). MainWindow.WindStepChanged applies it.

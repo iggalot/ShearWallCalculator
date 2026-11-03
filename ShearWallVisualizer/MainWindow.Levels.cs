@@ -51,6 +51,11 @@ namespace ShearWallVisualizer
             var g = workspaceLoads;
             if (g == null) return;
             g.Children.Clear(); g.RowDefinitions.Clear(); g.ColumnDefinitions.Clear();
+            // While the wind inputs are being entered (Site, Building) the loads are not settled: no table until Results.
+            // The Shear walls workspace always shows it: those are the loads its walls are using.
+            bool settling = InWindWorkspace && windSetup?.OnResults != true;
+            g.Visibility = settling ? Visibility.Collapsed : Visibility.Visible;
+            if (settling) return;
             for (int r = 0; r < 3; r++) g.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             g.ToolTip = "Each level gets the wind on its strip of the building (mid-story to mid-story). A level's walls carry its own strip " +
                         "plus every level above, so the first story's walls, and the foundation, take the whole building's base shear " +

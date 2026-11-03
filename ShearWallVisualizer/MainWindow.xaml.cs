@@ -112,6 +112,7 @@ namespace ShearWallVisualizer
                 // from the start instead of waiting for the BuildingData tab to be completed.
                 windSetup = new WindSetupControl(buildingData, windVersion, windLoadParams);
                 windSetup.InputsChanged += WindSetup_InputsChanged;
+                windSetup.StepChanged += (s2, e2) => WindStepChanged(); // the result tabs on the Results page only
                 windSetup.SendLoadsRequested += WindSetup_SendLoadsRequested;
                 windSetup.ShearWallsRequested += (s2, e2) => rbWorkspaceWalls.IsChecked = true;
                 windSetup.EditBuildingRequested += (s2, e2) => EditBuilding(); // the size and roof are edited in the Building Model editor
@@ -621,6 +622,7 @@ namespace ShearWallVisualizer
             viewer.SetResults(buildingData, windLoadCalculator_CC, windLoadCalculator_MWFRS_Length, windLoadCalculator_MWFRS_Width);
             tabWind3DTabItem.Content = viewer;
             TabControlManager.ReAddTab(MainTabControl, "tabWind3DTabItem");
+            if (windSetup != null) WindStepChanged(); // re-added tabs follow the setup's page
         }
 
         /// <summary>
@@ -1520,6 +1522,24 @@ namespace ShearWallVisualizer
             tab == tabWindInputControlTabItem || tab == tabWindResultsTabItem_CC ||
             tab == tabWindResultsTabItem_MWFRS_BldgLength || tab == tabWindResultsTabItem_MWFRS_BldgWidth;
 
+        /// <summary>
+        /// Detailed calculations and 3D Wind show the results of the inputs, so they appear on the setup's Results page only
+        /// (after Site and Building have been gone through), not beside the first page.
+        /// </summary>
+        private bool WindTabReady(TabItem tab) =>
+            !(tab == tabWindDetailsTabItem || tab == tabWind3DTabItem) || windSetup?.OnResults == true;
+
+        /// <summary>Shows or hides Detailed calculations and 3D Wind (and the loads table) for the workspace and the setup's page.</summary>
+        private void WindStepChanged()
+        {
+            bool wind = InWindWorkspace;
+            foreach (var tab in new[] { tabWindDetailsTabItem, tabWind3DTabItem })
+                tab.Visibility = wind && WindTabReady(tab) ? Visibility.Visible : Visibility.Collapsed;
+            if (wind && MainTabControl.SelectedItem is TabItem t && t.Visibility != Visibility.Visible) MainTabControl.SelectedItem = tabWindSetupTabItem;
+            ShowWorkspaceLoads();
+            Log.Debug($"Wind setup page {windSetup?.Step + 1}: the result tabs and the loads table {(windSetup?.OnResults == true ? "shown" : "hidden")}");
+        }
+
         private void Workspace_Checked(object sender, RoutedEventArgs e)
         {
             if (windSetup == null) return; // still loading
@@ -1536,7 +1556,8 @@ namespace ShearWallVisualizer
             if (!wind) windSetup?.FlushPendingChange(); // the walls get the latest wind loads first
 
             foreach (var tab in MainTabControl.Items.OfType<TabItem>())
-                tab.Visibility = IsWindTab(tab) == wind ? Visibility.Visible : Visibility.Collapsed;
+                tab.Visibility = IsWindTab(tab) == wind && WindTabReady(tab) ? Visibility.Visible : Visibility.Collapsed;
+            WindStepChanged(); // the result tabs and the loads table follow the setup's page
 
             // The canvas is Hidden (not Collapsed) so it keeps its size: its zoom/pan math reads
             // ActualWidth/ActualHeight. The tab area simply stretches over it.
