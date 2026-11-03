@@ -518,7 +518,8 @@ namespace ShearWallVisualizer.Controls
             ("Allowed", 56, "Design unit shear capacity", 2),
             ("Ratio", 44, "Demand / capacity", 1),
             ("T (lb)", 50, "Hold-down tension at ASD", 2),
-            ("Hold-down¹", 84, "Lightest Simpson model at or above T (" + SimpsonCatalog.Edition + ", see the footnote)", 0),
+            ("Hold-down¹", 150, "Auto: the lightest Simpson model at or above T (" + SimpsonCatalog.Edition + ", see the footnote). Pick a model to use your own " +
+                                "(e.g. one size up); a model weaker than T fails the wall. Changing the hold-down type goes back to Auto", 0),
             ("Status", 80, "", 0),
             ("", 30, "", 0),
         };
@@ -639,7 +640,11 @@ namespace ShearWallVisualizer.Controls
                     o => d.Species = (string)o == "SPF / HF" ? WoodTypes.WOODTYPE_SPF_HF : WoodTypes.WOODTYPE_DF_SP, id));
                 Put(row, col++, DeadLoadBox(d, id));
                 Put(row, col++, Combo(new object[] { ShortHoldownName(HoldownFamilies.HDU_ToFoundation), ShortHoldownName(HoldownFamilies.HTT_ToFoundation), ShortHoldownName(HoldownFamilies.STHD_ToFoundation), ShortHoldownName(HoldownFamilies.Strap_ToWallBelow), ShortHoldownName(HoldownFamilies.HDU_Legacy_ToFoundation) },
-                    ShortHoldownName(d.Holdown), o => d.Holdown = Enum.GetValues(typeof(HoldownFamilies)).Cast<HoldownFamilies>().First(f => ShortHoldownName(f) == (string)o), id));
+                    ShortHoldownName(d.Holdown), o =>
+                    {
+                        d.Holdown = Enum.GetValues(typeof(HoldownFamilies)).Cast<HoldownFamilies>().First(f => ShortHoldownName(f) == (string)o);
+                        d.HoldownKey = null; // a model of the old type means nothing for the new one: back to Auto
+                    }, id));
 
                 Cell(row, col++, double.IsInfinity(r.Demand) ? "-" : r.Demand.ToString("0"), id);
                 Cell(row, col++, double.IsNaN(r.Capacity) ? "-" : r.Capacity.ToString("0"), id);
@@ -647,11 +652,16 @@ namespace ShearWallVisualizer.Controls
                 Cell(row, col++, double.IsNaN(r.Capacity) || double.IsInfinity(r.ShearRatio) ? "-" : r.ShearRatio.ToString("0.00"), id, r.ShearOk ? Ink : FailInk, bold: !r.ShearOk);
                 Cell(row, col++, r.TensionAsd.ToString("0"), id);
                 if (!r.HoldownOk) Tint(row, col, FailFill);
-                var hdCell = Cell(row, col++, !r.HoldownNeeded ? "no uplift" : (r.Holdown?.Model ?? "✗ none fits") + (r.HoldownElsewhere.Count > 0 ? " · " + string.Join(", ", r.HoldownElsewhere) : ""),
-                                  id, r.HoldownOk ? Ink : FailInk, bold: !r.HoldownOk);
-                if (r.HoldownElsewhere.Count > 0)
-                    hdCell.ToolTip = $"{r.Holdown?.Model ?? "None"} ({HoldownName(d.Holdown)}) where it can anchor; where it lands on something it cannot anchor to, a valid type is picked automatically: " +
+                if (!r.HoldownNeeded && string.IsNullOrEmpty(d.HoldownKey))
+                    Cell(row, col++, "no uplift", id);
+                else
+                {
+                    var hd = HoldownCombo(d, r, id);
+                    if (r.HoldownElsewhere.Count > 0)
+                        hd.ToolTip = $"{r.Holdown?.Model ?? "None"} ({HoldownName(d.Holdown)}) where it can anchor; where it lands on something it cannot anchor to, a valid type is picked automatically: " +
                                      string.Join(", ", r.HoldownElsewhere) + ". Choose another Hold-down type for this wall to override.";
+                    Put(row, col++, hd);
+                }
                 var status = new Border
                 {
                     Background = Ui.StateFill(state), CornerRadius = new CornerRadius(4), Margin = new Thickness(3, 3, 3, 3), Padding = new Thickness(6, 2, 6, 2),
@@ -742,6 +752,55 @@ namespace ShearWallVisualizer.Controls
                 // the table is rebuilt after this event, not inside it: the box that raised it is one of the table's cells
                 Dispatcher.BeginInvoke(new Action(() => DesignChanged?.Invoke(this, EventArgs.Empty)), System.Windows.Threading.DispatcherPriority.Input);
             };
+            return cb;
+        }
+
+        /// <summary>One entry of a wall's hold-down box: Auto (Key null) or a catalog option of the wall's type.</summary>
+        private sealed class HoldownPick
+        {
+            public string Key;
+            public string Text;
+            public override string ToString() => Text;
+            public override bool Equals(object o) => o is HoldownPick p && p.Key == Key;
+            public override int GetHashCode() => Key?.GetHashCode() ?? 0;
+        }
+
+        /// <summary>
+        /// The wall's hold-down: "Auto · HDUE5-SDS3" (the lightest that works) or the engineer's own model, from every option
+        /// of the wall's type, lightest first, each with its allowable load; those weaker than T are marked.
+        /// </summary>
+        private ComboBox HoldownCombo(WallDesignInputs d, WallDesignResult r, int id)
+        {
+            var sthd = (SettingsCalc?.DesignSettings ?? new DesignSettings()).StrapHoldownsOrDefault();
+            bool auto = !r.HoldownChosen;
+            var items = new List<object>
+            {
+                new HoldownPick { Key = null, Text = auto ? (r.Holdown != null ? $"Auto · {r.Holdown.Model}" : "Auto · ✗ none fits") : "Auto (lightest that works)" },
+            };
+            var options = designer.Options(d.Holdown, d.Species, sthd).OrderBy(o => o.Allowable).ToList();
+            string Post(HoldownChoice o) => o.WoodMinHeight.HasValue && o.WoodMinWidth.HasValue ? $"min. {o.WoodMinHeight.Value:0.##} × {o.WoodMinWidth.Value:0.##}" : null;
+            var repeated = new HashSet<string>(options.GroupBy(o => o.Model).Where(g => g.Count() > 1).Select(g => g.Key));
+            var samePost = new HashSet<string>(options.GroupBy(o => o.Model + "|" + Post(o)).Where(g => g.Count() > 1).Select(g => g.Key));
+            foreach (var o in options)
+            {
+                // a model listed more than once (fastener options): told apart by its minimum post, and its fasteners when
+                // the post is the same too
+                var parts = new List<string>();
+                if (repeated.Contains(o.Model) && Post(o) != null) parts.Add(Post(o));
+                if (repeated.Contains(o.Model) && (Post(o) == null || samePost.Contains(o.Model + "|" + Post(o))) && !string.IsNullOrEmpty(o.Fasteners)) parts.Add(o.Fasteners);
+                string which = parts.Count == 0 ? "" : " · " + string.Join(", ", parts);
+                items.Add(new HoldownPick { Key = o.Key, Text = $"{o.Model} · {o.Allowable:0} lb{which}" + (r.HoldownNeeded && o.Allowable < r.TensionAsd - 1e-9 ? "  ✗ < T" : "") });
+            }
+            var selected = items.Cast<HoldownPick>().FirstOrDefault(p => p.Key == (auto ? null : d.HoldownKey)) ?? items[0];
+            var cb = Combo(items, selected, o => d.HoldownKey = ((HoldownPick)o).Key, id);
+            cb.MaxDropDownHeight = 420;
+            cb.Foreground = r.HoldownOk ? Ink : FailInk;
+            cb.FontWeight = r.HoldownChosen ? FontWeights.SemiBold : FontWeights.Normal;
+            cb.ToolTip = r.HoldownChosen && r.Holdown == null ? $"Your choice {d.HoldownKey}; no uplift on this wall now, so no hold-down is needed."
+                : r.HoldownChosen
+                ? $"Your choice: {r.Holdown} at {r.Holdown.Allowable:0} lb for T = {r.TensionAsd:0} lb" + (r.HoldownOk ? "." : " (too weak: the wall fails).") + " Auto goes back to the lightest that works."
+                : (r.HoldownChoiceIgnored != null ? $"Your choice {r.HoldownChoiceIgnored} is not a {HoldownName(d.Holdown)} option: the lightest that works is used. " : "") +
+                  "Auto: the lightest model at or above T. Pick one to use your own (e.g. a size up).";
             return cb;
         }
 
@@ -952,6 +1011,7 @@ namespace ShearWallVisualizer.Controls
                 {
                     var d = r.Inputs.Clone();
                     d.DeadLoad = 0;
+                    d.HoldownKey = null; // a new wall sizes its own hold-down
                     foreach (var calc in stories.Select(x => x.Calculator).Where(c => c?.DesignSettings != null))
                     {
                         if (exterior) calc.DesignSettings.NewWallDesign = d.Clone();
@@ -1026,8 +1086,9 @@ namespace ShearWallVisualizer.Controls
             yield return !r.HoldownNeeded ? "No uplift: no hold-down needed for overturning."
                 : r.Holdown == null ? $"✗ No {HoldownName(d.Holdown)} in the {(r.HoldownFromStandardList ? "company standard list" : "catalog")} reaches {r.TensionAsd:0} lb: lengthen the wall, add dead load or use another type" +
                                       (r.HoldownFromStandardList ? " (or add a stronger option to the standard list, or switch to the full catalog)." : ".")
-                : $"{HoldownName(d.Holdown)}{(r.HoldownFromStandardList ? " (standard list)" : "")}: {r.Holdown} — allowable {r.Holdown.Allowable:0} lb ({(d.Species == WoodTypes.WOODTYPE_SPF_HF ? "SPF/HF" : "DF/SP")}) → ratio {r.HoldownRatio:0.00} {mark(true)}" +
-                  (r.Holdown.Conditions != null ? $" [{r.Holdown.Conditions}]" : "");
+                : $"{HoldownName(d.Holdown)}{(r.HoldownChosen ? " (engineer's choice)" : r.HoldownFromStandardList ? " (standard list)" : "")}: {r.Holdown} — allowable {r.Holdown.Allowable:0} lb ({(d.Species == WoodTypes.WOODTYPE_SPF_HF ? "SPF/HF" : "DF/SP")}) → ratio {r.HoldownRatio:0.00} {mark(r.HoldownOk)}" +
+                  (r.Holdown.Conditions != null ? $" [{r.Holdown.Conditions}]" : "") +
+                  (r.HoldownChosen && !r.HoldownOk ? $" — weaker than T {r.TensionAsd:0} lb: pick a larger model or Auto." : "");
         }
 
         private static TextBlock Label(string text) =>

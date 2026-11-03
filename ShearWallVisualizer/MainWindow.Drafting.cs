@@ -389,7 +389,7 @@ namespace ShearWallVisualizer
                     var r = kv.Value;
                     string why = !r.AspectOk ? $"aspect ratio {r.AspectRatio:0.##} over {r.MaxAspectRatio:0.##}"
                                : !r.ShearOk ? $"shear {r.Demand:0} plf over the capacity {r.Capacity:0} plf"
-                               : "no hold-down strong enough";
+                               : r.Status;
                     list.Add(new ModelIssue { Severity = Severity.Error, Code = "WallFails", Message = $"{id} fails on {s.Level.Name}: {why}.", Ids = { id }, LevelId = s.Level.Id, At = w.Middle });
                 }
                 AddLandingIssues(list);

@@ -108,6 +108,13 @@ namespace ShearWallCalculator.Design
 
         public HoldownFamilies Holdown { get; set; } = HoldownFamilies.HDU_ToFoundation;
 
+        /// <summary>
+        /// The engineer's own hold-down for this wall: a catalog option key ("Model#n", see <see cref="ShearWallDesigner.OptionKey"/>)
+        /// of the wall's <see cref="Holdown"/> type. Null (the default): the lightest one strong enough is chosen. It is used
+        /// even when weaker than the tension (the wall then fails), and even when not on the company standard list.
+        /// </summary>
+        public string HoldownKey { get; set; }
+
         /// <summary>Hold-down on the inside face of the end post (SDPWS 2021 Table 4.3A footnote 10, with 10d nails).</summary>
         public bool HoldownOnInsideFace { get; set; } = true;
 
@@ -572,11 +579,18 @@ namespace ShearWallCalculator.Design
 
         /// <summary>True when the hold-down was drawn from the company standard list only.</summary>
         public bool HoldownFromStandardList { get; set; }
+
+        /// <summary>True when <see cref="Holdown"/> is the engineer's choice (<see cref="WallDesignInputs.HoldownKey"/>), not the program's.</summary>
+        public bool HoldownChosen { get; set; }
+
+        /// <summary>The engineer's choice could not be used (another type now, or no longer in the catalog): the program chose instead.</summary>
+        public string HoldownChoiceIgnored { get; set; }
+
         public bool HoldownNeeded => TensionAsd > 0;
         public double HoldownRatio => !HoldownNeeded ? 0 : Holdown == null ? double.PositiveInfinity : TensionAsd / Holdown.Allowable;
 
         public bool ShearOk => !double.IsNaN(Capacity) && ShearRatio <= 1.0 + 1e-9;
-        public bool HoldownOk => !HoldownNeeded || Holdown != null;
+        public bool HoldownOk => !HoldownNeeded || (Holdown != null && TensionAsd <= Holdown.Allowable + 1e-9);
         public bool Pass => AspectOk && ShearOk && HoldownOk;
 
         /// <summary>A passing wall at or above this shear ratio is shown as close to its limit.</summary>
@@ -590,7 +604,8 @@ namespace ShearWallCalculator.Design
             !AspectOk ? $"h/b {AspectRatio:0.00} > {MaxAspectRatio:0.0} not allowed"
             : double.IsNaN(Capacity) ? "no table value for this nailing"
             : !ShearOk ? $"shear {ShearRatio:0.00} > 1"
-            : !HoldownOk ? (HoldownFromStandardList ? "no standard-list hold-down strong enough" : "no hold-down strong enough")
+            : !HoldownOk ? (Holdown != null ? $"hold-down {Holdown.Model} {Holdown.Allowable:0} lb < T {TensionAsd:0} lb"
+                            : HoldownFromStandardList ? "no standard-list hold-down strong enough" : "no hold-down strong enough")
             : "OK";
     }
 
@@ -741,7 +756,13 @@ namespace ShearWallCalculator.Design
                 r.AboveTensionAsd = arm > 0 ? aboveAsd / arm : 0;
                 r.AboveTensionLrfd = arm > 0 ? aboveLrfd / arm : 0;
                 r.DeadLoadLb = D;
-                r.Holdown = r.HoldownNeeded ? SelectHoldown(d.Holdown, d.Species, r.TensionAsd, settings.HoldownsFromStandardList, settings.StrapHoldownsOrDefault()) : null;
+                // the engineer's own hold-down when set and still in the catalog for this type; else the lightest strong enough
+                var chosen = string.IsNullOrEmpty(d.HoldownKey) ? null
+                           : Options(d.Holdown, d.Species, settings.StrapHoldownsOrDefault()).FirstOrDefault(o => o.Key == d.HoldownKey);
+                r.HoldownChosen = chosen != null;
+                r.HoldownChoiceIgnored = chosen == null && !string.IsNullOrEmpty(d.HoldownKey) ? d.HoldownKey : null;
+                r.Holdown = !r.HoldownNeeded ? null
+                          : chosen ?? SelectHoldown(d.Holdown, d.Species, r.TensionAsd, settings.HoldownsFromStandardList, settings.StrapHoldownsOrDefault());
                 double next = WallSchedule.PostAlongWall(r.Holdown);
                 if (r.Holdown == null || Math.Abs(next - post) < 1e-9) break;
                 post = next;
