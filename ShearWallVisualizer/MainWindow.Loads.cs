@@ -268,24 +268,24 @@ namespace ShearWallVisualizer
             sd.Normalize();
             var perp = new Vector(-sd.Y, sd.X);
             var ft = new FormattedText(label, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 10.5 * LabelScale, ink, dip);
-            Rect ArrowBox(Point p) { var r = new Rect(p - sd * px / 2, p + sd * px / 2); r.Inflate(5, 5); return r; }
-            Rect LabelBox(Point p)
-            {
-                var a = p + perp * (side > 0 ? 4 : -4) + new Vector(4, 0);
-                if (side < 0) a.Y -= ft.Height;
-                return new Rect(a.X - 2, a.Y, ft.Width + 4, ft.Height);
-            }
-            bool Clear(Point p) { var a = ArrowBox(p); var l = LabelBox(p); return !labelsTaken.Any(t => t.IntersectsWith(a) || t.IntersectsWith(l)); }
+            // the arrow and its label are one piece: the label right beside the arrow's middle, on the far side from the wall
+            // line, and the two moved together (never the label alone, away from its arrow)
+            var away = perp * Math.Sign(side);
+            double reach = 5 + Math.Abs(away.X) * (ft.Width + 4) / 2 + Math.Abs(away.Y) * ft.Height / 2;
+            Rect ArrowBox(Point p) { var r = new Rect(p - sd * px / 2, p + sd * px / 2); r.Inflate(4, 4); return r; }
+            Rect LabelBox(Point p) { var m = p + away * reach; return new Rect(m.X - (ft.Width + 4) / 2, m.Y - ft.Height / 2, ft.Width + 4, ft.Height); }
+            Rect Piece(Point p) => Rect.Union(ArrowBox(p), LabelBox(p));
 
             var c0 = s0 + perp * side;
-            var c = c0;
-            double step = Math.Max(10, Math.Min(30, slide / 3));
-            for (double d = step; d <= slide + 1e-9 && !Clear(c); d += step)
-            {
-                if (Clear(c0 + sd * d)) { c = c0 + sd * d; break; }
-                if (Clear(c0 - sd * d)) { c = c0 - sd * d; break; }
-            }
-            labelsTaken.Add(ArrowBox(c));
+            // along its line (up to slide px either way), the nearest clear place; none clear: the one covering least
+            double step = Math.Max(6, Math.Min(20, slide / 4));
+            var tries = new List<Point> { c0 };
+            for (double d = step; d <= slide + 1e-9; d += step) { tries.Add(c0 + sd * d); tries.Add(c0 - sd * d); }
+            var clear = tries.Where(p => !labelsTaken.Any(t => Controls.DesignOverlay.Overlaps(t, Piece(p)))).ToList();
+            var c = clear.Count > 0 ? clear[0] : tries.OrderBy(p => Controls.DesignOverlay.Covered(Piece(p), labelsTaken)).First();
+            var lb = LabelBox(c);
+            labelsTaken.Add(Piece(c));
+            labelReach.Union(lb);
             var tail = c - sd * px / 2;
             var head = c + sd * px / 2;
             ctx.DrawLine(pen, tail, head);
@@ -297,8 +297,8 @@ namespace ShearWallVisualizer
             }
             g.Freeze();
             ctx.DrawGeometry(ink, null, g);
-            // on the arrow's side: the label grows away from the arrow (upward on the negative side)
-            Label(ctx, label, c + perp * (side > 0 ? 4 : -4) + new Vector(4, 0), ink, dip, above: side < 0);
+            ctx.DrawRectangle(LabelBack, null, lb);
+            ctx.DrawText(ft, new Point(lb.X + 2, lb.Y));
         }
 
         /// <summary>The Loads legend lines this frame (null when Loads is off): shown in the drawing key beside the plan.</summary>
