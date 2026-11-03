@@ -68,8 +68,12 @@ namespace ShearWallVisualizer.Controls
                 Row("Sheathing", r.Panel, r.Faces.Count > 1 ? r.CombineRule : null);
                 Row("Unit shear v", double.IsNaN(r.Capacity) ? $"{r.Demand:0} plf (no capacity)" : $"{r.Demand:0} / {r.Capacity:0} plf  ({r.ShearRatio:0.00})",
                     ink: r.ShearOk ? Ui.Ink : Ui.FailInk);
-                Row("Hold-down", !r.HoldownNeeded ? "no uplift" : r.Holdown == null ? $"none fits T = {r.TensionAsd:0} lb" : $"{r.Holdown.Model}  (T = {r.TensionAsd:0} lb)",
-                    ink: r.HoldownOk ? Ui.Ink : Ui.FailInk);
+                var picks = HoldownItems?.Invoke(w, r);
+                if (picks == null || (!r.HoldownNeeded && !r.HoldownChosen))
+                    Row("Hold-down", !r.HoldownNeeded ? "no uplift" : r.Holdown == null ? $"none fits T = {r.TensionAsd:0} lb" : $"{r.Holdown.Model}  (T = {r.TensionAsd:0} lb)",
+                        ink: r.HoldownOk ? Ui.Ink : Ui.FailInk);
+                else
+                    HoldownRow(w, r, picks);
                 body.Children.Add(new Border
                 {
                     Background = Ui.StateFill(r.State), CornerRadius = new CornerRadius(4), Padding = new Thickness(8, 3, 8, 3),
@@ -128,6 +132,40 @@ namespace ShearWallVisualizer.Controls
             Grid.SetColumn(v, 1);
             g.Children.Add(v);
             body.Children.Add(g);
+        }
+
+        /// <summary>The wall's hold-down choices (<see cref="HoldownPicks.For"/>), set by the window; null: the card shows the hold-down as text.</summary>
+        public Func<WallData, WallDesignResult, List<HoldownPicks.Item>> HoldownItems { get; set; }
+
+        /// <summary>A hold-down picked on the card: the wall and the catalog key (null: Auto).</summary>
+        public event Action<int, string> HoldownPicked;
+
+        /// <summary>"Hold-down" with a box of the choices, the tension under it.</summary>
+        private void HoldownRow(WallData w, WallDesignResult r, List<HoldownPicks.Item> picks)
+        {
+            var d = w.Design ?? new WallDesignInputs();
+            var g = new Grid { Margin = new Thickness(0, 2, 0, 1) };
+            g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
+            g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            g.Children.Add(new TextBlock { Text = "Hold-down", Foreground = Ui.InkMuted, VerticalAlignment = VerticalAlignment.Center });
+            var cb = new ComboBox
+            {
+                FontSize = 12, MaxDropDownHeight = 420, Padding = new Thickness(4, 1, 2, 1),
+                Foreground = r.HoldownOk ? Ui.Ink : Ui.FailInk, FontWeight = r.HoldownChosen ? FontWeights.SemiBold : FontWeights.Normal,
+                ToolTip = HoldownPicks.Tip(d, r),
+            };
+            foreach (var p in picks) cb.Items.Add(p);
+            cb.SelectedItem = HoldownPicks.Selected(picks, d, r);
+            int wallId = id;
+            cb.SelectionChanged += (s, e) =>
+            {
+                if (cb.SelectedItem is HoldownPicks.Item p && e.RemovedItems.Count > 0) HoldownPicked?.Invoke(wallId, p.Key);
+            };
+            Grid.SetColumn(cb, 1);
+            g.Children.Add(cb);
+            body.Children.Add(g);
+            if (r.HoldownNeeded)
+                Row("", $"T = {r.TensionAsd:0} lb" + (r.Holdown != null ? $" · allowable {r.Holdown.Allowable:0} lb" : ""), ink: r.HoldownOk ? Ui.InkSecondary : Ui.FailInk);
         }
 
         private void Buttons(params (string text, Action click)[] buttons)

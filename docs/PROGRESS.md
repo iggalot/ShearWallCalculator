@@ -1002,3 +1002,5 @@ against your printed standard.
 - Saved with the wall (WallDesignInputs.HoldownKey, the catalog option key "Model#n"; null = Auto). The chosen model is used even when it is weaker than T (the wall then fails: "hold-down DTT2Z 1825 lb < T 2769 lb") and even when not on the company standard list. Its post sets the arm d, as for an auto pick.
 - Changing the hold-down type goes back to Auto; a key not of the wall's type is ignored (Auto used, the tooltip says so). "Use for new exterior/interior walls" does not copy the chosen model.
 - The detail line says "(engineer's choice)". HoldownOk now also checks the allowable against T. Tests by hand in HoldownChoiceTests (L 10 ft, h 9 ft, V 5 k: T = 27000 / d).
+- The plan's wall card has the same hold-down box (Controls.HoldownPicks: one list for the table and the card), with "T = … lb · allowable … lb" under it. A pick there is the wall's design input as from the table: recalculated, saved, undoable, logged "(from the plan card)".
+- Fixed: the schedule beside the plan did not refresh when only a wall's hold-down changed (its change check left the hold-down out).

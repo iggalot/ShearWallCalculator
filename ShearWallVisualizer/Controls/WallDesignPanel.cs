@@ -755,52 +755,16 @@ namespace ShearWallVisualizer.Controls
             return cb;
         }
 
-        /// <summary>One entry of a wall's hold-down box: Auto (Key null) or a catalog option of the wall's type.</summary>
-        private sealed class HoldownPick
-        {
-            public string Key;
-            public string Text;
-            public override string ToString() => Text;
-            public override bool Equals(object o) => o is HoldownPick p && p.Key == Key;
-            public override int GetHashCode() => Key?.GetHashCode() ?? 0;
-        }
-
-        /// <summary>
-        /// The wall's hold-down: "Auto · HDUE5-SDS3" (the lightest that works) or the engineer's own model, from every option
-        /// of the wall's type, lightest first, each with its allowable load; those weaker than T are marked.
-        /// </summary>
+        /// <summary>The wall's hold-down box (<see cref="HoldownPicks"/>: the same choices as the plan's wall card).</summary>
         private ComboBox HoldownCombo(WallDesignInputs d, WallDesignResult r, int id)
         {
             var sthd = (SettingsCalc?.DesignSettings ?? new DesignSettings()).StrapHoldownsOrDefault();
-            bool auto = !r.HoldownChosen;
-            var items = new List<object>
-            {
-                new HoldownPick { Key = null, Text = auto ? (r.Holdown != null ? $"Auto · {r.Holdown.Model}" : "Auto · ✗ none fits") : "Auto (lightest that works)" },
-            };
-            var options = designer.Options(d.Holdown, d.Species, sthd).OrderBy(o => o.Allowable).ToList();
-            string Post(HoldownChoice o) => o.WoodMinHeight.HasValue && o.WoodMinWidth.HasValue ? $"min. {o.WoodMinHeight.Value:0.##} × {o.WoodMinWidth.Value:0.##}" : null;
-            var repeated = new HashSet<string>(options.GroupBy(o => o.Model).Where(g => g.Count() > 1).Select(g => g.Key));
-            var samePost = new HashSet<string>(options.GroupBy(o => o.Model + "|" + Post(o)).Where(g => g.Count() > 1).Select(g => g.Key));
-            foreach (var o in options)
-            {
-                // a model listed more than once (fastener options): told apart by its minimum post, and its fasteners when
-                // the post is the same too
-                var parts = new List<string>();
-                if (repeated.Contains(o.Model) && Post(o) != null) parts.Add(Post(o));
-                if (repeated.Contains(o.Model) && (Post(o) == null || samePost.Contains(o.Model + "|" + Post(o))) && !string.IsNullOrEmpty(o.Fasteners)) parts.Add(o.Fasteners);
-                string which = parts.Count == 0 ? "" : " · " + string.Join(", ", parts);
-                items.Add(new HoldownPick { Key = o.Key, Text = $"{o.Model} · {o.Allowable:0} lb{which}" + (r.HoldownNeeded && o.Allowable < r.TensionAsd - 1e-9 ? "  ✗ < T" : "") });
-            }
-            var selected = items.Cast<HoldownPick>().FirstOrDefault(p => p.Key == (auto ? null : d.HoldownKey)) ?? items[0];
-            var cb = Combo(items, selected, o => d.HoldownKey = ((HoldownPick)o).Key, id);
+            var items = HoldownPicks.For(designer, d, r, sthd);
+            var cb = Combo(items.Cast<object>(), HoldownPicks.Selected(items, d, r), o => d.HoldownKey = ((HoldownPicks.Item)o).Key, id);
             cb.MaxDropDownHeight = 420;
             cb.Foreground = r.HoldownOk ? Ink : FailInk;
             cb.FontWeight = r.HoldownChosen ? FontWeights.SemiBold : FontWeights.Normal;
-            cb.ToolTip = r.HoldownChosen && r.Holdown == null ? $"Your choice {d.HoldownKey}; no uplift on this wall now, so no hold-down is needed."
-                : r.HoldownChosen
-                ? $"Your choice: {r.Holdown} at {r.Holdown.Allowable:0} lb for T = {r.TensionAsd:0} lb" + (r.HoldownOk ? "." : " (too weak: the wall fails).") + " Auto goes back to the lightest that works."
-                : (r.HoldownChoiceIgnored != null ? $"Your choice {r.HoldownChoiceIgnored} is not a {HoldownName(d.Holdown)} option: the lightest that works is used. " : "") +
-                  "Auto: the lightest model at or above T. Pick one to use your own (e.g. a size up).";
+            cb.ToolTip = HoldownPicks.Tip(d, r);
             return cb;
         }
 

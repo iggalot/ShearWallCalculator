@@ -323,7 +323,7 @@ namespace ShearWallVisualizer
             var schedule = picked && showDesign && !foundationView && !InWindWorkspace && designResults != null && designResults.Count > 0
                 ? ShearWallCalculator.Design.WallSchedule.Build(designResults, MarkLevel(currentLevel)) : new List<ShearWallCalculator.Design.ScheduleEntry>();
             var loads = InWindWorkspace || !picked ? null : loadsKey;
-            string sig = string.Join("\n", schedule.Select(e => $"{e.Mark}|{e.Sheathing}|{e.Capacity}|{string.Join(",", e.WallIds)}"))
+            string sig = string.Join("\n", schedule.Select(e => $"{e.Mark}|{e.Sheathing}|{e.Capacity}|{e.Holdown}|{string.Join(",", e.WallIds)}"))
                          + "\n#\n" + (loads == null ? "" : string.Join("\n", loads));
             if (sig == drawingKeyShown) return;
             drawingKeyShown = sig;
