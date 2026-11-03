@@ -987,3 +987,4 @@ against your printed standard.
 - Driven by WindSetupControl.StepChanged / OnResults (ASCE7 repo). MainWindow.WindStepChanged applies it.
 - Wind Setup page 2 (Building) shows the building only: the model's box, roof, floors and north mark, redrawn as the numbers change. There are no pressures, legend, wind modes, wind arrow, windward/leeward labels or result cards. Those are on Results. Wind3DViewerControl.GeometryOnly (ASCE7 repo).
 - When the wind inputs can't be calculated, the building is still drawn (no pressures) instead of an empty view.
+- With a building model, Wind Setup page 2 shows the model's geometry (size, floors and plate heights, roof, eave overhang, parapet) as a read-out under "From the building model", with Edit building…. The locked input boxes and roof buttons are gone. The wind's own inputs (parapet envelope, cladding components) stay editable.
