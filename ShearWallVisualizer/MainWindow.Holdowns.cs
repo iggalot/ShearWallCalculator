@@ -103,7 +103,7 @@ namespace ShearWallVisualizer
                     ctx.DrawRectangle(a.Model != null ? LandFill : Brushes.White, a.Model != null ? LandEdge : MissingEdge, box);
                     string wallId = a.Kind != PathPointKind.WallHoldown ? a.From
                                   : stories.Count > 0 && stories[0].Walls.TryGetValue(a.WallId, out var id) ? id : $"W{a.WallId}";
-                    Label(ctx, $"{wallId}  {a.Model ?? "no HD"}  {a.TensionAsd:N0} lb", new Point(p.X + 7, p.Y - 16), a.Model == null ? Controls.Ui.FailInk : a.Note != null ? Controls.Ui.CloseInk : LandText, dip);
+                    Label(ctx, $"{wallId}  {a.Model ?? "no HD"}  {a.TensionAsd:N0} lb", new Point(p.X + 7, p.Y - 5), a.Model == null ? Controls.Ui.FailInk : a.Note != null ? Controls.Ui.CloseInk : LandText, dip, above: true);
                 }
                 return;
             }
@@ -140,13 +140,18 @@ namespace ShearWallVisualizer
                 string text = !l.Supported ? $"↓ {l.TensionAsd / 1000:0.0}k  nothing below: draw a beam (B) or a column (P)"
                             : l.Support == SupportKind.Wall ? $"↓ {l.TensionAsd / 1000:0.0}k" : $"↓ {l.TensionAsd / 1000:0.0}k on {l.SupportId}";
                 if (l.Note != null) text += $"  · {l.Model ?? "none"} ({HoldownRules.Name(l.Family)} here)";
-                Label(ctx, text, new Point(p.X + 8, p.Y - 20), !l.Supported ? Controls.Ui.FailInk : l.Note != null ? Controls.Ui.CloseInk : LandText, dip);
+                Label(ctx, text, new Point(p.X + 8, p.Y - 10), !l.Supported ? Controls.Ui.FailInk : l.Note != null ? Controls.Ui.CloseInk : LandText, dip, above: true);
             }
         }
 
-        private static void Label(DrawingContext ctx, string text, Point at, Brush ink, double dip)
+        /// <summary>The plan's text size against the base sizes: the sketch's, so the overlays match the plan's own labels.</summary>
+        private double LabelScale => Sketch?.LabelScale ?? 1;
+
+        /// <summary>A label on a light back, top-left at <paramref name="at"/>; <paramref name="above"/>: bottom-left there (it grows upward, off the mark under it).</summary>
+        private void Label(DrawingContext ctx, string text, Point at, Brush ink, double dip, bool above = false)
         {
-            var ft = new FormattedText(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 10.5, ink, dip);
+            var ft = new FormattedText(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 10.5 * LabelScale, ink, dip);
+            if (above) at = new Point(at.X, at.Y - ft.Height);
             ctx.DrawRectangle(LabelBack, null, new Rect(at.X - 2, at.Y, ft.Width + 4, ft.Height));
             ctx.DrawText(ft, at);
         }

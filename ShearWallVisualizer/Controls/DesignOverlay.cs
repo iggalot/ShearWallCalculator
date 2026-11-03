@@ -43,8 +43,9 @@ namespace ShearWallVisualizer.Controls
 
         /// <summary>Draws the overlay. <paramref name="toScreen"/> maps world ft to canvas pixels.</summary>
         public static void Draw(DrawingContext ctx, IEnumerable<KeyValuePair<int, WallData>> walls, IReadOnlyDictionary<int, WallDesignResult> design,
-                                Func<Point, Point> toScreen, Size view, double pixelsPerDip)
+                                Func<Point, Point> toScreen, Size view, double pixelsPerDip, double labelScale = 1)
         {
+            scale = labelScale > 0 ? labelScale : 1; // the plan's text size (the sketch's LabelScale)
             if (walls == null || design == null || design.Count == 0) return;
             var schedule = WallSchedule.Build(design);
             var marks = WallSchedule.MarksByWall(schedule);
@@ -100,7 +101,10 @@ namespace ShearWallVisualizer.Controls
         }
 
         private static FormattedText Text(string s, double size, Brush ink, double dip, bool bold = false) =>
-            new FormattedText(s, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, bold ? FaceBold : Face, size, ink, dip);
+            new FormattedText(s, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, bold ? FaceBold : Face, size * scale, ink, dip);
+
+        /// <summary>The text size against the base sizes, for the drawing under way (set by <see cref="Draw"/>; the UI thread only).</summary>
+        private static double scale = 1;
 
         private sealed class TagText
         {

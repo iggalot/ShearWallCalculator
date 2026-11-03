@@ -198,7 +198,7 @@ namespace ShearWallVisualizer
             g.Freeze();
             ctx.DrawGeometry(WindInk, null, g);
             var label = new FormattedText($"WIND from {CaseBreakdown.WindFrom(lc)}{(oblique ? " (quartering, on the corner)" : "")}", CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
-                                          new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal), 13, WindInk, dip);
+                                          new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal), 13 * LabelScale, WindInk, dip);
             var at = tail - sd * 8 - new Vector(label.Width / 2, label.Height / 2) + new Vector(-sd.X * label.Width / 2, -sd.Y * label.Height / 2);
             ctx.DrawRectangle(LabelBack, null, new Rect(at.X - 3, at.Y, label.Width + 6, label.Height));
             ctx.DrawText(label, at);
@@ -234,7 +234,7 @@ namespace ShearWallVisualizer
             }
             hg.Freeze();
             ctx.DrawGeometry(WindInk, null, hg);
-            Label(ctx, $"Mt {Math.Abs(mt):0.0} k·ft {(ccwPlan ? "CCW" : "CW")}", new Point(c.X + r + 6, c.Y - r - 4), WindInk, dip);
+            Label(ctx, $"Mt {Math.Abs(mt):0.0} k·ft {(ccwPlan ? "CCW" : "CW")}", new Point(c.X + r + 6, c.Y - r + 4), WindInk, dip, above: true);
         }
 
         /// <summary>An arrow of <paramref name="px"/> pixels centered on a plan point, along a plan direction, set off the line by <paramref name="side"/> px.</summary>
@@ -257,14 +257,15 @@ namespace ShearWallVisualizer
             }
             g.Freeze();
             ctx.DrawGeometry(ink, null, g);
-            Label(ctx, label, c + perp * (side > 0 ? 4 : -18) + new Vector(4, 0), ink, dip);
+            // on the arrow's side: the label grows away from the arrow (upward on the negative side)
+            Label(ctx, label, c + perp * (side > 0 ? 4 : -4) + new Vector(4, 0), ink, dip, above: side < 0);
         }
 
         /// <summary>The overlay's legend, bottom left of the plan.</summary>
         private void Legend(DrawingContext ctx, IList<string> lines, double dip)
         {
             var texts = lines.Select((t, i) => new FormattedText(t, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"),
-                                                                 i == 0 ? 12 : 11, i == 0 ? Controls.Ui.Ink : Controls.Ui.InkSecondary, dip)).ToList();
+                                                                 (i == 0 ? 12 : 11) * LabelScale, i == 0 ? Controls.Ui.Ink : Controls.Ui.InkSecondary, dip)).ToList();
             if (texts.Count > 0) texts[0].SetFontWeight(FontWeights.SemiBold);
             double w = texts.Max(t => t.Width) + 16, h = texts.Sum(t => t.Height + 2) + 12;
             double y = Math.Max(8, m_layers.ActualHeight - h - 12);

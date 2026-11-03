@@ -658,7 +658,7 @@ namespace ShearWallVisualizer
         {
             if (!showDesign || Calculator?._wall_system == null) return;
             DesignOverlay.Draw(ctx, Calculator._wall_system._walls, designResults, p => WorldToScreen(p, m_layers),
-                               new Size(m_layers.ActualWidth, m_layers.ActualHeight), VisualTreeHelper.GetDpi(this).PixelsPerDip);
+                               new Size(m_layers.ActualWidth, m_layers.ActualHeight), VisualTreeHelper.GetDpi(this).PixelsPerDip, LabelScale);
         }
 
         private static Pen FrozenPen(Color c, double thickness)

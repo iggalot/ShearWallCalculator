@@ -28,6 +28,8 @@ _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`
   + torsion before −. Each is labelled with its direction first ("SW · Case 4, torsion +267.6 k·ft CCW"), in the Show list
   (with group headers), the Loads ▾ menu (a submenu per direction), the background table and the design table's Case
   columns. The case names stay the keys between levels.
+- **Plan text 1.5× larger** (BuildingModel `SketchCanvas.LabelScale`, one number): the sketch's IDs, lengths and notes and
+  this app's overlays (loads, hold-downs, schedule marks and schedule, legend, wind). Labels above a mark grow upward.
 - **Foundation plan:** a column run down to the foundation is drawn there ("C1 base", outlined square) and can be picked.
   The same holds on any level a column stands on.
 
