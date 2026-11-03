@@ -611,40 +611,26 @@ namespace ShearWallVisualizer.Controls
                 var f2 = d.EffectiveFace2();
                 bool same = f2 != null && f1.SameConstructionAs(f2);
                 var o1 = designer.FindOption(f1);
-                Put(row, col++, FaceCombo(designer.SheathingOptions.Cast<object>(), o1, o =>
-                {
-                    var nf1 = ((SheathingOption)o).ToFace(f1.EdgeSpacing > 0 ? f1.EdgeSpacing : 6);
-                    if (!((SheathingOption)o).UsesEdgeSpacing) nf1.EdgeSpacing = 0;
-                    else if (double.IsNaN(((SheathingOption)o).NominalWind(nf1.EdgeSpacing))) nf1.EdgeSpacing = FirstSpacing((SheathingOption)o);
-                    d.SetFaces(nf1, same ? nf1 : f2);
-                }, id));
-                Put(row, col++, SpacingCell(o1, f1, s => { var n = f1.Clone(); n.EdgeSpacing = s; d.SetFaces(n, same ? n : f2); }, id));
+                // the edits are WallDesignEdits: the same as on the plan's wall card
+                Put(row, col++, FaceCombo(designer.SheathingOptions.Cast<object>(), o1, o => WallDesignEdits.SetFace1(d, (SheathingOption)o), id));
+                Put(row, col++, SpacingCell(o1, f1, s => WallDesignEdits.SetFace1Spacing(d, s), id));
 
                 var face2Items = new List<object> { NoFace, SameFace };
                 face2Items.AddRange(designer.SheathingOptions);
                 var o2 = f2 == null ? null : designer.FindOption(f2);
                 Put(row, col++, FaceCombo(face2Items, f2 == null ? (object)NoFace : same ? SameFace : (object)o2, o =>
                 {
-                    if (Equals(o, NoFace)) d.SetFaces(f1, null);
-                    else if (Equals(o, SameFace)) d.SetFaces(f1, f1);
-                    else
-                    {
-                        var opt = (SheathingOption)o;
-                        var nf2 = opt.ToFace(opt.UsesEdgeSpacing ? (double.IsNaN(opt.NominalWind(6)) ? FirstSpacing(opt) : 6) : 0);
-                        d.SetFaces(f1, nf2);
-                    }
+                    if (Equals(o, NoFace)) WallDesignEdits.SetNoFace2(d);
+                    else if (Equals(o, SameFace)) WallDesignEdits.SetFace2Same(d);
+                    else WallDesignEdits.SetFace2(d, (SheathingOption)o);
                 }, id));
                 if (f2 == null || same) Cell(row, col++, same ? "same" : "", id, InkSecondary);
-                else Put(row, col++, SpacingCell(o2, f2, s => { var n = f2.Clone(); n.EdgeSpacing = s; d.SetFaces(f1, n); }, id));
+                else Put(row, col++, SpacingCell(o2, f2, s => WallDesignEdits.SetFace2Spacing(d, s), id));
                 Put(row, col++, Combo(new object[] { "DF / SP", "SPF / HF" }, d.Species == WoodTypes.WOODTYPE_SPF_HF ? "SPF / HF" : "DF / SP",
                     o => d.Species = (string)o == "SPF / HF" ? WoodTypes.WOODTYPE_SPF_HF : WoodTypes.WOODTYPE_DF_SP, id));
                 Put(row, col++, DeadLoadBox(d, id));
-                Put(row, col++, Combo(new object[] { ShortHoldownName(HoldownFamilies.HDU_ToFoundation), ShortHoldownName(HoldownFamilies.HTT_ToFoundation), ShortHoldownName(HoldownFamilies.STHD_ToFoundation), ShortHoldownName(HoldownFamilies.Strap_ToWallBelow), ShortHoldownName(HoldownFamilies.HDU_Legacy_ToFoundation) },
-                    ShortHoldownName(d.Holdown), o =>
-                    {
-                        d.Holdown = Enum.GetValues(typeof(HoldownFamilies)).Cast<HoldownFamilies>().First(f => ShortHoldownName(f) == (string)o);
-                        d.HoldownKey = null; // a model of the old type means nothing for the new one: back to Auto
-                    }, id));
+                Put(row, col++, Combo(HoldownTypes.Select(ShortHoldownName).Cast<object>(),
+                    ShortHoldownName(d.Holdown), o => WallDesignEdits.SetHoldownType(d, HoldownTypes.First(f => ShortHoldownName(f) == (string)o)), id));
 
                 Cell(row, col++, double.IsInfinity(r.Demand) ? "-" : r.Demand.ToString("0"), id);
                 Cell(row, col++, double.IsNaN(r.Capacity) ? "-" : r.Capacity.ToString("0"), id);
@@ -938,6 +924,13 @@ namespace ShearWallVisualizer.Controls
         }
 
         /// <summary>The table's short label (the column tooltip says where each one anchors).</summary>
+        /// <summary>The hold-down types in the order offered (table and wall card).</summary>
+        public static readonly HoldownFamilies[] HoldownTypes =
+        {
+            HoldownFamilies.HDU_ToFoundation, HoldownFamilies.HTT_ToFoundation, HoldownFamilies.STHD_ToFoundation,
+            HoldownFamilies.Strap_ToWallBelow, HoldownFamilies.HDU_Legacy_ToFoundation,
+        };
+
         public static string ShortHoldownName(HoldownFamilies f) =>
             f == HoldownFamilies.HDU_Legacy_ToFoundation ? "HDU (disc.)" :
             f == HoldownFamilies.HDU_ToFoundation ? "HDUE" : f == HoldownFamilies.HTT_ToFoundation ? "HTT" :

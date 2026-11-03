@@ -102,13 +102,12 @@ namespace ShearWallVisualizer
             // the wall card's hold-down box: the Design table's choices; a pick is the wall's design input, as from the table
             selectionCard.HoldownItems = (w, r) => designer == null ? null
                 : Controls.HoldownPicks.For(designer, w.Design ?? new WallDesignInputs(), r, (Calculator?.DesignSettings ?? new DesignSettings()).StrapHoldownsOrDefault());
-            selectionCard.HoldownPicked += (wallId, key) =>
+            selectionCard.DesignEdit += (wallId, what, edit) =>
             {
                 if (Calculator == null || !Calculator._wall_system._walls.TryGetValue(wallId, out var w)) return;
                 w.Design = w.Design ?? new WallDesignInputs();
-                string was = w.Design.HoldownKey ?? "Auto";
-                w.Design.HoldownKey = key;
-                Log.Info("Design", $"Level {CurrentStory?.Level.Name} wall {wallId}: hold-down {was} → {key ?? "Auto"} (from the plan card)");
+                edit(w.Design);
+                Log.Info("Design", $"{CurrentStory?.Level.Name} wall {wallId}: {what} (from the plan card)");
                 // rebuilt after this event: the box that raised it is on the card
                 Dispatcher.BeginInvoke(new Action(UpdateShearWallUI), System.Windows.Threading.DispatcherPriority.Input);
             };
@@ -224,6 +223,7 @@ namespace ShearWallVisualizer
         private void CreateDesignPanel()
         {
             designer = new ShearWallDesigner(null, simpsonCatalog);
+            selectionCard.Designer = designer; // the wall card's sheathing boxes: the Design table's choices
             // The standard hold-down list belongs to the app (one list for every project). The company default ships with the
             // program; each user's copy follows it unless the user has changed theirs.
             try

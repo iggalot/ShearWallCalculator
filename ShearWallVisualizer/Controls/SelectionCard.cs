@@ -30,7 +30,7 @@ namespace ShearWallVisualizer.Controls
         {
             FontFamily = new FontFamily("Segoe UI");
             FontSize = 12;
-            Width = 290;
+            Width = 340; // room for the sheathing and hold-down boxes
             Content = new Border
             {
                 Background = Brushes.White, BorderBrush = Ui.Hairline, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(8),
@@ -65,9 +65,17 @@ namespace ShearWallVisualizer.Controls
 
             if (design != null && design.TryGetValue(id, out var r))
             {
-                Row("Sheathing", r.Panel, r.Faces.Count > 1 ? r.CombineRule : null);
+                if (Designer != null) DesignRows(w, r);
+                else Row("Sheathing", r.Panel, r.Faces.Count > 1 ? r.CombineRule : null);
                 Row("Unit shear v", double.IsNaN(r.Capacity) ? $"{r.Demand:0} plf (no capacity)" : $"{r.Demand:0} / {r.Capacity:0} plf  ({r.ShearRatio:0.00})",
                     ink: r.ShearOk ? Ui.Ink : Ui.FailInk);
+                if (Designer != null)
+                {
+                    var d0 = w.Design ?? new WallDesignInputs();
+                    ComboRow("Hold-down type", WallDesignPanel.HoldownTypes.Select(WallDesignPanel.ShortHoldownName).Cast<object>(), WallDesignPanel.ShortHoldownName(d0.Holdown),
+                        o => Edit($"hold-down type {o}", d => WallDesignEdits.SetHoldownType(d, WallDesignPanel.HoldownTypes.First(f => WallDesignPanel.ShortHoldownName(f) == (string)o))),
+                        tip: WallDesignPanel.HoldownName(d0.Holdown) + ". Changing the type sets the hold-down back to Auto.");
+                }
                 var picks = HoldownItems?.Invoke(w, r);
                 if (picks == null || (!r.HoldownNeeded && !r.HoldownChosen))
                     Row("Hold-down", !r.HoldownNeeded ? "no uplift" : r.Holdown == null ? $"none fits T = {r.TensionAsd:0} lb" : $"{r.Holdown.Model}  (T = {r.TensionAsd:0} lb)",
@@ -137,33 +145,84 @@ namespace ShearWallVisualizer.Controls
         /// <summary>The wall's hold-down choices (<see cref="HoldownPicks.For"/>), set by the window; null: the card shows the hold-down as text.</summary>
         public Func<WallData, WallDesignResult, List<HoldownPicks.Item>> HoldownItems { get; set; }
 
-        /// <summary>A hold-down picked on the card: the wall and the catalog key (null: Auto).</summary>
-        public event Action<int, string> HoldownPicked;
+        /// <summary>The sheathing choices (set by the window); null: the card shows the wall's design as text.</summary>
+        public ShearWallDesigner Designer { get; set; }
+
+        /// <summary>
+        /// An edit of the wall's design made on the card: the wall, what changed (for the log) and the edit (one of
+        /// <see cref="WallDesignEdits"/>). The window applies it as an edit from the Design table: recalculated, saved, undoable.
+        /// </summary>
+        public event Action<int, string, Action<WallDesignInputs>> DesignEdit;
+
+        private void Edit(string what, Action<WallDesignInputs> edit) => DesignEdit?.Invoke(id, what, edit);
+
+        private const string NoFace = "None", SameFace = "Same as face 1";
+
+        /// <summary>Face 1 (sheathing and edge nailing) and face 2 (none, the same, or its own sheathing and nailing).</summary>
+        private void DesignRows(WallData w, WallDesignResult r)
+        {
+            var d = w.Design ?? new WallDesignInputs();
+            var f1 = d.EffectiveFace1();
+            var f2 = d.EffectiveFace2();
+            bool same = WallDesignEdits.SecondIsSame(d);
+            var o1 = Designer.FindOption(f1);
+            ComboRow("Face 1", Designer.SheathingOptions.Cast<object>(), o1, o => Edit($"face 1 {((SheathingOption)o).Name}", x => WallDesignEdits.SetFace1(x, (SheathingOption)o)),
+                     Spacing(o1, f1, s => Edit($"face 1 edge nailing {s}\"", x => WallDesignEdits.SetFace1Spacing(x, s))), o1?.Description);
+
+            var items = new List<object> { NoFace, SameFace };
+            items.AddRange(Designer.SheathingOptions);
+            var o2 = f2 == null || same ? null : Designer.FindOption(f2);
+            ComboRow("Face 2", items, f2 == null ? NoFace : same ? SameFace : (object)o2, o =>
+                {
+                    if (Equals(o, NoFace)) Edit("face 2 none", WallDesignEdits.SetNoFace2);
+                    else if (Equals(o, SameFace)) Edit("face 2 same as face 1", WallDesignEdits.SetFace2Same);
+                    else Edit($"face 2 {((SheathingOption)o).Name}", x => WallDesignEdits.SetFace2(x, (SheathingOption)o));
+                },
+                o2 == null ? null : Spacing(o2, f2, s => Edit($"face 2 edge nailing {s}\"", x => WallDesignEdits.SetFace2Spacing(x, s))),
+                r.Faces.Count > 1 ? r.CombineRule : "One sheathed face. Pick a second face to sheathe both sides.");
+        }
+
+        /// <summary>The edge nailing box of a Table 4.3A/B face (only the spacings the table has); null otherwise.</summary>
+        private static ComboBox Spacing(SheathingOption o, FaceSheathing f, Action<int> pick)
+        {
+            if (o == null || !o.UsesEdgeSpacing) return null;
+            var cb = new ComboBox { FontSize = 12, Width = 46, Margin = new Thickness(4, 0, 0, 0), Padding = new Thickness(4, 1, 2, 1), ToolTip = "Panel edge nail spacing" };
+            foreach (int s in ShearWallDesigner.EdgeSpacings.Where(s => !double.IsNaN(o.NominalWind(s)))) cb.Items.Add($"{s}\"");
+            cb.SelectedItem = $"{f.EdgeSpacing}\"";
+            cb.SelectionChanged += (s, e) =>
+            {
+                if (e.RemovedItems.Count > 0 && cb.SelectedItem is string v) pick(int.Parse(v.TrimEnd('"'), System.Globalization.CultureInfo.InvariantCulture));
+            };
+            return cb;
+        }
+
+        /// <summary>A label and a box (and an optional second box beside it, e.g. the nailing).</summary>
+        private ComboBox ComboRow(string label, IEnumerable<object> items, object selected, Action<object> pick, UIElement extra = null, string tip = null)
+        {
+            var g = new Grid { Margin = new Thickness(0, 2, 0, 1) };
+            g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
+            g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            g.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            g.Children.Add(new TextBlock { Text = label, Foreground = Ui.InkMuted, VerticalAlignment = VerticalAlignment.Center });
+            var cb = new ComboBox { FontSize = 12, MaxDropDownHeight = 420, Padding = new Thickness(4, 1, 2, 1), ToolTip = tip };
+            foreach (var i in items) cb.Items.Add(i);
+            cb.SelectedItem = cb.Items.Cast<object>().FirstOrDefault(i => Equals(i, selected));
+            cb.SelectionChanged += (s, e) => { if (e.RemovedItems.Count > 0 && cb.SelectedItem != null) pick(cb.SelectedItem); };
+            Grid.SetColumn(cb, 1);
+            g.Children.Add(cb);
+            if (extra != null) { Grid.SetColumn(extra, 2); g.Children.Add(extra); }
+            body.Children.Add(g);
+            return cb;
+        }
 
         /// <summary>"Hold-down" with a box of the choices, the tension under it.</summary>
         private void HoldownRow(WallData w, WallDesignResult r, List<HoldownPicks.Item> picks)
         {
             var d = w.Design ?? new WallDesignInputs();
-            var g = new Grid { Margin = new Thickness(0, 2, 0, 1) };
-            g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
-            g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            g.Children.Add(new TextBlock { Text = "Hold-down", Foreground = Ui.InkMuted, VerticalAlignment = VerticalAlignment.Center });
-            var cb = new ComboBox
-            {
-                FontSize = 12, MaxDropDownHeight = 420, Padding = new Thickness(4, 1, 2, 1),
-                Foreground = r.HoldownOk ? Ui.Ink : Ui.FailInk, FontWeight = r.HoldownChosen ? FontWeights.SemiBold : FontWeights.Normal,
-                ToolTip = HoldownPicks.Tip(d, r),
-            };
-            foreach (var p in picks) cb.Items.Add(p);
-            cb.SelectedItem = HoldownPicks.Selected(picks, d, r);
-            int wallId = id;
-            cb.SelectionChanged += (s, e) =>
-            {
-                if (cb.SelectedItem is HoldownPicks.Item p && e.RemovedItems.Count > 0) HoldownPicked?.Invoke(wallId, p.Key);
-            };
-            Grid.SetColumn(cb, 1);
-            g.Children.Add(cb);
-            body.Children.Add(g);
+            var cb = ComboRow("Hold-down", picks.Cast<object>(), HoldownPicks.Selected(picks, d, r),
+                              o => Edit($"hold-down {((HoldownPicks.Item)o).Key ?? "Auto"}", x => x.HoldownKey = ((HoldownPicks.Item)o).Key), tip: HoldownPicks.Tip(d, r));
+            cb.Foreground = r.HoldownOk ? Ui.Ink : Ui.FailInk;
+            cb.FontWeight = r.HoldownChosen ? FontWeights.SemiBold : FontWeights.Normal;
             if (r.HoldownNeeded)
                 Row("", $"T = {r.TensionAsd:0} lb" + (r.Holdown != null ? $" · allowable {r.Holdown.Allowable:0} lb" : ""), ink: r.HoldownOk ? Ui.InkSecondary : Ui.FailInk);
         }
