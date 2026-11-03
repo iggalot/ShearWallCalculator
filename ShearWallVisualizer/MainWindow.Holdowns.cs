@@ -331,7 +331,7 @@ namespace ShearWallVisualizer
             // at one point, the walls meeting there added case by case (not each wall's own worst)
             double up = foundationPoints.Count == 0 ? 0 : foundationPoints.Max(p => p.UpliftAsd);
             double down = foundationPoints.Count == 0 ? 0 : foundationPoints.Max(p => p.BearingAsd);
-            return "Foundation" + (foundationPoints.Count > 0 ? $"  ·  max at a point +{down / 1000:0.0}k (C) / −{up / 1000:0.0}k (T) ASD" : "") +
+            return "Foundation (wind only)" + (foundationPoints.Count > 0 ? $"  ·  max at a point +{down / 1000:0.0}k (C) / −{up / 1000:0.0}k (T) ASD" : "") +
                    (missing > 0 ? $"  ·  {missing} hold-down{(missing == 1 ? "" : "s")} too weak" : "");
         }
 
@@ -363,6 +363,35 @@ namespace ShearWallVisualizer
             foreach (var p in points.Where(p => p.From.Count > 1))
                 Log.Debug($"Foundation at ({p.At.X:0.##}, {p.At.Y:0.##}): {string.Join(" + ", p.From)}: uplift {p.UpliftAsd:0} lb ({p.UpliftCase}), bearing {p.BearingAsd:0} lb ({p.BearingCase}), case by case");
             return points;
+        }
+
+        /// <summary>
+        /// The end of the viewport strip: what the plan shows, a word or two per overlay that is on ("Hold-downs · Wind
+        /// reactions" on G), so the foundation's numbers are not read as everything it must carry (no gravity here).
+        /// </summary>
+        private void UpdateShowing()
+        {
+            if (tbShowing == null) return;
+            var parts = new List<string>();
+            if (foundationView)
+            {
+                if (showDesign) parts.Add("hold-downs");
+                if (showReactions) parts.Add("reactions");
+            }
+            else
+            {
+                if (showDesign) parts.Add("Wall design");
+                if (showLoads) parts.Add("Wind loads");
+            }
+            string text = parts.Count == 0 ? "Plan only"
+                : foundationView ? "Wind only: " + string.Join(", ", parts)   // not everything the foundation carries
+                : string.Join("  ·  ", parts);
+            if (tbShowing.Text == text) return;
+            tbShowing.Text = text;
+            tbShowing.ToolTip = foundationView
+                ? "The foundation's WIND forces from the first story's walls: hold-down uplift, and the overturning compression with the walls' own dead load. " +
+                  "Gravity loads (floors, roof, columns) are not included: the foundation is designed for those too."
+                : "What the plan shows: the shear wall design (marks, hold-downs) and, when on, one wind load case.";
         }
 
         /// <summary>SHOW Reactions (the foundation view): what the foundation takes at each point.</summary>

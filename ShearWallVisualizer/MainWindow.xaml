@@ -239,7 +239,7 @@
                                 </Setter>
                             </Style>
                         </Border.Resources>
-                        <StackPanel Orientation="Horizontal">
+                        <WrapPanel Orientation="Horizontal">
                             <TextBlock Text="LEVEL" FontSize="11" FontWeight="SemiBold" Foreground="#7A7974" VerticalAlignment="Center" Margin="2,0,4,0"/>
                             <Button x:Name="btnFoundation" Style="{StaticResource ViewLevel}" Content="G" Click="Foundation_Click"
                                     ToolTip="G, the ground: the foundation plan with every hold-down anchor of the first story's walls (wall, model, uplift), for the foundation design."/>
@@ -264,7 +264,10 @@
                                     ToolTip="The building in 3D from the model: every level's diaphragm and the walls (shear walls blue); the level shown is stronger"/>
                             <Button x:Name="btnIssues" Style="{StaticResource ViewLevel}" Content="✓" Click="Issues_Click"
                                     ToolTip="Errors and warnings in the model and the design (also marked on the plan)"/>
-                        </StackPanel>
+                            <!-- what the plan shows now, in a word or two per overlay (follows LEVEL and SHOW) -->
+                            <Rectangle Width="1" Height="18" Fill="#D8D6CC" Margin="8,2,6,2"/>
+                            <TextBlock x:Name="tbShowing" VerticalAlignment="Center" FontSize="12" Foreground="#5B2C83" FontWeight="SemiBold" Margin="0,0,4,0"/>
+                        </WrapPanel>
                     </Border>
                     <!-- The shared sketcher (BuildingModel.Sketch): its own tools, snaps, undo and status line; the building model is the source of truth -->
                     <sketch:SketchView x:Name="sketchView"/>

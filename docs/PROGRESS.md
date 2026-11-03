@@ -966,3 +966,7 @@ against your printed standard.
 - Foundation reactions are their own overlay (SHOW Reactions, shown on G only, on by default): one label per point,
   "+6.9k (C) / −6.9k (T)" (+ compression, − tension, kips ASD), below right with a leader; the Design overlay keeps the
   hold-downs only. A column-only point shows its T only (its gravity is not calculated). Caption in the same format.
+
+### Viewport "what's shown" label
+- The end of the viewport strip says what the plan shows: "Wall design · Wind loads" on a level, "Wind only: hold-downs, reactions" on G.
+- The foundation caption reads "Foundation (wind only)", so the reactions aren't taken as everything the foundation carries (gravity isn't included). The strip wraps instead of clipping.

@@ -96,6 +96,7 @@ namespace ShearWallVisualizer
                 DrawLoads(e.Context);    // one load case: the shears from above and what each wall top receives (off unless asked for)
                 DrawDebug(e.Context);
                 UpdateDrawingKey(); // the schedule and the Loads legend, beside the plan
+                UpdateShowing();    // in a word or two, what the plan shows
             };
             s.WallStyle = DesignPen;
             s.ExtraSnapPoints = HoldownSnapPoints;
