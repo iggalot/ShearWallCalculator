@@ -95,6 +95,7 @@
     </Compile>
     <Compile Include="CanvasDrawer.cs" />
     <Compile Include="Dialogs\HoldownCatalogWindow.cs" />
+    <Compile Include="Dialogs\WallBuildWindow.cs" />
     <Compile Include="Dialogs\LoadInputDialog.xaml.cs">
       <DependentUpon>LoadInputDialog.xaml</DependentUpon>
     </Compile>

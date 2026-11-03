@@ -25,6 +25,67 @@ namespace ShearWallVisualizer
         private MemberDetailWindow detailWindow;
         private (string kind, int story, int key, string modelId) detailSubject;
 
+        /// <summary>The selected wall's construction window (elevation, 3D, pieces, calculation); null while closed.</summary>
+        private Dialogs.WallBuildWindow wallBuild;
+        /// <summary>Open the construction window whenever a wall is picked (its own check box; kept for the session).</summary>
+        private bool wallBuildOnPick = true;
+
+        /// <summary>
+        /// The construction window follows the selected wall and the design. A wall picked opens it (unless its "Open when a
+        /// wall is picked" is off); <paramref name="open"/>: the card's Detail, which opens it anyway.
+        /// </summary>
+        private void RefreshWallBuild(bool open = false)
+        {
+            bool wall = selectedKind == "Wall" && selectedId >= 0 && !foundationView;
+            if (wallBuild == null)
+            {
+                if (!wall || !(open || (wallBuildOnPick && selectionCardOpen))) return;
+                wallBuild = new Dialogs.WallBuildWindow { Owner = this, OpenOnPick = wallBuildOnPick };
+                wallBuild.Closed += (s, e) => { wallBuildOnPick = wallBuild?.OpenOnPick ?? wallBuildOnPick; wallBuild = null; };
+                wallBuild.Show();
+                Log.Info("Wall", $"Construction window opened for wall {selectedId}.");
+            }
+            else wallBuildOnPick = wallBuild.OpenOnPick;
+            if (wall) wallBuild.Show(WallBuildFor(Math.Max(0, currentLevel), selectedId));
+            if (open) wallBuild.Activate();
+        }
+
+        /// <summary>What the construction window shows for wall <paramref name="key"/> of story <paramref name="i"/>.</summary>
+        private Dialogs.WallBuildData WallBuildFor(int i, int key)
+        {
+            var calcs = levels.Count > 0 ? levels : new List<ShearWallCalculatorBase> { Calculator };
+            if (i < 0 || i >= calcs.Count || calcs[i]?._wall_system == null || !calcs[i]._wall_system._walls.TryGetValue(key, out var w)) return null;
+            var design = i < allDesignResults.Count ? allDesignResults[i] : designResults;
+            WallDesignResult r = null;
+            design?.TryGetValue(key, out r);
+            // its schedule mark (SW2-11, as on the plan's tag), with the model's name: "SW2-11 (W11)"
+            string modelName = i < stories.Count && stories[i].Walls.TryGetValue(key, out var id) ? id : $"Wall {key}";
+            string mark = design != null && design.Count > 0 && WallSchedule.MarksByWall(WallSchedule.Build(design, MarkLevel(i))).TryGetValue(key, out var m) ? m : null;
+            var d = new Dialogs.WallBuildData
+            {
+                Name = mark != null ? $"{mark} ({modelName})" : modelName,
+                LevelName = LevelName(i), Story = i, Stories = Math.Max(1, calcs.Count), Wall = w, Result = r,
+                Own = OwnLandings(i, key), Footnote = ShearWallDesigner.CatalogFootnote,
+            };
+            if (r != null) d.Lines = DetailCalcs.Wall(w, r, d.Own);
+            // what the story above stands on this wall: its hold-downs (and beam ends or column bases) landing on it
+            string UpperWall(HoldownLanding x)
+            {
+                int s = x.UpperStory - 1;
+                var up = s >= 0 && s < allDesignResults.Count ? allDesignResults[s] : null;
+                if (up != null && up.Count > 0 && WallSchedule.MarksByWall(WallSchedule.Build(up, MarkLevel(s))).TryGetValue(x.WallId, out var um)) return um; // SW3-10
+                return s >= 0 && s < stories.Count && stories[s].Walls.TryGetValue(x.WallId, out var n) ? n : $"W{x.WallId}";
+            }
+            var onto = landingsOnto.TryGetValue(i, out var here) ? here : new List<HoldownLanding>();
+            foreach (var x in onto.Where(x => x.LowerWallId == key))
+                d.Above.Add(new Dialogs.LoadFromAbove
+                {
+                    Landing = x, Along = d.AlongIn(x.At),
+                    From = x.Kind == PathPointKind.WallHoldown ? UpperWall(x) : ShearWallCalculator.Drawing.PlanLabels.ShortFrom(x.From),
+                });
+            return d;
+        }
+
         /// <summary>The beams and columns of the model, by story (for the load path and the details).</summary>
         private (List<FramingBeam> beams, List<FramingColumn> columns) Framing()
         {

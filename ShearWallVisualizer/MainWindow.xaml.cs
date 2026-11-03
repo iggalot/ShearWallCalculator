@@ -98,7 +98,7 @@ namespace ShearWallVisualizer
             selectionCard.OpenDesign += SelectionCard_OpenDesign;
             selectionCard.EditGeometry += SelectionCard_EditGeometry;
             selectionCard.DeleteRequested += SelectionCard_Delete;
-            selectionCard.OpenDetail += (kind, id) => OpenDetail(kind, Math.Max(0, currentLevel), id, null);
+            selectionCard.OpenDetail += (kind, id) => { if (kind == "Wall") RefreshWallBuild(open: true); else OpenDetail(kind, Math.Max(0, currentLevel), id, null); }; // a wall: its construction window
             selectionCard.Closed += (s, e) => CloseSelectionCard();
             // the wall card's hold-down box: the Design table's choices; a pick is the wall's design input, as from the table
             selectionCard.HoldownItems = (w, r) => designer == null ? null
@@ -186,6 +186,7 @@ namespace ShearWallVisualizer
                 resultsPanel?.Show(Calculator, CalculationTodo(), selectedKind == "Wall" ? selectedId : -1);
                 if (selectionCardOpen && (selectedKind == "Beam" || selectedKind == "Column")) ShowMemberCard();
                 else selectionCard.Show(Calculator, selectionCardOpen ? selectedKind : null, selectedId, designResults);
+                RefreshWallBuild(); // the wall construction window follows the selected wall and its design
 
                 // notify controls that we have updated
                 OnUpdated?.Invoke(this, EventArgs.Empty); // signal that the window has been updated -- so that subcontrols can refresh
