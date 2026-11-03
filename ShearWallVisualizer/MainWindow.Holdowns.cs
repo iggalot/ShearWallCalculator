@@ -138,12 +138,12 @@ namespace ShearWallVisualizer
                 }
                 return;
             }
-            if (!landingsOnto.TryGetValue(currentLevel, out var onto)) return;
+            var onto = landingsOnto.TryGetValue(currentLevel, out var here) ? here : new List<HoldownLanding>();
             var outline = BuildingOutline(); // the labels go outside it, each with an arrow to its point
-            // Each beam end on its own (SHOW Reactions): its reaction along the beam and its own connection, pointing at that
-            // end; two beams on one column are two connections, never one label
+            // Each end of every beam on its own (SHOW Reactions): its reaction along the beam and its own connection, pointing
+            // at that end; two beams on one column are two connections, never one label
             if (showReactions) DrawBeamEnds(ctx, onto.Where(l => l.Kind == PathPointKind.BeamEnd).ToList(), outline, dip);
-            if (!showDesign) return;
+            if (!showDesign || onto.Count == 0) return;
             // Everything else at one point gets one label: the hold-downs landing there from above ("↓ 1.0k + 0.6k on column C2")
             // and the column bases there with their connection. The beam's own summary is on the Members tab and its selection
             // card, not on the plan.
@@ -209,30 +209,42 @@ namespace ShearWallVisualizer
         }
 
         /// <summary>
-        /// Each beam end with uplift: its reaction "(2.7k)" along the beam just inside that end, and a small label of its own
-        /// connection ("MSTI26") with an arrow at that end, outside the building when the beam is on its edge. Red: nothing
+        /// Each end of every beam on the level: its uplift reaction "(2.7k)" along the beam just inside that end, and a small
+        /// label of its own connection ("MSTI26") with an arrow at that end, outside the building when the beam is on its
+        /// edge. An end with no uplift: "(0.0k)" and "None" (no hold-down needed; gravity is not calculated yet). Red: nothing
         /// under the end, or no connection strong enough; amber: a connection of another type than the wall's.
         /// </summary>
         private void DrawBeamEnds(DrawingContext ctx, List<HoldownLanding> ends, Rect? outline, double dip)
         {
             var lv = Sketch.ActiveLevel;
-            if (building == null || lv == null || ends.Count == 0) return;
-            var beams = building.BeamsOn(lv).ToList();
-            foreach (var l in ends)
+            if (building == null || lv == null) return;
+            foreach (var bm in building.BeamsOn(lv))
+            foreach (bool atStart in new[] { true, false })
             {
-                string id = ShearWallCalculator.Drawing.PlanLabels.ShortFrom(l.From);
-                var bm = beams.FirstOrDefault(b => b.Id == id);
-                if (bm == null) continue;
-                bool atStart = (l.From ?? "").EndsWith(" start");
+                string endName = $"beam {bm.Id} {(atStart ? "start" : "end")}";
+                var l = ends.FirstOrDefault(x => x.From == endName); // null: no uplift at this end
                 Point end = Sketch.ToScreen(atStart ? bm.Start : bm.End), other = Sketch.ToScreen(atStart ? bm.End : bm.Start);
                 if ((other - end).Length < 20) continue;
-                var ink = l.Supported && l.Choice != null ? (l.Note != null ? Controls.Ui.CloseInk : BeamInk) : Controls.Ui.FailInk;
+                var ink = l == null ? BeamInk : l.Supported && l.Choice != null ? (l.Note != null ? Controls.Ui.CloseInk : BeamInk) : Controls.Ui.FailInk;
 
                 // the reaction, along the beam just inside its end
-                var rft = new FormattedText($"({l.TensionAsd / 1000:0.0}k)", CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 9.5 * LabelScale, ink, dip);
+                var rft = new FormattedText($"({(l?.TensionAsd ?? 0) / 1000:0.0}k)", CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 9.5 * LabelScale, ink, dip);
                 double ang = BuildingModel.Sketch.SketchCanvas.MemberLabelAngle(other - end);
                 var rsize = new Size(rft.Width + 4, rft.Height);
-                var (c, tip) = ShearWallCalculator.Drawing.PlanLabels.BeamEnd(end, other, rsize, 8, ang);
+                // just inside the end on the side away from its name; taken (another beam's end at the same column): the
+                // name's side, then further in along the beam; with no clear spot, the one covering least
+                var spots = new List<(Point c, Point tip, Rect bounds)>();
+                foreach (double gap in new[] { 8.0, 8 + rsize.Width * 0.6, 8 + rsize.Width * 1.2 })
+                    foreach (bool nameSide in new[] { false, true })
+                    {
+                        var (sc, st) = ShearWallCalculator.Drawing.PlanLabels.BeamEnd(end, other, rsize, gap, ang, nameSide);
+                        var sb = new RotateTransform(ang, sc.X, sc.Y).TransformBounds(new Rect(sc.X - rsize.Width / 2, sc.Y - rsize.Height / 2, rsize.Width, rsize.Height));
+                        spots.Add((sc, st, sb));
+                    }
+                var pick = spots.FirstOrDefault(s => !labelsTaken.Any(tk => Controls.DesignOverlay.Overlaps(tk, s.bounds)));
+                if (pick.bounds.Width == 0) pick = spots.OrderBy(s => Controls.DesignOverlay.Covered(s.bounds, labelsTaken)).First(); // default: a zero box
+                var c = pick.c;
+                var tip = pick.tip;
                 var rbox = new Rect(c.X - rsize.Width / 2, c.Y - rsize.Height / 2, rsize.Width, rsize.Height);
                 var turn = new RotateTransform(ang, c.X, c.Y);
                 ctx.PushTransform(turn);
@@ -242,7 +254,7 @@ namespace ShearWallVisualizer
                 labelsTaken.Add(turn.TransformBounds(rbox));
 
                 // its own connection: a small label, an arrow at this beam's end
-                string conn = !l.Supported ? "nothing under it" : l.Model ?? "none strong enough";
+                string conn = l == null ? "None" : !l.Supported ? "nothing under it" : l.Model ?? "none strong enough";
                 var cft = new FormattedText(conn, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 9.5 * LabelScale, ink, dip);
                 var csize = new Size(cft.Width + 4, cft.Height);
                 var u = other - end; u.Normalize();
@@ -546,7 +558,7 @@ namespace ShearWallVisualizer
             else
             {
                 if (showDesign) parts.Add("Wall design");
-                if (showReactions && landingsOnto.TryGetValue(currentLevel, out var here) && here.Any(l => l.Kind == PathPointKind.BeamEnd)) parts.Add("Beam reactions");
+                if (showReactions && building != null && Sketch.ActiveLevel != null && building.BeamsOn(Sketch.ActiveLevel).Any()) parts.Add("Beam reactions");
                 if (showLoads) parts.Add("Wind loads");
             }
             string text = parts.Count == 0 ? "Plan only" : string.Join("  ·  ", parts);

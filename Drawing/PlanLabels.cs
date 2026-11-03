@@ -80,13 +80,14 @@ namespace ShearWallCalculator.Drawing
         /// it, on the side away from the beam's name. Also the point a connection label's arrow ends at: on the beam, just
         /// inside this end, so two beams meeting at one column each point at their own end.
         /// </summary>
-        public static (Point center, Point tip) BeamEnd(Point end, Point other, Size text, double gap, double angle)
+        public static (Point center, Point tip) BeamEnd(Point end, Point other, Size text, double gap, double angle, bool nameSide = false)
         {
             var u = other - end;
             if (u.Length < 1e-9) return (end, end);
             u.Normalize();
             double t = angle * Math.PI / 180;
             var up = new Vector(Math.Sin(t), -Math.Cos(t)); // above a level beam, left of an upright one (its name is on the other side)
+            if (nameSide) up = -up; // the other side, when this one is taken
             var center = end + u * (gap + text.Width / 2) + up * (text.Height / 2 + 3);
             return (center, end + u * 6);
         }

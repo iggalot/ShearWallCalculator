@@ -79,6 +79,9 @@ namespace ShearWallCalculator.Tests
             // its other end: in from the right
             (c, _) = PlanLabels.BeamEnd(new Point(300, 200), new Point(100, 200), text, 6, 0);
             Assert.AreEqual(new Point(279, 191), c);
+            // that side taken (another beam's end at the same column): the name's side, below it
+            (c, _) = PlanLabels.BeamEnd(new Point(100, 200), new Point(300, 200), text, 6, 0, nameSide: true);
+            Assert.AreEqual(new Point(121, 209), c);
             // two beams meeting at one column (C3: BM4 up from it, BM2 down from it): each arrow on its own beam
             var (_, tipUp) = PlanLabels.BeamEnd(new Point(500, 300), new Point(500, 100), text, 6, -90);
             var (_, tipDown) = PlanLabels.BeamEnd(new Point(500, 300), new Point(500, 500), text, 6, -90);
