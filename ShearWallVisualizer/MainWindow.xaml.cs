@@ -177,22 +177,10 @@ namespace ShearWallVisualizer
                 OnUpdated?.Invoke(this, EventArgs.Empty); // signal that the window has been updated -- so that subcontrols can refresh
 
                 // update the load info display
-                LoadInfoTextBlock.Text = (windLoadsLinked ? "Wind loads (auto)" : "Manual loads") + (levels.Count > 1 ? " on this level" : "") + $"   X {Calculator.V_x:0.0} k,  Y {Calculator.V_y:0.0} k";
-                // the level shown gets its own strip of the building; its walls also carry every level above (story shear)
-                int at = Math.Max(0, levels.IndexOf(Calculator));
-                double storyX = levels.Skip(at).Sum(l => l.V_x), storyY = levels.Skip(at).Sum(l => l.V_y);
-                double allX = levels.Sum(l => l.V_x), allY = levels.Sum(l => l.V_y);
-                string split = levels.Count > 1
-                    ? $"{LevelName(at)}: its own X {Calculator.V_x:0.0} k, Y {Calculator.V_y:0.0} k" +
-                      (at == 0 ? $"; with the levels above its walls take the whole building's X {allX:0.0} k, Y {allY:0.0} k"
-                       : at < levels.Count - 1 ? $"; with the levels above its walls take X {storyX:0.0} k, Y {storyY:0.0} k (whole building X {allX:0.0} k, Y {allY:0.0} k)"
-                       : $" (whole building X {allX:0.0} k, Y {allY:0.0} k)")
-                    : $"X {Calculator.V_x:0.0} k, Y {Calculator.V_y:0.0} k";
-                tbWorkspaceLoads.Text = windLoadsLinked
-                    ? $"Shear walls use the wind loads, updated automatically. {split}."
-                    : $"Shear walls use MANUAL loads, not the wind loads. {split}.";
-                tbWorkspaceLoads.ToolTip = "Each level gets the wind on its strip of the building (mid-story to mid-story). A level's walls resist its own strip plus every level above; the bottom story's walls take the whole building's base shear.";
-                tbWorkspaceLoads.Foreground = windLoadsLinked ? Controls.Ui.PassInk : Controls.Ui.WarnInk;
+                LoadInfoTextBlock.Text = foundationView
+                    ? $"Base shear   X {levels.Sum(l => l.V_x):0.0} k,  Y {levels.Sum(l => l.V_y):0.0} k"
+                    : (windLoadsLinked ? "Wind loads (auto)" : "Manual loads") + (levels.Count > 1 ? " on this level" : "") + $"   X {Calculator.V_x:0.0} k,  Y {Calculator.V_y:0.0} k";
+                ShowWorkspaceLoads(); // the loads table beside the workspace buttons
             }
 
             // UpdateShearWallUI the button appearances

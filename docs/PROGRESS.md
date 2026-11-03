@@ -921,3 +921,13 @@ against your printed standard.
   a lower level adds what its walls take with the levels above (the bottom story: the whole building's base shear). The
   toolbar says "Wind loads (auto) on this level". Each level's wind is its strip of the building, so the level shown is
   less than the wind calculator's total; nothing was lost (Level 2's walls: 23.2 + 8.2 = 31.4 k).
+- The loads sentence is now a small table beside the workspace buttons, roof first: each level's "Wind on the level"
+  (its strip), "Its walls carry" (its strip plus every level above), and "Foundation (total)" (the base shear, the wind
+  calculator's total). The level shown, or the foundation, is highlighted. The Calculations card says "Story shear
+  (walls resist)" (Level 2 of junk: Vx 31.4, Vy 51.9 k), not the level's own strip; the analysis always used the story
+  shear (StoryCascade.WithLoadsFromAbove: W2 + W4 = 15.72 + 15.72 = 31.4 k). The toolbar shows the base shear on the
+  foundation.
+- Objects drawn twice are flagged (BuildingModel ModelChecks, warnings): ColumnsOverlap (two columns within the bearing
+  tolerance over a shared height: junk's C3 / C5), BeamsOverlap (one level, one line, overlapping more than end to end),
+  WallsOverlap (a wall that is not a shear wall on another wall; two shear walls stay the WallOverlap error).
+  Test: EditsTests.Checks_ObjectsDrawnTwice_AreFlagged.

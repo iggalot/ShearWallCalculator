@@ -162,7 +162,12 @@ namespace ShearWallVisualizer.Controls
             strip.Children.Add(Ui.Figure("Diaphragm", Env != null ? "Envelope" : Rigid ? "Rigid" : "Flexible",
                 Env != null ? $"Rigid and flexible both calculated; each wall takes the larger shear (rigid governs {Env.Governs.Count(g => g.Value == ShearWallCalculator_Envelope.RigidTag)} walls, flexible {Env.Governs.Count(g => g.Value == ShearWallCalculator_Envelope.FlexibleTag)})"
                 : Rigid ? "Load shared by wall rigidity, plus torsion about the center of rigidity" : "Each wall line takes its tributary load, plus torsion by equivalent tributary weights"));
-            strip.Children.Add(Ui.Figure("Largest load", $"Vx {Ui.Num(calc.V_x, "0.0")} k,  Vy {Ui.Num(calc.V_y, "0.0")} k",
+            // the story shear the walls resist: this level's wind plus every level above (the cases as analysed)
+            var analysed = calc.CasesToAnalyse();
+            double sx = analysed.Count > 0 ? analysed.Max(c => Math.Abs(c.Vx)) : calc.V_x, sy = analysed.Count > 0 ? analysed.Max(c => Math.Abs(c.Vy)) : calc.V_y;
+            bool above = analysed.Any(c => c.AboveVx != 0 || c.AboveVy != 0);
+            strip.Children.Add(Ui.Figure(above ? "Story shear (walls resist)" : "Largest load", $"Vx {Ui.Num(sx, "0.0")} k,  Vy {Ui.Num(sy, "0.0")} k",
+                (above ? $"This level's wind Vx {Ui.Num(calc.V_x, "0.0")} k, Vy {Ui.Num(calc.V_y, "0.0")} k, plus the walls above. " : "") +
                 $"{cases} load case{(cases == 1 ? "" : "s")}; strength level"));
             strip.Children.Add(Ui.Figure("Center of mass", $"({Ui.Num(ds.CtrMass.X, "0.0")}, {Ui.Num(ds.CtrMass.Y, "0.0")}) ft", "Centroid of the diaphragm areas; the load acts here"));
             if (RigidRun != null)

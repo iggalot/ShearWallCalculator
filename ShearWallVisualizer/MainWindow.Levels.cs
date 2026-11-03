@@ -34,6 +34,58 @@ namespace ShearWallVisualizer
         /// <summary>The model's name of story <paramref name="i"/>'s level (0 = the first story: "Level 2" in the model).</summary>
         private string LevelName(int i) => i >= 0 && i < stories.Count ? stories[i].Level.Name : $"Level {i + 2}";
 
+        /// <summary>
+        /// The loads table beside the workspace buttons, roof first: the wind on each level's strip of the building, what
+        /// that level's walls carry (its strip plus every level above), and the foundation's total (the base shear, which
+        /// is the wind calculator's building total). The level shown (or the foundation) is highlighted.
+        /// </summary>
+        private void ShowWorkspaceLoads()
+        {
+            var g = workspaceLoads;
+            if (g == null) return;
+            g.Children.Clear(); g.RowDefinitions.Clear(); g.ColumnDefinitions.Clear();
+            for (int r = 0; r < 3; r++) g.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            g.ToolTip = "Each level gets the wind on its strip of the building (mid-story to mid-story). A level's walls carry its own strip " +
+                        "plus every level above, so the first story's walls, and the foundation, take the whole building's base shear " +
+                        "(the wind calculator's total).";
+
+            int n = levels.Count;
+            int shown = foundationView ? -1 : Math.Max(0, levels.IndexOf(Calculator));
+            string XY(double x, double y) => $"X {x:0.0}   Y {y:0.0} k";
+            void Cell(int row, int c, string text, bool head = false, bool on = false, int span = 1, Brush ink = null)
+            {
+                var t = new TextBlock
+                {
+                    Text = text, FontSize = 12, Padding = new Thickness(8, 0, 8, 0), VerticalAlignment = VerticalAlignment.Center,
+                    FontWeight = head || on ? FontWeights.SemiBold : FontWeights.Normal,
+                    Foreground = ink ?? (head ? Controls.Ui.InkSecondary : Controls.Ui.Ink),
+                    HorizontalAlignment = c == 0 ? HorizontalAlignment.Left : HorizontalAlignment.Right,
+                };
+                var b = new Border { Child = t, Background = on ? Controls.Ui.SelectedFill : Brushes.Transparent };
+                Grid.SetRow(b, row); Grid.SetColumn(b, c); Grid.SetRowSpan(b, span);
+                g.Children.Add(b);
+            }
+
+            g.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            Cell(0, 0, windLoadsLinked ? "Wind loads (auto)" : "MANUAL loads", head: true, ink: windLoadsLinked ? Controls.Ui.PassInk : Controls.Ui.WarnInk);
+            Cell(1, 0, "Wind on the level");
+            Cell(2, 0, "Its walls carry");
+
+            int col = 1;
+            for (int i = n - 1; i >= 0; i--, col++) // roof first: the order the load goes down
+            {
+                g.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                bool on = i == shown;
+                double cx = levels.Skip(i).Sum(l => l.V_x), cy = levels.Skip(i).Sum(l => l.V_y);
+                Cell(0, col, LevelName(i), head: true, on: on);
+                Cell(1, col, XY(levels[i].V_x, levels[i].V_y), on: on);
+                Cell(2, col, XY(cx, cy), on: on);
+            }
+            g.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            Cell(0, col, "Foundation (total)", head: true, on: shown < 0);
+            Cell(1, col, XY(levels.Sum(l => l.V_x), levels.Sum(l => l.V_y)), on: shown < 0, span: 2);
+        }
+
         /// <summary>The design method, edition, hold-down list etc. are the project's: every level uses the same object.</summary>
         private void ShareDesignSettings(ShearWallCalculator.Design.DesignSettings settings)
         {

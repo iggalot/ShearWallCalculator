@@ -110,7 +110,7 @@
                 <RadioButton x:Name="rbWorkspaceWalls" GroupName="workspace" Style="{StaticResource Workspace}"
                              Content="2   Shear walls" Checked="Workspace_Checked"
                              ToolTip="Draw the walls and diaphragms, and see the force on each wall."/>
-                <TextBlock x:Name="tbWorkspaceLoads" VerticalAlignment="Center" Margin="12,0,0,0" Foreground="#52514E"/>
+                <Grid x:Name="workspaceLoads" VerticalAlignment="Center" Margin="16,2,0,2"/>
             </DockPanel>
         </Border>
 
