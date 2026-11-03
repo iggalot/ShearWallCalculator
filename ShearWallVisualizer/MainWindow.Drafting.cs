@@ -100,6 +100,7 @@ namespace ShearWallVisualizer
                 MeasureLabelRoom(); // what Zoom to the drawing leaves around the plan for these labels
             };
             s.WallStyle = DesignPen;
+            s.InterceptClick = ClickOnTag; // a wall's design tag picks the wall, as a click on the wall does
             s.ExtraSnapPoints = HoldownSnapPoints;
             s.LevelCaption = l => ""; // no tag on the plan: the strip above it says the level and what is shown
             s.FitPadding = () => labelRoom; // room for the labels outside the building (the foundation's anchors, a level's hold-down landings)

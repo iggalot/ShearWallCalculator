@@ -681,13 +681,34 @@ namespace ShearWallVisualizer
 
         #region Drawing functions
 
+        /// <summary>Where each wall's design tag was drawn this frame (screen), by wall key: a click on a tag picks its wall.</summary>
+        private readonly Dictionary<int, Rect> tagHits = new Dictionary<int, Rect>();
+
+        /// <summary>
+        /// A left click on a wall's design tag (Select tool): the wall is picked and its card opens, as a click on the wall
+        /// does (Shift or Ctrl adds it to the selection). True: the click was used.
+        /// </summary>
+        private bool ClickOnTag(BuildingModel.Geometry.Point2 world)
+        {
+            if (Sketch.Tool != BuildingModel.Sketch.SketchTool.Select || tagHits.Count == 0) return false;
+            var p = Sketch.ToScreen(world);
+            var hit = tagHits.Where(kv => kv.Value.Contains(p)).Select(kv => (int?)kv.Key).FirstOrDefault();
+            string modelId = hit == null ? null : CurrentStory?.ModelId("Wall", hit.Value);
+            if (modelId == null) return false;
+            bool add = (Keyboard.Modifiers & (ModifierKeys.Shift | ModifierKeys.Control)) != 0;
+            Sketch.Select(new[] { modelId }, add); // SelectionChanged opens the card
+            Log.Info("Select", $"{modelId} picked by its design tag.");
+            return true;
+        }
+
         /// <summary>Schedule marks, hold-downs and the schedule over the plan (SHOW Design).</summary>
         private void DrawWallDesign(DrawingContext ctx)
         {
+            tagHits.Clear();
             if (!showDesign || Calculator?._wall_system == null) return;
             DesignOverlay.Draw(ctx, Calculator._wall_system._walls, designResults, p => WorldToScreen(p, m_layers),
                                new Size(m_layers.ActualWidth, m_layers.ActualHeight), VisualTreeHelper.GetDpi(this).PixelsPerDip, LabelScale, labelsTaken,
-                               schedule: false, markLevel: MarkLevel(currentLevel)); // the schedule is in the drawing key, beside the plan
+                               schedule: false, markLevel: MarkLevel(currentLevel), tagBoxes: tagHits); // the schedule is in the drawing key, beside the plan
         }
 
         private static Pen FrozenPen(Color c, double thickness)

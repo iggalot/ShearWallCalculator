@@ -44,7 +44,7 @@ namespace ShearWallVisualizer.Controls
         /// <summary>Draws the overlay. <paramref name="toScreen"/> maps world ft to canvas pixels.</summary>
         public static void Draw(DrawingContext ctx, IEnumerable<KeyValuePair<int, WallData>> walls, IReadOnlyDictionary<int, WallDesignResult> design,
                                 Func<Point, Point> toScreen, Size view, double pixelsPerDip, double labelScale = 1, List<Rect> taken = null,
-                                bool schedule = true, string markLevel = null)
+                                bool schedule = true, string markLevel = null, IDictionary<int, Rect> tagBoxes = null)
         {
             taken = taken ?? new List<Rect>();
             scale = labelScale > 0 ? labelScale : 1; // the plan's text size (the sketch's LabelScale)
@@ -102,6 +102,7 @@ namespace ShearWallVisualizer.Controls
                 var clear = inView.Where(x => !taken.Any(t => Overlaps(t, x))).ToList();
                 Rect box = clear.Count > 0 ? clear[0] : inView.OrderBy(x => Covered(x, taken)).First(); // stable: the preferred spot on a tie
                 DrawTag(ctx, box, tag, r.State, vertical);
+                if (tagBoxes != null) tagBoxes[kv.Key] = box; // a click on the tag picks its wall
                 taken.Add(box);
                 drawn.Union(box);
             }
