@@ -377,7 +377,7 @@ namespace ShearWallVisualizer
             bool any = drawingKeyPanel.Children.Count > 0;
             drawingKey.Background = Controls.Ui.Surface;
             drawingKey.BorderBrush = Controls.Ui.Hairline;
-            drawingKey.Visibility = any ? Visibility.Visible : Visibility.Collapsed;
+            drawingKey.Visibility = any && dataOpen ? Visibility.Visible : Visibility.Collapsed; // not while DATA is closed
             // the tabs end above the key
             drawingKey.UpdateLayout();
             MainTabControl.Margin = new Thickness(2, 0, 0, any ? drawingKey.ActualHeight + 6 : 0);

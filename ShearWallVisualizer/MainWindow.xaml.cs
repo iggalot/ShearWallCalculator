@@ -1542,12 +1542,13 @@ namespace ShearWallVisualizer
             // ActualWidth/ActualHeight. The tab area simply stretches over it.
             dockpanel.Visibility = wind ? Visibility.Hidden : Visibility.Visible;
             drawingSplitter.Visibility = wind ? Visibility.Collapsed : Visibility.Visible;
-            Grid.SetColumn(MainTabControl, wind ? 0 : 2);
-            Grid.SetColumnSpan(MainTabControl, wind ? 3 : 1);
+            Grid.SetColumn(MainTabControl, wind ? 0 : 3);
+            Grid.SetColumnSpan(MainTabControl, wind ? 5 : 1);
             spDrawingToolbar.Visibility = wind ? Visibility.Collapsed : Visibility.Visible;
 
             if (!(MainTabControl.SelectedItem is TabItem current) || current.Visibility != Visibility.Visible)
                 MainTabControl.SelectedItem = wind ? tabWindSetupTabItem : (TabItem)tabCalculationsTabItem;
+            ApplyPanels();      // the PLAN / DATA flyouts (shear walls only)
             if (!wind) Draw();
             UpdateDrawingKey(); // the drawing key belongs to the Shear walls workspace
         }

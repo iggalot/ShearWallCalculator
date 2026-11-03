@@ -970,3 +970,8 @@ against your printed standard.
 ### Viewport "what's shown" label
 - The end of the viewport strip says what the plan shows: "Wall design · Wind loads" on a level, "Wind only: hold-downs, reactions" on G.
 - The foundation caption reads "Foundation (wind only)", so the reactions aren't taken as everything the foundation carries (gravity isn't included). The strip wraps instead of clipping.
+
+### PLAN / DATA flyouts
+- A tab on each edge of the Shear walls workspace: PLAN (left) closes or opens the plan, DATA (right) the tabs. Either side can take the whole width, or both stay open as before.
+- Both can't be closed at once (closing one reopens the other). Reopening restores the splitter width.
+- The Wind loads workspace has no flyouts. Code: MainWindow.Panels.cs.
