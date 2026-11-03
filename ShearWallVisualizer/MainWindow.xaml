@@ -185,22 +185,6 @@
                         <Button x:Name="btnLoadEntry" Style="{StaticResource Tool}" Content="Loads..." Click="btnOpenLoadDialog_Click"
                                 ToolTip="Use the wind loads (automatic) or enter loads by hand"/>
                         <TextBlock x:Name="LoadInfoTextBlock" VerticalAlignment="Center" Margin="2,0,0,0" FontSize="13" Foreground="#52514E"/>
-                        <Rectangle Style="{StaticResource ToolDivider}"/>
-                        <TextBlock Style="{StaticResource ToolGroup}" Text="SHOW"/>
-                        <Button x:Name="btnHideImage" Style="{StaticResource Tool}" Content="Image" Tag="on" Click="btnHideImage_Click"
-                                ToolTip="Show or hide the plan under this level (on this screen only; the plan is the building model's)"/>
-                        <Button x:Name="btnImageOptions" Style="{StaticResource Tool}" Content="▾" Padding="6,4" Click="btnImageOptions_Click"
-                                ToolTip="Plan: show or hide, zoom to it; plans are imported and placed in the Building Model editor"/>
-                        <Button x:Name="btnShowDesign" Style="{StaticResource Tool}" Content="Design" Tag="on" Click="btnShowDesign_Click"
-                                ToolTip="Shear wall marks (SW1, SW2, ...) with each wall's hold-down, the hold-downs at the wall ends, and the shear wall schedule"/>
-                        <Button x:Name="btnLoads" Style="{StaticResource Tool}" Content="Loads" Click="btnLoads_Click"
-                                ToolTip="One load case on the plan: the shear each wall of the level above puts into this floor (orange) and what the top of each wall here receives (blue). Pick the case with ▾ or on the Calculations tab"/>
-                        <Button x:Name="btnLoadsOptions" Style="{StaticResource Tool}" Content="▾" Padding="6,4" Click="btnLoadsOptions_Click"
-                                ToolTip="The load case the Loads overlay shows"/>
-                        <Button x:Name="btn3D" Style="{StaticResource Tool}" Content="3D" Click="Show3D_Click"
-                                ToolTip="The building in 3D from the model: every level's diaphragm and the walls (shear walls blue); the level shown is stronger"/>
-                        <Button x:Name="btnIssues" Style="{StaticResource Tool}" Content="✓" Click="Issues_Click"
-                                ToolTip="Errors and warnings in the model and the design (also marked on the plan)"/>
                     </WrapPanel>
                     <TextBlock x:Name="tbImageFileName" DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center"
                                Foreground="#7A7974" FontSize="12" TextTrimming="CharacterEllipsis"/>
@@ -217,54 +201,73 @@
 
                 <!-- Drawing Area: the full height under the toolbar; drag the bar on its right to widen it -->
                 <DockPanel x:Name="dockpanel" Grid.Column="0" LastChildFill="True" ClipToBounds="True" Background="White">
+                    <!-- Which level the plan shows (G: the foundation; 2, 3: the level plans, as in the marks SW2-9): the view only.
+                         The Design tab lists what its own Floors filter picks. -->
+                    <Border x:Name="levelPicker" DockPanel.Dock="Top"
+                            Background="#FAFAF7" BorderBrush="#D8D6CC" BorderThickness="0,0,0,1" Padding="6,4">
+                        <Border.Resources>
+                            <Style x:Key="ViewLevel" TargetType="Button">
+                                <Setter Property="Margin" Value="3,0,0,0"/>
+                                <Setter Property="Padding" Value="9,3"/>
+                                <Setter Property="MinWidth" Value="30"/>
+                                <Setter Property="FontSize" Value="13"/>
+                                <Setter Property="Cursor" Value="Hand"/>
+                                <Setter Property="Focusable" Value="False"/>
+                                <Setter Property="Foreground" Value="#0B0B0B"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border x:Name="bd" CornerRadius="5" BorderThickness="1" BorderBrush="#C3C2B7" Background="White" Padding="{TemplateBinding Padding}">
+                                                <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="bd" Property="BorderBrush" Value="#898781"/>
+                                                </Trigger>
+                                                <Trigger Property="Tag" Value="on">
+                                                    <Setter TargetName="bd" Property="Background" Value="#E6F0FB"/>
+                                                    <Setter TargetName="bd" Property="BorderBrush" Value="#2A78D6"/>
+                                                    <Setter Property="Foreground" Value="#0B4C9A"/>
+                                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                                </Trigger>
+                                                <Trigger Property="IsEnabled" Value="False">
+                                                    <Setter TargetName="bd" Property="Opacity" Value="0.4"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </Border.Resources>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="LEVEL" FontSize="11" FontWeight="SemiBold" Foreground="#7A7974" VerticalAlignment="Center" Margin="2,0,4,0"/>
+                            <Button x:Name="btnFoundation" Style="{StaticResource ViewLevel}" Content="G" Click="Foundation_Click"
+                                    ToolTip="G, the ground: the foundation plan with every hold-down anchor of the first story's walls (wall, model, uplift), for the foundation design."/>
+                            <Button x:Name="btnLevel1" Style="{StaticResource ViewLevel}" Content="1" CommandParameter="1" Click="LevelButton_Click"/>
+                            <Button x:Name="btnLevel2" Style="{StaticResource ViewLevel}" Content="2" CommandParameter="2" Click="LevelButton_Click"/>
+                            <Button x:Name="btnLevel3" Style="{StaticResource ViewLevel}" Content="3" CommandParameter="3" Click="LevelButton_Click"/>
+                            <Rectangle Width="1" Fill="#D8D6CC" Margin="8,2,4,2"/>
+                            <TextBlock Text="SHOW" FontSize="11" FontWeight="SemiBold" Foreground="#7A7974" VerticalAlignment="Center" Margin="2,0,1,0"/>
+                            <Button x:Name="btnHideImage" Style="{StaticResource ViewLevel}" Content="Image" Tag="on" Click="btnHideImage_Click"
+                                    ToolTip="Show or hide the plan under this level (on this screen only; the plan is the building model's)"/>
+                            <Button x:Name="btnImageOptions" Style="{StaticResource ViewLevel}" Content="▾" Padding="5,3" MinWidth="0" Click="btnImageOptions_Click"
+                                    ToolTip="Plan: show or hide, zoom to it; plans are imported and placed in the Building Model editor"/>
+                            <Button x:Name="btnShowDesign" Style="{StaticResource ViewLevel}" Content="Design" Tag="on" Click="btnShowDesign_Click"
+                                    ToolTip="Shear wall marks (SW2-9: wall 9 on the Level 2 plan) with each wall's hold-down, the hold-downs at the wall ends, and the shear wall schedule"/>
+                            <Button x:Name="btnLoads" Style="{StaticResource ViewLevel}" Content="Loads" Click="btnLoads_Click"
+                                    ToolTip="One load case on the plan: the shear each wall of the level above puts into this floor (orange) and what the top of each wall here receives (blue). Pick the case with ▾ or on the Calculations tab"/>
+                            <Button x:Name="btnLoadsOptions" Style="{StaticResource ViewLevel}" Content="▾" Padding="5,3" MinWidth="0" Click="btnLoadsOptions_Click"
+                                    ToolTip="The load case the Loads overlay shows"/>
+                            <Button x:Name="btn3D" Style="{StaticResource ViewLevel}" Content="3D" Click="Show3D_Click"
+                                    ToolTip="The building in 3D from the model: every level's diaphragm and the walls (shear walls blue); the level shown is stronger"/>
+                            <Button x:Name="btnIssues" Style="{StaticResource ViewLevel}" Content="✓" Click="Issues_Click"
+                                    ToolTip="Errors and warnings in the model and the design (also marked on the plan)"/>
+                        </StackPanel>
+                    </Border>
                     <!-- The shared sketcher (BuildingModel.Sketch): its own tools, snaps, undo and status line; the building model is the source of truth -->
                     <sketch:SketchView x:Name="sketchView"/>
                 </DockPanel>
 
-                <!-- Which level the plan shows (G: the foundation; 2, 3: the level plans, as in the marks SW2-9): the view only.
-                     The Design tab lists what its own Floors filter picks. -->
-                <Border x:Name="levelPicker" Grid.Column="0" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0"
-                        Background="#F2FFFFFF" BorderBrush="#C3C2B7" BorderThickness="1" CornerRadius="6" Padding="6,4">
-                    <Border.Resources>
-                        <Style x:Key="ViewLevel" TargetType="Button">
-                            <Setter Property="Margin" Value="3,0,0,0"/>
-                            <Setter Property="Padding" Value="9,3"/>
-                            <Setter Property="MinWidth" Value="30"/>
-                            <Setter Property="FontSize" Value="13"/>
-                            <Setter Property="Cursor" Value="Hand"/>
-                            <Setter Property="Focusable" Value="False"/>
-                            <Setter Property="Foreground" Value="#0B0B0B"/>
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="Button">
-                                        <Border x:Name="bd" CornerRadius="5" BorderThickness="1" BorderBrush="#C3C2B7" Background="White" Padding="{TemplateBinding Padding}">
-                                            <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                                        </Border>
-                                        <ControlTemplate.Triggers>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="bd" Property="BorderBrush" Value="#898781"/>
-                                            </Trigger>
-                                            <Trigger Property="Tag" Value="on">
-                                                <Setter TargetName="bd" Property="Background" Value="#E6F0FB"/>
-                                                <Setter TargetName="bd" Property="BorderBrush" Value="#2A78D6"/>
-                                                <Setter Property="Foreground" Value="#0B4C9A"/>
-                                                <Setter Property="FontWeight" Value="SemiBold"/>
-                                            </Trigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                    </Border.Resources>
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="VIEW" FontSize="11" FontWeight="SemiBold" Foreground="#7A7974" VerticalAlignment="Center" Margin="2,0,4,0"/>
-                        <Button x:Name="btnFoundation" Style="{StaticResource ViewLevel}" Content="G" Click="Foundation_Click"
-                                ToolTip="G, the ground: the foundation plan with every hold-down anchor of the first story's walls (wall, model, uplift), for the foundation design."/>
-                        <Button x:Name="btnLevel1" Style="{StaticResource ViewLevel}" Content="1" CommandParameter="1" Click="LevelButton_Click"/>
-                        <Button x:Name="btnLevel2" Style="{StaticResource ViewLevel}" Content="2" CommandParameter="2" Click="LevelButton_Click"/>
-                        <Button x:Name="btnLevel3" Style="{StaticResource ViewLevel}" Content="3" CommandParameter="3" Click="LevelButton_Click"/>
-                    </StackPanel>
-                </Border>
 
                 <!-- The picked wall or diaphragm (Select tool), over the top-right corner of the drawing, under the level buttons -->
                 <ctrl:SelectionCard x:Name="selectionCard" Grid.Column="0" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,48,8,0" Visibility="Collapsed"/>

@@ -952,3 +952,7 @@ against your printed standard.
   Level 2 plan is SW2-9). Two walls with the same sheathing keep their own marks. The drawing key lists each mark with
   its sheathing, capacity and hold-down. WallSchedule.Mark / Build; tests Schedule_OneMarkPerWall_ItsLevelAndNumber,
   Schedule_LevelTag_FromTheLevelName.
+- What works on what: the plan has its own strip across the top of the viewport, LEVEL (G, 2, 3: which plan is shown,
+  the short names as in the marks) and SHOW (Image ▾, Design, Loads ▾, 3D, issues); the top toolbar keeps the project's
+  Floors… and Loads. The Design tab's banner says what its Floors filter lists ("ALL FLOORS · 10 walls · Floors picks
+  what this table lists") and its rows no longer mark the plan's level: the level buttons change the view only.

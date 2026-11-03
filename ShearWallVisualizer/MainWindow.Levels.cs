@@ -165,7 +165,6 @@ namespace ShearWallVisualizer
                                                          (k == stories.Count - 1 ? "roof" : "floor") + " on them. The view only: the Design tab lists what its Floors filter picks." : null;
             }
             btnFoundation.Visibility = stories.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
-            levelPicker.Visibility = stories.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
             btnFoundation.Tag = foundationView ? "on" : null;
             miCopyFromBelow.IsEnabled = currentLevel > 0 && !foundationView;
             btnFloors.ToolTip = $"FLOORS: {stories.Count} in the model. Floors are added, deleted and given their plate heights in the Building Model editor (the building's geometry is edited only there); this opens it on the project.";
