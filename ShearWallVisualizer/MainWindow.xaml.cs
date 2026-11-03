@@ -910,7 +910,7 @@ namespace ShearWallVisualizer
                         Brushes.Black,
                         VisualTreeHelper.GetDpi(this).PixelsPerDip);
 
-                    ctx.DrawText(idLabel, new Point(5, 5));
+                    // (its coordinates are on the Calculations card; the corner of the plan stays clear)
 
                     double x_screen = WorldToScreen(com, m_layers).X;
                     double y_screen = WorldToScreen(com, m_layers).Y;
@@ -989,7 +989,7 @@ namespace ShearWallVisualizer
                     Brushes.Black,
                     VisualTreeHelper.GetDpi(this).PixelsPerDip);
 
-                ctx.DrawText(idLabel, new Point(5, 19));
+                // (its coordinates are on the Calculations card)
                 double x_screen = WorldToScreen(cor, m_layers).X;
                 double y_screen = WorldToScreen(cor, m_layers).Y;
 

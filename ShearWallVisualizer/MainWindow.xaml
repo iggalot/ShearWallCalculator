@@ -299,7 +299,9 @@
                                     ToolTip="Errors and warnings in the model and the design (also marked on the plan)"/>
                             <!-- what the plan shows now, in a word or two per overlay (follows LEVEL and SHOW) -->
                             <Rectangle Width="1" Height="18" Fill="#D8D6CC" Margin="8,2,6,2"/>
-                            <TextBlock x:Name="tbShowing" VerticalAlignment="Center" FontSize="12" Foreground="#5B2C83" FontWeight="SemiBold" Margin="0,0,4,0"/>
+                            <Border x:Name="showingBadge" Background="#5B2C83" CornerRadius="10" Padding="10,3" VerticalAlignment="Center" Margin="0,0,4,0">
+                                <TextBlock x:Name="tbShowing" FontSize="12" Foreground="White" FontWeight="SemiBold"/>
+                            </Border>
                         </WrapPanel>
                     </Border>
                     <!-- The shared sketcher (BuildingModel.Sketch): its own tools, snaps, undo and status line; the building model is the source of truth -->

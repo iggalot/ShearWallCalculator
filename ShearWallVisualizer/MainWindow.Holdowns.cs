@@ -388,7 +388,7 @@ namespace ShearWallVisualizer
                 : string.Join("  ·  ", parts);
             if (tbShowing.Text == text) return;
             tbShowing.Text = text;
-            tbShowing.ToolTip = foundationView
+            showingBadge.ToolTip = foundationView
                 ? "The foundation's WIND forces from the first story's walls: hold-down uplift, and the overturning compression with the walls' own dead load. " +
                   "Gravity loads (floors, roof, columns) are not included: the foundation is designed for those too."
                 : "What the plan shows: the shear wall design (marks, hold-downs) and, when on, one wind load case.";

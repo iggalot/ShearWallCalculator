@@ -975,3 +975,5 @@ against your printed standard.
 - A tab on each edge of the Shear walls workspace: PLAN (left) closes or opens the plan, DATA (right) the tabs. Either side can take the whole width, or both stay open as before.
 - Both can't be closed at once (closing one reopens the other). Reopening restores the splitter width.
 - The Wind loads workspace has no flyouts. Code: MainWindow.Panels.cs.
+- The black caption on the plan is gone on every level. The level buttons and the "what's shown" badge (now filled purple) say the same thing. The foundation's max values stay in the status line.
+- The COM/COR coordinate text in the plan's corner is gone too. The markers stay on the plan, and the coordinates are on the Calculations card.

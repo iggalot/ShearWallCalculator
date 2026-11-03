@@ -83,7 +83,6 @@ namespace ShearWallVisualizer
             s.DrawOver += (o, e) =>
             {
                 labelsTaken.Clear(); // the overlays keep their labels off each other, this frame
-                if (m_layers != null) labelsTaken.Add(new Rect(0, 0, m_layers.ActualWidth, 38 * LabelScale)); // the plan's caption across the top
                 if (!foundationView) ReservePlanMarks(); // and off the centers of mass and rigidity and the wall labels
                 if (!foundationView)
                 {
@@ -100,7 +99,7 @@ namespace ShearWallVisualizer
             };
             s.WallStyle = DesignPen;
             s.ExtraSnapPoints = HoldownSnapPoints;
-            s.LevelCaption = LevelCaption;
+            s.LevelCaption = l => ""; // no tag on the plan: the strip above it says the level and what is shown
             s.Escaped += (o, e) =>
             {
                 if (selectionCardOpen) CloseSelectionCard();
@@ -365,15 +364,6 @@ namespace ShearWallVisualizer
             return check.State == DesignState.Fail ? FailPen : check.State == DesignState.Close ? ClosePen : null;
         }
 
-        private string LevelCaption(Level l)
-        {
-            if (l != null && l.Elevation == 0 && foundationView) return FoundationCaption();
-            int i = stories.FindIndex(s => s.Level.Id == l.Id);
-            if (i < 0) return null;
-            var s0 = stories[i];
-            return $"{LevelName(i)}  ·  story {i + 1} of {stories.Count}  ·  plate {s0.PlateHeight:0.##} ft" +
-                   (designResults.Count > 0 ? $"  ·  {designResults.Values.Count(r => !r.Pass)} of {designResults.Count} walls fail" : "");
-        }
 
         // ------------------------------------------------------------------ errors and warnings on the plan
 
