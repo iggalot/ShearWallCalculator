@@ -134,8 +134,10 @@ namespace ShearWallVisualizer
                 bool ew = w.WallDir == WallDirs.EastWest;
                 var dir = ew ? new Vector(Math.Sign(onTop), 0) : new Vector(0, Math.Sign(onTop));
                 string id = CurrentStory != null && CurrentStory.Walls.TryGetValue(kv.Key, out var mid) ? mid : $"W{kv.Key}";
+                // it may slide along its wall, staying within the wall
+                double wallPx = (WorldToScreen(w.End, m_layers) - WorldToScreen(w.Start, m_layers)).Length;
                 Arrow(ctx, new Point((w.Start.X + w.End.X) / 2, (w.Start.Y + w.End.Y) / 2), dir, Len(onTop), -16, TopArrowPen, TopInk,
-                      $"{id} top {Math.Abs(onTop):0.00} k", dip);
+                      $"{id} top {Math.Abs(onTop):0.00} k", dip, Math.Max(0, wallPx / 2 - Len(onTop) / 2));
             }
 
             var row = CaseBreakdown.Rows(Calculator).FirstOrDefault(r => r.Case == name);
@@ -190,8 +192,10 @@ namespace ShearWallVisualizer
                 head = c - sd * (Math.Min(tx, ty) + 28);
             }
             var tail = head - sd * 95;
-            // kept on the canvas (the building may fill the view): slid toward the building until the tail and its label fit
+            // kept on the canvas (the building may fill the view): first shortened, keeping the head off the building and its
+            // tags; only when even a short arrow will not fit is it slid toward the building
             var inner = new Rect(40, 40, Math.Max(1, m_layers.ActualWidth - 80), Math.Max(1, m_layers.ActualHeight - 80));
+            for (int k = 0; k < 200 && !inner.Contains(tail) && (head - tail).Length > 44; k++) tail += sd * 4;
             for (int k = 0; k < 200 && !inner.Contains(tail); k++) { head += sd * 4; tail += sd * 4; }
             var perp = new Vector(-sd.Y, sd.X);
             ctx.DrawLine(WindPen, tail, head - sd * 14);
@@ -250,15 +254,37 @@ namespace ShearWallVisualizer
             Label(ctx, $"Mt {Math.Abs(mt):0.0} k·ft {(ccwPlan ? "CCW" : "CW")}", new Point(c.X + r + 6, c.Y - r + 4), WindInk, dip, above: true);
         }
 
-        /// <summary>An arrow of <paramref name="px"/> pixels centered on a plan point, along a plan direction, set off the line by <paramref name="side"/> px.</summary>
-        private void Arrow(DrawingContext ctx, Point at, Vector dir, double px, double side, Pen pen, Brush ink, string label, double dip)
+        /// <summary>
+        /// An arrow of <paramref name="px"/> pixels centered on a plan point, along a plan direction, set off the line by
+        /// <paramref name="side"/> px. When the arrow or its label would land on a tag, a label or the schedule, it slides along
+        /// its line (up to <paramref name="slide"/> px either way) to the first clear place, then reserves where it went.
+        /// </summary>
+        private void Arrow(DrawingContext ctx, Point at, Vector dir, double px, double side, Pen pen, Brush ink, string label, double dip, double slide = 60)
         {
             var s0 = WorldToScreen(at, m_layers);
             var sd = WorldToScreen(at + dir, m_layers) - s0;
             if (sd.Length < 1e-9) return;
             sd.Normalize();
             var perp = new Vector(-sd.Y, sd.X);
-            var c = s0 + perp * side;
+            var ft = new FormattedText(label, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 10.5 * LabelScale, ink, dip);
+            Rect ArrowBox(Point p) { var r = new Rect(p - sd * px / 2, p + sd * px / 2); r.Inflate(5, 5); return r; }
+            Rect LabelBox(Point p)
+            {
+                var a = p + perp * (side > 0 ? 4 : -4) + new Vector(4, 0);
+                if (side < 0) a.Y -= ft.Height;
+                return new Rect(a.X - 2, a.Y, ft.Width + 4, ft.Height);
+            }
+            bool Clear(Point p) { var a = ArrowBox(p); var l = LabelBox(p); return !labelsTaken.Any(t => t.IntersectsWith(a) || t.IntersectsWith(l)); }
+
+            var c0 = s0 + perp * side;
+            var c = c0;
+            double step = Math.Max(10, Math.Min(30, slide / 3));
+            for (double d = step; d <= slide + 1e-9 && !Clear(c); d += step)
+            {
+                if (Clear(c0 + sd * d)) { c = c0 + sd * d; break; }
+                if (Clear(c0 - sd * d)) { c = c0 - sd * d; break; }
+            }
+            labelsTaken.Add(ArrowBox(c));
             var tail = c - sd * px / 2;
             var head = c + sd * px / 2;
             ctx.DrawLine(pen, tail, head);
