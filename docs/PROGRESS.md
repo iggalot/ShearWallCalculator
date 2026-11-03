@@ -15,6 +15,17 @@ _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`
 - Beam and column labels on the plan: everything at one point is one label ("↓ 0.8k + 0.9k on column C1   BM2 start ↑ 0.4k
   HRS6"); the beam's mid-span summary is gone from the plan (Members tab and its card). The Members tab's beam row names
   each end's connection ("start 367 lb → column C1 HRS6, end 420 lb → column C3 HRS6").
+- Hold-downs case by case where they share a support. Each wall's hold-down is still its worst case (its design shear,
+  the envelope of every case and run), but two walls' worst cases are not at the same time (an E-W wall peaks in W/E
+  cases, a N-S wall in N/S). `WallDesignResult.SetCaseTensions` gives each wall's tension in every case at the end that
+  lifts (a negative force on the diaphragm pushes the top +, lifting the low end); the walls above are scaled by
+  |V_case| / V, so the governing case is exactly T. The load path (`LoadPathTrace.SumByCase`) adds these case by case on a
+  column (its base) and a beam (each end's reaction), and sizes for the worst case of the sum, not the sum of the worst.
+  A wall-on-wall stack on the same line is unchanged (envelope, by wind direction). The plan says it:
+  "↓ 0.8k + 0.9k (at once 0.9k) on column C1". Tests: CaseByCaseHoldownTests (by hand).
+- A wall's hold-down type that cannot anchor where it lands (an HDUE into a beam) is replaced automatically by one that
+  can (a strap), no longer a warning (an error only when none of that type is strong enough). The Design tab's Hold-down
+  column says where ("DTT1Z · ST9 strap on beam BM2"), and the Hold-down type column is always shown, to override.
 
 ## 2026-11-02 — Load cases, wall by wall; the Loads overlay; columns on the foundation plan (BuildingModel 266db64)
 

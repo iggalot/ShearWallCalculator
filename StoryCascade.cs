@@ -359,6 +359,9 @@ namespace ShearWallCalculator
         /// <summary>The wind direction (true: the low ends of the walls lift); null: both (a beam end or column base).</summary>
         public bool? LowEndUp { get; set; }
 
+        /// <summary>The tension in each load case (lb, ASD); null when not known. Loads at one point add case by case.</summary>
+        public Dictionary<string, double> CaseAsd { get; set; }
+
         /// <summary>What it anchors to, and its id ("wall 2", "beam BM1", "column C1").</summary>
         public SupportKind Support { get; set; }
         public string SupportId { get; set; }

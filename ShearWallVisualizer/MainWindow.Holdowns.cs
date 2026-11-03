@@ -71,8 +71,11 @@ namespace ShearWallVisualizer
                             Message = $"{what}, {l.TensionAsd:N0} lb up, lands on {levelName} at ({l.At.X:0.##}, {l.At.Y:0.##}) with nothing under it: " +
                                       (l.Kind == PathPointKind.BeamEnd ? "the beam end needs a wall or a column under it." : "draw a beam (B) or a column (P) to carry it down."),
                         });
-                    else if (l.Note != null)
-                        list.Add(new ModelIssue { Severity = Severity.Warning, Code = "HoldownTypeReplaced", LevelId = levelId, At = at, Message = $"{what} on {l.SupportId ?? levelName}: {l.Note}" });
+                    // a wall's hold-down type that cannot anchor here: a valid one is picked automatically (shown on the plan
+                    // and in the Design tab's Hold-down column; the wall's Hold-down type overrides it), an issue only when
+                    // none of that type is strong enough
+                    else if (l.Note != null && l.Choice == null)
+                        list.Add(new ModelIssue { Severity = Severity.Error, Code = "HoldownTypeReplaced", LevelId = levelId, At = at, Message = $"{what} on {l.SupportId ?? levelName}: {l.Note}" });
                     else if (l.Choice == null && l.Kind != PathPointKind.WallHoldown)
                         list.Add(new ModelIssue
                         {
@@ -112,6 +115,7 @@ namespace ShearWallVisualizer
             // the beam ends or column bases there with their connection ("BM2 end ↑ 0.4k HRS6"). The beam's own summary is on the
             // Members tab and its selection card, not on the plan.
             var atPoint = new Dictionary<(long, long), (Point p, List<string> downs, List<string> ups, Brush ink)>();
+            var cases = new Dictionary<((long, long), string), List<Dictionary<string, double>>>(); // each down load's tension by case
             Brush Worse(Brush a, Brush b) => ReferenceEquals(a, Controls.Ui.FailInk) || ReferenceEquals(b, Controls.Ui.FailInk) ? Controls.Ui.FailInk
                                            : ReferenceEquals(a, Controls.Ui.CloseInk) || ReferenceEquals(b, Controls.Ui.CloseInk) ? Controls.Ui.CloseInk : LandText;
             void Add(Point world, Point screen, string down, string up, Brush ink)
@@ -150,10 +154,19 @@ namespace ShearWallVisualizer
                 string rest = !l.Supported ? "  nothing below: draw a beam (B) or a column (P)" : l.Support == SupportKind.Wall ? "" : $" on {l.SupportId}";
                 if (l.Note != null) rest += $"  · {l.Model ?? "none"} ({HoldownRules.Name(l.Family)} here)";
                 Add(l.At, p, $"{l.TensionAsd / 1000:0.0}k|{rest}", null, !l.Supported ? Controls.Ui.FailInk : l.Note != null ? Controls.Ui.CloseInk : LandText);
+                var ck = (((long)Math.Round(l.At.X * 4), (long)Math.Round(l.At.Y * 4)), rest);
+                if (!cases.TryGetValue(ck, out var cl)) cases[ck] = cl = new List<Dictionary<string, double>>();
+                cl.Add(l.CaseAsd);
             }
-            foreach (var g in atPoint.Values)
+            foreach (var kv in atPoint)
             {
-                var parts = g.downs.Select(t => t.Split('|')).GroupBy(t => t[1]).Select(x => "↓ " + string.Join(" + ", x.Select(t => t[0])) + x.Key).ToList();
+                var g = kv.Value;
+                // two walls' hold-downs on one support: each is its wall's worst case, which are not at the same time; what
+                // acts at once is the worst case of their sum (what the support is sized for)
+                string Together(string rest) =>
+                    rest.StartsWith(" on ") && cases.TryGetValue((kv.Key, rest), out var cl) && cl.Count > 1 && LoadPathTrace.SumByCase(cl) is Dictionary<string, double> sum && sum.Count > 0
+                        ? $" (at once {Math.Max(0, sum.Values.Max()) / 1000:0.0}k)" : "";
+                var parts = g.downs.Select(t => t.Split('|')).GroupBy(t => t[1]).Select(x => "↓ " + string.Join(" + ", x.Select(t => t[0])) + Together(x.Key) + x.Key).ToList();
                 // a beam end's support is named only when the loads from above have not already named it
                 string said = string.Join(" ", parts);
                 parts.AddRange(g.ups.Select(t => t.Split('|')).Select(t => t[1].Length == 0 || said.Contains(t[1]) ? t[0] : $"{t[0]} on {t[1]}"));

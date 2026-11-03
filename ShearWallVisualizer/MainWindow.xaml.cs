@@ -380,6 +380,8 @@ namespace ShearWallVisualizer
         {
             var results = new Dictionary<int, WallDesignResult>();
             if (calc == null || designer == null || !calc.IsValidForCalculation) return results;
+            // every wall's force in every case: its hold-down tension case by case (the load path adds those that share a support)
+            var byWall = ShearWallCalculator.CaseBreakdown.Rows(calc).GroupBy(x => x.Wall).ToDictionary(g => g.Key, g => g.ToList());
             foreach (var kv in calc._wall_system._walls)
             {
                 if (!calc.TotalWallShear.TryGetValue(kv.Key, out double v)) continue;
@@ -387,6 +389,8 @@ namespace ShearWallVisualizer
                 var above = upper == null ? null : StoryCascade.HoldownForcesOn(kv.Value, upper._wall_system._walls, upperDesign, upperLevel);
                 if (extra != null && extra.TryGetValue(kv.Key, out var more)) (above = above ?? new List<StackedForce>()).AddRange(more);
                 results[kv.Key] = designer.Check(kv.Key, kv.Value, v, governing, calc.DesignSettings, null, above);
+                if (byWall.TryGetValue(kv.Key, out var rows))
+                    results[kv.Key].SetCaseTensions(rows.GroupBy(x => x.Case).Select(g => new KeyValuePair<string, double>(g.Key, g.First().Total)));
             }
             return results;
         }

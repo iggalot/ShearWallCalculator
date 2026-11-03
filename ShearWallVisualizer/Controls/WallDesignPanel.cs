@@ -496,7 +496,8 @@ namespace ShearWallVisualizer.Controls
             ("Nails", 46, "Edge fastener spacing of face 2", 0),
             ("Framing", 64, "Framing species group (Table 4.3A footnote)", 1),
             ("Dead (plf)", 46, "Dead load on the wall that resists overturning (0 = none)", 1),
-            ("Hold-down type", 70, "HDUE, HTT or a cast-in STHD strap anchors the wall end to the foundation; a strap ties it to the wall below", 1),
+            ("Hold-down type", 70, "HDUE, HTT or a cast-in STHD strap anchors the wall end to the foundation; a strap ties it to the wall below, a column or a beam. " +
+                                   "Where this type cannot anchor to what is under a hold-down, a valid one is picked automatically (shown in the Hold-down column); choose here to override", 0),
             ("v (plf)", 48, "Unit shear demand", 2),
             ("Allowed", 56, "Design unit shear capacity", 2),
             ("Ratio", 44, "Demand / capacity", 1),
@@ -626,7 +627,11 @@ namespace ShearWallVisualizer.Controls
                 Cell(row, col++, double.IsNaN(r.Capacity) || double.IsInfinity(r.ShearRatio) ? "-" : r.ShearRatio.ToString("0.00"), id, r.ShearOk ? Ink : FailInk, bold: !r.ShearOk);
                 Cell(row, col++, r.TensionAsd.ToString("0"), id);
                 if (!r.HoldownOk) Tint(row, col, FailFill);
-                Cell(row, col++, !r.HoldownNeeded ? "no uplift" : r.Holdown?.Model ?? "✗ none fits", id, r.HoldownOk ? Ink : FailInk, bold: !r.HoldownOk);
+                var hdCell = Cell(row, col++, !r.HoldownNeeded ? "no uplift" : (r.Holdown?.Model ?? "✗ none fits") + (r.HoldownElsewhere.Count > 0 ? " · " + string.Join(", ", r.HoldownElsewhere) : ""),
+                                  id, r.HoldownOk ? Ink : FailInk, bold: !r.HoldownOk);
+                if (r.HoldownElsewhere.Count > 0)
+                    hdCell.ToolTip = $"{r.Holdown?.Model ?? "None"} ({HoldownName(d.Holdown)}) where it can anchor; where it lands on something it cannot anchor to, a valid type is picked automatically: " +
+                                     string.Join(", ", r.HoldownElsewhere) + ". Choose another Hold-down type for this wall to override.";
                 var status = new Border
                 {
                     Background = Ui.StateFill(state), CornerRadius = new CornerRadius(4), Margin = new Thickness(3, 3, 3, 3), Padding = new Thickness(6, 2, 6, 2),

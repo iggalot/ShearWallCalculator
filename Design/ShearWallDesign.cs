@@ -516,6 +516,43 @@ namespace ShearWallCalculator.Design
         public double OwnTensionLrfd { get; set; }
         /// <summary>The tension added by the walls above (lb, ASD).</summary>
         public double TensionFromAboveAsd => Math.Max(0, TensionAsd - OwnTensionAsd);
+        /// <summary>The walls above's share of T at the design shear (lb, ASD / LRFD: their moment over the arm).</summary>
+        public double AboveTensionAsd { get; set; }
+        public double AboveTensionLrfd { get; set; }
+        /// <summary>The dead load on the wall resisting overturning (lb).</summary>
+        public double DeadLoadLb { get; set; }
+
+        /// <summary>
+        /// The hold-down tension in each load case, at the end that lifts in it: [low-end ASD, high-end ASD, low-end LRFD,
+        /// high-end LRFD] (lb; "low" = the smaller x of an E-W wall, the smaller y of a N-S wall). Null until
+        /// <see cref="SetCaseTensions"/>. The load path adds these case by case where hold-downs share a column or a beam:
+        /// two walls' worst cases are not at the same time.
+        /// </summary>
+        public Dictionary<string, double[]> TensionByCase { get; set; }
+
+        /// <summary>
+        /// The tension of each case from the wall's force in that case (kips on the diaphragm, building axes; the top of the
+        /// wall is pushed the other way, so a negative force lifts the low end). Same formula as <see cref="TensionAsd"/>,
+        /// at |V_case|; the walls above are scaled by |V_case| / V (they are stacked on the same line, so they follow the
+        /// same cases), which gives exactly <see cref="TensionAsd"/> in the governing case.
+        /// </summary>
+        public void SetCaseTensions(IEnumerable<KeyValuePair<string, double>> forceByCase)
+        {
+            TensionByCase = new Dictionary<string, double[]>();
+            double arm = HoldownArm, V = Math.Abs(this.V);
+            if (!(arm > 0) || double.IsInfinity(arm)) return;
+            foreach (var kv in forceByCase)
+            {
+                double vc = Math.Abs(kv.Value), share = V > 1e-12 ? vc / V : 0, M = vc * 1000.0 * Height;
+                double asd = Math.Max(0, 0.6 * M / arm - 0.6 * DeadLoadLb / 2 + AboveTensionAsd * share);
+                double lrfd = Math.Max(0, 1.0 * M / arm - 0.9 * DeadLoadLb / 2 + AboveTensionLrfd * share);
+                bool lowLifts = kv.Value < 0;
+                TensionByCase[kv.Key] = lowLifts ? new[] { asd, 0, lrfd, 0 } : new[] { 0, asd, 0, lrfd };
+            }
+        }
+
+        /// <summary>Where the load path anchors this wall's hold-down with another type than its own (e.g. "ST9 strap on beam BM2"): set by the load path.</summary>
+        public List<string> HoldownElsewhere { get; } = new List<string>();
 
         /// <summary>True when the hold-down was drawn from the company standard list only.</summary>
         public bool HoldownFromStandardList { get; set; }
@@ -685,6 +722,9 @@ namespace ShearWallCalculator.Design
                 r.OwnTensionLrfd = arm > 0 ? Math.Max(0, ownLrfd) : double.PositiveInfinity;
                 r.TensionAsd = arm > 0 ? Math.Max(0, ownAsd + aboveAsd / arm) : double.PositiveInfinity;
                 r.TensionLrfd = arm > 0 ? Math.Max(0, ownLrfd + aboveLrfd / arm) : double.PositiveInfinity;
+                r.AboveTensionAsd = arm > 0 ? aboveAsd / arm : 0;
+                r.AboveTensionLrfd = arm > 0 ? aboveLrfd / arm : 0;
+                r.DeadLoadLb = D;
                 r.Holdown = r.HoldownNeeded ? SelectHoldown(d.Holdown, d.Species, r.TensionAsd, settings.HoldownsFromStandardList, settings.StrapHoldownsOrDefault()) : null;
                 double next = WallSchedule.PostAlongWall(r.Holdown);
                 if (r.Holdown == null || Math.Abs(next - post) < 1e-9) break;

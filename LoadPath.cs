@@ -64,6 +64,11 @@ namespace ShearWallCalculator
         public static HoldownFamilies NewConnection(SupportKind support, HoldownFamilies chosen) =>
             support == SupportKind.Foundation ? (CanAnchorTo(chosen, support) ? chosen : HoldownFamilies.HDU_ToFoundation) : HoldownFamilies.Strap_ToWallBelow;
 
+        /// <summary>The family in a word or two: "strap", "HDUE / DTT", "LTT / HTT", "STHD", "HDU".</summary>
+        public static string ShortName(HoldownFamilies f) =>
+            f == HoldownFamilies.HDU_ToFoundation ? "HDUE / DTT" : f == HoldownFamilies.HTT_ToFoundation ? "LTT / HTT" :
+            f == HoldownFamilies.STHD_ToFoundation ? "STHD" : f == HoldownFamilies.Strap_ToWallBelow ? "strap" : "HDU";
+
         public static string Name(HoldownFamilies f) =>
             f == HoldownFamilies.HDU_ToFoundation ? "an HDUE / DTT" : f == HoldownFamilies.HTT_ToFoundation ? "an LTT / HTT" :
             f == HoldownFamilies.STHD_ToFoundation ? "an STHD" : f == HoldownFamilies.Strap_ToWallBelow ? "a strap" : "an HDU";
@@ -169,7 +174,25 @@ namespace ShearWallCalculator
             public HoldownFamilies Family;  // the family chosen for the wall the load comes from
             public WoodTypes Species;
             public HoldownChoice Chosen;    // a wall's hold-down: the one its design chose
+            public WallDesignResult Result; // a wall's hold-down: its design (told where it is anchored with another type)
+            /// <summary>The tension in each load case (lb ASD / LRFD); null when not known (the envelope is used).</summary>
+            public Dictionary<string, double> CaseAsd, CaseLrfd;
         }
+
+        /// <summary>Σ case by case of loads that act together; null when any of them has no cases (then the envelope rules apply).</summary>
+        public static Dictionary<string, double> SumByCase(IEnumerable<Dictionary<string, double>> loads, IEnumerable<double> factors = null)
+        {
+            var list = loads.ToList();
+            if (list.Count == 0 || list.Any(x => x == null)) return null;
+            var f = factors?.ToList();
+            var sum = new Dictionary<string, double>();
+            for (int i = 0; i < list.Count; i++)
+                foreach (var kv in list[i])
+                    sum[kv.Key] = (sum.TryGetValue(kv.Key, out var s) ? s : 0) + kv.Value * (f == null ? 1 : f[i]);
+            return sum;
+        }
+
+        private static double Max(Dictionary<string, double> byCase) => byCase.Count == 0 ? 0 : Math.Max(0, byCase.Values.Max());
 
         /// <summary>The extra forces from above on story <paramref name="story"/>'s walls (beam ends and column bases on them), by wall.</summary>
         public Dictionary<int, List<StackedForce>> ExtraOn(int story)
@@ -200,8 +223,13 @@ namespace ShearWallCalculator
                     var f = g.First();
                     double up = g.Where(x => x.LowEndUp != false).Sum(x => x.Asd), dn = g.Where(x => x.LowEndUp != true).Sum(x => x.Asd);
                     double upL = g.Where(x => x.LowEndUp != false).Sum(x => x.Lrfd), dnL = g.Where(x => x.LowEndUp != true).Sum(x => x.Lrfd);
-                    f.Asd = Math.Max(up, dn);
-                    f.Lrfd = Math.Max(upL, dnL);
+                    // case by case when every load knows its cases: the worst case of the sum, not the sum of the worst
+                    var cAsd = SumByCase(g.Select(x => x.CaseAsd));
+                    var cLrfd = SumByCase(g.Select(x => x.CaseLrfd));
+                    f.Asd = cAsd != null ? Max(cAsd) : Math.Max(up, dn);
+                    f.Lrfd = cLrfd != null ? Max(cLrfd) : Math.Max(upL, dnL);
+                    f.CaseAsd = cAsd;
+                    f.CaseLrfd = cLrfd;
                     f.LowEndUp = g.All(x => x.LowEndUp == true) ? true : g.All(x => x.LowEndUp == false) ? (bool?)false : null;
                     arriving.Add(f);
                 }
@@ -214,6 +242,7 @@ namespace ShearWallCalculator
                     var d = w.Design ?? new WallDesignInputs();
                     var (p1, p2) = WallSchedule.HoldownPoints(w, r.Holdown);
                     bool ew = w.WallDir == WallDirs.EastWest;
+                    r.HoldownElsewhere.Clear();
                     foreach (var at in new[] { p1, p2 })
                     {
                         bool atLow = ew ? at.X < (w.Start.X + w.End.X) / 2 : at.Y < (w.Start.Y + w.End.Y) / 2;
@@ -221,7 +250,9 @@ namespace ShearWallCalculator
                         {
                             At = at, Asd = r.TensionAsd, Lrfd = r.TensionLrfd, LowEndUp = atLow, Kind = PathPointKind.WallHoldown,
                             From = $"wall {kv.Key}", UpperStory = story + 1, WallId = kv.Key, Dir = w.WallDir,
-                            Family = d.Holdown, Species = d.Species, Chosen = r.Holdown,
+                            Family = d.Holdown, Species = d.Species, Chosen = r.Holdown, Result = r,
+                            CaseAsd = r.TensionByCase?.ToDictionary(c => c.Key, c => c.Value[atLow ? 0 : 1]),
+                            CaseLrfd = r.TensionByCase?.ToDictionary(c => c.Key, c => c.Value[atLow ? 2 : 3]),
                         });
                     }
                 }
@@ -251,15 +282,31 @@ namespace ShearWallCalculator
                 reactions.EndAsd = Math.Max(e0, e1);
                 reactions.StartLrfd = Math.Max(sl0, sl1);
                 reactions.EndLrfd = Math.Max(el0, el1);
+                // case by case when every load knows its cases: each end's worst case of the sum
+                var xs = kv.Value.Select(a => L <= 0 ? 0 : Math.Max(0, Math.Min(L, Vector.Multiply(a.At - bm.Start, (bm.End - bm.Start) / L)))).ToList();
+                var toStart = xs.Select(x => L > 0 ? (L - x) / L : 0.5).ToList();
+                var toEnd = xs.Select(x => L > 0 ? x / L : 0.5).ToList();
+                var sAsd = SumByCase(kv.Value.Select(a => a.CaseAsd), toStart);
+                var eAsd = SumByCase(kv.Value.Select(a => a.CaseAsd), toEnd);
+                var sLrfd = SumByCase(kv.Value.Select(a => a.CaseLrfd), toStart);
+                var eLrfd = SumByCase(kv.Value.Select(a => a.CaseLrfd), toEnd);
+                if (sAsd != null && eAsd != null && sLrfd != null && eLrfd != null)
+                {
+                    reactions.StartAsd = Max(sAsd);
+                    reactions.EndAsd = Max(eAsd);
+                    reactions.StartLrfd = Max(sLrfd);
+                    reactions.EndLrfd = Max(eLrfd);
+                }
                 Beams.Add(reactions);
                 var first = kv.Value[0];
-                foreach (var (end, asd, lrfd, which) in new[] { (bm.Start, reactions.StartAsd, reactions.StartLrfd, "start"), (bm.End, reactions.EndAsd, reactions.EndLrfd, "end") })
+                foreach (var (end, asd, lrfd, which, cA, cL) in new[] { (bm.Start, reactions.StartAsd, reactions.StartLrfd, "start", sAsd, sLrfd), (bm.End, reactions.EndAsd, reactions.EndLrfd, "end", eAsd, eLrfd) })
                 {
                     if (!(asd > 0)) continue;
                     Place(new Arrival
                     {
                         At = end, Asd = asd, Lrfd = lrfd, LowEndUp = null, Kind = PathPointKind.BeamEnd, From = $"beam {bm.Id} {which}",
                         UpperStory = first.UpperStory, WallId = first.WallId, Family = first.Family, Species = first.Species,
+                        CaseAsd = cA, CaseLrfd = cL,
                     }, level, wallsBelow, null);
                 }
             }
@@ -271,7 +318,7 @@ namespace ShearWallCalculator
             var l = new HoldownLanding
             {
                 UpperStory = a.UpperStory, WallId = a.WallId, At = a.At, TensionAsd = a.Asd, TensionLrfd = a.Lrfd, Kind = a.Kind, From = a.From,
-                LowEndUp = a.LowEndUp,
+                LowEndUp = a.LowEndUp, CaseAsd = a.CaseAsd,
             };
             ByLevel[level].Add(l);
 
@@ -301,7 +348,12 @@ namespace ShearWallCalculator
                 if (a.Kind == PathPointKind.WallHoldown && fam == a.Family) l.Choice = a.Chosen;
                 else l.Choice = size(fam, a.Species, a.Asd);
                 if (a.Kind == PathPointKind.WallHoldown && fam != a.Family)
-                    l.Note = $"{HoldownRules.WhyNot(a.Family, l.Support)}: sized as {HoldownRules.Name(fam)} ({l.Choice?.Model ?? "none strong enough"}). Set the wall's hold-down type.";
+                {
+                    // a valid type is picked here automatically; the wall's Hold-down type (Design tab) overrides it
+                    l.Note = $"{HoldownRules.WhyNot(a.Family, l.Support)}: {HoldownRules.Name(fam)} ({l.Choice?.Model ?? "none strong enough"}) is used here instead, picked automatically.";
+                    string where = $"{l.Choice?.Model ?? "none strong enough"} {HoldownRules.ShortName(fam)} on {l.SupportId}";
+                    if (a.Result != null && !a.Result.HoldownElsewhere.Contains(where)) a.Result.HoldownElsewhere.Add(where);
+                }
             }
             l.Model = l.Choice?.Model;
 
@@ -328,7 +380,7 @@ namespace ShearWallCalculator
                     down.Add(new Arrival
                     {
                         At = col.At, Asd = a.Asd, Lrfd = a.Lrfd, LowEndUp = a.LowEndUp, Kind = PathPointKind.ColumnBase, From = $"column {col.Id} base",
-                        UpperStory = a.UpperStory, WallId = a.WallId, Family = a.Family, Species = a.Species,
+                        UpperStory = a.UpperStory, WallId = a.WallId, Family = a.Family, Species = a.Species, CaseAsd = a.CaseAsd, CaseLrfd = a.CaseLrfd,
                     });
                     break;
                 case SupportKind.Beam:
