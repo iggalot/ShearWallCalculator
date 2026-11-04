@@ -549,8 +549,10 @@ namespace ShearWallVisualizer
             if (w.ShowDialog() != true) return;
             var levels = w.Levels;
             double wallDead = w.WallDead;
-            string what = "Floor and roof loads: " + string.Join("; ", building.LevelsBottomUp.Where(l => levels.ContainsKey(l.Id)).Select(l => $"{l.Name} {levels[l.Id]} psf")) + $"; walls {wallDead:0.##} psf.";
-            Sketch.Edit(what, b => LoadManager.LoadSection.SetAreaLoads(b, levels, wallDead));
+            var zones = w.Zones;
+            string what = "Floor and roof loads: " + string.Join("; ", building.LevelsBottomUp.Where(l => levels.ContainsKey(l.Id)).Select(l => $"{l.Name} {levels[l.Id]} psf")) + $"; walls {wallDead:0.##} psf" +
+                          (zones.Count > 0 ? $"; zones {string.Join(", ", zones.Select(z => z.Name))}." : ".");
+            Sketch.Edit(what, b => { LoadManager.LoadSection.SetAreaLoads(b, levels, wallDead); LoadManager.LoadSection.SetZones(b, zones); });
         }
 
         /// <summary>Loads > Foundation loads: the load manager's read-only window of what reaches the foundation.</summary>

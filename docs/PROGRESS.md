@@ -1233,3 +1233,31 @@ Loads aren't the building model's. Like the wind calculator's "Wind" section, th
   - W2 at the base: D 676.5 + 150 = 827; D + L + 0.7S = 2,016 plf.
   - W1 with its hand entry: D 300 + 150 = 450; D + L + 0.7S = 1,025 plf, noted.
   - C1 carries BM3 and BM2: 13,846 lb.
+
+### Load zones
+- **LoadManager:** LoadSection.Zones holds LoadZone entries: level, name, a rectangle on the plan (ft), and area loads.
+  - A zone's loads take the place of the level's inside it, for example a deck, a corridor or a storage room. Where zones overlap, the larger of each kind applies.
+  - SetZones sets them all as one edit. It puts the corners in order, takes negative loads as 0, and leaves out zones with no area or no such level.
+  - Saved in the "Loads" section of the project file, not the model.
+- **Load path:** at each sample along a wall or beam, the line load is the area load summed across that point's own tributary strip. A zone counts over the part of the strip it covers.
+  - For each kind, the most along the line is kept.
+  - With no zones this is the old result: area × tributary.
+  - WallTopLoad.Zones and BeamLoad.Zones name the zones met; the construction window's load-path line says "load zone Storage".
+  - A zone only counts where a sample point is inside it by more than 0.01 ft; a line that just grazes its edge does not take it.
+  - Two bearing lines within 0.25 ft of each other count as the same line. A beam drawn 3/4 in off a wall's line was splitting the wall's tributary.
+- **Floor and roof loads window:** a Load zones table, one row per zone: level, name, west x, south y, width, depth, D, L, Lr, S, Remove.
+  - "Add zone" starts a zone with that level's loads as typed.
+  - Bad numbers are marked; the width and depth must be above 0.
+  - OK applies the levels, the walls' weight and the zones as one undoable edit.
+- **Tests:** LoadManager 30.
+  - A deck over part of the length: L 360 on the edge wall, 600 on the interior wall.
+  - A corridor over half the strip: 3 × 100 + 3 × 40 = 420.
+  - A line grazing a zone's edge takes the level's 400, not 600. This fails on the old inclusive edge.
+  - Round trip and clear.
+  - WoodFraming 32, SWC 219.
+- **Checked on lbltwo** (scratch copy; the original is kept as lbltwo_before_zones.bldg.json):
+  - Added "Storage" on Level 2 (x 30–46, y 0.5–20, D 12, L 125) through the window, pressed OK, saved.
+  - The file holds the zone.
+  - W4 takes L 125 × 19.5 = 2,437.5 plf, with tributary 19.5 all along. W2 is unchanged.
+  - The construction window reads "load zone Storage".
+- **Not done yet:** drawing zones on the plan (they are typed in); zones on a sloped roof's slope.
