@@ -561,5 +561,36 @@ namespace ShearWallVisualizer
             if (building == null) { MessageBox.Show(this, "Open a project first.", "Foundation loads"); return; }
             new LoadManager.Wpf.FoundationLoadsWindow(building) { Owner = this }.Show();
         }
+
+        /// <summary>
+        /// Wind uplift from the wind calculator's own results (the ones the shear walls take their wind from): its whole-building
+        /// roof pressures, eight cases, down the load path, and its components and cladding roof pressures on the rafter ties.
+        /// </summary>
+        private void WindUplift_Click(object sender, RoutedEventArgs e)
+        {
+            if (building == null) { MessageBox.Show(this, "Open a project first.", "Wind uplift"); return; }
+            var (u, why) = Uplift();
+            new LoadManager.Wpf.WindUpliftWindow(building, u, why) { Owner = this }.Show();
+        }
+
+        /// <summary>The wind uplift for the model, or null and why not (manual loads, no wind results).</summary>
+        private (LoadManager.WindUplift u, string why) Uplift()
+        {
+            if (!windLoadsLinked) return (null, "The wind loads are entered by hand (not linked to the wind calculator), so there are no roof pressures. Link them in Wind setup to see the uplift.");
+            if (windLoadCalculator_MWFRS_Length == null || windLoadCalculator_MWFRS_Width == null)
+                return (null, "The wind calculator has no results for these inputs (Wind setup), so there are no roof pressures.");
+            try
+            {
+                var box = building.Envelope().Bounds;
+                var cases = LoadManager.RoofWind.Mwfrs(box, windLoadCalculator_MWFRS_Length, windLoadCalculator_MWFRS_Width);
+                var cc = windLoadCalculator_CC;
+                return (LoadManager.WindUplift.Run(building, LoadManager.LoadSection.Read(building), cases, a => LoadManager.RoofWind.Cladding(box, cc, a)), null);
+            }
+            catch (Exception ex) when (ex is InvalidOperationException || ex is ArgumentException)
+            {
+                Log.Warning("Loads", "The wind uplift could not be found: " + ex.Message, ex);
+                return (null, "The wind uplift could not be found: " + ex.Message);
+            }
+        }
     }
 }

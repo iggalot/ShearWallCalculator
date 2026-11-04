@@ -68,6 +68,8 @@
                           ToolTip="Each level's area loads (D, L, Lr, S psf) and the walls' own weight: the gravity load path takes them to the wall tops (the load manager's, saved in the project file)"/>
                 <MenuItem Header="F_oundation loads..." Click="FoundationLoads_Click"
                           ToolTip="What the gravity load path brings down to the foundation: each wall on the ground and each column, by kind and the largest ASD combination"/>
+                <MenuItem Header="_Wind uplift..." Click="WindUplift_Click"
+                          ToolTip="The wind calculator's roof pressures lifting against the dead load (0.6D + 0.6W): the rafter ties by components and cladding, and the wall tops, beams, columns and foundation by the whole-building wind cases"/>
             </MenuItem>
             <MenuItem Header="_Help">
                 <MenuItem Header="Open _log folder" Click="OpenLogFolder_Click"/>

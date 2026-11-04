@@ -1261,3 +1261,44 @@ Loads aren't the building model's. Like the wind calculator's "Wind" section, th
   - W4 takes L 125 × 19.5 = 2,437.5 plf, with tributary 19.5 all along. W2 is unchanged.
   - The construction window reads "load zone Storage".
 - **Not done yet:** drawing zones on the plan (they are typed in); zones on a sloped roof's slope.
+
+### Wind uplift on the roof (from the wind calculator)
+- **The pressures are the wind calculator's own.** Nothing is calculated a second time: the same results the shear walls take their wind from (Wind setup, linked).
+  - **Whole-building (MWFRS, Ch. 27):** the roof zones of Fig. 27.3-1 as the calculator lays them out (plan polygons), both roof coefficients (the larger suction and the other one), with the wind from each of the four sides: 8 cases.
+    - Wind from the east and from the north are the calculator's west and south results mirrored. The south one is the calculator's along-width run turned onto the plan.
+    - Internal pressure taken to lift the roof (external − |internal|).
+    - The eaves take the top pressure of the zone they come out of, without internal pressure. The windward eave also takes the soffit, Cp 0.8 (27.3.3).
+  - **Components and cladding (C&C, Ch. 30 Part 1), for the rafter or truss ties:** the calculator's roof zones and curves, read at each rafter's effective wind area, span × max(spacing, span/3) (26.2). Internal pressure and the 16 psf minimum (30.2.2) apply. The eaves use the overhang coefficients (ASCE 7-22 with none: roof + wall below, as the calculator does).
+    - The span is the load path's: from the wall or beam to the next one across the framing (WallTopLoad/BeamLoad.FramingSpan).
+    - At 10 sq ft the C&C pressures equal the calculator's own tables (tested, 7-16 and 7-22). The wind setup's default 10 sq ft would have given about 1,500 lb per truss on lbltwo, against about 600 at the truss's 507 sq ft.
+- **LoadManager:**
+  - GravityLoad.Wind, W (+ down, − up). It is never entered or saved.
+  - Net = 0.6D + 0.6W (ASCE 7-22 2.4 Eq. 7a; the IBC 1605.2 alternative counts 2/3 D, less severe).
+  - GravityLoadPath.Uplift(b, s, case) is the same load path with the dead loads only (levels, zones, walls' weight, and hand entries' D) and the case's pressure taken across each roof tributary strip, eaves included.
+    - W goes down like any load: to walls below, beam reactions, posts, columns, and the foundation.
+    - Along a line, the sample with the most net uplift is kept, its D and W together. Taking the most D with the most W would not be conservative.
+  - RoofWind.Mwfrs / RoofWind.Cladding build the cases from the calculators.
+  - WindUplift.Run gives the governing case for each wall top, beam end, column, foundation wall and post, and the C&C tie at each roof wall and beam. It makes one pass per distinct rafter area.
+  - LoadManager now references ASCE7Wind.Core (no UI).
+- **BuildingModel:** ModelDefaults.RafterSpacing = 24 in. (the roof framing; not editable in a window yet).
+- **SWC:** Loads > Wind uplift... opens the load manager's read-only window.
+  - It shows ties (span, area, D, W, net, per rafter), wall tops, beam ends, columns, and the foundation (walls and their posts), each with its governing case.
+  - With manual wind loads it says there are no roof pressures.
+- **Tests:** LoadManager 40 (10 new). BuildingModel 81. SWC 219.
+  - Uniform 30 psf up: S wall D 90, W −180, net −54; interior −90; N −36. Live load dropped.
+  - Varying wind plus a heavier zone: the place with the most net uplift, not the most D with the most W.
+  - Two stories: 312 D vs −300 W gives +7.2 (held); the foundation gives +67.2.
+  - Beam on two posts: −1,800 lb each to the foundation.
+  - Hand entry keeps its D and takes the W. The eave is in the strip.
+  - Envelope: governing case and the tie, 12 ft span → 48 sq ft, −216 lb a rafter.
+  - The calculator's zones on the plan, by hand: qh Kd 24.43, −23.09 psf at the windward edge in all four directions, −35.30 on the windward eave.
+- **Checked on lbltwo**, through the window and a script with the app's DLLs:
+  - Gable 26.6°, 7-22, 115 mph.
+  - The W8/W6 roof share is 19.5 ft × −29.3 psf (wind from the west, 0 to h/2) = −571 plf; against D 293 that is 167 plf up.
+  - Trusses 39 ft, 507 sq ft: 617 lb up a truss at 24 in.
+  - Below the roof, the dead load holds everything down: W2/W4 at Level 2 63 plf, posts C1 1,116 lb, C2 427 lb.
+- **Not done yet:**
+  - The wind on a lower roof (only the top roof's).
+  - A window to set the rafter spacing.
+  - Uplift in the construction window.
+  - Hold-down sizing for the uplift (only the forces are found).
