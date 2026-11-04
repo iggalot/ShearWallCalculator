@@ -64,8 +64,9 @@
                 <MenuItem Header="_Apply a change set..." Click="ApplyChanges_Click"/>
             </MenuItem>
             <MenuItem Header="_Loads">
-                <MenuItem Header="_Floor and roof loads..." Click="AreaLoads_Click"
-                          ToolTip="Each level's area loads (D, L, Lr, S psf) and the walls' own weight: the gravity load path takes them to the wall tops (the load manager's, saved in the project file)"/>
+                <MenuItem Header="_Edit loads in the Load Manager..." Click="EditLoads_Click"
+                          ToolTip="The gravity loads are edited in the Load Manager: each level's floor and roof loads, load zones, the walls' own weight, a wall's top load by hand; it also shows the foundation loads combined (plan, envelope, 3D). This app reads them."/>
+                <Separator/>
                 <MenuItem Header="F_oundation loads..." Click="FoundationLoads_Click"
                           ToolTip="What the gravity load path brings down to the foundation: each wall on the ground and each column, by kind and the largest ASD combination"/>
                 <MenuItem Header="_Wind uplift..." Click="WindUplift_Click"

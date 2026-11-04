@@ -99,7 +99,7 @@ namespace ShearWallVisualizer
         {
             if (editorProcess != null && !editorProcess.HasExited)
             {
-                MessageBox.Show(this, "The building is open in the Building Model editor. Save and close it there first.", "Shear Wall Calculator",
+                MessageBox.Show(this, $"The project is open in the {editorName}. Save and close it there first.", "Shear Wall Calculator",
                                 MessageBoxButton.OK, MessageBoxImage.Information);
                 e.Cancel = true;
                 return;
@@ -252,6 +252,10 @@ namespace ShearWallVisualizer
                 var doc = projectDoc ?? new ModelDocument();
                 doc.Building = BuildingToSave();
                 doc.Version = ModelDocument.CurrentVersion;
+                // what the shear walls put on the foundation, for the load manager (not compared for unsaved changes: it is
+                // rewritten from the design on every save); the revision is the one this save gives the file
+                var lateral = LateralForFoundation(doc.Revision + 1);
+                LoadManager.LateralSection.Write(doc.Building, lateral);   // none: an old one is removed
                 ModelFile.Save(path, doc);
                 projectDoc = doc;
                 baseModelJson = ModelFile.BuildingToJson(building); // Model > Export changes: since this save
@@ -357,35 +361,60 @@ namespace ShearWallVisualizer
         /// <summary>The Building Model editor, next to this program (copied there by the build).</summary>
         private static string EditorPath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "BuildingModel.exe");
 
+        /// <summary>The Load Manager, next to this program (copied there by the build).</summary>
+        private static string LoadManagerPath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "LoadManagerApp.exe");
+
+        /// <summary>The other app open on the project ("Building Model editor", "Load Manager"), while one is.</summary>
+        private string editorName = "Building Model editor";
+
         private void EditBuilding_Click(object sender, RoutedEventArgs e) => EditBuilding();
+
+        private void EditLoads_Click(object sender, RoutedEventArgs e) => EditLoads();
 
         /// <summary>
         /// Saves the project and opens it in the Building Model editor, the one place the building's levels, size and roof are
         /// edited. While it is open this window waits (so the two never change the file at once) and reloads the project each
         /// time the editor saves it.
         /// </summary>
-        private void EditBuilding()
+        private void EditBuilding() => OpenInOtherApp(EditorPath, "Building Model editor", "Edit building",
+            "The building is open in the Building Model editor.\n\nEdit the levels, size, roof, walls and diaphragms there and save: " +
+            "this window updates each time. Close the editor to work here again.");
+
+        /// <summary>
+        /// Saves the project and opens it in the Load Manager, where the gravity loads are edited (this app only reads them): the
+        /// floor and roof loads, zones, a wall's top load by hand; it also shows the foundation loads combined. This window waits
+        /// and reloads the project each time the Load Manager saves.
+        /// </summary>
+        private void EditLoads() => OpenInOtherApp(LoadManagerPath, "Load Manager", "Edit loads",
+            "The project is open in the Load Manager.\n\nEdit the floor and roof loads, load zones and wall loads there and save: " +
+            "this window updates each time. Close the Load Manager to work here again.");
+
+        private string editorOverlayText;
+
+        private void OpenInOtherApp(string exe, string name, string caption, string overlay)
         {
             if (!HasProject) return;
             if (editorProcess != null && !editorProcess.HasExited) return;
-            if (!File.Exists(EditorPath))
+            if (!File.Exists(exe))
             {
-                Log.Error("Project", "The Building Model editor was not found: " + EditorPath, null);
-                MessageBox.Show(this, "The Building Model editor (BuildingModel.exe) is not next to this program:\n" + EditorPath, "Edit building", MessageBoxButton.OK, MessageBoxImage.Warning);
+                Log.Error("Project", $"The {name} was not found: " + exe, null);
+                MessageBox.Show(this, $"The {name} ({Path.GetFileName(exe)}) is not next to this program:\n" + exe, caption, MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
             if (HasUnsavedChanges && !SaveProject(saveAs: false)) return;
             try
             {
-                editorProcess = Process.Start(new ProcessStartInfo(EditorPath, "\"" + currentProjectPath + "\"") { UseShellExecute = false });
+                editorProcess = Process.Start(new ProcessStartInfo(exe, "\"" + currentProjectPath + "\"") { UseShellExecute = false });
             }
             catch (Exception ex) when (ex is System.ComponentModel.Win32Exception || ex is InvalidOperationException)
             {
-                Log.Error("Project", "Could not start the Building Model editor", ex);
-                MessageBox.Show(this, "The Building Model editor could not be started:\n" + ex.Message, "Edit building", MessageBoxButton.OK, MessageBoxImage.Warning);
+                Log.Error("Project", $"Could not start the {name}", ex);
+                MessageBox.Show(this, $"The {name} could not be started:\n" + ex.Message, caption, MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
-            Log.Info("Project", "Building Model editor opened on " + currentProjectPath);
+            editorName = name;
+            editorOverlayText = overlay;
+            Log.Info("Project", $"{name} opened on " + currentProjectPath);
             editorProcess.EnableRaisingEvents = true;
             editorProcess.Exited += (s, a) => Dispatcher.BeginInvoke(new Action(EditorClosed));
 
@@ -412,7 +441,7 @@ namespace ShearWallVisualizer
             if (stamp == lastReloaded) return;
             lastReloaded = stamp;
             OpenProject(currentProjectPath, reload: true);
-            ShowStatusMessage(LogLevel.Info, "The building was updated from the Building Model editor.");
+            ShowStatusMessage(LogLevel.Info, $"The project was updated from the {editorName}.");
         }
 
         private void EditorClosed()
@@ -420,7 +449,7 @@ namespace ShearWallVisualizer
             editorWatcher?.Dispose();
             editorWatcher = null;
             editorReload?.Stop();
-            Log.Info("Project", "Building Model editor closed.");
+            Log.Info("Project", $"{editorName} closed.");
             editorProcess = null;
             ReloadFromEditor(); // a save just before closing
             ShowEditorOverlay(false);
@@ -428,12 +457,12 @@ namespace ShearWallVisualizer
 
         private void ShowEditorOverlay(bool show)
         {
+            if (editorOverlay != null && show) ((TextBlock)((Border)editorOverlay.Child).Child).Text = editorOverlayText ?? "";
             if (editorOverlay == null)
             {
                 var text = new TextBlock
                 {
-                    Text = "The building is open in the Building Model editor.\n\nEdit the levels, size, roof, walls and diaphragms there and save: " +
-                           "this window updates each time. Close the editor to work here again.",
+                    Text = editorOverlayText ?? "",
                     TextWrapping = TextWrapping.Wrap, FontSize = 15, MaxWidth = 520, TextAlignment = TextAlignment.Center,
                 };
                 editorOverlay = new Border

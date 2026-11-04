@@ -181,8 +181,8 @@ namespace ShearWallVisualizer.Dialogs
         /// <summary>Ctrl+Z (false) or Ctrl+Y (true) pressed here: the host undoes or redoes the model.</summary>
         public event Action<bool> UndoRedo;
 
-        /// <summary>The engineer entered the loads on the shown wall's top (plf). The host saves them in the project file through the LoadManager.</summary>
-        public event Action<LoadManager.LineLoad> TopLoadChanged;
+        /// <summary>"Edit loads…" pressed: the host opens the project in the Load Manager (the gravity loads are edited there, not here).</summary>
+        public event Action EditLoadsRequested;
 
         /// <summary>Open this window whenever a wall is picked (the host reads it).</summary>
         public bool OpenOnPick { get => follow.IsChecked == true; set => follow.IsChecked = value; }
@@ -575,41 +575,27 @@ namespace ShearWallVisualizer.Dialogs
             string verdict = !d.SlendernessOk ? $"{f.StudSize} is too slender (le/d = {d.Slenderness:0.0} > 50): use a deeper stud (Studs, top right)."
                            : d.Passes ? $"{lumber} {f.StudSize} at {f.Spacing:0}\" o.c. works: {g?.Name} governs at {g?.Ratio:0.00}."
                            : $"{lumber} {f.StudSize} at {f.Spacing:0}\" o.c. does not work: " + Worst(d) + " Use a deeper stud or closer spacing.";
-            Section(p, "Studs: NDS design", verdict + (loads ? "" : " No gravity loads on the wall's top yet (Loads > Floor and roof loads, or enter them below): wind (or 5 psf) only."));
+            Section(p, "Studs: NDS design", verdict + (loads ? "" : " No gravity loads on the wall's top yet (Loads > Edit loads: the Load Manager): wind (or 5 psf) only."));
             if (!d.Passes) ((TextBlock)p.Children[p.Children.Count - 1]).Foreground = Ui.FailInk;
 
-            // the loads on the wall's top, entered here, saved in the project file's loads, not the model (the gravity load path will fill them in later)
+            // the loads on the wall's top are the load manager's (read here; edited in the Load Manager app, not by the shear wall app)
             var bar = new WrapPanel { Margin = new Thickness(0, 4, 0, 6) };
-            bar.Children.Add(new TextBlock { Text = "Loads on the wall's top entered by hand (plf, service):", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0), Foreground = Ui.InkSecondary });
             var t = data.TopLoadEntered;
-            var boxes = new List<TextBox>();
-            foreach (var (label, v) in new[] { ("D", t?.Dead ?? 0), ("L", t?.Live ?? 0), ("Lr", t?.RoofLive ?? 0), ("S", t?.Snow ?? 0) })
+            bar.Children.Add(new TextBlock
             {
-                bar.Children.Add(new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 4, 0) });
-                var box = new TextBox { Text = v > 0 ? v.ToString("0.##", CultureInfo.InvariantCulture) : "", Width = 60, VerticalAlignment = VerticalAlignment.Center };
-                System.Windows.Automation.AutomationProperties.SetName(box, "Top load " + label);
-                boxes.Add(box);
-                bar.Children.Add(box);
-            }
-            void Apply()
-            {
-                double Num(TextBox b) => double.TryParse(b.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var x) && x > 0 ? x : 0;
-                var next = new LoadManager.LineLoad { Dead = Num(boxes[0]), Live = Num(boxes[1]), RoofLive = Num(boxes[2]), Snow = Num(boxes[3]) };
-                if (next.SameAs(data.TopLoadEntered ?? new LoadManager.LineLoad())) return;
-                TopLoadChanged?.Invoke(next);
-            }
-            foreach (var b in boxes)
-            {
-                b.LostFocus += (o, e) => Apply();
-                b.KeyDown += (o, e) => { if (e.Key == System.Windows.Input.Key.Enter) { Apply(); e.Handled = true; } };
-            }
-            bar.Children.Add(new TextBlock { Text = "Entered values replace the load path's; clear them all to go back to it (Ctrl+Z undoes).", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(10, 0, 0, 0), Foreground = Ui.InkMuted, FontSize = 11 });
+                Text = t != null ? $"Loads on the wall's top entered by hand in the Load Manager: D {t.Dead:0.##}, L {t.Live:0.##}, Lr {t.RoofLive:0.##}, S {t.Snow:0.##} plf (service)."
+                                 : "The gravity loads are the Load Manager's: the floor and roof loads, zones and any load entered on a wall's top are edited there.",
+                VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0), Foreground = Ui.InkSecondary, TextWrapping = TextWrapping.Wrap, MaxWidth = 640,
+            });
+            var edit = new Button { Content = "Edit loads…", Padding = new Thickness(8, 1, 8, 1), VerticalAlignment = VerticalAlignment.Center, ToolTip = "Open the project in the Load Manager" };
+            edit.Click += (o, e) => EditLoadsRequested?.Invoke();
+            bar.Children.Add(edit);
             p.Children.Add(bar);
 
-            // what the gravity load path works out from the floor and roof loads (Loads > Floor and roof loads)
+            // what the gravity load path works out from the floor and roof loads (the Load Manager: Loads > Edit loads)
             var path = data.TopLoadPath;
             string pathText = path == null || (path.Computed.IsEmpty && path.TributaryMax <= 0 && path.Above.Count == 0 && path.Points.Count == 0)
-                ? "From the floor and roof loads: nothing reaches this wall (no area loads entered, or no floor or roof bears on it). Loads > Floor and roof loads."
+                ? "From the floor and roof loads: nothing reaches this wall (no area loads entered, or no floor or roof bears on it). Loads > Edit loads (the Load Manager)."
                 : $"From the floor and roof loads: D {path.Computed.Dead:0}, L {path.Computed.Live:0}, Lr {path.Computed.RoofLive:0}, S {path.Computed.Snow:0} plf ({path.Describe()})"
                   + (data.TopLoadEntered != null ? " — not used: the values entered replace it." : " — used.");
             p.Children.Add(new TextBlock { Text = pathText, TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkSecondary, Margin = new Thickness(0, 0, 0, 4) });

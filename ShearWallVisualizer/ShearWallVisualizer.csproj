@@ -123,6 +123,9 @@
     <Compile Include="MainWindow.Holdowns.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="MainWindow.Lateral.cs">
+      <DependentUpon>MainWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="MainWindow.Details.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </Compile>
@@ -212,6 +215,10 @@
     <!-- the Building Model editor: referenced so BuildingModel.exe is copied next to this program (Model > Edit building) -->
     <ProjectReference Include="..\..\BuildingModel\BuildingModel.App\BuildingModel.App.csproj">
       <Name>BuildingModel.App</Name>
+    </ProjectReference>
+    <!-- the Load Manager: referenced so LoadManagerApp.exe is copied next to this program (Loads > Edit loads) -->
+    <ProjectReference Include="..\..\LoadManager\LoadManager.App\LoadManager.App.csproj">
+      <Name>LoadManager.App</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup />

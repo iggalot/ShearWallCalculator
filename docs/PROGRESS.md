@@ -1302,3 +1302,51 @@ Loads aren't the building model's. Like the wind calculator's "Wind" section, th
   - A window to set the rafter spacing.
   - Uplift in the construction window.
   - Hold-down sizing for the uplift (only the forces are found).
+
+### The Load Manager app; the foundation's loads combined (plan, envelope, 3D)
+- **The gravity loads now live in their own app.** The Shear Wall Calculator only reads them.
+  - Floor and roof loads, load zones, the walls' own weight and a wall's top load by hand are edited in the Load Manager (LoadManager.App, LoadManagerApp.exe).
+  - It opens the same .bldg.json. It never changes the building; Save reads the file again and replaces only its "Loads" section.
+  - It reads the building again when another app saves the file. Unsaved load edits are kept.
+- **Load Manager, Loads view:** the model's plan (read only; its drawing tools get no clicks or keys) with a level bar.
+  - Zones are drawn on the plan (R, drag), then edited or deleted in the side panel. Each wall's top load is labelled.
+  - Click a wall: what it carries, where it comes from, how it varies along it, its posts, and its top load by hand (set or clear).
+  - Undo and redo cover the loads (snapshots of the Loads section).
+  - Loads menu: Floor and roof loads, Wind uplift (from the file's wind setup), Foundation loads (service), Foundation loads (combined).
+- **Foundation, combined (LoadManager.FoundationAnalysis):**
+  - Walls on the ground: the line load as it varies along each wall (the load path's profiles), cut wherever any wind case changes.
+  - Points: posts in the walls, columns (on a wall's footing when they stand in it, else on their own), and the shear walls' end forces.
+  - Wind: the roof's 8 whole-building cases carried down the load path, plus the shear walls' couples per case. Where both meet, their extremes are added whatever their cases (the two apps name cases differently). That is on the safe side.
+  - Every combination of the method (ASD: ASCE 7-22 2.4 and IBC 1605.2; or strength: ASCE 7-22 2.3) with only D, L, Lr, S and W, and only those whose loads are present.
+    - Each variable load is set to zero where that is worse: "most" takes the wind at its most pressing down, "least" at its most lifting.
+    - E, Ev, Eh, R and WT combinations are left out, and the window says so.
+  - The envelope: the most down and the most up, with the combination giving each, for every stretch of footing and every point.
+- **Foundation view:**
+  - On the plan: beside each footing the most combined line load down (blue, to scale) and the most up where it lifts (vermilion). Circles are posts and columns; squares are shear wall ends.
+  - Under the plan: the envelope load diagram of the selected wall (most and least along it, the points as arrows with their values).
+  - The side panel: ASD or strength, the overall envelope, the selected wall or point with its service loads and every combination (collapsed), and "All the numbers…" (each combination's load factors, every wall and point).
+  - **Foundation 3D:** the building see-through and grey. Load-diagram plates stand on the footings (blue down, vermilion up), with arrows at the points. The numbers are on the plan.
+- **The shear walls on the foundation:** on every save the Shear Wall Calculator writes the "Lateral" section (LoadManager.LateralSection).
+  - It holds each first-story wall end's overturning couple per wind case, at W level (the ASD couple ÷ 0.6), with no dead load.
+  - Column bases carrying hold-downs are included as ASD ÷ 0.6.
+  - The Load Manager adds its own dead loads and combines. It warns when a named wall is gone or has moved, or when the model has been saved since.
+- **SWC:** Loads > Edit loads in the Load Manager... opens it like Edit building (save first, wait under a notice, reload on each save).
+  - The Floor and roof loads window and the construction window's hand entry are gone. The construction window shows a hand entry read only, with an "Edit loads…" button.
+- **BuildingModel:** Building3DView.Ghost (see-through, grey) and Extra (the host's own 3D models).
+- **Tests:** LoadManager 46 (3 new). SWC 219.
+  - Gravity ASD: 190 / 120 plf → D + Lr 310, least 0.6D 114. Strength: 1.2D + 1.6Lr 420, least 0.9D 171.
+  - Roof lifted 30 psf: W −180 plf; ASD 0.6D + 0.6W = 6 plf (down); strength 0.9D + 1.0W = −9 plf (lifts).
+  - A shear wall end ±1,000 lb: ASD ±600, strength ±1,000. One with nothing drawn under it stands alone, with a note. The Lateral format round-trips.
+- **Checked** on scratch copies of lbltwo, rendered in the app's own window in-process (the display was off):
+  - W4 footing: most 3,674 plf (D + L + 0.7S), least 153 plf (0.6D + 0.6W).
+  - C1, strength: 1.2 × 5,751 + 1.6 × 5,305 + 0.5 × 2,657 = 16,719 lb; least 0.9 × 5,751 − 3,892 = 1,284 lb.
+  - The SWC save wrote 13 shear wall points (64 cases). The Load Manager shows them; the W1/W2 corner takes ±9,045 lb ASD.
+  - Edit loads from SWC's menu opened the Load Manager; the notice showed and cleared when it closed.
+  - A Load Manager save changed only the loads: wind, lateral and walls unchanged, revision 26 → 27.
+- **Not done yet / to confirm:**
+  - The shear wall app's own wall dead-load input (plf per wall) is a second source beside the Load Manager's. It should read the Load Manager's.
+  - The shear-wall points carry no dead load of their own: the footing's line dead load resists them, but the points' envelope shows the bare uplift.
+  - Earthquake loads.
+  - Footing sizing.
+  - Labels in 3D.
+  - A load manager for beams and columns (the framing design app).

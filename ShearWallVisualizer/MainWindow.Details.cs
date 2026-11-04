@@ -46,17 +46,8 @@ namespace ShearWallVisualizer
                 wallBuild.UndoRedo += redo => { if (redo) Sketch.Redo(); else Sketch.Undo(); };
                 // a stud size picked there is the wall's, in the building model (every app reads it): an edit through the
                 // sketch, so it is saved, undoable and logged like any other model edit
-                // the loads on the wall's top entered there: the LoadManager's ("Loads" in the project file, not the model's; an
-                // edit through the sketch all the same, so saved and undoable; the gravity load path will write them later)
-                wallBuild.TopLoadChanged += load =>
-                {
-                    var d = wallBuild?.Data;
-                    if (selectedKind != "Wall" || building == null || d?.ModelWallId == null || d.TopLevelId == null) return;
-                    string what = $"{d.Name}: loads on its top D {load.Dead:0.##}, L {load.Live:0.##}, Lr {load.RoofLive:0.##}, S {load.Snow:0.##} plf.";
-                    Dispatcher.BeginInvoke(new Action(() =>
-                        Sketch.Edit(what, b => LoadManager.LoadSection.SetWallTop(b, d.ModelWallId, d.TopLevelId, load))),
-                        System.Windows.Threading.DispatcherPriority.Input);
-                };
+                // the gravity loads are edited in the Load Manager (this app only reads them)
+                wallBuild.EditLoadsRequested += () => Dispatcher.BeginInvoke(new Action(EditLoads), System.Windows.Threading.DispatcherPriority.Input);
                 wallBuild.StudSizeChosen += size =>
                 {
                     var d = wallBuild?.Data;
@@ -100,7 +91,7 @@ namespace ShearWallVisualizer
             var lines = DetailCalcs.Beam(br, ends) ?? new List<CalcLine>();
             lines.AddRange(GravityLines(id, true));
             return Dialogs.MemberViews.Beam(id, level?.Name, br, End("start", br.Beam.Start, br.StartAsd), End("end", br.Beam.End, br.EndAsd),
-                                            lines, "The beam itself is not sized here: these are the uplift reactions its end connections and supports must take, and its gravity reactions (service loads, from Loads > Floor and roof loads).");
+                                            lines, "The beam itself is not sized here: these are the uplift reactions its end connections and supports must take, and its gravity reactions (service loads, from the Load Manager).");
         }
 
         /// <summary>A column's construction view: the levels it passes, what lands on its top, its base connection.</summary>
@@ -119,7 +110,7 @@ namespace ShearWallVisualizer
             var lines = DetailCalcs.Column(fc, span, onIt, bottom) ?? new List<CalcLine>();
             lines.AddRange(GravityLines(id, false));
             return Dialogs.MemberViews.Column(id, lo?.Elevation ?? 0, hi?.Elevation ?? 0, levelList, onIt, bottom, span,
-                                              lines, "The column itself is not sized here: this is the uplift its connections must take, and the gravity load it carries (service loads, from Loads > Floor and roof loads).");
+                                              lines, "The column itself is not sized here: this is the uplift its connections must take, and the gravity load it carries (service loads, from the Load Manager).");
         }
 
         /// <summary>A beam's or column's gravity loads by the load manager's load path (service level), as calculation lines.</summary>
@@ -536,23 +527,6 @@ namespace ShearWallVisualizer
             }
             if (members.Count > 0) sections.Add(new ReportSection("Beams and columns carrying hold-downs", members));
             return sections;
-        }
-
-        /// <summary>
-        /// Loads > Floor and roof loads: the load manager's window; its loads are saved in the project file as one edit
-        /// through the sketch (undoable, logged), and the gravity load path carries them to the wall tops.
-        /// </summary>
-        private void AreaLoads_Click(object sender, RoutedEventArgs e)
-        {
-            if (building == null) { MessageBox.Show(this, "Open a project first.", "Floor and roof loads"); return; }
-            var w = new LoadManager.Wpf.AreaLoadsWindow(building) { Owner = this };
-            if (w.ShowDialog() != true) return;
-            var levels = w.Levels;
-            double wallDead = w.WallDead;
-            var zones = w.Zones;
-            string what = "Floor and roof loads: " + string.Join("; ", building.LevelsBottomUp.Where(l => levels.ContainsKey(l.Id)).Select(l => $"{l.Name} {levels[l.Id]} psf")) + $"; walls {wallDead:0.##} psf" +
-                          (zones.Count > 0 ? $"; zones {string.Join(", ", zones.Select(z => z.Name))}." : ".");
-            Sketch.Edit(what, b => { LoadManager.LoadSection.SetAreaLoads(b, levels, wallDead); LoadManager.LoadSection.SetZones(b, zones); });
         }
 
         /// <summary>Loads > Foundation loads: the load manager's read-only window of what reaches the foundation.</summary>
