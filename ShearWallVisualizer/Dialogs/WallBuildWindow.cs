@@ -107,6 +107,7 @@ namespace ShearWallVisualizer.Dialogs
             {
                 Species = StudSpecies, Grade = StudGrade, Size = f.StudSize, SpacingIn = f.Spacing, LengthIn = len,
                 Loads = t ?? new LoadManager.LineLoad(),
+                Points = TopLoadPath?.Points,
                 WindPressurePsf = psf, WindNote = StudWindNote, DeflectionLimit = DeflectionLimit,
             });
         }
@@ -614,16 +615,24 @@ namespace ShearWallVisualizer.Dialogs
             p.Children.Add(new TextBlock { Text = pathText, TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkSecondary, Margin = new Thickness(0, 0, 0, 4) });
             foreach (var note in path?.Notes ?? new List<string>())
                 p.Children.Add(new TextBlock { Text = "• " + note, TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkMuted, Margin = new Thickness(0, 0, 0, 4) });
-            // beam ends and posts landing on the wall: each needs a post (king or built-up studs) under it, not checked here
-            if (path != null && path.Points.Count > 0)
+            // beam ends and posts landing on the wall: the post under each, its loads by combination (not sized here)
+            if (d.Posts.Count > 0)
             {
-                var prow = path.Points.OrderBy(x => x.At).Select(x => new[]
+                string Kinds(LoadManager.GravityLoad gl) => $"D {gl.Dead:N0}, L {gl.Live:N0}, Lr {gl.RoofLive:N0}, S {gl.Snow:N0}";
+                var prow = d.Posts.OrderBy(x => x.AtFt).Select(x => new[]
                 {
-                    x.From, FtIn.Of(x.At * 12),
-                    $"D {x.Load.Dead:N0}, L {x.Load.Live:N0}, Lr {x.Load.RoofLive:N0}, S {x.Load.Snow:N0} lb",
+                    x.From, FtIn.Of(x.AtFt * 12), Kinds(x.Point), Kinds(x.Service),
+                    x.MaxP == null ? "" : $"{x.MaxP.P:N0} ({x.MaxP.Name})",
+                    x.Governing == null ? "" : $"{x.Governing.POverCD:N0} = {x.Governing.P:N0} / {x.Governing.CD:0.0#} ({x.Governing.Name})",
                 }).ToList();
-                p.Children.Add(Table(new[] { "Concentrated load", "From the wall's start", "Load (service)" }, prow));
-                p.Children.Add(new TextBlock { Text = "Each needs a post under it (built-up studs or a column) down to the foundation; the stud check here is for the line load only.", TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkMuted, FontSize = 11, Margin = new Thickness(0, 0, 0, 4) });
+                p.Children.Add(Table(new[] { "Post under", "From the wall's start", "Concentrated (lb)", "Post total (lb)", "Most P (ASD)", "Governs a wood post (P/CD)" }, prow));
+                p.Children.Add(new TextBlock
+                {
+                    Text = $"Each post carries its concentrated load and the wall's line load over one stud spacing ({f.Spacing:0.#}\"), axial, in every ASD combination of the loads on it, CD by the shortest load (NDS 2.3.2.2). " +
+                           "It goes down to the foundation through the wall under it. Not sized here; the stud check below is for the line load." +
+                           (data.TopLoadEntered != null ? " The concentrated loads are the load path's; the values entered by hand replace only the line load." : ""),
+                    TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkMuted, FontSize = 11, Margin = new Thickness(0, 0, 0, 4),
+                });
             }
 
             var s = d.Section;

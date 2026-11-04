@@ -1188,3 +1188,27 @@ Loads aren't the building model's. Like the wind calculator's "Wind" section, th
   - Continuous beams, cantilevers and beams that are not square to the plan (only what stands or lands on them is carried).
   - Spreading a concentrated load into a wall below (it stays a post load).
   - Area-load zones.
+
+### Concentrated loads checked; post loads in the stud design
+- **Bug fixed (LoadManager):** a concentrated load in an upper wall went to every lower wall within 0.25 ft of it.
+  - At the joint between two lower walls on one line it was counted twice. A test caught it on the old code: 2 loads instead of 1.
+  - A load with no lower wall on its line was dropped without a note.
+  - Now each concentrated load in a wall standing on a level goes to exactly one support: the nearest wall or beam under it on its line, else whatever is under the point (a cross wall, a column, a beam). If nothing is there, it is noted.
+- **WoodFraming (StudDesign):** the input takes the wall's concentrated loads (Points). For each one, a PostLoad gives the post's load.
+  - The post carries the concentrated load plus the wall's line load over one stud spacing.
+  - Axial only, in every ASD combination of the loads on it (dead always counts), CD by the shortest load (NDS 2.3.2.2).
+  - It reports the largest P, and the largest P/CD (the one that governs a wood post of any size). No sizing.
+- **SWC:** the construction window's post table lists each post: where it is, the concentrated load, the post total, the most P, and the governing P/CD.
+  - The hand-entered line load replaces only the line load; the concentrated loads stay the load path's (said in the note).
+- **Tests:**
+  - LoadManager 25: the joint case, a 1500 lb roof beam end over two lower walls, goes to one.
+  - WoodFraming 32: post hand calculation.
+    - D 1000, L 2000, Lr 500 on a 300/400 plf wall at 16" gives D 1400, L 2533.33, Lr 500.
+    - Most P: D + L + Lr = 4433.33 at CD 1.25.
+    - Governing a wood post: D + L = 3933.33 at CD 1.0.
+    - No wind or snow combinations.
+  - SWC 219.
+- **Checked on lbltwo**, SW2-2 (W2) under BM1, matching the hand calculation:
+  - Post total: D 4,569 + 677 × 16/12 = 5,471; L 6,313; Lr 3,153; S 4,729.
+  - Most P: D + L + 0.7S = 15,095.
+  - Governing: 15,095 / 1.15 = 13,126.
