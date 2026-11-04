@@ -608,9 +608,9 @@ namespace ShearWallVisualizer.Dialogs
 
             // what the gravity load path works out from the floor and roof loads (Loads > Floor and roof loads)
             var path = data.TopLoadPath;
-            string pathText = path == null || (path.Load.IsEmpty && path.TributaryMax <= 0 && path.Above.Count == 0 && path.Points.Count == 0)
+            string pathText = path == null || (path.Computed.IsEmpty && path.TributaryMax <= 0 && path.Above.Count == 0 && path.Points.Count == 0)
                 ? "From the floor and roof loads: nothing reaches this wall (no area loads entered, or no floor or roof bears on it). Loads > Floor and roof loads."
-                : $"From the floor and roof loads: D {path.Load.Dead:0}, L {path.Load.Live:0}, Lr {path.Load.RoofLive:0}, S {path.Load.Snow:0} plf ({path.Describe()})"
+                : $"From the floor and roof loads: D {path.Computed.Dead:0}, L {path.Computed.Live:0}, Lr {path.Computed.RoofLive:0}, S {path.Computed.Snow:0} plf ({path.Describe()})"
                   + (data.TopLoadEntered != null ? " — not used: the values entered replace it." : " — used.");
             p.Children.Add(new TextBlock { Text = pathText, TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkSecondary, Margin = new Thickness(0, 0, 0, 4) });
             foreach (var note in path?.Notes ?? new List<string>())

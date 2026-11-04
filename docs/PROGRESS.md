@@ -1212,3 +1212,24 @@ Loads aren't the building model's. Like the wind calculator's "Wind" section, th
   - Post total: D 4,569 + 677 × 16/12 = 5,471; L 6,313; Lr 3,153; S 4,729.
   - Most P: D + L + 0.7S = 15,095.
   - Governing: 15,095 / 1.15 = 13,126.
+
+### Foundation loads; hand-entered wall loads carried down
+- **LoadManager:**
+  - GravityLoadPath's Result now has Foundation. It lists each wall on the ground: its line load at the base (its top load plus its bottom story's own weight) and the posts in it. It also lists each column on the foundation with its load.
+  - LoadCombinations.Largest(load) gives the largest ASD total of a gravity load and its combination. It uses the combinations whose loads are all on it; wind and earthquake add nothing vertical and are left out.
+- **Hand entries carry down:** a wall-top load entered by hand now replaces the computed one inside the load path itself. It goes on down to the walls, beams and foundation under it.
+  - Before, only that wall's stud design used it.
+  - WallTopLoad.Computed keeps what the path found; WallTopLoad.Entered marks a hand entry.
+  - The construction window's "From the floor and roof loads" line shows the computed value.
+- **LoadManager.Wpf:** FoundationLoadsWindow, a read-only window opened from SWC Loads > Foundation loads...
+  - Walls: length, line load at the base by kind, largest ASD, posts.
+  - Columns: place, load, largest ASD, what lands on them.
+  - Notes: hand entries and the load path's remarks.
+- **Tests:** LoadManager 26.
+  - Foundation: S1 D 350, L 200, Lr 200; largest D + L + Lr = 750 plf; C1 9,500 lb.
+  - A hand entry of D 1000 upstairs gives 1,150 on the wall below and 1,250 at the foundation.
+  - WoodFraming 32, SWC 219.
+- **Checked on lbltwo:**
+  - W2 at the base: D 676.5 + 150 = 827; D + L + 0.7S = 2,016 plf.
+  - W1 with its hand entry: D 300 + 150 = 450; D + L + 0.7S = 1,025 plf, noted.
+  - C1 carries BM3 and BM2: 13,846 lb.
