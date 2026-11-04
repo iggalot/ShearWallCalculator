@@ -56,11 +56,7 @@ namespace ShearWallCalculator.Design
             double M = r.V * 1000 * h;
             lines.Add(new CalcLine("Overturning", $"M = V h = {r.V * 1000:0} × {h:0.##}", $"{M:0} lb-ft"));
             lines.Add(new CalcLine("Lever arm", $"d = L − post = {L:0.##} − {r.PostAlongWall:0.##}/12", $"{r.HoldownArm:0.##} ft"));
-            double dl = r.Inputs?.DeadLoad ?? w.Design?.DeadLoad ?? 0;
-            double D = Math.Max(0, dl) * L;
-            if (D > 0) lines.Add(new CalcLine("Dead load", $"D = {dl:0} plf × {L:0.##} ft (resists: 0.6 D / 2 at ASD)", $"{D:0} lb"));
-            lines.Add(new CalcLine("Own uplift", D > 0 ? $"T = 0.6 M / d − 0.6 D / 2 = 0.6 × {M:0} / {r.HoldownArm:0.##} − 0.6 × {D:0} / 2"
-                                                         : $"T = 0.6 M / d = 0.6 × {M:0} / {r.HoldownArm:0.##}", $"{r.OwnTensionAsd:0} lb (ASD)"));
+            lines.Add(new CalcLine("Own uplift", $"T = 0.6 M / d = 0.6 × {M:0} / {r.HoldownArm:0.##} (no dead load counted)", $"{r.OwnTensionAsd:0} lb (ASD)"));
             foreach (var s in r.FromAbove ?? new List<StackedForce>())
                 lines.Add(new CalcLine("From above", $"{s.From}: {(s.Asd >= 0 ? "uplift" : "bearing")} at {s.Along:0.##} ft from the {(w.WallDir == WallDirs.EastWest ? "west" : "south")} end, " +
                                                      $"wind lifting the {(s.LowEndUp ? (w.WallDir == WallDirs.EastWest ? "west" : "south") : (w.WallDir == WallDirs.EastWest ? "east" : "north"))} end",

@@ -9,7 +9,7 @@ namespace ShearWallCalculator.Tests
 {
     /// <summary>
     /// The detail sheets restate the design: each line's numbers are the ones <see cref="ShearWallDesigner.Check"/> and
-    /// <see cref="LoadPathTrace"/> used, checked here against the formulas (T = 0.6 V h / d − 0.6 D / 2, d = L − post;
+    /// <see cref="LoadPathTrace"/> used, checked here against the formulas (T = 0.6 V h / d, d = L − post, no dead load;
     /// simple-span reactions).
     /// </summary>
     [TestClass]
@@ -23,17 +23,17 @@ namespace ShearWallCalculator.Tests
         public void WallSheet_RestatesTheOverturning()
         {
             var wall = new WallData(9, 0, 0, 10, 0);
-            var r = Designer.Check(1, wall, 2.0, "Case 1", new DesignSettings(), new WallDesignInputs { DeadLoad = 100 });
+            var r = Designer.Check(1, wall, 2.0, "Case 1", new DesignSettings(), new WallDesignInputs());
             var lines = DetailCalcs.Wall(wall, r, null);
 
-            double M = 2.0 * 1000 * 9, d = 10 - r.PostAlongWall / 12, D = 100 * 10;
+            double M = 2.0 * 1000 * 9, d = 10 - r.PostAlongWall / 12;
             Assert.AreEqual(d, r.HoldownArm, 1e-9);
-            Assert.AreEqual(0.6 * M / d - 0.6 * D / 2, r.OwnTensionAsd, 1e-6, "the source formula");
+            Assert.AreEqual(0.6 * M / d, r.OwnTensionAsd, 1e-6, "the source formula: no dead load");
             Assert.AreEqual($"{M:0} lb-ft", Line(lines, "Overturning").Result);
             Assert.AreEqual($"{d:0.##} ft", Line(lines, "Lever arm").Result);
-            Assert.AreEqual($"{D:0} lb", Line(lines, "Dead load").Result);
+            Assert.IsFalse(lines.Any(l => l.Item == "Dead load"), "no dead load line");
             Assert.AreEqual($"{r.OwnTensionAsd:0} lb (ASD)", Line(lines, "Own uplift").Result);
-            StringAssert.Contains(Line(lines, "Own uplift").Calculation, $"0.6 × {M:0} / {d:0.##} − 0.6 × {D:0} / 2");
+            StringAssert.Contains(Line(lines, "Own uplift").Calculation, $"0.6 × {M:0} / {d:0.##} (no dead load counted)");
             Assert.AreEqual($"{0.6 * 2000 / 10:0} plf", Line(lines, "Unit shear").Result);
             Assert.AreEqual($"T = {r.TensionAsd:0} lb (ASD)", Line(lines, "Hold-down tension").Result);
             if (r.Holdown != null) StringAssert.Contains(Line(lines, "Hold-down").Calculation, r.Holdown.Model);

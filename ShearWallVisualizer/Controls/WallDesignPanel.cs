@@ -511,7 +511,6 @@ namespace ShearWallVisualizer.Controls
             ("Face 2", 134, "The other face: none, the same as face 1, or another material (two-face rule in the details below)", 0),
             ("Nails", 46, "Edge fastener spacing of face 2", 0),
             ("Framing", 64, "Framing species group (Table 4.3A footnote)", 1),
-            ("Dead (plf)", 46, "Dead load on the wall that resists overturning (0 = none)", 1),
             ("Hold-down type", 70, "HDUE, HTT or a cast-in STHD strap anchors the wall end to the foundation; a strap ties it to the wall below, a column or a beam. " +
                                    "Where this type cannot anchor to what is under a hold-down, a valid one is picked automatically (shown in the Hold-down column); choose here to override", 0),
             ("v (plf)", 48, "Unit shear demand", 2),
@@ -628,7 +627,6 @@ namespace ShearWallVisualizer.Controls
                 else Put(row, col++, SpacingCell(o2, f2, s => WallDesignEdits.SetFace2Spacing(d, s), id));
                 Put(row, col++, Combo(new object[] { "DF / SP", "SPF / HF" }, d.Species == WoodTypes.WOODTYPE_SPF_HF ? "SPF / HF" : "DF / SP",
                     o => d.Species = (string)o == "SPF / HF" ? WoodTypes.WOODTYPE_SPF_HF : WoodTypes.WOODTYPE_DF_SP, id));
-                Put(row, col++, DeadLoadBox(d, id));
                 Put(row, col++, Combo(HoldownTypes.Select(ShortHoldownName).Cast<object>(),
                     ShortHoldownName(d.Holdown), o => WallDesignEdits.SetHoldownType(d, HoldownTypes.First(f => ShortHoldownName(f) == (string)o)), id));
 
@@ -809,27 +807,6 @@ namespace ShearWallVisualizer.Controls
             BuildingModel.Diagnostics.Log.Info("Design", $"{Story(id)?.Name} wall {id % KeyStride}: no edge-nailing choice: {why}");
         }
 
-        private TextBox DeadLoadBox(WallDesignInputs d, int id)
-        {
-            var tb = new TextBox { Text = d.DeadLoad.ToString("0.#"), Margin = new Thickness(2, 3, 2, 3), VerticalContentAlignment = VerticalAlignment.Center, TextAlignment = TextAlignment.Right };
-            void Commit()
-            {
-                if (!double.TryParse(tb.Text, NumberStyles.Float, CultureInfo.CurrentCulture, out double v) || v < 0)
-                {
-                    tb.Text = d.DeadLoad.ToString("0.#"); // keep the last good value
-                    return;
-                }
-                if (Math.Abs(v - d.DeadLoad) < 1e-9) return;
-                d.DeadLoad = v;
-                selectedWall = id;
-                DesignChanged?.Invoke(this, EventArgs.Empty);
-            }
-            tb.GotFocus += (s, e) => { Select(id); tb.SelectAll(); };
-            tb.LostFocus += (s, e) => Commit();
-            tb.KeyDown += (s, e) => { if (e.Key == Key.Enter) Commit(); };
-            return tb;
-        }
-
         private void SettingsChanged()
         {
             if (loading || stories.Count == 0) return;
@@ -973,7 +950,6 @@ namespace ShearWallVisualizer.Controls
                 b.Click += (s, e) =>
                 {
                     var d = r.Inputs.Clone();
-                    d.DeadLoad = 0;
                     d.HoldownKey = null; // a new wall sizes its own hold-down
                     foreach (var calc in stories.Select(x => x.Calculator).Where(c => c?.DesignSettings != null))
                     {
@@ -986,7 +962,7 @@ namespace ShearWallVisualizer.Controls
             }
             string listed = showLevel ? "every wall listed" : "every wall of " + (Story(selectedWall)?.Name ?? "this floor");
             var applyAll = new Button { Content = "Same sheathing on every wall listed", Padding = new Thickness(8, 2, 8, 2),
-                                        ToolTip = $"Copies this wall's faces, nailing and framing to {listed} (dead loads and hold-down types stay). " +
+                                        ToolTip = $"Copies this wall's faces, nailing and framing to {listed} (hold-down types stay). " +
                                                   "Pick one floor in Floors to change only its walls." };
             applyAll.Click += (s, e) =>
             {
@@ -1039,15 +1015,14 @@ namespace ShearWallVisualizer.Controls
                          $"{(double.IsNaN(r.Capacity) ? "-" : r.Capacity.ToString("0"))} plf → ratio {(double.IsNaN(r.Capacity) ? "-" : r.ShearRatio.ToString("0.00"))} {mark(r.ShearOk)}";
             yield return $"Hold-down arm: d = L − post = {r.Length:0.00} ft − {r.PostAlongWall:0.##} in = {r.HoldownArm:0.000} ft (hold-downs on the post centerlines)";
             yield return $"Hold-down (always ASD): T = M / d = 0.6 × {r.V:0.00} k × 1000 × {r.Height:0.0} ft / {r.HoldownArm:0.000} ft" +
-                         (d.DeadLoad > 0 ? $" − 0.6 × {d.DeadLoad:0} plf × {r.Length:0.00} ft / 2" : "") +
                          (r.FromAbove.Count > 0 ? $" + walls above (next line) = {r.TensionAsd:0} lb" : $" = {r.TensionAsd:0} lb") +
-                         $"  (LRFD 1.0W" + (d.DeadLoad > 0 ? " − 0.9D" : "") + $": {r.TensionLrfd:0} lb, for reference)";
+                         $"  (LRFD 1.0W: {r.TensionLrfd:0} lb, for reference; no dead load counted)";
             if (r.FromAbove.Count > 0)
                 yield return $"Walls above standing on this wall: {string.Join(", ", r.FromAbove.Select(f => f.From).Distinct())}. Their hold-down " +
                              $"forces (± {r.FromAbove.Max(f => Math.Abs(f.Asd)):0} lb at their posts) add Σ F × (distance to the compression post) / d = " +
                              $"{r.TensionFromAboveAsd:0} lb (own {r.OwnTensionAsd:0} lb). Tie each upper hold-down down to this wall (strap or rod), not just to the floor.";
             yield return !r.HoldownNeeded ? "No uplift: no hold-down needed for overturning."
-                : r.Holdown == null ? $"✗ No {HoldownName(d.Holdown)} in the {(r.HoldownFromStandardList ? "company standard list" : "catalog")} reaches {r.TensionAsd:0} lb: lengthen the wall, add dead load or use another type" +
+                : r.Holdown == null ? $"✗ No {HoldownName(d.Holdown)} in the {(r.HoldownFromStandardList ? "company standard list" : "catalog")} reaches {r.TensionAsd:0} lb: lengthen the wall, use another type, or count dead load (not counted in this app)" +
                                       (r.HoldownFromStandardList ? " (or add a stronger option to the standard list, or switch to the full catalog)." : ".")
                 : $"{HoldownName(d.Holdown)}{(r.HoldownChosen ? " (engineer's choice)" : r.HoldownFromStandardList ? " (standard list)" : "")}: {r.Holdown} — allowable {r.Holdown.Allowable:0} lb ({(d.Species == WoodTypes.WOODTYPE_SPF_HF ? "SPF/HF" : "DF/SP")}) → ratio {r.HoldownRatio:0.00} {mark(r.HoldownOk)}" +
                   (r.Holdown.Conditions != null ? $" [{r.Holdown.Conditions}]" : "") +

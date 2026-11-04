@@ -1350,3 +1350,30 @@ Loads aren't the building model's. Like the wind calculator's "Wind" section, th
   - Footing sizing.
   - Labels in 3D.
   - A load manager for beams and columns (the framing design app).
+
+### No dead load and no gravity work in the Shear Wall Calculator (2026-11-04)
+
+The Shear Wall Calculator only finds hold-downs. It no longer counts dead load against them and does no gravity or stud design.
+- **Hold-downs:** T = 0.6 M / d at ASD (1.0 M / d at LRFD, for reference), plus the walls above. There is no dead-load reduction.
+  - The wall table's Dead (plf) column is gone, along with the value saved with each wall. An old file's value is ignored when read.
+  - The "Dead load" calculation line is gone; the "Own uplift" line says no dead load is counted.
+  - When no hold-down is strong enough, the hint still mentions dead load, saying this app does not count it.
+  - The sill anchors take the SDPWS 4.3.6.4.3 washer exception where it otherwise applies, since the hold-downs are sized without dead load.
+- **Foundation forces (G view, and the Lateral section for the Load Manager):** each wall end's overturning couple per case alone, + up / − down.
+  - `EndForceByCase` is now [low, high]; it no longer carries the 0.6D and 1.0D versions.
+  - `FoundationLoad.ByCase` replaces `With06D` / `With10D`. The plan shows uplift and overturning compression from the wind alone.
+- **Removed from the construction window:**
+  - The prescriptive stud table check (IRC R602.3(5)), which is out of scope for these projects.
+  - The NDS stud design, including the C&C wind on the studs and the gravity loads on the wall's top.
+  - The posts-under-concentrated-loads table and the "Edit loads…" button.
+  - The stud size picker stays, for the drawing; it offers the project default and larger sizes, with no code filter.
+  - A new "Shear wall framing" section keeps the SDPWS 4.3.7.1 shear wall rules: a 3x at the panel joints for tight nailing, and studs at 24" o.c. or less.
+- **Removed elsewhere:**
+  - The gravity lines in the beam and column views.
+  - Loads > Foundation loads and Loads > Wind uplift. The Load Manager has both.
+  - The Loads menu now has only "Open in the Load Manager...".
+- **WoodFraming:** `StudRules` (the prescriptive table) and its tests are deleted. `StudDesign` (NDS 3.9) stays in the library for a future framing design app, which is where the wind-on-the-face and gravity stud checks belong.
+- **Tests:** SWC 219, all passing, with the dead-load hand calculations redone without D:
+  - 0.6 × 10 × 1000 × 10 / 9.75 + 500 = 6,653.8 lb.
+  - LRFD: 100,000 / 9.75 + 800 = 11,056.4 lb.
+  - WoodFraming 27, all passing; the StudRules tests went with the class.

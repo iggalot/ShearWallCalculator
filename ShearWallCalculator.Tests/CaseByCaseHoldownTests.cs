@@ -23,55 +23,54 @@ namespace ShearWallCalculator.Tests
         [TestMethod]
         public void CaseTension_ByHand_OnTheEndThatLifts()
         {
-            // V = 10 k, h = 10 ft, d = 9.75 ft, D = 2000 lb, walls above 500 lb (ASD) / 800 lb (LRFD) at the design shear
-            var r = new WallDesignResult { V = 10, Height = 10, HoldownArm = 9.75, DeadLoadLb = 2000, AboveTensionAsd = 500, AboveTensionLrfd = 800 };
+            // V = 10 k, h = 10 ft, d = 9.75 ft, walls above 500 lb (ASD) / 800 lb (LRFD) at the design shear; no dead load
+            var r = new WallDesignResult { V = 10, Height = 10, HoldownArm = 9.75, AboveTensionAsd = 500, AboveTensionLrfd = 800 };
             r.SetCaseTensions(new[]
             {
                 new KeyValuePair<string, double>("A", -10), // force on the diaphragm −x: the top is pushed +x, the low (west) end lifts
                 new KeyValuePair<string, double>("B", 4),   // +x: the high end lifts, at 40 % of the design shear
             });
-            // A: 0.6 × 10 k × 1000 × 10 ft / 9.75 ft − 0.6 × 2000 / 2 + 500 = 6153.85 − 600 + 500
-            Assert.AreEqual(6053.846, r.TensionByCase["A"][0], 1e-3);
+            // A: 0.6 × 10 k × 1000 × 10 ft / 9.75 ft + 500 = 6153.846 + 500
+            Assert.AreEqual(6653.846, r.TensionByCase["A"][0], 1e-3);
             Assert.AreEqual(0, r.TensionByCase["A"][1]);
-            // LRFD: 1.0 × 100000 / 9.75 − 0.9 × 2000 / 2 + 800
-            Assert.AreEqual(10156.410, r.TensionByCase["A"][2], 1e-3);
-            // B: 0.6 × 4 × 1000 × 10 / 9.75 − 600 + 500 × 0.4
+            // LRFD: 1.0 × 100000 / 9.75 + 800 = 10256.410 + 800
+            Assert.AreEqual(11056.410, r.TensionByCase["A"][2], 1e-3);
+            // B: 0.6 × 4 × 1000 × 10 / 9.75 + 500 × 0.4 = 2461.538 + 200
             Assert.AreEqual(0, r.TensionByCase["B"][0]);
-            Assert.AreEqual(2061.538, r.TensionByCase["B"][1], 1e-3);
+            Assert.AreEqual(2661.538, r.TensionByCase["B"][1], 1e-3);
         }
 
         [TestMethod]
-        public void EndForces_ByHand_UpliftAndBearing()
+        public void EndForces_ByHand_TheCoupleAlone()
         {
-            // as above: V = 10 k, h = 10 ft, d = 9.75 ft, D = 2000 lb, walls above 500 lb at the design shear
-            var r = new WallDesignResult { V = 10, Height = 10, HoldownArm = 9.75, DeadLoadLb = 2000, AboveTensionAsd = 500, AboveTensionLrfd = 800 };
+            // as above: V = 10 k, h = 10 ft, d = 9.75 ft, walls above 500 lb at the design shear
+            var r = new WallDesignResult { V = 10, Height = 10, HoldownArm = 9.75, AboveTensionAsd = 500, AboveTensionLrfd = 800 };
             r.SetCaseTensions(new[] { new KeyValuePair<string, double>("A", -10) }); // the low end lifts
-            // couple = 0.6 × 10 × 1000 × 10 / 9.75 + 500 = 6653.846 lb
+            // couple = 0.6 × 10 × 1000 × 10 / 9.75 + 500 = 6653.846 lb, up at the low end, down at the high end
             var f = r.EndForceByCase["A"];
-            Assert.AreEqual(6653.846 - 600, f[0], 1e-3, "low end, 0.6D: up (= the hold-down tension)");
-            Assert.AreEqual(-(6653.846 + 600), f[1], 1e-3, "high end, 0.6D: down");
-            Assert.AreEqual(6653.846 - 1000, f[2], 1e-3, "low end, 1.0D");
-            Assert.AreEqual(-(6653.846 + 1000), f[3], 1e-3, "high end, 1.0D: the bearing");
+            Assert.AreEqual(2, f.Length);
+            Assert.AreEqual(6653.846, f[0], 1e-3, "low end: up (= the hold-down tension)");
+            Assert.AreEqual(-6653.846, f[1], 1e-3, "high end: down, the same");
             Assert.AreEqual(r.TensionByCase["A"][0], f[0], 1e-9);
         }
 
         [TestMethod]
-        public void Foundation_WallsMeetingAtAPoint_AddCaseByCase_UpliftAndBearingSeparately()
+        public void Foundation_WallsMeetingAtAPoint_AddCaseByCase_UpliftAndCompressionSeparately()
         {
             var p = new Point(0, 0);
             var loads = new[]
             {
-                new FoundationLoad { At = p, From = "W1", With06D = new Dictionary<string, double> { ["A"] = 1000, ["B"] = -800 }, With10D = new Dictionary<string, double> { ["A"] = 600, ["B"] = -1200 } },
-                new FoundationLoad { At = new Point(0.1, 0), From = "W2", With06D = new Dictionary<string, double> { ["A"] = -300, ["B"] = 900 }, With10D = new Dictionary<string, double> { ["A"] = -700, ["B"] = 500 } },
-                new FoundationLoad { At = new Point(20, 0), From = "W3", With06D = new Dictionary<string, double> { ["A"] = 50 }, With10D = new Dictionary<string, double> { ["A"] = -40 } },
+                new FoundationLoad { At = p, From = "W1", ByCase = new Dictionary<string, double> { ["A"] = 1000, ["B"] = -1200 } },
+                new FoundationLoad { At = new Point(0.1, 0), From = "W2", ByCase = new Dictionary<string, double> { ["A"] = -300, ["B"] = 500 } },
+                new FoundationLoad { At = new Point(20, 0), From = "W3", ByCase = new Dictionary<string, double> { ["A"] = 50, ["B"] = -40 } },
             };
             var pts = FoundationForces.Combine(loads);
             Assert.AreEqual(2, pts.Count, "W1 and W2 are one point (within 3 in)");
             var corner = pts.Single(x => x.From.Count == 2);
-            // uplift (0.6D): A 1000 − 300 = 700, B −800 + 900 = 100 → 700 in A (not 1000 + 900 = 1900, each wall's worst)
+            // A: 1000 − 300 = 700 up; B: −1200 + 500 = −700 → uplift 700 in A (not 1000 + 500, each wall's worst)
             Assert.AreEqual(700, corner.UpliftAsd, 1e-9);
             Assert.AreEqual("A", corner.UpliftCase);
-            // bearing (1.0D): A −(600 − 700) = 100, B −(−1200 + 500) = 700 → 700 in B
+            // compression 700 in B (not 1200 + 300)
             Assert.AreEqual(700, corner.BearingAsd, 1e-9);
             Assert.AreEqual("B", corner.BearingCase);
             var alone = pts.Single(x => x.From.Count == 1);
@@ -82,8 +81,8 @@ namespace ShearWallCalculator.Tests
         [TestMethod]
         public void CaseTension_TheGoverningCase_IsTheDesignTension()
         {
-            var r = new WallDesignResult { V = 7.5, Height = 9, HoldownArm = 11.5, DeadLoadLb = 1200, AboveTensionAsd = 300, AboveTensionLrfd = 450 };
-            r.TensionAsd = 0.6 * 7.5 * 1000 * 9 / 11.5 - 0.6 * 1200 / 2 + 300; // the design's own formula (ShearWallDesigner.Check)
+            var r = new WallDesignResult { V = 7.5, Height = 9, HoldownArm = 11.5, AboveTensionAsd = 300, AboveTensionLrfd = 450 };
+            r.TensionAsd = 0.6 * 7.5 * 1000 * 9 / 11.5 + 300; // the design's own formula (ShearWallDesigner.Check), no dead load
             r.SetCaseTensions(new[] { new KeyValuePair<string, double>("gov", 7.5), new KeyValuePair<string, double>("other", -3) });
             Assert.AreEqual(r.TensionAsd, r.TensionByCase["gov"][1], 1e-9);
         }

@@ -103,9 +103,6 @@ namespace ShearWallCalculator.Design
 
         public WoodTypes Species { get; set; } = WoodTypes.WOODTYPE_DF_SP;
 
-        /// <summary>Dead load on top of the wall (plf) that resists overturning. 0 = none counted.</summary>
-        public double DeadLoad { get; set; }
-
         public HoldownFamilies Holdown { get; set; } = HoldownFamilies.HDU_ToFoundation;
 
         /// <summary>
@@ -513,13 +510,13 @@ namespace ShearWallCalculator.Design
         public double PostAlongWall { get; set; }
         /// <summary>Hold-down lever arm d = L - post (ft): between the hold-down centerlines.</summary>
         public double HoldownArm { get; set; }
-        public double TensionAsd { get; set; }      // lb: 0.6 V h / d - 0.6 D L / 2, d = L - post
-        public double TensionLrfd { get; set; }     // lb: 1.0 V h / d - 0.9 D L / 2 (for reference)
+        public double TensionAsd { get; set; }      // lb: 0.6 V h / d, d = L - post (no dead load counted)
+        public double TensionLrfd { get; set; }     // lb: 1.0 V h / d (for reference)
         public HoldownChoice Holdown { get; set; }  // null if none in the pool is strong enough
 
         /// <summary>The hold-down forces of the walls above standing on this one (empty on the top level or a single story).</summary>
         public List<StackedForce> FromAbove { get; set; } = new List<StackedForce>();
-        /// <summary>This wall's own tension (its shear and dead load only), lb ASD / LRFD; <see cref="TensionAsd"/> adds the walls above.</summary>
+        /// <summary>This wall's own tension (its own shear only), lb ASD / LRFD; <see cref="TensionAsd"/> adds the walls above.</summary>
         public double OwnTensionAsd { get; set; }
         public double OwnTensionLrfd { get; set; }
         /// <summary>The tension added by the walls above (lb, ASD).</summary>
@@ -527,8 +524,6 @@ namespace ShearWallCalculator.Design
         /// <summary>The walls above's share of T at the design shear (lb, ASD / LRFD: their moment over the arm).</summary>
         public double AboveTensionAsd { get; set; }
         public double AboveTensionLrfd { get; set; }
-        /// <summary>The dead load on the wall resisting overturning (lb).</summary>
-        public double DeadLoadLb { get; set; }
 
         /// <summary>
         /// The hold-down tension in each load case, at the end that lifts in it: [low-end ASD, high-end ASD, low-end LRFD,
@@ -553,25 +548,23 @@ namespace ShearWallCalculator.Design
             foreach (var kv in forceByCase)
             {
                 double vc = Math.Abs(kv.Value), share = V > 1e-12 ? vc / V : 0, M = vc * 1000.0 * Height;
-                double asd = Math.Max(0, 0.6 * M / arm - 0.6 * DeadLoadLb / 2 + AboveTensionAsd * share);
-                double lrfd = Math.Max(0, 1.0 * M / arm - 0.9 * DeadLoadLb / 2 + AboveTensionLrfd * share);
+                double asd = Math.Max(0, 0.6 * M / arm + AboveTensionAsd * share);
+                double lrfd = Math.Max(0, 1.0 * M / arm + AboveTensionLrfd * share);
                 bool lowLifts = kv.Value < 0;
                 TensionByCase[kv.Key] = lowLifts ? new[] { asd, 0, lrfd, 0 } : new[] { 0, asd, 0, lrfd };
 
-                // both ends on the foundation, + up / − down (ASD): the overturning couple ± and the dead load down, with
-                // 0.6D (uplift, 0.6D + 0.6W) and with 1.0D (bearing, D + 0.6W). The walls above add their couple at both
-                // ends (taken equal at the compression end: a wall stacked end to end)
+                // both ends on the foundation, + up / − down (ASD): the overturning couple alone, no dead load (this app
+                // counts none; the load manager adds the gravity loads at the foundation). The walls above add their couple
+                // at both ends (taken equal at the compression end: a wall stacked end to end)
                 double couple = 0.6 * M / arm + AboveTensionAsd * share;
-                double up06 = couple - 0.6 * DeadLoadLb / 2, down06 = -(couple + 0.6 * DeadLoadLb / 2);
-                double up10 = couple - DeadLoadLb / 2, down10 = -(couple + DeadLoadLb / 2);
-                EndForceByCase[kv.Key] = lowLifts ? new[] { up06, down06, up10, down10 } : new[] { down06, up06, down10, up10 };
+                EndForceByCase[kv.Key] = lowLifts ? new[] { couple, -couple } : new[] { -couple, couple };
             }
         }
 
         /// <summary>
-        /// The force each end puts on what is under it in each load case, lb ASD, + up (uplift) / − down (bearing):
-        /// [low end with 0.6D, high end with 0.6D, low end with 1.0D, high end with 1.0D]. The foundation adds these where
-        /// walls meet (<see cref="FoundationForces"/>): uplift from the 0.6D values, bearing from the 1.0D values.
+        /// The force each end puts on what is under it in each load case, lb ASD, + up (uplift) / − down (the overturning
+        /// compression): [low end, high end], the couple alone, no dead load. The foundation adds these where walls meet
+        /// (<see cref="FoundationForces"/>).
         /// </summary>
         public Dictionary<string, double[]> EndForceByCase { get; set; }
 
@@ -614,7 +607,7 @@ namespace ShearWallCalculator.Design
     /// Wood structural panel shear-wall checks for wind (SDPWS), per wall segment (each drawn wall is one
     /// full-height segment):
     /// v = factor V / L; capacity = v_w x species x footnote-10 x aspect factor x sides / Omega (ASD) or x phi (LRFD);
-    /// hold-down tension T = M / d, d = L - post (less dead load), always at ASD (0.6W) against Simpson allowables.
+    /// hold-down tension T = M / d, d = L - post (no dead load counted), always at ASD (0.6W) against Simpson allowables.
     /// </summary>
     public class ShearWallDesigner
     {
@@ -732,11 +725,10 @@ namespace ShearWallCalculator.Design
             r.Capacity = SdpwsSource.DesignUnitShearWind(nominal, settings.Method);
 
             // Hold-down: overturning moment about the compression post over the lever arm d = L - post (hold-down
-            // centerlines at half a post in from each end), less dead load. Dead load acts at L/2, d/2 from the post
-            // centerline, so its share is D d/2 / d = D/2 whatever the post. The post comes from the hold-down chosen,
-            // which depends on T: start with two 2x studs and repeat until the choice settles.
+            // centerlines at half a post in from each end). No dead load is counted against it: this app finds the
+            // hold-downs from the overturning alone. The post comes from the hold-down chosen, which depends on T: start
+            // with two 2x studs and repeat until the choice settles.
             double M = V * 1000.0 * h;                      // lb-ft
-            double D = Math.Max(0, d.DeadLoad) * L;         // lb on the wall
             r.HoldownFromStandardList = settings.HoldownsFromStandardList;
             r.FromAbove = above?.ToList() ?? new List<StackedForce>();
             double post = WallSchedule.DefaultPostAlongWall;
@@ -746,17 +738,15 @@ namespace ShearWallCalculator.Design
                 r.HoldownArm = L - post / 12.0;
                 double arm = r.HoldownArm;
                 // The walls above: their moment about the compression post at the far end, for the worse wind direction
-                // (both ends get the same hold-down). A wall stacked end to end adds its own T; the dead load of this
-                // wall resists the whole stack.
+                // (both ends get the same hold-down). A wall stacked end to end adds its own T.
                 var (aboveAsd, aboveLrfd) = MomentFromAbove(r.FromAbove, L, post / 24.0);
-                double ownAsd = 0.6 * M / arm - 0.6 * D / 2, ownLrfd = 1.0 * M / arm - 0.9 * D / 2;
+                double ownAsd = 0.6 * M / arm, ownLrfd = 1.0 * M / arm;
                 r.OwnTensionAsd = arm > 0 ? Math.Max(0, ownAsd) : double.PositiveInfinity;
                 r.OwnTensionLrfd = arm > 0 ? Math.Max(0, ownLrfd) : double.PositiveInfinity;
                 r.TensionAsd = arm > 0 ? Math.Max(0, ownAsd + aboveAsd / arm) : double.PositiveInfinity;
                 r.TensionLrfd = arm > 0 ? Math.Max(0, ownLrfd + aboveLrfd / arm) : double.PositiveInfinity;
                 r.AboveTensionAsd = arm > 0 ? aboveAsd / arm : 0;
                 r.AboveTensionLrfd = arm > 0 ? aboveLrfd / arm : 0;
-                r.DeadLoadLb = D;
                 // the engineer's own hold-down when set and still in the catalog for this type; else the lightest strong enough
                 var chosen = string.IsNullOrEmpty(d.HoldownKey) ? null
                            : Options(d.Holdown, d.Species, settings.StrapHoldownsOrDefault()).FirstOrDefault(o => o.Key == d.HoldownKey);

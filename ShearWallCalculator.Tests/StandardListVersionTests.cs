@@ -144,7 +144,7 @@ namespace ShearWallCalculator.Tests
             designer.StandardList.MarkAsCompanyVersion(2, "2026-11-02");
             var settings = new DesignSettings { Method = DesignMethods.ASD, HoldownsFromStandardList = true };
             var wall = new WallData(10, 0, 0, 4, 0);
-            var before = new Dictionary<int, WallDesignResult> { [1] = designer.Check(1, wall, 2.2, null, settings), [2] = designer.Check(2, new WallData(10, 0, 0, 20, 0), 0.5, null, settings, new WallDesignInputs { DeadLoad = 1000 }) };
+            var before = new Dictionary<int, WallDesignResult> { [1] = designer.Check(1, wall, 2.2, null, settings), [2] = designer.Check(2, new WallData(10, 0, 0, 20, 0), 0.0, null, settings) }; // no shear: no uplift
             Assert.AreEqual("HDUE5-SDS3#1", before[1].Holdown.Key);
 
             var calc = new ShearWallCalculator_RigidDiaphragm();

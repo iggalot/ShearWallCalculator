@@ -64,13 +64,8 @@
                 <MenuItem Header="_Apply a change set..." Click="ApplyChanges_Click"/>
             </MenuItem>
             <MenuItem Header="_Loads">
-                <MenuItem Header="_Edit loads in the Load Manager..." Click="EditLoads_Click"
-                          ToolTip="The gravity loads are edited in the Load Manager: each level's floor and roof loads, load zones, the walls' own weight, a wall's top load by hand; it also shows the foundation loads combined (plan, envelope, 3D). This app reads them."/>
-                <Separator/>
-                <MenuItem Header="F_oundation loads..." Click="FoundationLoads_Click"
-                          ToolTip="What the gravity load path brings down to the foundation: each wall on the ground and each column, by kind and the largest ASD combination"/>
-                <MenuItem Header="_Wind uplift..." Click="WindUplift_Click"
-                          ToolTip="The wind calculator's roof pressures lifting against the dead load (0.6D + 0.6W): the rafter ties by components and cladding, and the wall tops, beams, columns and foundation by the whole-building wind cases"/>
+                <MenuItem Header="_Open in the Load Manager..." Click="EditLoads_Click"
+                          ToolTip="The gravity loads, the wind uplift and the foundation (the gravity loads combined with these hold-down forces) are in the Load Manager. This app uses no gravity loads: it finds the hold-downs from the overturning alone."/>
             </MenuItem>
             <MenuItem Header="_Help">
                 <MenuItem Header="Open _log folder" Click="OpenLogFolder_Click"/>

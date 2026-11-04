@@ -34,7 +34,7 @@ namespace ShearWallVisualizer
 
         /// <summary>
         /// The foundation at each anchor point: the walls (and column bases) meeting there added case by case; the worst
-        /// uplift (0.6D) and the worst bearing (1.0D), each in its own case.
+        /// uplift and the worst overturning compression (wind alone, no dead load), each in its own case.
         /// </summary>
         private List<ShearWallCalculator.Design.FoundationPoint> foundationPoints = new List<ShearWallCalculator.Design.FoundationPoint>();
 
@@ -595,7 +595,7 @@ namespace ShearWallVisualizer
                 loads.Add(new ShearWallCalculator.Design.FoundationLoad
                 {
                     At = a.At, From = a.From, Envelope = a.TensionAsd,
-                    With06D = a.CaseAsd == null ? null : new Dictionary<string, double>(a.CaseAsd),
+                    ByCase = a.CaseAsd == null ? null : new Dictionary<string, double>(a.CaseAsd),
                 });
             var points = ShearWallCalculator.Design.FoundationForces.Combine(loads);
             foreach (var p in points.Where(p => p.From.Count > 1))
@@ -629,8 +629,8 @@ namespace ShearWallVisualizer
             if (tbShowing.Text == text) return;
             tbShowing.Text = text;
             showingBadge.ToolTip = foundationView
-                ? "The foundation's WIND forces from the first story's walls: hold-down uplift, and the overturning compression with the walls' own dead load. " +
-                  "Gravity loads (floors, roof, columns) are not included: the foundation is designed for those too."
+                ? "The foundation's WIND forces from the first story's walls: hold-down uplift and the overturning compression, the wind alone (no dead load counted). " +
+                  "Gravity loads are not included: the Load Manager's foundation view adds them."
                 : "What the plan shows: the shear wall design (marks, hold-downs) and, when on, one wind load case.";
         }
 
@@ -641,8 +641,8 @@ namespace ShearWallVisualizer
 
         /// <summary>
         /// The foundation reactions, one short label per point, below right of it with a leader: "+6.8k (C) / −7.6k (T)",
-        /// + compression (bearing, D + 0.6W), − tension (uplift, 0.6D + 0.6W), kips ASD; the walls (and column bases)
-        /// meeting at the point added case by case, each the worst in its own case. A column's gravity is not calculated: T only.
+        /// + compression, − tension (uplift), 0.6W alone (no dead load), kips ASD; the walls (and column bases)
+        /// meeting at the point added case by case, each the worst in its own case. A column base: T only.
         /// </summary>
         private void DrawReactions(DrawingContext ctx)
         {

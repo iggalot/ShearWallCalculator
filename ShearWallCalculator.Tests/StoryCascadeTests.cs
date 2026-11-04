@@ -381,9 +381,9 @@ namespace ShearWallCalculator.Tests
             Assert.IsTrue(stacked.Holdown == null || stacked.Holdown.Allowable >= stacked.TensionAsd, "the hold-down is chosen for the total");
         }
 
-        /// <summary>The dead load of the lower wall resists the whole stack: 0.6 D L / 2 comes off the total, not just its own share.</summary>
+        /// <summary>A lower wall with no shear of its own still takes the stack above: their moment over its arm, no dead load off it.</summary>
         [TestMethod]
-        public void Check_DeadLoadBelowOffsetsTheWallsAbove()
+        public void Check_WallsAboveAlone_NoDeadLoadOffsets()
         {
             var wall = new WallData(9, 0, 0, 10, 0);
             var forces = new List<Design.StackedForce>
@@ -391,9 +391,9 @@ namespace ShearWallCalculator.Tests
                 new Design.StackedForce { Along = 0.125, Asd = 1000, Lrfd = 1000, LowEndUp = true },
                 new Design.StackedForce { Along = 9.875, Asd = -1000, Lrfd = -1000, LowEndUp = true },
             };
-            var r = Designer.Check(1, wall, 0.0, null, new Design.DesignSettings(), new Design.WallDesignInputs { DeadLoad = 100 }, forces);
+            var r = Designer.Check(1, wall, 0.0, null, new Design.DesignSettings(), new Design.WallDesignInputs(), forces);
             Assert.AreEqual(0.0, r.OwnTensionAsd, Tol, "no shear of its own");
-            Assert.AreEqual(System.Math.Max(0, (1000 * (10 - r.PostAlongWall / 24 - 0.125) - 1000 * System.Math.Max(0, 10 - r.PostAlongWall / 24 - 9.875)) / r.HoldownArm - 0.6 * 100 * 10 / 2), r.TensionAsd, 1e-6);
+            Assert.AreEqual(System.Math.Max(0, (1000 * (10 - r.PostAlongWall / 24 - 0.125) - 1000 * System.Math.Max(0, 10 - r.PostAlongWall / 24 - 9.875)) / r.HoldownArm), r.TensionAsd, 1e-6);
         }
 
         // ------------------------------------------------------------------ adding and deleting floors

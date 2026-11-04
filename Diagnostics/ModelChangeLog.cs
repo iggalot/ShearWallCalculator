@@ -74,7 +74,6 @@ namespace ShearWallCalculator.Diagnostics
                 ["face 1"] = Face(f1, designer),
                 ["face 2"] = f2 == null ? "none" : f1.SameConstructionAs(f2) ? "same as face 1" : Face(f2, designer),
                 ["framing"] = d.Species == WoodTypes.WOODTYPE_SPF_HF ? "SPF/HF" : "DF-L/SP",
-                ["dead load"] = F(d.DeadLoad) + " plf",
                 ["hold-down type"] = d.Holdown.ToString(),
                 ["hold-down on inside face"] = d.HoldownOnInsideFace ? "yes" : "no",
             };

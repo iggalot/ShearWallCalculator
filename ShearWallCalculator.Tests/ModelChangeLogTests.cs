@@ -58,14 +58,14 @@ namespace ShearWallCalculator.Tests
         }
 
         [TestMethod]
-        public void SheathingNailingFramingDeadLoadHoldown()
+        public void SheathingNailingFramingHoldown()
         {
             var calc = Model();
             int id = calc._wall_system._walls.Keys.Min();
             var gyp = Designer.SheathingOptions.First(o => o.Table == SheathingTable.GypsumAndPlaster && o.Row == 4);
             var lines = Diff(calc, c =>
             {
-                var d = new WallDesignInputs { Species = WoodTypes.WOODTYPE_SPF_HF, DeadLoad = 150, Holdown = HoldownFamilies.HTT_ToFoundation };
+                var d = new WallDesignInputs { Species = WoodTypes.WOODTYPE_SPF_HF, Holdown = HoldownFamilies.HTT_ToFoundation };
                 var f1 = d.EffectiveFace1().Clone();
                 f1.EdgeSpacing = 4;
                 d.SetFaces(f1, gyp.ToFace());
@@ -75,7 +75,7 @@ namespace ShearWallCalculator.Tests
             Assert.IsTrue(lines.Any(l => l.StartsWith($"Wall {id} face 1:") && l.Contains("edge nailing 6\"") && l.Contains("edge nailing 4\"")), all);
             Assert.IsTrue(lines.Any(l => l.StartsWith($"Wall {id} face 2: none →") && l.Contains(gyp.Description)), all);
             Assert.IsTrue(lines.Any(l => l == $"Wall {id} framing: DF-L/SP → SPF/HF"), all);
-            Assert.IsTrue(lines.Any(l => l == $"Wall {id} dead load: 0 plf → 150 plf"), all);
+            Assert.IsFalse(lines.Any(l => l.Contains("dead load")), all);
             Assert.IsTrue(lines.Any(l => l.StartsWith($"Wall {id} hold-down type:")), all);
         }
 

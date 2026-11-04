@@ -11,8 +11,8 @@ namespace ShearWallVisualizer
         /// <summary>
         /// What the lateral design puts on the foundation, for the load manager (its "Lateral" section of the project file, written
         /// on every save): each first-story shear wall's two ends, per wind case, the overturning couple alone (its hold-down's
-        /// uplift at one end, the same pressing down at the other) at the wind's own level (the ASD couple ÷ 0.6), without this
-        /// app's wall dead load: the load manager adds the dead load from its own loads and combines. Column bases carrying
+        /// uplift at one end, the same pressing down at the other) at the wind's own level (the ASD couple ÷ 0.6), with no dead load (this app counts
+        /// none): the load manager adds the dead load from its own loads and combines. Column bases carrying
         /// hold-downs from above are added as this app's ASD force ÷ 0.6. Null when there is no design yet.
         /// </summary>
         private LoadManager.LateralSection LateralForFoundation(int revision)
@@ -45,8 +45,8 @@ namespace ShearWallVisualizer
                 var upHigh = new Dictionary<string, double>();
                 foreach (var c in r.EndForceByCase)
                 {
-                    // [low 0.6D, high 0.6D, ...]: the dead load is the same at both ends, so half their difference is the couple
-                    double couple = (c.Value[0] - c.Value[1]) / 2 / 0.6;
+                    // [low, high]: the couple alone, + up at the low end (no dead load in this app)
+                    double couple = c.Value[0] / 0.6;
                     upLow[c.Key] = Math.Round(couple, 1);
                     upHigh[c.Key] = Math.Round(-couple, 1);
                     Case(c.Key);

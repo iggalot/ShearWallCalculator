@@ -46,8 +46,6 @@ namespace ShearWallVisualizer
                 wallBuild.UndoRedo += redo => { if (redo) Sketch.Redo(); else Sketch.Undo(); };
                 // a stud size picked there is the wall's, in the building model (every app reads it): an edit through the
                 // sketch, so it is saved, undoable and logged like any other model edit
-                // the gravity loads are edited in the Load Manager (this app only reads them)
-                wallBuild.EditLoadsRequested += () => Dispatcher.BeginInvoke(new Action(EditLoads), System.Windows.Threading.DispatcherPriority.Input);
                 wallBuild.StudSizeChosen += size =>
                 {
                     var d = wallBuild?.Data;
@@ -89,9 +87,8 @@ namespace ShearWallVisualizer
             var level = building.Level(bm.LevelId);
             var ends = landings.Where(l => l.Kind == PathPointKind.BeamEnd && l.From.StartsWith($"beam {id} ")).ToList();
             var lines = DetailCalcs.Beam(br, ends) ?? new List<CalcLine>();
-            lines.AddRange(GravityLines(id, true));
             return Dialogs.MemberViews.Beam(id, level?.Name, br, End("start", br.Beam.Start, br.StartAsd), End("end", br.Beam.End, br.EndAsd),
-                                            lines, "The beam itself is not sized here: these are the uplift reactions its end connections and supports must take, and its gravity reactions (service loads, from the Load Manager).");
+                                            lines, "The beam itself is not sized here: these are the uplift reactions its end connections and supports must take.");
         }
 
         /// <summary>A column's construction view: the levels it passes, what lands on its top, its base connection.</summary>
@@ -108,35 +105,8 @@ namespace ShearWallVisualizer
             string span = $"from {(lo?.Elevation == 0 ? "the foundation" : lo?.Name)} up to {hi?.Name}" + (col.BaseFixed ? " (base set by hand)" : "");
             var levelList = building.LevelsBottomUp.Select(l => (l.Name, l.Elevation)).ToList();
             var lines = DetailCalcs.Column(fc, span, onIt, bottom) ?? new List<CalcLine>();
-            lines.AddRange(GravityLines(id, false));
             return Dialogs.MemberViews.Column(id, lo?.Elevation ?? 0, hi?.Elevation ?? 0, levelList, onIt, bottom, span,
-                                              lines, "The column itself is not sized here: this is the uplift its connections must take, and the gravity load it carries (service loads, from the Load Manager).");
-        }
-
-        /// <summary>A beam's or column's gravity loads by the load manager's load path (service level), as calculation lines.</summary>
-        private List<CalcLine> GravityLines(string id, bool beam)
-        {
-            var lines = new List<CalcLine>();
-            if (building == null) return lines;
-            var r = LoadManager.GravityLoadPath.Run(building, LoadManager.LoadSection.Read(building));
-            string Of(LoadManager.GravityLoad g, string unit) => $"D {g.Dead:N0}, L {g.Live:N0}, Lr {g.RoofLive:N0}, S {g.Snow:N0} {unit}";
-            if (beam && r.Beams.TryGetValue(id, out var b))
-            {
-                string trib = b.TributaryMax <= 0 ? "the floor or roof framing does not bear on it"
-                            : Math.Abs(b.TributaryMax - b.TributaryMin) < 0.005 ? $"tributary {b.TributaryMax:0.##} ft" : $"tributary {b.TributaryMin:0.##} to {b.TributaryMax:0.##} ft (the most, over the whole span)";
-                lines.Add(new CalcLine("Gravity: floor or roof", trib, Of(b.FromLevel, "plf")));
-                foreach (var p in b.Partials) lines.Add(new CalcLine($"Gravity: wall {p.From} on it", $"{p.A:0.##} to {p.B:0.##} ft from the start, with its own weight", Of(p.Load, "plf")));
-                foreach (var p in b.Points) lines.Add(new CalcLine($"Gravity: {p.From}", $"{p.At:0.##} ft from the start", Of(p.Load, "lb")));
-                lines.Add(new CalcLine("Gravity: start reaction", "simple span; on " + (b.StartOn ?? "nothing drawn"), Of(b.StartReaction, "lb"), flag: b.StartOn == null));
-                lines.Add(new CalcLine("Gravity: end reaction", "simple span; on " + (b.EndOn ?? "nothing drawn"), Of(b.EndReaction, "lb"), flag: b.EndOn == null));
-                foreach (var n in b.Notes) lines.Add(new CalcLine("Gravity: note", n, "", flag: true));
-            }
-            if (!beam && r.Columns.TryGetValue(id, out var c))
-            {
-                lines.Add(new CalcLine("Gravity: carried", c.From.Count == 0 ? "nothing lands on it" : "from " + string.Join(", ", c.From), Of(c.Load, "lb")));
-                lines.Add(new CalcLine("Gravity: base", "on " + (c.BaseOn ?? "nothing drawn: not traced down"), "", flag: c.BaseOn == null));
-            }
-            return lines;
+                                              lines, "The column itself is not sized here: this is the uplift its connections must take.");
         }
 
         /// <summary>What the construction window shows for wall <paramref name="key"/> of story <paramref name="i"/>.</summary>
@@ -155,9 +125,6 @@ namespace ShearWallVisualizer
                 Name = mark != null ? $"{mark} ({modelName})" : modelName,
                 LevelName = LevelName(i), Story = i, Stories = Math.Max(1, calcs.Count), Wall = w, Result = r,
                 Own = OwnLandings(i, key), Footnote = ShearWallDesigner.CatalogFootnote,
-                // the wind model's speed and exposure test the prescriptive framing limits (none with manual loads)
-                WindMph = windLoadsLinked && windLoadParams != null ? windLoadParams.WindSpeed : (double?)null,
-                Exposure = windLoadsLinked && windLoadParams != null ? windLoadParams.ExposureCategory.ToString().Substring(windLoadParams.ExposureCategory.ToString().Length - 1) : null,
             };
             if (r != null) d.Lines = DetailCalcs.Wall(w, r, d.Own);
             // its studs, from the building model: the wall's own size and spacing on this story, else the project's
@@ -179,20 +146,6 @@ namespace ShearWallVisualizer
             }
             d.StudSize = size;
             d.StudSpacing = mw != null && top != null ? building.StudSpacingOf(mw, top) : defaults.StudSpacing;
-            // the NDS stud design: the loads on its top, its lumber and deflection limit (the model's), the wind on its studs
-            // the loads on its top: entered by hand, else what the gravity load path works out from the floor and roof loads
-            var loadSection = LoadManager.LoadSection.Read(building);
-            d.TopLoadEntered = loadSection.WallTop(mw?.Id, top);
-            LoadManager.WallTopLoad computed = null;
-            d.TopLoad = mw != null && top != null ? LoadManager.GravityLoadPath.Effective(building, loadSection, mw.Id, top, out computed) : null;
-            d.TopLoadPath = computed;
-            d.Exterior = mw != null && building.IsExterior(mw);
-            d.StudSpecies = Enum.TryParse(defaults.StudSpecies, out NDS_WoodLibrary.NDS2018.Species sp) ? sp : NDS_WoodLibrary.NDS2018.Species.DouglasFirLarch;
-            d.StudGrade = Enum.TryParse(defaults.StudGrade, out NDS_WoodLibrary.NDS2018.Grade gr) ? gr : NDS_WoodLibrary.NDS2018.Grade.No2;
-            if (!Enum.TryParse(defaults.StudSpecies, out sp) || !Enum.TryParse(defaults.StudGrade, out gr))
-                Log.Warning("Construction", $"The project's stud lumber \"{defaults.StudSpecies} {defaults.StudGrade}\" is not known; designed as DF-L No. 2.", null);
-            d.DeflectionLimit = defaults.WallDeflectionLimit;
-            if (mw != null && d.Exterior) d.StudWind = (len, spacing) => StudWind(mw, len, spacing);
             // what the story above stands on this wall: its hold-downs (and beam ends or column bases) landing on it
             string UpperWall(HoldownLanding x)
             {
@@ -209,47 +162,6 @@ namespace ShearWallVisualizer
                     From = x.Kind == PathPointKind.WallHoldown ? UpperWall(x) : ShearWallCalculator.Drawing.PlanLabels.ShortFrom(x.From),
                 });
             return d;
-        }
-
-        /// <summary>
-        /// The components and cladding wind pressure on a stud of an exterior wall (psf, strength), from the wind model's
-        /// own calculator (ASCE 7 Ch. 30 Part 1, the edition and inputs of the wind loads): p = qh Kd (GCp − (±GCpi)), the
-        /// larger of inward and outward, not less than the 16 psf minimum (30.2.2). GCp is the wall's (Fig. 30.3-1): Zone 5
-        /// where the wall comes within a of a corner of the building, else Zone 4; read at the stud's effective wind area,
-        /// span × the larger of its spacing and a third of the span (26.2). Null with manual loads (no wind model).
-        /// </summary>
-        private (double psf, string note)? StudWind(Wall w, double lengthIn, double spacingIn)
-        {
-            var cc = windLoadCalculator_CC;
-            if (!windLoadsLinked || cc?.extGCpCurve_Wall?.WallCurves_Pos == null || buildingData == null || building == null) return null;
-            try
-            {
-                double span = lengthIn / 12.0, width = Math.Max(spacingIn / 12.0, span / 3.0), area = span * width;
-                double a = EnvelopeLateralLoads.ZoneWidthA(buildingData);
-                var ext = BuildingModel.Edits.BuildingEdits.Extents(building);
-                bool corner = false;
-                if (ext is BuildingModel.Geometry.Rect2 e)
-                {
-                    double lo, hi, min, max;
-                    if (w.Direction == WallDirection.WestEast) { lo = Math.Min(w.Start.X, w.End.X); hi = Math.Max(w.Start.X, w.End.X); min = Math.Min(e.X0, e.X1); max = Math.Max(e.X0, e.X1); }
-                    else { lo = Math.Min(w.Start.Y, w.End.Y); hi = Math.Max(w.Start.Y, w.End.Y); min = Math.Min(e.Y0, e.Y1); max = Math.Max(e.Y0, e.Y1); }
-                    corner = lo < min + a - 1e-6 || hi > max - a + 1e-6;
-                }
-                string zone = corner ? "Zone5" : "Zone4";
-                double qh = cc.CalculateDynamicWindPressure(buildingData.MeanRoofHeight), kd = cc.PressureKd, gcpi = cc.GetGCpi();
-                double pos = cc.extGCpCurve_Wall.WallCurves_Pos[zone].Evaluate(area), neg = cc.extGCpCurve_Wall.WallCurves_Neg[zone].Evaluate(area);
-                double pIn = qh * kd * (pos + gcpi), pOut = Math.Abs(qh * kd * (neg - gcpi));
-                double p = Math.Max(Math.Max(pIn, pOut), WindLoadCalculator_CC.MinimumNetPressure);
-                string note = $"ASCE 7 Fig. 30.3-1 {(corner ? "Zone 5 (within a = " + a.ToString("0.#") + " ft of a corner)" : "Zone 4")}, " +
-                              $"A = {span:0.0} × {width:0.00} = {area:0} sq ft; qh = {qh:0.0} psf, Kd {kd:0.00}, GCp +{pos:0.00} / {neg:0.00}, GCpi ±{gcpi:0.00}: " +
-                              $"inward {pIn:0.0}, outward {pOut:0.0} psf" + (p > Math.Max(pIn, pOut) + 1e-9 ? $", the {WindLoadCalculator_CC.MinimumNetPressure:0} psf minimum (30.2.2)." : ".");
-                return (p, note);
-            }
-            catch (Exception ex)
-            {
-                Log.Warning("Construction", "The wind on the studs could not be found: " + ex.Message, ex);
-                return null;
-            }
         }
 
         /// <summary>The beams and columns of the model, by story (for the load path and the details).</summary>
@@ -527,44 +439,6 @@ namespace ShearWallVisualizer
             }
             if (members.Count > 0) sections.Add(new ReportSection("Beams and columns carrying hold-downs", members));
             return sections;
-        }
-
-        /// <summary>Loads > Foundation loads: the load manager's read-only window of what reaches the foundation.</summary>
-        private void FoundationLoads_Click(object sender, RoutedEventArgs e)
-        {
-            if (building == null) { MessageBox.Show(this, "Open a project first.", "Foundation loads"); return; }
-            new LoadManager.Wpf.FoundationLoadsWindow(building) { Owner = this }.Show();
-        }
-
-        /// <summary>
-        /// Wind uplift from the wind calculator's own results (the ones the shear walls take their wind from): its whole-building
-        /// roof pressures, eight cases, down the load path, and its components and cladding roof pressures on the rafter ties.
-        /// </summary>
-        private void WindUplift_Click(object sender, RoutedEventArgs e)
-        {
-            if (building == null) { MessageBox.Show(this, "Open a project first.", "Wind uplift"); return; }
-            var (u, why) = Uplift();
-            new LoadManager.Wpf.WindUpliftWindow(building, u, why) { Owner = this }.Show();
-        }
-
-        /// <summary>The wind uplift for the model, or null and why not (manual loads, no wind results).</summary>
-        private (LoadManager.WindUplift u, string why) Uplift()
-        {
-            if (!windLoadsLinked) return (null, "The wind loads are entered by hand (not linked to the wind calculator), so there are no roof pressures. Link them in Wind setup to see the uplift.");
-            if (windLoadCalculator_MWFRS_Length == null || windLoadCalculator_MWFRS_Width == null)
-                return (null, "The wind calculator has no results for these inputs (Wind setup), so there are no roof pressures.");
-            try
-            {
-                var box = building.Envelope().Bounds;
-                var cases = LoadManager.RoofWind.Mwfrs(box, windLoadCalculator_MWFRS_Length, windLoadCalculator_MWFRS_Width);
-                var cc = windLoadCalculator_CC;
-                return (LoadManager.WindUplift.Run(building, LoadManager.LoadSection.Read(building), cases, a => LoadManager.RoofWind.Cladding(box, cc, a)), null);
-            }
-            catch (Exception ex) when (ex is InvalidOperationException || ex is ArgumentException)
-            {
-                Log.Warning("Loads", "The wind uplift could not be found: " + ex.Message, ex);
-                return (null, "The wind uplift could not be found: " + ex.Message);
-            }
         }
     }
 }

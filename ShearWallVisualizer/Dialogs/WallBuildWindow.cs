@@ -50,10 +50,6 @@ namespace ShearWallVisualizer.Dialogs
             return EastWest ? (p.X - Math.Min(Wall.Start.X, Wall.End.X)) * 12 : (p.Y - Math.Min(Wall.Start.Y, Wall.End.Y)) * 12;
         }
 
-        /// <summary>The design wind speed (ultimate, mph) and exposure ("B", "C", "D") when the loads come from the wind model.</summary>
-        public double? WindMph { get; set; }
-        public string Exposure { get; set; }
-
         /// <summary>The building model's wall and the level on top of its story (the key of its framing there).</summary>
         public string ModelWallId { get; set; }
         public string TopLevelId { get; set; }
@@ -66,59 +62,6 @@ namespace ShearWallVisualizer.Dialogs
         /// <summary>The wall has a size of its own (not the project's default).</summary>
         public bool OwnStudSize { get; set; }
 
-        /// <summary>On the building's outside edge (the building model's): wind on its studs, else the interior 5 psf.</summary>
-        public bool Exterior { get; set; }
-        /// <summary>The C&amp;C wind pressure on a stud (psf, strength) and how it was found; null with manual loads.</summary>
-        public double? StudWindPsf { get; set; }
-        public string StudWindNote { get; set; }
-        /// <summary>A function of the stud's length and spacing (in) giving its wind (psf, note); null with manual loads.</summary>
-        public Func<double, double, (double psf, string note)?> StudWind { get; set; }
-        /// <summary>The gravity loads on the wall's top used (plf): the ones entered, else the gravity load path's; null: none.</summary>
-        public LoadManager.LineLoad TopLoad { get; set; }
-        /// <summary>The loads entered by hand on the wall's top (the LoadManager's "Loads"); null: none (the load path's apply).</summary>
-        public LoadManager.LineLoad TopLoadEntered { get; set; }
-        /// <summary>What the gravity load path works out for the wall's top (from the floor and roof loads), or null.</summary>
-        public LoadManager.WallTopLoad TopLoadPath { get; set; }
-        /// <summary>The project's stud lumber and wall deflection limit (the building model's defaults).</summary>
-        public Species StudSpecies { get; set; }
-        public Grade StudGrade { get; set; }
-        public double DeflectionLimit { get; set; }
-
-        /// <summary>
-        /// The NDS design of the wall's studs (NDS-2018 3.9.2), with the top loads and the wind on them; null for an
-        /// exterior wall without the wind model (no pressure to design for).
-        /// </summary>
-        public StudDesign NdsStuds(WallFraming f)
-        {
-            if (f == null || !WallFraming.IsStudSize(f.StudSize)) return null;
-            double len = f.StudTop - WallFraming.Ply;
-            if (!(len > 0)) return null;
-            double? psf = null;
-            if (Exterior)
-            {
-                var w = StudWind?.Invoke(len, f.Spacing);
-                if (w == null) return null;
-                psf = w.Value.psf;
-                StudWindNote = w.Value.note;
-            }
-            StudWindPsf = psf;
-            var t = TopLoad;
-            return StudDesign.Check(new StudDesignInput
-            {
-                Species = StudSpecies, Grade = StudGrade, Size = f.StudSize, SpacingIn = f.Spacing, LengthIn = len,
-                Loads = t ?? new LoadManager.LineLoad(),
-                Points = TopLoadPath?.Points,
-                WindPressurePsf = psf, WindNote = StudWindNote, DeflectionLimit = DeflectionLimit,
-            });
-        }
-
-        /// <summary>The code check of the wall's studs: carrying the floors above it and the roof, studs the wall's height less the plates.</summary>
-        public StudCheck Studs(WallFraming f) => StudsOf(f.StudSize, f);
-
-        /// <summary>The code check as if the studs were <paramref name="size"/> (the same spacing and length as <paramref name="f"/>).</summary>
-        public StudCheck StudsOf(string size, WallFraming f) =>
-            StudRules.Check(size, f.Spacing, f.StudTop / 12.0 - WallFraming.Ply / 12.0, Math.Max(0, Stories - 1 - Story), WindMph, Exposure, WallFraming.StudSizes);
-
         public WallFraming Framing() =>
             WallFraming.Build(Wall?.WallLength ?? 0, Wall?.WallHeight ?? 0, StudSize, StudSpacing, WallSchedule.PostAlongWall(Result?.Holdown),
                               Above.Select(a => a.Along));
@@ -128,7 +71,7 @@ namespace ShearWallVisualizer.Dialogs
 
         /// <summary>
         /// A first-story wall's sill anchor bolts (null above the first story or before a design): for the ASD wind shear
-        /// 0.6 V / L, the wall's nominal capacity, aspect ratio and whether its hold-downs count on dead load (the washer).
+        /// 0.6 V / L, the wall's nominal capacity, aspect ratio (the hold-downs never count on dead load here: the washer exception can apply).
         /// </summary>
         public SillAnchorage Anchors()
         {
@@ -136,7 +79,7 @@ namespace ShearWallVisualizer.Dialogs
             if (!FirstStory || r == null || r.Length <= 0) return null;
             double vAsd = 0.6 * r.V * 1000.0 / r.Length;
             double nominal = r.CombinedNominal > 0 ? r.CombinedNominal : r.Nominal;
-            return SillAnchorage.Design(r.Length, vAsd, NdsSpecies(r.Inputs?.Species ?? WoodTypes.WOODTYPE_DF_SP), nominal, r.AspectRatio, r.DeadLoadLb > 0);
+            return SillAnchorage.Design(r.Length, vAsd, NdsSpecies(r.Inputs?.Species ?? WoodTypes.WOODTYPE_DF_SP), nominal, r.AspectRatio, false); // the hold-downs are sized without dead load
         }
 
         /// <summary>The hold-down at the low (left) or high (right) end, as traced.</summary>
@@ -180,9 +123,6 @@ namespace ShearWallVisualizer.Dialogs
 
         /// <summary>Ctrl+Z (false) or Ctrl+Y (true) pressed here: the host undoes or redoes the model.</summary>
         public event Action<bool> UndoRedo;
-
-        /// <summary>"Edit loads…" pressed: the host opens the project in the Load Manager (the gravity loads are edited there, not here).</summary>
-        public event Action EditLoadsRequested;
 
         /// <summary>Open this window whenever a wall is picked (the host reads it).</summary>
         public bool OpenOnPick { get => follow.IsChecked == true; set => follow.IsChecked = value; }
@@ -283,15 +223,9 @@ namespace ShearWallVisualizer.Dialogs
                 // the project's size for the story (the building model's defaults)
                 string def = d.DefaultStudSize;
                 string chosen = d.OwnStudSize ? d.StudSize : null;
-                // the code's smallest here (IRC Table R602.3(5)); sizes under it and under the default are not offered
-                var check = framing == null || !WallFraming.IsStudSize(def) ? null : d.StudsOf(def, framing);
-                bool defFails = check != null && !check.DesignRequired && !check.Passes;
-                studs.Items.Add(new ComboBoxItem
-                {
-                    Content = $"{def} (project default, {(d.FirstStory ? "first story" : "upper story")}){(defFails ? $": under the code's {check.Minimum}" : "")}",
-                    Tag = null, Foreground = defFails ? Ui.FailInk : Ui.Ink,
-                });
-                int min = Math.Max(Array.IndexOf(WallFraming.StudSizes, def), check?.Minimum == null ? 0 : Array.IndexOf(WallFraming.StudSizes, check.Minimum));
+                // sizes under the default are not offered (the studs are not designed here)
+                studs.Items.Add(new ComboBoxItem { Content = $"{def} (project default, {(d.FirstStory ? "first story" : "upper story")})", Tag = null });
+                int min = Array.IndexOf(WallFraming.StudSizes, def);
                 foreach (var s in WallFraming.StudSizes.Skip(Math.Max(0, min)))
                     studs.Items.Add(new ComboBoxItem { Content = s, Tag = s });
                 studs.SelectedItem = studs.Items.Cast<ComboBoxItem>().FirstOrDefault(i => (i.Tag as string) == chosen) ?? studs.Items[0];
@@ -357,17 +291,7 @@ namespace ShearWallVisualizer.Dialogs
             subtitle.Text = $"{(d.EastWest ? "East-west" : "North-south")} wall, {FtIn.Of(framing.Length)} long × {FtIn.Of(framing.Height)} high (story {d.Story + 1} of {d.Stories}). " +
                             (r == null ? "Not designed yet (no shear on it)." :
                              $"{r.Status}: v = {r.Demand:0} plf of {r.Capacity:0} plf" + (r.HoldownNeeded ? $", hold-downs {r.Holdown?.Model ?? "none strong enough"} for T = {r.TensionAsd:N0} lb (ASD)." : ", no uplift."));
-            var sc = d.Studs(framing);
-            string nds = "";
-            if (sc.DesignRequired)
-            {
-                StudDesign sd = null;
-                try { sd = d.NdsStuds(framing); } catch (Exception) { }
-                nds = sd == null ? "outside the code's stud table, not designed (see Pieces)."
-                    : sd.Passes ? $"outside the code's stud table; NDS 3.9 OK, {sd.Governing?.Ratio:0.00} (see Pieces)."
-                    : "outside the code's stud table; NDS 3.9 fails: " + Worst(sd) + " (see Pieces)";
-            }
-            subtitle.Text += $" Studs {framing.StudSize}: " + (sc.DesignRequired ? nds : sc.Passes ? "meet the code's stud table." : $"under the code's stud table, use {sc.Minimum}.");
+            subtitle.Text += $" Studs {framing.StudSize} at {framing.Spacing:0}\" o.c. (not designed here).";
             int faces = Faces().Count;
             face2In3D.IsEnabled = faces > 1;
             ShowElevation();
@@ -424,9 +348,7 @@ namespace ShearWallVisualizer.Dialogs
             var blocks = f.Pieces.Where(x => x.Kind == FramingKind.Blocking).ToList();
             if (blocks.Count > 0) rows.Add(new[] { "Blocking at the horizontal sheet joint", sz, blocks.Count.ToString(), $"{FtIn.Of(blocks.Sum(b => b.Length))} total", $"At {FtIn.Of(WallFraming.SheetHeight)} up: every sheet edge is blocked (the capacities are for blocked walls)." });
             p.Children.Add(Table(new[] { "Piece", "Size", "Qty", "Length (each)", "Notes" }, rows));
-            var studCheck = data.Studs(f);
-            StudSection(p, studCheck, f, Faces());
-            if (studCheck.DesignRequired) NdsStudSection(p, f);
+            ShearWallFramingSection(p, f, Faces());
 
             var faces = Faces();
             for (int i = 0; i < faces.Count; i++)
@@ -516,20 +438,20 @@ namespace ShearWallVisualizer.Dialogs
             return p;
         }
 
-        /// <summary>The studs against the code's table (IRC R602.3(5) / IBC 2308.9.1) and SDPWS's shear wall framing, with the quoted text.</summary>
-        private static void StudSection(Panel p, StudCheck c, WallFraming f, List<FaceResult> faces)
+        /// <summary>
+        /// SDPWS 4.3.7.1's framing of a shear wall (a wider face at the panel joints, the stud spacing), with the quoted text.
+        /// The studs themselves are not designed here (gravity, wind on the wall's face): that belongs to a framing design app.
+        /// </summary>
+        private static void ShearWallFramingSection(Panel p, WallFraming f, List<FaceResult> faces)
         {
-            string head = c.DesignRequired ? $"Design required: {c.Size} studs are outside the prescriptive table here."
-                        : c.Passes ? $"{c.Size} at {f.Spacing:0}\" o.c. meets the table (smallest allowed here: {c.Minimum})."
-                        : $"{c.Size} at {f.Spacing:0}\" o.c. does not meet the table: use {c.Minimum ?? "a designed stud"} (Studs, top right).";
-            Section(p, "Studs: code check", head);
+            bool wide = f.Spacing > ShearWallFraming.MaxStudSpacingIn + 1e-9;
+            Section(p, "Shear wall framing", wide ? $"The studs at {f.Spacing:0}\" o.c. are over SDPWS 4.3.7.1's {ShearWallFraming.MaxStudSpacingIn:0}\" for a shear wall."
+                                                  : "SDPWS 4.3.7.1's framing for a shear wall. The studs are not designed here (gravity loads, wind on the wall's face).");
+            if (wide) ((TextBlock)p.Children[p.Children.Count - 1]).Foreground = Ui.FailInk;
             var rows = new List<string[]>
             {
-                new[] { "Stud length (unsupported)", FtIn.Of(c.StudHeightFt * 12), $"Table limit for bearing walls {StudRules.TableHeightFt:0} ft (note a: points of lateral support; sheathed on one side at least)." },
-                new[] { "Carries", c.Carries, "The stories above this one (the roof on top), as a bearing wall." },
-                new[] { "Spacing", $"{f.Spacing:0}\" o.c.", c.MaxSpacingIn is double m ? (m == 0 ? $"{c.Size}: not permitted for this load" : $"{c.Size}: up to {m:0}\" o.c.") : "outside the table" },
+                new[] { "Shear wall studs", $"{f.Spacing:0}\" o.c.", $"{(wide ? "Over" : "Within")} SDPWS 4.3.7.1 item 6's {ShearWallFraming.MaxStudSpacingIn:0}\" on centre." },
             };
-            foreach (var r in c.Reasons) rows.Add(new[] { "", "", r });
             foreach (var fr in faces)
             {
                 var fs = fr.Face;
@@ -541,154 +463,12 @@ namespace ShearWallVisualizer.Dialogs
                     break;
                 }
             }
-            if (c.SpacingIn > ShearWallFraming.MaxStudSpacingIn + 1e-9)
-                rows.Add(new[] { "Shear wall studs", $"{c.SpacingIn:0}\" o.c.", $"Over SDPWS 4.3.7.1 item 6's {ShearWallFraming.MaxStudSpacingIn:0}\" on centre." });
             p.Children.Add(Table(new[] { "Item", "Value", "Notes" }, rows));
             var src = new Expander { Header = "Sources (quoted)", IsExpanded = false, Margin = new Thickness(0, 4, 0, 0) };
             var sp = new StackPanel();
-            foreach (var s in StudRules.Citations.Concat(new[] { ShearWallFraming.Citation }))
-                sp.Children.Add(new TextBlock { Text = "•  " + s, TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkSecondary, FontSize = 11.5, Margin = new Thickness(6, 2, 0, 2) });
-            sp.Children.Add(new TextBlock { Text = "Text from the 2025 California Residential and Building Codes (the 2024 IRC and IBC); the stud table cells are the same in the 2018 and 2021 editions (not checked against those texts here). Where the table does not apply, the studs are designed per NDS 3.9 below.", TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkMuted, FontSize = 11, Margin = new Thickness(6, 4, 0, 2) });
+            sp.Children.Add(new TextBlock { Text = "•  " + ShearWallFraming.Citation, TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkSecondary, FontSize = 11.5, Margin = new Thickness(6, 2, 0, 2) });
             src.Content = sp;
             p.Children.Add(src);
-        }
-
-        /// <summary>
-        /// The studs designed per NDS-2018 3.9.2 (outside the prescriptive table): the loads on the wall's top (entered
-        /// here, saved in the project file's loads), the wind on the studs, every ASD combination (ASCE 7-22 2.4 and IBC 1605.2), and the other checks.
-        /// </summary>
-        private void NdsStudSection(Panel p, WallFraming f)
-        {
-            StudDesign d;
-            try { d = data.NdsStuds(f); }
-            catch (Exception ex) { Section(p, "Studs: NDS design", "Not designed: " + ex.Message); return; }
-            string lumber = $"{SpeciesInfo.Abbreviation(data.StudSpecies)} {SpeciesInfo.Name(data.StudGrade)}";
-            if (d == null)
-            {
-                Section(p, "Studs: NDS design", data.Exterior
-                    ? "An exterior wall: the studs need the wind's components and cladding pressure, which comes from the wind model. Use the wind loads (manual loads have no pressure on the studs)."
-                    : "Not designed.");
-                return;
-            }
-            var g = d.Governing;
-            bool loads = data.TopLoad != null && !data.TopLoad.IsEmpty;
-            string verdict = !d.SlendernessOk ? $"{f.StudSize} is too slender (le/d = {d.Slenderness:0.0} > 50): use a deeper stud (Studs, top right)."
-                           : d.Passes ? $"{lumber} {f.StudSize} at {f.Spacing:0}\" o.c. works: {g?.Name} governs at {g?.Ratio:0.00}."
-                           : $"{lumber} {f.StudSize} at {f.Spacing:0}\" o.c. does not work: " + Worst(d) + " Use a deeper stud or closer spacing.";
-            Section(p, "Studs: NDS design", verdict + (loads ? "" : " No gravity loads on the wall's top yet (Loads > Edit loads: the Load Manager): wind (or 5 psf) only."));
-            if (!d.Passes) ((TextBlock)p.Children[p.Children.Count - 1]).Foreground = Ui.FailInk;
-
-            // the loads on the wall's top are the load manager's (read here; edited in the Load Manager app, not by the shear wall app)
-            var bar = new WrapPanel { Margin = new Thickness(0, 4, 0, 6) };
-            var t = data.TopLoadEntered;
-            bar.Children.Add(new TextBlock
-            {
-                Text = t != null ? $"Loads on the wall's top entered by hand in the Load Manager: D {t.Dead:0.##}, L {t.Live:0.##}, Lr {t.RoofLive:0.##}, S {t.Snow:0.##} plf (service)."
-                                 : "The gravity loads are the Load Manager's: the floor and roof loads, zones and any load entered on a wall's top are edited there.",
-                VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0), Foreground = Ui.InkSecondary, TextWrapping = TextWrapping.Wrap, MaxWidth = 640,
-            });
-            var edit = new Button { Content = "Edit loads…", Padding = new Thickness(8, 1, 8, 1), VerticalAlignment = VerticalAlignment.Center, ToolTip = "Open the project in the Load Manager" };
-            edit.Click += (o, e) => EditLoadsRequested?.Invoke();
-            bar.Children.Add(edit);
-            p.Children.Add(bar);
-
-            // what the gravity load path works out from the floor and roof loads (the Load Manager: Loads > Edit loads)
-            var path = data.TopLoadPath;
-            string pathText = path == null || (path.Computed.IsEmpty && path.TributaryMax <= 0 && path.Above.Count == 0 && path.Points.Count == 0)
-                ? "From the floor and roof loads: nothing reaches this wall (no area loads entered, or no floor or roof bears on it). Loads > Edit loads (the Load Manager)."
-                : $"From the floor and roof loads: D {path.Computed.Dead:0}, L {path.Computed.Live:0}, Lr {path.Computed.RoofLive:0}, S {path.Computed.Snow:0} plf ({path.Describe()})"
-                  + (data.TopLoadEntered != null ? " — not used: the values entered replace it." : " — used.");
-            p.Children.Add(new TextBlock { Text = pathText, TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkSecondary, Margin = new Thickness(0, 0, 0, 4) });
-            foreach (var note in path?.Notes ?? new List<string>())
-                p.Children.Add(new TextBlock { Text = "• " + note, TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkMuted, Margin = new Thickness(0, 0, 0, 4) });
-            // beam ends and posts landing on the wall: the post under each, its loads by combination (not sized here)
-            if (d.Posts.Count > 0)
-            {
-                string Kinds(LoadManager.GravityLoad gl) => $"D {gl.Dead:N0}, L {gl.Live:N0}, Lr {gl.RoofLive:N0}, S {gl.Snow:N0}";
-                var prow = d.Posts.OrderBy(x => x.AtFt).Select(x => new[]
-                {
-                    x.From, FtIn.Of(x.AtFt * 12), Kinds(x.Point), Kinds(x.Service),
-                    x.MaxP == null ? "" : $"{x.MaxP.P:N0} ({x.MaxP.Name})",
-                    x.Governing == null ? "" : $"{x.Governing.POverCD:N0} = {x.Governing.P:N0} / {x.Governing.CD:0.0#} ({x.Governing.Name})",
-                }).ToList();
-                p.Children.Add(Table(new[] { "Post under", "From the wall's start", "Concentrated (lb)", "Post total (lb)", "Most P (ASD)", "Governs a wood post (P/CD)" }, prow));
-                p.Children.Add(new TextBlock
-                {
-                    Text = $"Each post carries its concentrated load and the wall's line load over one stud spacing ({f.Spacing:0.#}\"), axial, in every ASD combination of the loads on it, CD by the shortest load (NDS 2.3.2.2). " +
-                           "It goes down to the foundation through the wall under it. Not sized here; the stud check below is for the line load." +
-                           (data.TopLoadEntered != null ? " The concentrated loads are the load path's; the values entered by hand replace only the line load." : ""),
-                    TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkMuted, FontSize = 11, Margin = new Thickness(0, 0, 0, 4),
-                });
-            }
-
-            var s = d.Section;
-            var info = new List<string[]>
-            {
-                new[] { "Stud", $"{lumber} {f.StudSize} ({FtIn.Inches(s.B)} × {FtIn.Inches(s.D)}): A {s.A:0.00} in², S {s.Sx:0.00} in³, I {s.Ix:0.00} in⁴", "NDS Supplement Table 1B." },
-                new[] { "Reference values", $"Fb {d.Values.Fb:0}, Fc {d.Values.Fc:0}, Fv {d.Values.Fv:0}, Fc⊥ {d.Values.FcPerp:0}, E {d.Values.E / 1e6:0.0#}M, Emin {d.Values.Emin:N0} psi; CF Fb {d.CF.Fb:0.0#}, Fc {d.CF.Fc:0.0#}", d.Values.Source },
-                new[] { "Length", $"ℓu = {FtIn.Of(d.Input.LengthIn)}, le = Ke ℓu = {FtIn.Of(d.Le)}, le/d = {d.Slenderness:0.0}" + (d.SlendernessOk ? " ≤ 50" : " > 50: not allowed"), "Pinned at both plates (Ke = 1.0); the sheathing braces the weak axis, so d is the depth." },
-                new[] { "FcE", $"0.822 × {d.EminPrime:N0} / {d.Slenderness:0.0}² = {(g?.FcE ?? 0):0} psi", "Eq. 3.7-1; Emin' = Emin (dry, normal temperature)." },
-                new[] { "Lateral", d.Exterior ? $"Wind {d.Input.WindPressurePsf:0.0} psf (C&C, strength)" : $"Interior {d.Input.InteriorPressurePsf:0} psf (IBC 1607.16)",
-                        d.Exterior ? data.StudWindNote ?? "" : "A live-load duration (CD 1.0)." },
-                new[] { "Top loads per stud", loads ? $"D {data.TopLoad.Dead:0}, L {data.TopLoad.Live:0}, Lr {data.TopLoad.RoofLive:0}, S {data.TopLoad.Snow:0} plf × {f.Spacing:0}/12" : "none",
-                        (data.TopLoadEntered != null ? "Entered by hand. " : loads ? "From the gravity load path. " : "") + "Service loads on the wall's top, carried by each stud over its spacing." },
-            };
-            p.Children.Add(Table(new[] { "Item", "Value", "Notes" }, info));
-
-            var rows = d.Combinations.Select(c => new[]
-            {
-                c.Name, ShortEquations(c.Equation), $"{c.CD:0.00}", $"{c.P:N0}", $"{c.fc:0}", $"{c.CP:0.000}", $"{c.FcPrime:0}", $"{c.fb:0}", $"{c.FbPrime:0}",
-                double.IsInfinity(c.Ratio) ? "fc ≥ FcE" : $"{c.Ratio:0.00}" + (ReferenceEquals(c, g) ? "  ◀" : ""),
-            }).ToList();
-            p.Children.Add(Table(new[] { "Combination (ASD)", "Equations", "CD", "P (lb)", "fc", "CP", "Fc'", "fb", "Fb'", "Eq. 3.9-3" }, rows));
-
-            double sh = d.MaxShearRatio;
-            var checks = new List<string[]>
-            {
-                new[] { "Bending and compression", g == null ? "" : double.IsInfinity(g.Ratio) ? "fc ≥ FcE: buckles" : $"{g.Ratio:0.00} ≤ 1.0 ({g.Name})", Adjustments.CombinedSource },
-                new[] { "Bearing on the plates", $"fc = {d.BearingFc:0} psi ≤ Fc⊥' = {d.FcPerpPrime:0} psi ({(d.FcPerpPrime > 0 ? d.BearingFc / d.FcPerpPrime : 0):0.00})", "NDS 3.10.1; Cb = 1.0 (conservative); no CD on Fc⊥ (Table 4.3.1)." },
-                new[] { "Shear", $"{sh:0.00} ≤ 1.0", "fv = 1.5 V / A, V = w ℓ / 2; Fv' = Fv CD." },
-                new[] { "Deflection", $"{d.DeflectionIn:0.000}\" ≤ ℓ/{d.Input.DeflectionLimit:0} = {d.DeflectionAllowedIn:0.000}\"",
-                        $"5 w ℓ⁴ / (384 E' I), w = {d.DeflectionPressurePsf:0.0} psf" + (d.Exterior ? " (0.42 × C&C, IBC Table 1604.3 note f)." : " (the interior 5 psf).") + " The limit is the project's (building model defaults)." },
-            };
-            p.Children.Add(Table(new[] { "Check", "Result", "Notes" }, checks));
-            foreach (var n in d.Notes)
-                p.Children.Add(new TextBlock { Text = "•  " + n, TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkSecondary, Margin = new Thickness(6, 1, 0, 1) });
-
-            var src = new Expander { Header = "Sources (quoted)", IsExpanded = false, Margin = new Thickness(0, 4, 0, 0) };
-            var sp = new StackPanel();
-            foreach (var c in StudDesign.Citations)
-                sp.Children.Add(new TextBlock { Text = "•  " + c, TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkSecondary, FontSize = 11.5, Margin = new Thickness(6, 2, 0, 2) });
-            sp.Children.Add(new TextBlock { Text = "NDS-2018 and its Supplement from AWC's PDFs; IBC text from the 2025 California Building Code (2024 IBC). ASCE 7 wind: the wind model's (the same calculator as the wind loads).", TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkMuted, FontSize = 11, Margin = new Thickness(6, 4, 0, 2) });
-            src.Content = sp;
-            p.Children.Add(src);
-        }
-
-        /// <summary>"ASCE 7-22 2.4 Eq. 1a; ASCE 7-22 2.4 Eq. 3a; IBC Eq. 16-1" → "ASCE 1a, 3a; IBC 16-1".</summary>
-        internal static string ShortEquations(string equations)
-        {
-            var groups = new List<(string label, List<string> eqs)>();
-            foreach (var e in (equations ?? "").Split(new[] { "; " }, StringSplitOptions.RemoveEmptyEntries))
-            {
-                int k = e.LastIndexOf("Eq. ", StringComparison.Ordinal);
-                string label = e.StartsWith("ASCE", StringComparison.Ordinal) ? "ASCE" : e.StartsWith("IBC", StringComparison.Ordinal) ? "IBC" : "";
-                string eq = k >= 0 ? e.Substring(k + 4) : e;
-                var g = groups.FirstOrDefault(x => x.label == label);
-                if (g.eqs == null) groups.Add(g = (label, new List<string>()));
-                g.eqs.Add(eq);
-            }
-            return string.Join("; ", groups.Select(g => (g.label.Length > 0 ? g.label + " " : "") + string.Join(", ", g.eqs)));
-        }
-
-        /// <summary>What fails, in a few words.</summary>
-        private static string Worst(StudDesign d)
-        {
-            var bad = new List<string>();
-            if (d.MaxRatio > 1) bad.Add(double.IsInfinity(d.MaxRatio) ? "it buckles (fc ≥ FcE)" : $"bending and compression {d.MaxRatio:0.00}");
-            if (d.BearingFc > d.FcPerpPrime) bad.Add($"bearing {d.BearingFc / d.FcPerpPrime:0.00}");
-            if (d.MaxShearRatio > 1) bad.Add($"shear {d.MaxShearRatio:0.00}");
-            if (d.DeflectionIn > d.DeflectionAllowedIn) bad.Add($"deflection {d.DeflectionIn:0.00}\" > {d.DeflectionAllowedIn:0.00}\"");
-            return string.Join(", ", bad) + ".";
         }
 
         /// <summary>The sill plate's anchor bolts: what to install, how it was found, and the code text it rests on.</summary>

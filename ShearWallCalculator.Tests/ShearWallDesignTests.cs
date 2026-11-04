@@ -88,22 +88,19 @@ namespace ShearWallCalculator.Tests
         }
 
         [TestMethod]
-        public void DeadLoad_ReducesHoldownTension()
+        public void HoldownTension_IsTheOverturningAlone_NoDeadLoad()
         {
-            // T = 0.6 x 5000 x 9 / d - 0.6 x (200 plf x 10 ft) / 2, d = 10 - post/12: dead load at L/2 is d/2 from the
-            // compression post, so its share D d/2 / d = D/2 does not depend on the post.
-            var d = new WallDesignInputs { DeadLoad = 200 };
-            var r = Designer.Check(1, Wall(10), 5.0, null, Asd, d);
-            Assert.AreEqual(27000 / r.HoldownArm - 600, r.TensionAsd, 1e-9);
-            Assert.AreEqual(45000 / r.HoldownArm - 0.9 * 2000 / 2, r.TensionLrfd, 1e-9);
+            // T = 0.6 x 5000 x 9 / d, d = 10 - post/12; LRFD 1.0 x 5000 x 9 / d. No dead load is counted in this app.
+            var r = Designer.Check(1, Wall(10), 5.0, null, Asd, new WallDesignInputs());
+            Assert.AreEqual(27000 / r.HoldownArm, r.TensionAsd, 1e-9);
+            Assert.AreEqual(45000 / r.HoldownArm, r.TensionLrfd, 1e-9);
             Assert.AreEqual(WallSchedule.PostAlongWall(r.Holdown), r.PostAlongWall, 1e-12, "the arm uses the chosen hold-down's post");
             Assert.IsTrue(r.Holdown.Allowable >= r.TensionAsd);
 
-            var heavy = Designer.Check(1, Wall(10), 1.0, null, Asd, new WallDesignInputs { DeadLoad = 2000 });
-            Assert.AreEqual(0.0, heavy.TensionAsd, "no uplift");
-            Assert.IsFalse(heavy.HoldownNeeded);
-            Assert.IsNull(heavy.Holdown);
-            Assert.IsTrue(heavy.HoldownOk);
+            // any shear lifts the wall: a hold-down is always needed
+            var light = Designer.Check(1, Wall(10), 1.0, null, Asd, new WallDesignInputs());
+            Assert.AreEqual(0.6 * 1000 * 9 / light.HoldownArm, light.TensionAsd, 1e-9);
+            Assert.IsTrue(light.HoldownNeeded);
         }
 
         [TestMethod]
