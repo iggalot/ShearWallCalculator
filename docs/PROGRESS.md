@@ -1149,3 +1149,42 @@ Loads aren't the building model's. Like the wind calculator's "Wind" section, th
   - The load path on that building: the gable rafters (ridge W-E) put 19.5 ft on W6 and W8, giving D 292.5, Lr 390, S 585. W2 and W4 get D 234 + 292.5 + 150 = 676.5 and L 780, as by hand.
   - It notes W3 standing on the Level 2 framing.
   - The construction window's display is still to be seen on screen.
+
+### Span picker in the editor; beams, columns and concentrated loads in the gravity load path
+- **BuildingModel editor**:
+  - A diaphragm's properties have a Span picker: "Auto (S-N, the shorter way)", W-E or S-N. Picking one is one undoable edit.
+  - The picker is off for the sloped roof, whose rafters run across the ridge.
+  - The plan label shows the span ("D1 · spans S-N").
+  - Checked in the app on a scratch copy (spantest): set W-E, the label followed, undo put it back.
+- **LoadManager** (GravityLoadPath):
+  - **Beams:** a beam takes its share of the floor by tributary width, like a wall (the most along it, over the whole span).
+    - A wall standing on a beam is a part-length load on it: the wall's load plus its own weight.
+    - Beam ends and columns landing on a beam are concentrated loads on it.
+    - Reactions are simple span by statics, each load kind alike.
+    - Each end lands on what is under it: a wall, then a column, then a beam (a girder, only away from its own ends).
+    - Beams framing into a girder are done before the girder; a loop is noted.
+  - **Columns:** a column carries the beam ends landing on it down to its base: the foundation, or a wall, beam or column under it.
+  - **Concentrated loads on walls:** a beam end or column base on a wall is a concentrated load on that wall's top, at its place along the wall.
+    - It is carried on down the walls under it ("BM1 via W6"), each needing a post. It is not in the stud check.
+  - **Tolerance:** a hand-drawn beam within 0.25 ft of square counts as square, the same tolerance the model uses for column bases. An edge within 0.25 ft of a line gets no note.
+  - New types: PointLoad, ConcentratedLoad, PartialLoad, BeamLoad, ColumnLoad; Result.Beams and Result.Columns.
+  - A wall standing on a beam is no longer noted as "on the framing".
+- **SWC**:
+  - The construction window lists a wall's concentrated loads (from, where along the wall, D/L/Lr/S lb) under the load-path line.
+  - A beam's and a column's Calculation tab add the gravity lines: the floor or roof tributary, the walls and loads on it, each end's reaction and what it bears on, and for a column, what it carries and what it stands on.
+- **Tests**:
+  - LoadManager 24. The new hand calculations:
+    - A beam on posts: 10 ft tributary, 1500 / 3000 lb ends.
+    - A beam on walls: 1500 lb at 10 ft along the wall.
+    - Two stories with a wall on a beam: D 2500, L 6000, Lr 1000 each end; the S wall D 250, L 200, Lr 200.
+    - A beam into a girder: 750 into the girder, then 375 to each wall.
+    - A roof beam's end carried down the wall under it.
+  - BuildingModel 148, WoodFraming 31, SWC 219.
+- **Checked on lbltwo** (scratch build):
+  - BM1 (13.5 ft) takes 19.53 ft of Level 2 (D 234, L 781 plf) plus W6 on it (D 292.5 + 150 own weight = 443, Lr 390, S 585). Each end: D 4,569, L 5,273, Lr 2,633, S 3,949 lb, as by hand. It bears on W2 and C2.
+  - SW2-2 (W2) lists BM1 at 45'-6" as a concentrated load. C1 carries BM3 and BM2 (W3 stands on BM2) to the foundation.
+- **Not done yet:**
+  - Sizing beams, columns and posts.
+  - Continuous beams, cantilevers and beams that are not square to the plan (only what stands or lands on them is carried).
+  - Spreading a concentrated load into a wall below (it stays a post load).
+  - Area-load zones.

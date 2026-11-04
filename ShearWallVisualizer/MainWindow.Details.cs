@@ -97,8 +97,10 @@ namespace ShearWallVisualizer
             }
             var level = building.Level(bm.LevelId);
             var ends = landings.Where(l => l.Kind == PathPointKind.BeamEnd && l.From.StartsWith($"beam {id} ")).ToList();
+            var lines = DetailCalcs.Beam(br, ends) ?? new List<CalcLine>();
+            lines.AddRange(GravityLines(id, true));
             return Dialogs.MemberViews.Beam(id, level?.Name, br, End("start", br.Beam.Start, br.StartAsd), End("end", br.Beam.End, br.EndAsd),
-                                            DetailCalcs.Beam(br, ends), "The beam itself is not sized here: these are the uplift reactions its end connections and supports must take.");
+                                            lines, "The beam itself is not sized here: these are the uplift reactions its end connections and supports must take, and its gravity reactions (service loads, from Loads > Floor and roof loads).");
         }
 
         /// <summary>A column's construction view: the levels it passes, what lands on its top, its base connection.</summary>
@@ -114,8 +116,36 @@ namespace ShearWallVisualizer
             var bottom = all.FirstOrDefault(l => l.Kind == PathPointKind.ColumnBase && l.From == $"column {id} base");
             string span = $"from {(lo?.Elevation == 0 ? "the foundation" : lo?.Name)} up to {hi?.Name}" + (col.BaseFixed ? " (base set by hand)" : "");
             var levelList = building.LevelsBottomUp.Select(l => (l.Name, l.Elevation)).ToList();
+            var lines = DetailCalcs.Column(fc, span, onIt, bottom) ?? new List<CalcLine>();
+            lines.AddRange(GravityLines(id, false));
             return Dialogs.MemberViews.Column(id, lo?.Elevation ?? 0, hi?.Elevation ?? 0, levelList, onIt, bottom, span,
-                                              DetailCalcs.Column(fc, span, onIt, bottom), "The column itself is not sized here: this is the uplift its connections must take.");
+                                              lines, "The column itself is not sized here: this is the uplift its connections must take, and the gravity load it carries (service loads, from Loads > Floor and roof loads).");
+        }
+
+        /// <summary>A beam's or column's gravity loads by the load manager's load path (service level), as calculation lines.</summary>
+        private List<CalcLine> GravityLines(string id, bool beam)
+        {
+            var lines = new List<CalcLine>();
+            if (building == null) return lines;
+            var r = LoadManager.GravityLoadPath.Run(building, LoadManager.LoadSection.Read(building));
+            string Of(LoadManager.GravityLoad g, string unit) => $"D {g.Dead:N0}, L {g.Live:N0}, Lr {g.RoofLive:N0}, S {g.Snow:N0} {unit}";
+            if (beam && r.Beams.TryGetValue(id, out var b))
+            {
+                string trib = b.TributaryMax <= 0 ? "the floor or roof framing does not bear on it"
+                            : Math.Abs(b.TributaryMax - b.TributaryMin) < 0.005 ? $"tributary {b.TributaryMax:0.##} ft" : $"tributary {b.TributaryMin:0.##} to {b.TributaryMax:0.##} ft (the most, over the whole span)";
+                lines.Add(new CalcLine("Gravity: floor or roof", trib, Of(b.FromLevel, "plf")));
+                foreach (var p in b.Partials) lines.Add(new CalcLine($"Gravity: wall {p.From} on it", $"{p.A:0.##} to {p.B:0.##} ft from the start, with its own weight", Of(p.Load, "plf")));
+                foreach (var p in b.Points) lines.Add(new CalcLine($"Gravity: {p.From}", $"{p.At:0.##} ft from the start", Of(p.Load, "lb")));
+                lines.Add(new CalcLine("Gravity: start reaction", "simple span; on " + (b.StartOn ?? "nothing drawn"), Of(b.StartReaction, "lb"), flag: b.StartOn == null));
+                lines.Add(new CalcLine("Gravity: end reaction", "simple span; on " + (b.EndOn ?? "nothing drawn"), Of(b.EndReaction, "lb"), flag: b.EndOn == null));
+                foreach (var n in b.Notes) lines.Add(new CalcLine("Gravity: note", n, "", flag: true));
+            }
+            if (!beam && r.Columns.TryGetValue(id, out var c))
+            {
+                lines.Add(new CalcLine("Gravity: carried", c.From.Count == 0 ? "nothing lands on it" : "from " + string.Join(", ", c.From), Of(c.Load, "lb")));
+                lines.Add(new CalcLine("Gravity: base", "on " + (c.BaseOn ?? "nothing drawn: not traced down"), "", flag: c.BaseOn == null));
+            }
+            return lines;
         }
 
         /// <summary>What the construction window shows for wall <paramref name="key"/> of story <paramref name="i"/>.</summary>

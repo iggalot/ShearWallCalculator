@@ -607,13 +607,24 @@ namespace ShearWallVisualizer.Dialogs
 
             // what the gravity load path works out from the floor and roof loads (Loads > Floor and roof loads)
             var path = data.TopLoadPath;
-            string pathText = path == null || (path.Load.IsEmpty && path.TributaryMax <= 0 && path.Above.Count == 0)
+            string pathText = path == null || (path.Load.IsEmpty && path.TributaryMax <= 0 && path.Above.Count == 0 && path.Points.Count == 0)
                 ? "From the floor and roof loads: nothing reaches this wall (no area loads entered, or no floor or roof bears on it). Loads > Floor and roof loads."
                 : $"From the floor and roof loads: D {path.Load.Dead:0}, L {path.Load.Live:0}, Lr {path.Load.RoofLive:0}, S {path.Load.Snow:0} plf ({path.Describe()})"
                   + (data.TopLoadEntered != null ? " — not used: the values entered replace it." : " — used.");
             p.Children.Add(new TextBlock { Text = pathText, TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkSecondary, Margin = new Thickness(0, 0, 0, 4) });
             foreach (var note in path?.Notes ?? new List<string>())
                 p.Children.Add(new TextBlock { Text = "• " + note, TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkMuted, Margin = new Thickness(0, 0, 0, 4) });
+            // beam ends and posts landing on the wall: each needs a post (king or built-up studs) under it, not checked here
+            if (path != null && path.Points.Count > 0)
+            {
+                var prow = path.Points.OrderBy(x => x.At).Select(x => new[]
+                {
+                    x.From, FtIn.Of(x.At * 12),
+                    $"D {x.Load.Dead:N0}, L {x.Load.Live:N0}, Lr {x.Load.RoofLive:N0}, S {x.Load.Snow:N0} lb",
+                }).ToList();
+                p.Children.Add(Table(new[] { "Concentrated load", "From the wall's start", "Load (service)" }, prow));
+                p.Children.Add(new TextBlock { Text = "Each needs a post under it (built-up studs or a column) down to the foundation; the stud check here is for the line load only.", TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkMuted, FontSize = 11, Margin = new Thickness(0, 0, 0, 4) });
+            }
 
             var s = d.Section;
             var info = new List<string[]>
