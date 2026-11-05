@@ -195,20 +195,25 @@ namespace ShearWallVisualizer
             UpdateLevelBanners();
         }
 
-        /// <summary>Linked wind: each level gets the wind on its strip of the building (mid-story to mid-story).</summary>
+        /// <summary>
+        /// Linked wind: the wind calculator's own wind cases (each wind with its walls, roof value and GCpi sign, and the separate
+        /// minimum cases), every one on every level under its own name, each level taking its strip of the building (mid-story to
+        /// mid-story) and the roof the roof's part. This app makes no wind of its own: the names are the calculator's, so the
+        /// load manager matches the hold-downs to its cases by name.
+        /// </summary>
         private void SetWindLoadsPerLevel(ASCE7WindLoadCalculator.WindAnalysisResult analysis, bool onlyCases1And3, out string message)
         {
             int n = Math.Max(1, Math.Min(levels.Count, ASCE7WindLoadCalculator.BuildingData.MaxStories));
-            var r = ASCE7WindLoadCalculator.StoryWindLoads.Compute(analysis, onlyCases1And3, n);
+            var r = ASCE7WindLoadCalculator.StoryWindLoads.ComputeCases(analysis, onlyCases1And3, n);
             for (int i = 0; i < levels.Count; i++)
                 levels[i].SetLoadCases(i < r.Levels.Count
-                    ? r.Levels[i].LoadCases.Select(c => new LateralLoadCase(c.Name, c.Vx, c.Vy, c.Mt, applyMinimumEccentricity: false))
+                    ? r.Levels[i].Select(c => new LateralLoadCase(c.Name, c.Vx, c.Vy, c.Mt, applyMinimumEccentricity: false))
                     : Enumerable.Empty<LateralLoadCase>());
-            var b = r.Building;
-            message = $"{b.LoadCases.Count} load cases (from W {b.AlongLength.DesignKips:0.0} k, from S {b.AlongWidth.DesignKips:0.0} k). ";
+            double maxX = r.Cases.Max(c => Math.Abs(c.Vx)), maxY = r.Cases.Max(c => Math.Abs(c.Vy));
+            message = $"{r.Cases.Count} wind cases from the wind calculator (the largest base shear {maxX:0.0} k along X, {maxY:0.0} k along Y). ";
             if (levels.Count > 1)
-                message += $"Split over {levels.Count} floors ({r.StoryHeight:0.#} ft stories), from W / from S: " +
-                           string.Join(",  ", r.Levels.Select((l, i) => $"{LevelName(i)} {l.AlongLengthDesignKips:0.0} / {l.AlongWidthDesignKips:0.0} k")) + ". ";
+                message += $"Each split over {levels.Count} floors ({r.Strips.StoryHeight:0.#} ft stories), largest along X / Y: " +
+                           string.Join(",  ", r.Levels.Select((l, i) => $"{LevelName(i)} {l.Max(c => Math.Abs(c.Vx)):0.0} / {l.Max(c => Math.Abs(c.Vy)):0.0} k")) + ". ";
             message += "Updated automatically. Per-wall results: 2 Shear walls, Calculations tab.";
         }
 

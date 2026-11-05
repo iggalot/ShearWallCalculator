@@ -5,6 +5,7 @@ using ShearWallCalculator.NDSProvisions;
 using ShearWallVisualizer.Controls;
 using NDS_WoodLibrary.NDS2018;
 using WoodFraming;
+using WoodFraming.Wpf;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -259,7 +260,7 @@ namespace ShearWallVisualizer.Dialogs
             subtitle.Text = v.Subtitle;
             var e = v.Elevation?.Invoke();
             if (e != null) elevationHost.Children.Add(e);
-            view3D.ShowModel(v.Model?.Invoke() ?? new Model3DGroup(), v.Key);
+            view3D.ShowModel(v.Model?.Invoke() ?? new Model3DGroup(), v.Key, null, v.North, v.FromPlan);
             pieces.Content = v.Pieces?.Invoke();
             var cp = new StackPanel { Margin = new Thickness(4) };
             cp.Children.Add(CalcTable.Build(v.Lines ?? new List<CalcLine>()));
@@ -281,7 +282,7 @@ namespace ShearWallVisualizer.Dialogs
                 elevationHost.Children.Clear();
                 pieces.Content = null;
                 calc.Content = null;
-                view3D.Show(null, null, false, false, false);
+                view3D.ShowModel(new Model3DGroup(), null);
                 return;
             }
             var w = d.Wall;
@@ -318,9 +319,17 @@ namespace ShearWallVisualizer.Dialogs
 
         private void Show3D()
         {
-            if (data?.Wall == null || framing == null) { view3D.Show(null, null, false, false, false); return; }
+            if (data?.Wall == null || framing == null) { view3D.ShowModel(new Model3DGroup(), null); return; }
             var faces = Faces();
-            view3D.Show(data, framing, face1In3D.IsChecked == true && faces.Count > 0, face2In3D.IsChecked == true && faces.Count > 1, cutaway.IsChecked == true, faces);
+            var model = WallModel3D.Build(data, framing, face1In3D.IsChecked == true && faces.Count > 0, face2In3D.IsChecked == true && faces.Count > 1, cutaway.IsChecked == true, faces);
+            // the same wall (its size) keeps the turn; fitted on the wall itself, not the footing or the straps
+            // with the building model's north arrow (as in every view), off the wall's north-west corner; the wall's own axes run from
+            // its low end (west or south), seen from the south or the east
+            var w = data.Wall;
+            double x0 = Math.Min(w.Start.X, w.End.X), x1 = Math.Max(w.Start.X, w.End.X), y0 = Math.Min(w.Start.Y, w.End.Y), y1 = Math.Max(w.Start.Y, w.End.Y);
+            var north = BuildingModel.Model.NorthArrow.For(new BuildingModel.Geometry.Rect2(x0, y0, x1, y1), framing.Height / 12);
+            var fromPlan = data.EastWest ? FramingModel.FromPlan(x0, y0, x1, y0, framing.StudDepth) : FramingModel.FromPlan(x0, y0, x0, y1, framing.StudDepth);
+            view3D.ShowModel(model, $"wall {framing.Length:0.##} x {framing.Height:0.##}", new Rect3D(0, 0, 0, framing.Length, framing.Height, framing.StudDepth), north, fromPlan);
         }
 
         // ---------------------------------------------------------------- the pieces
@@ -798,88 +807,24 @@ namespace ShearWallVisualizer.Dialogs
     }
 
     /// <summary>
-    /// The wall in 3D: every framing piece, the hold-downs with their anchors, the posts and straps from above, the
-    /// foundation (first story), and each face's sheets, either face off, or the right half cut away to show the framing.
-    /// Drag to turn, wheel to zoom, double-click to fit. Inches: x along the wall, y up, z through it (face 1 at +z).
+    /// The wall in 3D for the construction window: the shared framing and sheathing (WoodFraming.Wpf), with this app's design
+    /// added: the hold-downs on the end posts with their anchors, the straps from above, the sill's anchor bolts, and the
+    /// foundation under a first-story wall. Inches: x along the wall, y up, z through it (face 1 at +z).
     /// </summary>
-    public sealed class Framing3DView : Border
+    public static class WallModel3D
     {
-        private readonly Viewport3D viewport = new Viewport3D();
-        private readonly PerspectiveCamera camera = new PerspectiveCamera { FieldOfView = 40 };
-        private readonly ModelVisual3D content = new ModelVisual3D();
-        private Point3D target;
-        private double yaw = 28, pitch = 16, distance = 400, radius = 100;
-        private Point? dragFrom;
-        private bool moved;
-        private WallFraming shownFraming;
-
-        public Framing3DView()
+        public static Model3DGroup Build(WallBuildData d, WallFraming f, bool face1, bool face2, bool cut, List<FaceResult> faces)
         {
-            Background = new LinearGradientBrush(Color.FromRgb(0xF7, 0xF9, 0xFC), Color.FromRgb(0xE4, 0xE9, 0xF0), 90);
-            viewport.Camera = camera;
-            var lights = new Model3DGroup();
-            lights.Children.Add(new AmbientLight(Color.FromRgb(0x78, 0x78, 0x78)));
-            lights.Children.Add(new DirectionalLight(Color.FromRgb(0xA8, 0xA8, 0xA8), new Vector3D(-0.4, -0.8, -0.9)));
-            lights.Children.Add(new DirectionalLight(Color.FromRgb(0x50, 0x50, 0x50), new Vector3D(0.6, -0.2, 0.8)));
-            viewport.Children.Add(new ModelVisual3D { Content = lights });
-            viewport.Children.Add(content);
-            Child = new Grid { Children = { viewport, new TextBlock { Text = "Drag to turn · wheel to zoom · double-click to fit", Foreground = Ui.InkMuted, FontSize = 11, Margin = new Thickness(10, 8, 0, 0), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top } } };
-            MouseLeftButtonDown += (s, e) =>
+            if (f == null || d == null) return new Model3DGroup();
+            SheathingLayer Face(int i)
             {
-                if (e.ClickCount == 2) { moved = false; Fit(); return; }
-                dragFrom = e.GetPosition(this);
-                CaptureMouse();
-            };
-            MouseMove += (s, e) =>
-            {
-                if (dragFrom == null) return;
-                var p = e.GetPosition(this);
-                yaw -= (p.X - dragFrom.Value.X) * 0.4;
-                pitch = Math.Max(-60, Math.Min(85, pitch + (p.Y - dragFrom.Value.Y) * 0.3));
-                dragFrom = p;
-                moved = true;
-                PlaceCamera();
-            };
-            MouseLeftButtonUp += (s, e) => { dragFrom = null; ReleaseMouseCapture(); };
-            MouseWheel += (s, e) => { distance *= e.Delta > 0 ? 0.88 : 1 / 0.88; moved = true; PlaceCamera(); };
-            SizeChanged += (s, e) => { if (!moved) Fit(); };
-        }
-
-        private static readonly Material Stud = Mat("#E6CFA3"), Plate = Mat("#D2AE78"), Post = Mat("#C08D4E"), Under = Mat("#E39A50"),
-                                         Osb = Mat("#C9A66B"), Gyp = Mat("#ECEEF0"), Steel = Mat("#4B5563"), Concrete = Mat("#C9CDD2"), Strap = Mat("#C2410C");
-
-        private static Material Mat(string hex)
-        {
-            var m = new DiffuseMaterial(Ui.Frozen(hex));
-            m.Freeze();
-            return m;
-        }
-
-        public void Show(WallBuildData d, WallFraming f, bool face1, bool face2, bool cut, List<FaceResult> faces = null)
-        {
-            var g = new Model3DGroup();
-            bool newWall = !ReferenceEquals(f, shownFraming) && (shownFraming == null || f == null || Math.Abs(shownFraming.Length - f.Length) > 0.01 || Math.Abs(shownFraming.Height - f.Height) > 0.01);
-            shownFraming = f;
-            if (f == null || d == null) { content.Content = g; return; }
+                var o = faces != null && i < faces.Count ? faces[i]?.Option : null;
+                return new SheathingLayer { Thickness = Thickness(o), Gypsum = o?.Table == SheathingTable.GypsumAndPlaster };
+            }
+            var g = FramingModel.Wall(f, face1 ? Face(0) : null, face2 ? Face(1) : null, cut);
             double D = f.StudDepth, L = f.Length, H = f.Height;
-            foreach (var p in f.Pieces)
-            {
-                var m = p.Kind == FramingKind.Stud || p.Kind == FramingKind.Blocking ? Stud : p.Kind == FramingKind.EndPost ? Post : p.Kind == FramingKind.PostUnder ? Under : Plate;
-                g.Children.Add(Box(p.X0 + 0.04, p.Y0 + 0.04, 0, p.X1 - 0.04, p.Y1 - 0.04, D, m));
-            }
-            void Sheets(int i, double z0, double z1)
-            {
-                var fr = faces != null && i < faces.Count ? faces[i] : null;
-                var m = fr?.Option?.Table == SheathingTable.GypsumAndPlaster ? Gyp : Osb;
-                foreach (var s in f.Sheets)
-                {
-                    if (cut && s.X0 >= L / 2 - 0.01) continue; // the right half cut away: the framing shows
-                    g.Children.Add(Box(s.X0 + 0.06, s.Y0 + 0.06, z0, s.X1 - 0.06, s.Y1 - 0.06, z1, m));
-                }
-            }
-            double t1 = Thickness(faces, 0), t2 = Thickness(faces, 1);
-            if (face1) Sheets(0, D, D + t1);
-            if (face2) Sheets(1, -t2, 0);
+            GeometryModel3D Box(double x0, double y0, double z0, double x1, double y1, double z1, Material m) => FramingModel.Box(x0, y0, z0, x1, y1, z1, m);
+            var steel = FramingMaterials.Steel;
 
             // hold-downs on the end posts' inner faces, the anchor rod down into the foundation
             var r = d.Result;
@@ -892,106 +837,39 @@ namespace ShearWallVisualizer.Dialogs
                     if (fam == HoldownFamilies.Strap_ToWallBelow || fam == HoldownFamilies.STHD_ToFoundation)
                     {
                         double sx = low ? post / 2 : L - post / 2;
-                        g.Children.Add(Box(sx - 0.625, -14, -0.1, sx + 0.625, 30, -0.02, Steel));
+                        g.Children.Add(Box(sx - 0.625, -14, -0.1, sx + 0.625, 30, -0.02, steel));
                     }
                     else
                     {
-                        g.Children.Add(Box(x0, WallFraming.Ply, D / 2 - 1.5, x0 + 2.9, WallFraming.Ply + 12, D / 2 + 1.5, Steel));
-                        g.Children.Add(Box(x0 + 1.15, d.FirstStory ? -10 : -6, D / 2 - 0.3, x0 + 1.75, WallFraming.Ply + 3, D / 2 + 0.3, Steel));
+                        g.Children.Add(Box(x0, WallFraming.Ply, D / 2 - 1.5, x0 + 2.9, WallFraming.Ply + 12, D / 2 + 1.5, steel));
+                        g.Children.Add(Box(x0 + 1.15, d.FirstStory ? -10 : -6, D / 2 - 0.3, x0 + 1.75, WallFraming.Ply + 3, D / 2 + 0.3, steel));
                     }
                 }
             // straps from above at their posts
             foreach (var a in d.Above)
-                g.Children.Add(Box(a.Along - 0.625, H - 2, D + 0.05, a.Along + 0.625, H + 18, D + 0.15, Strap));
+                g.Children.Add(Box(a.Along - 0.625, H - 2, D + 0.05, a.Along + 0.625, H + 18, D + 0.15, FramingMaterials.Strap));
             // the sill's anchor bolts: a rod through the sill's middle, its washer and nut on top
             var an = d.Anchors();
             if (an != null)
                 foreach (double ax in an.PositionsIn)
                 {
                     double r2 = an.BoltDia / 2;
-                    g.Children.Add(Box(ax - r2, -7, D / 2 - r2, ax + r2, WallFraming.Ply + 1.2, D / 2 + r2, Steel));
+                    g.Children.Add(Box(ax - r2, -7, D / 2 - r2, ax + r2, WallFraming.Ply + 1.2, D / 2 + r2, steel));
                     double w = an.PlateWasher ? 1.5 : 0.9;
-                    g.Children.Add(Box(ax - w, WallFraming.Ply, D / 2 - w, ax + w, WallFraming.Ply + 0.23, D / 2 + w, Steel));
+                    g.Children.Add(Box(ax - w, WallFraming.Ply, D / 2 - w, ax + w, WallFraming.Ply + 0.23, D / 2 + w, steel));
                 }
-            if (d.FirstStory) g.Children.Add(Box(-8, -14, -4, L + 8, 0, D + 4, Concrete));
-            content.Content = g;
-            target = new Point3D(L / 2, H / 2, D / 2);
-            radius = 0.5 * Math.Sqrt(L * L + H * H + 400);
-            if (newWall) moved = false;
-            if (!moved) Fit(); else PlaceCamera();
+            if (d.FirstStory) g.Children.Add(Box(-8, -14, -4, L + 8, 0, D + 4, FramingMaterials.Concrete));
+            return g;
         }
 
-        /// <summary>Any model (a beam, a column): shown fitted, unless the same member is shown again and the view was turned.</summary>
-        public void ShowModel(Model3DGroup g, string key)
+        /// <summary>A sheathing option's thickness (in), from its nominal thickness ("15/32\"" → 0.469); 1/2 in. when not known.</summary>
+        private static double Thickness(SheathingOption o)
         {
-            shownFraming = null;
-            if (key != shownKey) moved = false;
-            shownKey = key;
-            content.Content = g;
-            var b = g?.Bounds ?? Rect3D.Empty;
-            if (b.IsEmpty) return;
-            target = new Point3D(b.X + b.SizeX / 2, b.Y + b.SizeY / 2, b.Z + b.SizeZ / 2);
-            radius = 0.5 * Math.Sqrt(b.SizeX * b.SizeX + b.SizeY * b.SizeY + b.SizeZ * b.SizeZ);
-            if (!moved) Fit(); else PlaceCamera();
-        }
-
-        private string shownKey;
-
-        // the pieces a member model is built of (shared with MemberViews)
-        internal static Material StudMaterial => Stud;
-        internal static Material PostMaterial => Post;
-        internal static Material SteelMaterial => Steel;
-        internal static Material ConcreteMaterial => Concrete;
-        internal static Material StrapMaterial => Strap;
-        internal static Material PlateMaterial => Plate;
-        internal static GeometryModel3D BoxModel(double x0, double y0, double z0, double x1, double y1, double z1, Material m) => Box(x0, y0, z0, x1, y1, z1, m);
-
-        /// <summary>A face's sheathing thickness (in), from its nominal thickness ("15/32\"" → 0.469); 1/2 in. when not known.</summary>
-        private static double Thickness(List<FaceResult> faces, int i)
-        {
-            var o = faces != null && i < faces.Count ? faces[i]?.Option : null;
             if (o == null) return 0.5;
             string s = ShearWallDesigner.ThicknessName(o.Thickness).Replace("\"", "");
             var parts = s.Split('/');
             return parts.Length == 2 && double.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out double a) &&
                    double.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out double b) && b > 0 ? a / b : 0.5;
-        }
-
-        private void Fit()
-        {
-            double aspect = ActualWidth > 0 && ActualHeight > 0 ? ActualHeight / ActualWidth : 0.6;
-            double half = camera.FieldOfView / 2 * Math.PI / 180;
-            double halfV = Math.Atan(Math.Tan(half) * aspect);
-            distance = 1.1 * radius / Math.Sin(Math.Min(half, halfV));
-            PlaceCamera();
-        }
-
-        private void PlaceCamera()
-        {
-            double y = yaw * Math.PI / 180, p = pitch * Math.PI / 180;
-            var dir = new Vector3D(Math.Cos(p) * Math.Sin(y), Math.Sin(p), Math.Cos(p) * Math.Cos(y));
-            camera.Position = target + dir * distance;
-            camera.LookDirection = -dir * distance;
-            camera.UpDirection = new Vector3D(0, 1, 0);
-            camera.NearPlaneDistance = 1;
-            camera.FarPlaneDistance = distance * 10;
-        }
-
-        private static GeometryModel3D Box(double x0, double y0, double z0, double x1, double y1, double z1, Material m)
-        {
-            var c = new[] { new Point3D(x0, y0, z0), new Point3D(x1, y0, z0), new Point3D(x1, y1, z0), new Point3D(x0, y1, z0),
-                            new Point3D(x0, y0, z1), new Point3D(x1, y0, z1), new Point3D(x1, y1, z1), new Point3D(x0, y1, z1) };
-            var mesh = new MeshGeometry3D();
-            int[][] faces = { new[] { 0, 3, 2, 1 }, new[] { 4, 5, 6, 7 }, new[] { 0, 1, 5, 4 }, new[] { 1, 2, 6, 5 }, new[] { 2, 3, 7, 6 }, new[] { 3, 0, 4, 7 } };
-            foreach (var fc in faces)
-            {
-                int i = mesh.Positions.Count;
-                foreach (var k in fc) mesh.Positions.Add(c[k]);
-                mesh.TriangleIndices.Add(i); mesh.TriangleIndices.Add(i + 1); mesh.TriangleIndices.Add(i + 2);
-                mesh.TriangleIndices.Add(i); mesh.TriangleIndices.Add(i + 2); mesh.TriangleIndices.Add(i + 3);
-            }
-            mesh.Freeze();
-            return new GeometryModel3D(mesh, m) { BackMaterial = m };
         }
     }
 }

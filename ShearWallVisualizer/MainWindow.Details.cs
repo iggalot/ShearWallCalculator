@@ -87,8 +87,13 @@ namespace ShearWallVisualizer
             var level = building.Level(bm.LevelId);
             var ends = landings.Where(l => l.Kind == PathPointKind.BeamEnd && l.From.StartsWith($"beam {id} ")).ToList();
             var lines = DetailCalcs.Beam(br, ends) ?? new List<CalcLine>();
-            return Dialogs.MemberViews.Beam(id, level?.Name, br, End("start", br.Beam.Start, br.StartAsd), End("end", br.Beam.End, br.EndAsd),
+            var view = Dialogs.MemberViews.Beam(id, level?.Name, br, End("start", br.Beam.Start, br.StartAsd), End("end", br.Beam.End, br.EndAsd),
                                             lines, "The beam itself is not sized here: these are the uplift reactions its end connections and supports must take.");
+            // the building model's north arrow (as in every view): the beam's own axes run along it from its start, seen from its right
+            Point s = br.Beam.Start, e = br.Beam.End;
+            view.North = BuildingModel.Model.NorthArrow.For(new BuildingModel.Geometry.Rect2(Math.Min(s.X, e.X), Math.Min(s.Y, e.Y), Math.Max(s.X, e.X), Math.Max(s.Y, e.Y)), Dialogs.MemberViews.BeamDepth / 12);
+            view.FromPlan = WoodFraming.Wpf.FramingModel.FromPlan(s.X, s.Y, e.X, e.Y, Dialogs.MemberViews.BeamWidth);
+            return view;
         }
 
         /// <summary>A column's construction view: the levels it passes, what lands on its top, its base connection.</summary>
@@ -105,8 +110,13 @@ namespace ShearWallVisualizer
             string span = $"from {(lo?.Elevation == 0 ? "the foundation" : lo?.Name)} up to {hi?.Name}" + (col.BaseFixed ? " (base set by hand)" : "");
             var levelList = building.LevelsBottomUp.Select(l => (l.Name, l.Elevation)).ToList();
             var lines = DetailCalcs.Column(fc, span, onIt, bottom) ?? new List<CalcLine>();
-            return Dialogs.MemberViews.Column(id, lo?.Elevation ?? 0, hi?.Elevation ?? 0, levelList, onIt, bottom, span,
+            var view = Dialogs.MemberViews.Column(id, lo?.Elevation ?? 0, hi?.Elevation ?? 0, levelList, onIt, bottom, span,
                                               lines, "The column itself is not sized here: this is the uplift its connections must take.");
+            // the building model's north arrow (as in every view): the post's own axes x east from its west face, z south
+            double half = Dialogs.MemberViews.PostSize / 24;
+            view.North = BuildingModel.Model.NorthArrow.For(new BuildingModel.Geometry.Rect2(col.At.X - half, col.At.Y - half, col.At.X + half, col.At.Y + half), Math.Max(0, (hi?.Elevation ?? 0) - (lo?.Elevation ?? 0)));
+            view.FromPlan = WoodFraming.Wpf.FramingModel.FromPlan(col.At.X - half, col.At.Y, col.At.X + half, col.At.Y, Dialogs.MemberViews.PostSize);
+            return view;
         }
 
         /// <summary>What the construction window shows for wall <paramref name="key"/> of story <paramref name="i"/>.</summary>

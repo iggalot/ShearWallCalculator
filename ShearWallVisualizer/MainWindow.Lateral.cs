@@ -28,6 +28,22 @@ namespace ShearWallVisualizer
                 Note = "Each shear wall end's overturning couple by wind case, W at strength level (this app's ASD couple ÷ 0.6), the walls above " +
                        "included as designed; no dead load (the load manager's is added).",
             };
+            // one entry per wind case of the wind calculator (its own name). The wind is the same whether the diaphragm is taken rigid or
+            // flexible (the pressures come from the geometry); the two are only two ways of sharing it among the walls, so each
+            // wall end takes the governing of the two for that wind ("Case 1, ... (rigid)" and "(flexible)" become "Case 1, ...")
+            string Bare(string key)
+            {
+                foreach (var tag in new[] { ShearWallCalculator_Envelope.RigidTag, ShearWallCalculator_Envelope.FlexibleTag })
+                {
+                    string tail = $" ({tag})";
+                    if (key.EndsWith(tail, StringComparison.Ordinal)) return key.Substring(0, key.Length - tail.Length);
+                }
+                return key;
+            }
+            void Govern(Dictionary<string, double> d, string key, double v)
+            {
+                if (!d.TryGetValue(key, out var was) || Math.Abs(v) > Math.Abs(was)) d[key] = v;
+            }
             var cases = new List<string>();
             void Case(string c) { if (!cases.Contains(c)) cases.Add(c); }
             foreach (var kv in levels[0]._wall_system._walls)
@@ -46,23 +62,23 @@ namespace ShearWallVisualizer
                 foreach (var c in r.EndForceByCase)
                 {
                     // [low, high]: the couple alone, + up at the low end (no dead load in this app)
-                    double couple = c.Value[0] / 0.6;
-                    upLow[c.Key] = Math.Round(couple, 1);
-                    upHigh[c.Key] = Math.Round(-couple, 1);
-                    Case(c.Key);
+                    double couple = Math.Round(c.Value[0] / 0.6, 1);
+                    string k = Bare(c.Key);
+                    Govern(upLow, k, couple);
+                    upHigh[k] = -upLow[k];
+                    Case(k);
                 }
                 s.Points.Add(new LoadManager.LateralPoint { From = $"{name} {(ew ? "west" : "south")} end", WallId = modelId, X = low.X, Y = low.Y, Up = upLow });
                 s.Points.Add(new LoadManager.LateralPoint { From = $"{name} {(ew ? "east" : "north")} end", WallId = modelId, X = high.X, Y = high.Y, Up = upHigh });
             }
             foreach (var a in foundationAnchors.Where(a => a.Kind == PathPointKind.ColumnBase && a.CaseAsd != null && a.CaseAsd.Count > 0))
             {
-                s.Points.Add(new LoadManager.LateralPoint
-                {
-                    From = a.From, X = a.At.X, Y = a.At.Y,
-                    Up = a.CaseAsd.ToDictionary(kv => kv.Key, kv => Math.Round(kv.Value / 0.6, 1)),
-                });
-                foreach (var c in a.CaseAsd.Keys) Case(c);
+                var up = new Dictionary<string, double>();
+                foreach (var kv in a.CaseAsd) { string k = Bare(kv.Key); Govern(up, k, Math.Round(kv.Value / 0.6, 1)); Case(k); }
+                s.Points.Add(new LoadManager.LateralPoint { From = a.From, X = a.At.X, Y = a.At.Y, Up = up });
             }
+            // the wind calculator's case names, nothing else about the wind: the load manager takes each case (its direction,
+            // its roof pressures) from the wind calculator itself
             s.Cases = cases;
             return s.IsEmpty ? null : s;
         }

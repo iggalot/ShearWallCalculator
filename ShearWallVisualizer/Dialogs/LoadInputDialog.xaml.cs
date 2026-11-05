@@ -112,17 +112,19 @@ namespace ShearWallVisualizer.Dialogs
                 MagnitudeX = lateral.AlongLength.DesignKips;
                 MagnitudeY = lateral.AlongWidth.DesignKips;
             }
-            LoadCases = lateral.LoadCases
+            // the wind calculator's own wind cases (the building's; on save each floor gets its share of every one)
+            var cases = WindCases.For(wind, cbOnlyCases1And3.IsChecked == true);
+            LoadCases = cases
                 .Select(c => new ShearWallCalculator.LateralLoadCase(c.Name, c.Vx, c.Vy, c.Mt, applyMinimumEccentricity: false))
                 .ToList();
 
             string Line(DirectionalWindForce f, string axis) =>
                 $"Wind from the {f.Direction} ({axis}): {f.DesignKips:0.0} kips" +
-                $"  (walls {f.WallsKips:0.0} + roof {f.RoofKips:0.0} = {f.TotalKips:0.0}; minimum {f.MinimumKips:0.0}" +
-                (f.MinimumGoverns ? " governs" : "") + ")";
+                $"  (walls {f.WallsKips:0.0} + roof {f.RoofKips:0.0} = {f.TotalKips:0.0}; minimum {f.MinimumKips:0.0}, a separate case" +
+                (f.MinimumGoverns ? ", the larger" : "") + ")";
             tbWindLoadSummary.Text =
                 Line(lateral.AlongLength, "X") + "\n" + Line(lateral.AlongWidth, "Y") + "\n" +
-                $"{LoadCases.Count} load cases (Fig. 27.3-8); each wall uses its worst case.";
+                $"{LoadCases.Count} wind cases from the wind calculator (each wind with each roof value and GCpi sign, and the minimum as its own cases); each wall uses its worst case.";
         }
 
         private void Update()

@@ -2,6 +2,7 @@ using ShearWallCalculator;
 using ShearWallCalculator.Design;
 using ShearWallVisualizer.Controls;
 using WoodFraming;
+using WoodFraming.Wpf;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,6 +23,9 @@ namespace ShearWallVisualizer.Dialogs
         public string Key { get; set; }
         public Func<FrameworkElement> Elevation { get; set; }
         public Func<Model3DGroup> Model { get; set; }
+        /// <summary>The building model's north arrow for the 3D view (as in every view) and plan ft to the model's axes; null: none.</summary>
+        public BuildingModel.Model.NorthArrow North { get; set; }
+        public Func<BuildingModel.Geometry.Point2, Point3D> FromPlan { get; set; }
         public Func<FrameworkElement> Pieces { get; set; }
         public List<CalcLine> Lines { get; set; } = new List<CalcLine>();
         public string Footnote { get; set; }
@@ -77,22 +81,22 @@ namespace ShearWallVisualizer.Dialogs
             var g = new Model3DGroup();
             double L = (br?.Beam?.Length ?? 0) * 12;
             if (L <= 0) return g;
-            g.Children.Add(Framing3DView.BoxModel(0, 0, 0, L, BeamDepth, BeamWidth, Framing3DView.PlateMaterial));
+            g.Children.Add(FramingModel.Box(0, 0, 0, L, BeamDepth, BeamWidth, FramingMaterials.Plate));
             foreach (var (e, x, inward) in new[] { (start, 0.0, 1.0), (end, L, -1.0) })
             {
                 // what it bears on, and the connection on its face
-                if (e.OnColumn) g.Children.Add(Framing3DView.BoxModel(x - PostSize / 2, -60, 0, x + PostSize / 2, -0.05, PostSize, Framing3DView.PostMaterial));
-                else g.Children.Add(Framing3DView.BoxModel(x - 6, -60, -1, x + 6, -0.05, BeamWidth + 1, Framing3DView.StudMaterial));
+                if (e.OnColumn) g.Children.Add(FramingModel.Box(x - PostSize / 2, -60, 0, x + PostSize / 2, -0.05, PostSize, FramingMaterials.Post));
+                else g.Children.Add(FramingModel.Box(x - 6, -60, -1, x + 6, -0.05, BeamWidth + 1, FramingMaterials.Stud));
                 if (e.Landing != null)
                 {
                     double sx = x + inward * 3;
-                    g.Children.Add(Framing3DView.BoxModel(Math.Min(sx, sx + inward * 1.25), -20, BeamWidth + 0.02, Math.Max(sx, sx + inward * 1.25), BeamDepth - 1, BeamWidth + 0.12, Framing3DView.SteelMaterial));
+                    g.Children.Add(FramingModel.Box(Math.Min(sx, sx + inward * 1.25), -20, BeamWidth + 0.02, Math.Max(sx, sx + inward * 1.25), BeamDepth - 1, BeamWidth + 0.12, FramingMaterials.Steel));
                 }
             }
             foreach (var ld in br.Loads)
             {
                 double a = ld.A * 12;
-                g.Children.Add(Framing3DView.BoxModel(a - 0.625, BeamDepth - 2, BeamWidth + 0.02, a + 0.625, BeamDepth + 20, BeamWidth + 0.12, Framing3DView.StrapMaterial));
+                g.Children.Add(FramingModel.Box(a - 0.625, BeamDepth - 2, BeamWidth + 0.02, a + 0.625, BeamDepth + 20, BeamWidth + 0.12, FramingMaterials.Strap));
             }
             return g;
         }
@@ -149,19 +153,19 @@ namespace ShearWallVisualizer.Dialogs
         {
             var g = new Model3DGroup();
             if (H <= 0) return g;
-            g.Children.Add(Framing3DView.BoxModel(0, 0, 0, PostSize, H, PostSize, Framing3DView.PostMaterial));
+            g.Children.Add(FramingModel.Box(0, 0, 0, PostSize, H, PostSize, FramingMaterials.Post));
             if (bottom != null)
             {
-                g.Children.Add(Framing3DView.BoxModel(PostSize + 0.02, 1.5, 0.3, PostSize + 2.9, 13.5, PostSize - 0.3, Framing3DView.SteelMaterial));
-                g.Children.Add(Framing3DView.BoxModel(PostSize + 1.15, -10, PostSize / 2 - 0.3, PostSize + 1.75, 4, PostSize / 2 + 0.3, Framing3DView.SteelMaterial));
+                g.Children.Add(FramingModel.Box(PostSize + 0.02, 1.5, 0.3, PostSize + 2.9, 13.5, PostSize - 0.3, FramingMaterials.Steel));
+                g.Children.Add(FramingModel.Box(PostSize + 1.15, -10, PostSize / 2 - 0.3, PostSize + 1.75, 4, PostSize / 2 + 0.3, FramingMaterials.Steel));
             }
-            if (bottom == null || bottom.Support == SupportKind.Foundation) g.Children.Add(Framing3DView.BoxModel(-12, -16, -12, PostSize + 12, -0.05, PostSize + 12, Framing3DView.ConcreteMaterial));
-            else g.Children.Add(Framing3DView.BoxModel(-8, -12, -2, PostSize + 8, -0.05, PostSize + 2, Framing3DView.StudMaterial));
+            if (bottom == null || bottom.Support == SupportKind.Foundation) g.Children.Add(FramingModel.Box(-12, -16, -12, PostSize + 12, -0.05, PostSize + 12, FramingMaterials.Concrete));
+            else g.Children.Add(FramingModel.Box(-8, -12, -2, PostSize + 8, -0.05, PostSize + 2, FramingMaterials.Stud));
             int k = 0;
             foreach (var l in onIt)
             {
                 double z = 0.4 + 1.1 * (k++ % 3);
-                g.Children.Add(Framing3DView.BoxModel(PostSize + 0.02, H - 14, z, PostSize + 0.12, H + 18, z + 0.9, Framing3DView.StrapMaterial));
+                g.Children.Add(FramingModel.Box(PostSize + 0.02, H - 14, z, PostSize + 0.12, H + 18, z + 0.9, FramingMaterials.Strap));
             }
             return g;
         }

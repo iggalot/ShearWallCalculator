@@ -194,6 +194,10 @@
     <ProjectReference Include="..\ShearWallCalculator.ModelAdapter\ShearWallCalculator.ModelAdapter.csproj">
       <Name>ShearWallCalculator.ModelAdapter</Name>
     </ProjectReference>
+    <!-- the shared wood framing in 3D (the construction window draws its walls with it, adding the hold-downs) -->
+    <ProjectReference Include="..\..\WoodFraming\WoodFraming.Wpf\WoodFraming.Wpf.csproj">
+      <Name>WoodFraming.Wpf</Name>
+    </ProjectReference>
     <!-- the wind app's section of the model file and the model's wind geometry -->
     <ProjectReference Include="..\..\ASCE7-Wind-Load-Calculator\ASCE7Wind.ModelAdapter\ASCE7Wind.ModelAdapter.csproj">
       <Name>ASCE7Wind.ModelAdapter</Name>

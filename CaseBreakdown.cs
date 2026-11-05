@@ -124,7 +124,9 @@ namespace ShearWallCalculator
                     var m = System.Text.RegularExpressions.Regex.Match(name, @"^Case (\d+)");
                     int n = m.Success ? int.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture) : 0;
                     double mt = lc == null ? 0 : lc.Mt - lc.AboveMt;
-                    string what = m.Success ? $"Case {n}" : name;
+                    // the wind calculator's own name, less the direction (it leads the label): "Case 1, roof Case A, +GCpi"
+                    string what = System.Text.RegularExpressions.Regex.Replace(name, @", from [NSEW]{1,2}\b", "");
+                    if (m.Success && System.Math.Abs(mt) > 1e-6) what = System.Text.RegularExpressions.Regex.Replace(what, @", torsion [+\-−]+$", ""); // the value follows
                     if (m.Success && System.Math.Abs(mt) > 1e-6)
                         what += $", torsion {(mt > 0 ? "+" : "−")}{System.Math.Abs(mt).ToString("0.0", System.Globalization.CultureInfo.CurrentCulture)} k·ft {(mt > 0 ? "CCW" : "CW")}";
                     if (calc is ShearWallCalculator_Envelope) what += $" ({tag})";
