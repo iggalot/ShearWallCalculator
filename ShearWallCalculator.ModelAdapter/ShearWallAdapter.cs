@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Windows;
+using BuildingModel.Checks;
 using BuildingModel.Edits;
 using BuildingModel.Geometry;
 using BuildingModel.Model;
@@ -75,6 +76,185 @@ namespace ShearWallCalculator.ModelAdapter
             /// follows when the wall becomes exterior or interior. Not there once the user edits the design (null: none).
             /// </summary>
             public Dictionary<string, bool> AutoExterior { get; set; }
+
+            /// <summary>
+            /// The part of the wall declared a shear wall: from and to, in ft along the wall from its start. Its ends are where
+            /// the hold-downs go. Null: the wall is not a shear wall (it carries only its gravity load).
+            /// </summary>
+            public ShearPart Shear { get; set; }
+        }
+
+        /// <summary>A stretch of a wall, in ft along it from its start (<see cref="Wall.Start"/>).</summary>
+        public sealed class ShearPart
+        {
+            public double From { get; set; }
+            public double To { get; set; }
+            public double Length => To - From;
+        }
+
+        /// <summary>
+        /// On the building once this app declares the shear walls itself (every project it has opened). Without it the project is
+        /// from before: the walls the model marked (<see cref="Wall.IsShearWall"/>) are its shear walls, each over its whole length.
+        /// </summary>
+        public const string DeclaredKey = "ShearWall.Declared";
+
+        /// <summary>The shortest part of a wall that can be declared (ft).</summary>
+        public const double MinShearLength = 0.5;
+
+        /// <summary>True when the shear walls are declared in this app (<see cref="DeclaredKey"/>).</summary>
+        public static bool Declares(Building b) => b?.GetData(DeclaredKey) != null;
+
+        /// <summary>
+        /// The part of <paramref name="w"/> that is a shear wall, kept on the wall (null: not a shear wall). A project from before
+        /// (<see cref="Declares"/> false): a wall the model marked, its whole length.
+        /// </summary>
+        public static ShearPart ShearPartOf(Building b, Wall w)
+        {
+            if (w == null) return null;
+            double len = w.Length;
+            var s = ReadWall(w).Shear;
+            if (s != null)
+            {
+                double from = Math.Max(0, Math.Min(s.From, s.To)), to = Math.Min(len, Math.Max(s.From, s.To));
+                return to - from >= MinShearLength - 1e-9 ? new ShearPart { From = from, To = to } : null;
+            }
+            return !Declares(b) && w.IsShearWall && len > 0 ? new ShearPart { From = 0, To = len } : null;
+        }
+
+        public static bool IsShearWall(Building b, Wall w) => ShearPartOf(b, w) != null;
+
+        /// <summary>The shear walls of the building (declared, or from before: see <see cref="ShearPartOf"/>).</summary>
+        public static List<Wall> ShearWalls(Building b) => b.Walls.Where(w => IsShearWall(b, w)).ToList();
+
+        /// <summary>The two ends of a part of a wall, in plan.</summary>
+        public static (Point2 a, Point2 e) Ends(Wall w, ShearPart p)
+        {
+            double len = w.Length;
+            Point2 At(double t) => len > 0 ? new Point2(w.Start.X + (w.End.X - w.Start.X) * t / len, w.Start.Y + (w.End.Y - w.Start.Y) * t / len) : w.Start;
+            return (At(p.From), At(p.To));
+        }
+
+        /// <summary>The levels whose diaphragms the wall can hold up: the stories it spans (above its base, up to its top).</summary>
+        public static List<Level> StoriesOf(Building b, Wall w)
+        {
+            var lo = b.Level(w.BaseLevelId);
+            var hi = b.Level(w.TopLevelId);
+            if (lo == null || hi == null) return new List<Level>();
+            return Stories(b).Where(l => l.Elevation > lo.Elevation && l.Elevation <= hi.Elevation).ToList();
+        }
+
+        /// <summary>
+        /// Declares the part of <paramref name="w"/> from <paramref name="from"/> to <paramref name="to"/> (ft from its start, kept
+        /// inside it) a shear wall. A story it spans that has no sheathing yet is given the project's default for where the wall is
+        /// (exterior or interior) as the pick to start from; it is the wall's own, not followed when the wall moves. False when the
+        /// part is shorter than <see cref="MinShearLength"/>.
+        /// </summary>
+        public static bool Declare(Building b, Wall w, double from, double to, DesignSettings settings)
+        {
+            double len = w.Length;
+            double a = Math.Max(0, Math.Min(from, to)), e = Math.Min(len, Math.Max(from, to));
+            if (e - a < MinShearLength - 1e-9) return false;
+            var x = ReadWall(w);
+            x.Shear = new ShearPart { From = Math.Round(a, 4), To = Math.Round(e, 4) };
+            foreach (var l in StoriesOf(b, w))
+                if (!x.Design.TryGetValue(l.Id, out var d) || d == null) x.Design[l.Id] = NewWallDesign(b, w, settings);
+            x.AutoExterior = null;
+            WriteWall(w, x);
+            return true;
+        }
+
+        /// <summary>The wall is no longer a shear wall: this app's data on it is taken off (its sheathing too).</summary>
+        public static void Undeclare(Wall w) => w.SetData(WallKey, null);
+
+        /// <summary>
+        /// On opening a project: from now on this app declares its shear walls (<see cref="DeclaredKey"/>). A project from before keeps
+        /// its shear walls: each wall the model marked is declared over its whole length. Returns how many were declared so.
+        /// </summary>
+        public static int Adopt(Building b)
+        {
+            if (Declares(b)) return 0;
+            int n = 0;
+            foreach (var w in b.Walls)
+            {
+                var x = ReadWall(w);
+                if (x.Shear != null || !w.IsShearWall || !(w.Length >= MinShearLength)) continue;
+                x.Shear = new ShearPart { From = 0, To = Math.Round(w.Length, 4) };
+                WriteWall(w, x);
+                n++;
+            }
+            b.SetData(DeclaredKey, "1");
+            return n;
+        }
+
+        /// <summary>
+        /// The shear wall checks, on the declared parts (the model's own checks know no shear walls): for each level, a shear wall
+        /// both ways reaching its diaphragm; a shear wall no diaphragm reaches; two shear walls of one story over each other.
+        /// </summary>
+        public static List<ModelIssue> Checks(Building b)
+        {
+            var list = new List<ModelIssue>();
+            var shear = b.Walls.Select(w => (w, p: ShearPartOf(b, w))).Where(t => t.p != null && t.w.Direction != WallDirection.NotOrthogonal
+                                                                              && b.Level(t.w.BaseLevelId) != null && b.Level(t.w.TopLevelId) != null).ToList();
+            foreach (var l in Stories(b))
+            {
+                var net = b.NetDiaphragm(l);
+                if (net.IsEmpty) continue;
+                foreach (var dir in new[] { WallDirection.WestEast, WallDirection.SouthNorth })
+                {
+                    bool any = shear.Any(t => t.w.Direction == dir && StoriesOf(b, t.w).Contains(l) && Reaches(net, t.w, t.p));
+                    if (!any)
+                        list.Add(new ModelIssue
+                        {
+                            Severity = Severity.Warning, Code = "NoLateralSupport", LevelId = l.Id, Ids = { l.Id },
+                            Message = $"{l.Name}: no shear wall {(dir == WallDirection.WestEast ? "running W-E" : "running S-N")} is declared under it. " +
+                                      "Pick a wall on the plan and make it a shear wall.",
+                        });
+                }
+            }
+            foreach (var (w, p) in shear)
+            {
+                var top = b.Level(w.TopLevelId);
+                var stories = StoriesOf(b, w);
+                if (stories.Count > 0 && !stories.Any(l => Reaches(b.NetDiaphragm(l), w, p)))
+                    list.Add(new ModelIssue
+                    {
+                        Severity = Severity.Warning, Code = "ShearWallNotReached", LevelId = top.Id, Ids = { w.Id }, At = Mid(w, p),
+                        Message = $"Shear wall {w.Id}: no diaphragm reaches its shear part, so it takes no load.",
+                    });
+            }
+            for (int i = 0; i < shear.Count; i++)
+                for (int j = i + 1; j < shear.Count; j++)
+                {
+                    var (a, pa) = shear[i];
+                    var (c, pc) = shear[j];
+                    if (a.Direction != c.Direction) continue;
+                    bool we = a.Direction == WallDirection.WestEast;
+                    if (Math.Abs(we ? a.Start.Y - c.Start.Y : a.Start.X - c.Start.X) > 1e-6) continue;
+                    var ea = Ends(a, pa); var ec = Ends(c, pc);
+                    double Lo((Point2 a, Point2 e) x) => we ? Math.Min(x.a.X, x.e.X) : Math.Min(x.a.Y, x.e.Y);
+                    double Hi((Point2 a, Point2 e) x) => we ? Math.Max(x.a.X, x.e.X) : Math.Max(x.a.Y, x.e.Y);
+                    double lo = Math.Max(Lo(ea), Lo(ec)), hi = Math.Min(Hi(ea), Hi(ec));
+                    if (hi - lo <= 1e-6) continue;
+                    if (!StoriesOf(b, a).Intersect(StoriesOf(b, c)).Any()) continue;
+                    list.Add(new ModelIssue
+                    {
+                        Severity = Severity.Error, Code = "WallOverlap", LevelId = a.TopLevelId, Ids = { a.Id, c.Id }, At = Mid(a, pa),
+                        Message = $"Shear walls {a.Id} and {c.Id} overlap over {hi - lo:0.##} ft: the same wall is counted twice. Shorten one's shear part, or make one not a shear wall.",
+                    });
+                }
+            return list;
+        }
+
+        private static bool Reaches(Region net, Wall w, ShearPart p)
+        {
+            var (a, e) = Ends(w, p);
+            return net.LengthAlong(a, e, BuildingQueries.WallTolerance) > 0;
+        }
+
+        private static Point2 Mid(Wall w, ShearPart p)
+        {
+            var (a, e) = Ends(w, p);
+            return new Point2((a.X + e.X) / 2, (a.Y + e.Y) / 2);
         }
 
         public sealed class DiaphragmExtras
@@ -168,17 +348,20 @@ namespace ShearWallCalculator.ModelAdapter
                 }
             }
 
-            // the shear walls under the level that its diaphragm reaches
+            // the shear walls under the level that its diaphragm reaches: each its declared part (its ends are the hold-downs')
             var net = b.NetDiaphragm(level);
-            foreach (var w in b.WallsUnder(level).Where(w => w.IsShearWall && w.Direction != WallDirection.NotOrthogonal))
+            foreach (var w in b.WallsUnder(level).Where(w => w.Direction != WallDirection.NotOrthogonal))
             {
-                if (!(net.LengthAlong(w.Start, w.End, BuildingQueries.WallTolerance) > 0)) continue;
+                var part = ShearPartOf(b, w);
+                if (part == null) continue; // not a shear wall: it carries only its gravity load
+                var (p0, p1) = Ends(w, part);
+                if (!(net.LengthAlong(p0, p1, BuildingQueries.WallTolerance) > 0)) continue;
                 int key = Number(w.Id) ?? 0;
                 if (calc._wall_system._walls.ContainsKey(key)) continue;
                 double height = HeightAt(b, w, level);
                 if (!(height > 0)) continue;
                 var extras = ReadWall(w);
-                var data = new WallData(height, w.Start.X, w.Start.Y, w.End.X, w.End.Y) { ID = key, WallType = extras.WallType };
+                var data = new WallData(height, p0.X, p0.Y, p1.X, p1.Y) { ID = key, WallType = extras.WallType };
                 if (extras.Design.TryGetValue(level.Id, out var design) && design != null)
                 {
                     data.Design = design;
@@ -310,37 +493,6 @@ namespace ShearWallCalculator.ModelAdapter
         private static bool Same(WallDesignInputs a, WallDesignInputs b) =>
             JsonConvert.SerializeObject(a, Json) == JsonConvert.SerializeObject(b, Json);
 
-        /// <summary>
-        /// Writes coordinates typed in the designer's tables back into the model: a wall's ends, and a diaphragm's
-        /// rectangle when it is one rectangle on the story (not split by openings). Returns true when the model changed.
-        /// </summary>
-        public static bool StoreGeometry(Building b, StoryMap s)
-        {
-            bool changed = false;
-            foreach (var kv in s.Walls)
-            {
-                if (!(b.Find(kv.Value) is Wall w) || !s.Calculator._wall_system._walls.TryGetValue(kv.Key, out var data)) continue;
-                var a = new Point2(data.Start.X, data.Start.Y);
-                var e = new Point2(data.End.X, data.End.Y);
-                bool same = (a.Equals(w.Start) && e.Equals(w.End)) || (a.Equals(w.End) && e.Equals(w.Start));
-                if (same) continue;
-                w.Start = a;
-                w.End = e;
-                changed = true;
-            }
-            foreach (var g in s.Diaphragms.GroupBy(kv => kv.Value).Where(g => g.Count() == 1))
-            {
-                var kv = g.First();
-                if (!(b.Find(kv.Value) is Diaphragm d) || d.Pieces.Count != 1 || !s.Calculator._diaphragm_system._diaphragms.TryGetValue(kv.Key, out var data)) continue;
-                if (b.OpeningsCutting(s.Level).Count > 0) continue;
-                var r = new Rect2(data.P1.X, data.P1.Y, data.P3.X, data.P3.Y);
-                if (r.IsEmpty || r.Equals(d.Pieces[0])) continue;
-                d.Pieces[0] = r;
-                changed = true;
-            }
-            return changed;
-        }
-
         // ------------------------------------------------------------------ stories
 
         /// <summary>A new building with one story per plate height (bottom first; the default story height when none or not more than 0), named by <see cref="BuildingEdits.NameStories"/>.</summary>
@@ -376,11 +528,12 @@ namespace ShearWallCalculator.ModelAdapter
         /// <summary>
         /// An older designer project (calculators only) as a building model: level n at the sum of the plate heights
         /// (or each story's tallest wall, else 9 ft), each diaphragm rectangle a diaphragm, each wall a shear wall of its
-        /// story with its design. Keys become IDs where they are free (W3 for wall 3 of the first story).
+        /// story with its design, declared over its whole length. Keys become IDs where they are free (W3 for wall 3 of the first story).
         /// </summary>
         public static Building FromCalculators(IList<ShearWallCalculatorBase> calcs, IList<double> plateHeights = null, string name = "")
         {
             var b = Building.New(name);
+            b.SetData(DeclaredKey, "1"); // its shear walls are declared (below)
             var below = b.Ground;
             double z = 0;
             for (int i = 0; i < calcs.Count; i++)
@@ -409,6 +562,7 @@ namespace ShearWallCalculator.ModelAdapter
                         TopLevelId = level.Id,
                     };
                     var x = new WallExtras { WallType = kv.Value.WallType };
+                    x.Shear = new ShearPart { From = 0, To = Math.Round(w.Length, 4) }; // each wall of the older project was a shear wall: declared, whole
                     // an older wall without a design used the program default (Structural I): kept as it was, not a "new" wall
                     x.Design[level.Id] = kv.Value.Design ?? new WallDesignInputs();
                     WriteWall(w, x);

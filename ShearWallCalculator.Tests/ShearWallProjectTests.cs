@@ -88,7 +88,7 @@ namespace ShearWallCalculator.Tests
         public void Save_WritesTheDesignIntoTheCopy()
         {
             var b = TwoStories();
-            b.AddWall(b.Ground, b.LevelsBottomUp[1], 0, 0, 40, 0);
+            b.AddWall(b.Ground, b.LevelsBottomUp[1], 0, 0, 40, 0, shearWall: true);
             var stories = ShearWallAdapter.ToCalculators(b);
             var wall = stories[0].Calculator._wall_system._walls.Values.Single();
             wall.Design.EdgeSpacing = 2;

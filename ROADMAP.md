@@ -26,6 +26,15 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
 - [x] **One owner per piece** (2026-11-05). The geometry is edited only in the Building Model (SWC's sketch is
   `GeometryLocked`); the wind only in the Wind Load Calculator (SWC's wind page is read-only, with Edit wind).
   The hub's steps: 1 Building, 2a Gravity loads, 2b Wind, 3 Shear walls, 4 Foundation loads.
+- [x] **Shear walls are declared in SWC** (2026-11-05). A wall is a plain wall until declared there (its card: Make it a
+  shear wall, then the shear part from–to); the hold-downs go at the part's ends. The Building Model has no shear-wall
+  switch; its shear-wall checks moved to SWC (`ShearWallAdapter.Checks`). Older projects keep their marked walls, whole.
+- [ ] **More than one shear part on a wall**, and a part per story (today one part, the same on every story the wall
+  spans). For now, split the wall in the Building Model.
+- [ ] **Show the declared shear walls in the Building Model** (read-only, e.g. a thicker line on the part), so the
+  geometry editor shows where the hold-downs will be. Needs a small neutral reader the Building Model may use.
+- [ ] **A suggested shear part:** the full-height stretches between doors and windows, offered when a wall is declared
+  (the model has no wall openings yet: its openings cut floors).
 - [ ] **Relax the hub's one-app-at-a-time rule** now that saves merge (for example, allow the Load Manager beside the
   Shear Wall Calculator), and let each app warn from the locks instead.
 - [ ] **SWC clean-up after the geometry lock:** remove the dead geometry handlers (Export/Apply change set, Copy from

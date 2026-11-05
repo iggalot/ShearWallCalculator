@@ -64,10 +64,10 @@ namespace ShearWallVisualizer
 
         /// <summary>
         /// The data keys this app writes into the project file: its section and design settings, each wall's and diaphragm's
-        /// design ("ShearWall"), and the forces it puts on the foundation ("Lateral", for the Load Manager). Nothing else.
+        /// design ("ShearWall"), and the forces it puts on the foundation (the shear walls are declared there: the part of each that counts), the mark that it declares them ("ShearWall.Declared"), and the forces it puts on the foundation ("Lateral", for the Load Manager). Nothing else.
         /// </summary>
         private static bool OwnsData(string key) =>
-            key == ShearWallProject.Key || key == ShearWallAdapter.SettingsKey || key == ShearWallAdapter.WallKey || key == ShearWallAdapter.DiaphragmKey ||
+            key == ShearWallProject.Key || key == ShearWallAdapter.SettingsKey || key == ShearWallAdapter.WallKey || key == ShearWallAdapter.DiaphragmKey || key == ShearWallAdapter.DeclaredKey ||
             key == LoadManager.LateralSection.Key;
 
         /// <summary>This app's hold on the open project (one Shear Wall Calculator per project).</summary>
@@ -392,14 +392,14 @@ namespace ShearWallVisualizer
         // ------------------------------------------------------------------ the model's errors stop the design
 
         /// <summary>The model's errors (not warnings): while there are any, nothing is designed or reported.</summary>
-        private List<ModelIssue> ModelErrors() => ModelChecks.Run(building).Where(i => i.Severity == Severity.Error).ToList();
+        private List<ModelIssue> ModelErrors() => ModelChecks.Run(building).Concat(ShearWallAdapter.Checks(building)).Where(i => i.Severity == Severity.Error).ToList();
 
         private string ModelErrorTodo()
         {
             if (!HasProject) return "Open or make a project first (File > New project or Open).";
             var errors = ModelErrors();
             if (errors.Count == 0) return null;
-            return $"The building model has {errors.Count} error{(errors.Count == 1 ? "" : "s")}; fix {(errors.Count == 1 ? "it" : "them")} before the design " +
+            return $"The building model or its shear walls have {errors.Count} error{(errors.Count == 1 ? "" : "s")}; fix {(errors.Count == 1 ? "it" : "them")} before the design " +
                    $"(the ✗ button lists them). First: {errors[0].Message}";
         }
 

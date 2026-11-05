@@ -138,10 +138,10 @@ namespace ShearWallCalculator.Tests
             for (int i = 1; i < lv.Length; i++)
             {
                 b.AddDiaphragm(lv[i], new Rect2(0, 0, 60, 40));
-                b.AddWall(lv[i - 1], lv[i], 0, 0, 60, 0);
-                b.AddWall(lv[i - 1], lv[i], 0, 40, 60, 40);
-                b.AddWall(lv[i - 1], lv[i], 0, 0, 0, 40);
-                b.AddWall(lv[i - 1], lv[i], 60, 0, 60, 40);
+                b.AddWall(lv[i - 1], lv[i], 0, 0, 60, 0, shearWall: true);
+                b.AddWall(lv[i - 1], lv[i], 0, 40, 60, 40, shearWall: true);
+                b.AddWall(lv[i - 1], lv[i], 0, 0, 0, 40, shearWall: true);
+                b.AddWall(lv[i - 1], lv[i], 60, 0, 60, 40, shearWall: true);
             }
 
             var s = ShearWallAdapter.ToCalculators(b);

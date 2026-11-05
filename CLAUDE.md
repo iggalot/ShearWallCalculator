@@ -18,6 +18,12 @@
   - **No design without a valid building model.** No project, or a model with errors, gives no design, loads or
     reports.
   - **The wind is the wind calculator's `WindCases`** (by name, every case). SWC makes no wind of its own.
+  - **Shear walls are declared here.** A wall is a plain wall (it carries its gravity load) until it is declared in SWC:
+    its card's **Make it a shear wall**, then **Shear part** from–to (ft from its west or south end). The hold-downs go at
+    the part's ends. It is `WallExtras.Shear` in the wall's `ShearWall` data (`ShearWallAdapter.Declare`, `Undeclare`,
+    `ShearPartOf`). `ShearWall.Declared` on the building marks a project that declares; an older project is adopted once
+    (`Adopt`: the walls it marked, `Wall.IsShearWall`, declared over the whole length). The shear-wall checks are
+    `ShearWallAdapter.Checks` (no shear wall both ways, not reached, two overlapping: an error that stops the design).
   - **Hold-downs only:** SWC does no dead load, gravity or stud work. Gravity loads are edited in the Load Manager
     (Loads > Edit loads); SWC only reads them.
   - On save, the end couples per wind case go into the `Lateral` section, for the foundation.

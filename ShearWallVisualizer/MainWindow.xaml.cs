@@ -109,6 +109,10 @@ namespace ShearWallVisualizer
             selectionCard.DeleteRequested += SelectionCard_Delete;
             selectionCard.OpenDetail += (kind, id) => { if (kind == "Wall") RefreshWallBuild(open: true); else OpenDetail(kind, Math.Max(0, currentLevel), id, null); }; // a wall: its construction window
             selectionCard.Closed += (s, e) => CloseSelectionCard();
+            // the shear walls are declared here: the part of a wall that counts (its ends the hold-downs'), or not a shear wall
+            selectionCard.ShearPartOf = ShearPartFor;
+            selectionCard.ShearPartChanged += (key, a, e) => Later(() => SetShearPart(key, a, e));
+            selectionCard.NotShearWall += key => Later(() => MakePlainWall(key));
             // the wall card's hold-down box: the Design table's choices; a pick is the wall's design input, as from the table
             selectionCard.HoldownItems = (w, r) => designer == null ? null
                 : Controls.HoldownPicks.For(designer, w.Design ?? new WallDesignInputs(), r, (Calculator?.DesignSettings ?? new DesignSettings()).StrapHoldownsOrDefault());
@@ -193,7 +197,7 @@ namespace ShearWallVisualizer
                 ShowFramingRows(); // the beams and columns of the level shown
                 if (resultsPanel != null) resultsPanel.Notes = levelNotes;
                 resultsPanel?.Show(Calculator, CalculationTodo(), selectedKind == "Wall" ? selectedId : -1);
-                if (selectionCardOpen && (selectedKind == "Beam" || selectedKind == "Column")) ShowMemberCard();
+                if (selectionCardOpen && (selectedKind == "Beam" || selectedKind == "Column" || selectedKind == PlainWallKind)) ShowMemberCard();
                 else selectionCard.Show(Calculator, selectionCardOpen ? selectedKind : null, selectedId, designResults);
                 RefreshWallBuild(); // the wall construction window follows the selected wall and its design
 

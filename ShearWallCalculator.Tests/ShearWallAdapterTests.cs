@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using BuildingModel.Edits;
 using BuildingModel.Geometry;
@@ -28,10 +29,10 @@ namespace ShearWallCalculator.Tests
             for (int i = 1; i < lv.Length; i++)
             {
                 b.AddDiaphragm(lv[i], new Rect2(0, 0, 60, 40));
-                b.AddWall(lv[i - 1], lv[i], 0, 0, 60, 0);
-                b.AddWall(lv[i - 1], lv[i], 0, 40, 60, 40);
-                b.AddWall(lv[i - 1], lv[i], 0, 0, 0, 40);
-                b.AddWall(lv[i - 1], lv[i], 60, 0, 60, 40);
+                b.AddWall(lv[i - 1], lv[i], 0, 0, 60, 0, shearWall: true);
+                b.AddWall(lv[i - 1], lv[i], 0, 40, 60, 40, shearWall: true);
+                b.AddWall(lv[i - 1], lv[i], 0, 0, 0, 40, shearWall: true);
+                b.AddWall(lv[i - 1], lv[i], 60, 0, 60, 40, shearWall: true);
             }
             return b;
         }
@@ -76,7 +77,7 @@ namespace ShearWallCalculator.Tests
         {
             var b = Box(out var l2, out var roof);
             b.AddOpening(b.Ground, roof, new Rect2(25, 0, 35, 15));
-            var tall = b.AddWall(b.Ground, roof, 30, 0, 30, 10);
+            var tall = b.AddWall(b.Ground, roof, 30, 0, 30, 10, shearWall: true);
             var other = b.AddWall(b.Ground, l2, 45, 10, 45, 20, shearWall: false);
             var s = ShearWallAdapter.ToCalculators(b);
             int key = ShearWallAdapter.Number(tall.Id).Value;
@@ -89,7 +90,7 @@ namespace ShearWallCalculator.Tests
         public void Design_IsKeptPerStoryInTheWallsBag()
         {
             var b = Box(out var l2, out var roof);
-            var tall = b.AddWall(b.Ground, roof, 20, 0, 20, 40); // reached at both levels
+            var tall = b.AddWall(b.Ground, roof, 20, 0, 20, 40, shearWall: true); // reached at both levels
             var s = ShearWallAdapter.ToCalculators(b);
             int key = ShearWallAdapter.Number(tall.Id).Value;
             s[0].Calculator._wall_system._walls[key].Design.EdgeSpacing = 2;
@@ -161,24 +162,82 @@ namespace ShearWallCalculator.Tests
             Assert.AreEqual(0, BuildingModel.Checks.ModelChecks.Run(b).Count(i => i.Code == "BadReference"));
         }
 
-        /// <summary>Typed coordinates in the designer's table go back to the model's wall and single-rectangle diaphragm.</summary>
+        /// <summary>A plain wall (the Building Model's walls are all plain now) is no shear wall: not designed, no default sheathing.</summary>
         [TestMethod]
-        public void StoreGeometry_WritesTypedCoordinatesBack()
+        public void PlainWalls_AreNotDesigned_UntilDeclared()
+        {
+            var b = Building.New();
+            var l2 = b.AddLevel("Level 2", 10);
+            b.AddDiaphragm(l2, new Rect2(0, 0, 40, 30));
+            var south = b.AddWall(b.Ground, l2, 0, 0, 40, 0);
+            var west = b.AddWall(b.Ground, l2, 0, 0, 0, 30);
+            Assert.AreEqual(0, ShearWallAdapter.Adopt(b), "a new project: nothing was marked");
+            Assert.IsTrue(ShearWallAdapter.Declares(b));
+            var s = ShearWallAdapter.ToCalculators(b)[0];
+            Assert.AreEqual(0, s.Calculator._wall_system._walls.Count, "plain walls carry only their gravity load");
+            Assert.IsNull(south.GetData(ShearWallAdapter.WallKey), "no design given to a plain wall");
+            var issues = ShearWallAdapter.Checks(b);
+            Assert.AreEqual(2, issues.Count(i => i.Code == "NoLateralSupport"), string.Join("\n", issues.Select(i => i.Message)));
+            Assert.IsTrue(issues.All(i => i.Severity == BuildingModel.Checks.Severity.Warning), "a warning: the building is still a valid model");
+
+            // the south wall from 4 to 16 ft along it: the part designed, its ends the hold-downs'
+            Assert.IsTrue(ShearWallAdapter.Declare(b, south, 4, 16, new DesignSettings()));
+            Assert.IsFalse(ShearWallAdapter.Declare(b, west, 3, 3.2, new DesignSettings()), "too short a part");
+            s = ShearWallAdapter.ToCalculators(b)[0];
+            var w = s.Calculator._wall_system._walls.Values.Single();
+            Assert.AreEqual(4, Math.Min(w.Start.X, w.End.X), Tol);
+            Assert.AreEqual(16, Math.Max(w.Start.X, w.End.X), Tol);
+            Assert.AreEqual(12, w.WallLength, Tol);
+            Assert.IsNotNull(w.Design, "declared with the project's exterior default to start from");
+            Assert.IsNull(ShearWallAdapter.ReadWall(south).AutoExterior, "the declared sheathing is the wall's own: it does not follow a move");
+            Assert.AreEqual(1, ShearWallAdapter.Checks(b).Count(i => i.Code == "NoLateralSupport"), "still none running S-N");
+
+            // a part asked past the wall's end is kept inside it
+            Assert.IsTrue(ShearWallAdapter.Declare(b, west, -5, 50, new DesignSettings()));
+            var p = ShearWallAdapter.ShearPartOf(b, west);
+            Assert.AreEqual(0, p.From, Tol);
+            Assert.AreEqual(30, p.To, Tol);
+            Assert.AreEqual(0, ShearWallAdapter.Checks(b).Count);
+
+            ShearWallAdapter.Undeclare(south);
+            Assert.IsFalse(ShearWallAdapter.IsShearWall(b, south));
+            Assert.IsNull(south.GetData(ShearWallAdapter.WallKey));
+        }
+
+        /// <summary>A project from before keeps its shear walls: the walls the model marked, each declared over its whole length.</summary>
+        [TestMethod]
+        public void Adopt_AProjectFromBefore_KeepsItsMarkedWalls()
         {
             var b = Box(out var l2, out _);
-            var s = ShearWallAdapter.ToCalculators(b)[0];
-            int key = ShearWallAdapter.Number(b.Walls[0].Id).Value;
-            Assert.IsFalse(ShearWallAdapter.StoreGeometry(b, s), "nothing typed yet");
-            var w = s.Calculator._wall_system._walls[key];
-            w.Start = new System.Windows.Point(0, 0);
-            w.End = new System.Windows.Point(50, 0);
-            var d = s.Calculator._diaphragm_system._diaphragms.Values.Single();
-            d.P1 = new System.Windows.Point(0, 0);
-            d.P3 = new System.Windows.Point(70, 40);
-            Assert.IsTrue(ShearWallAdapter.StoreGeometry(b, s));
-            Assert.AreEqual(50, b.Walls[0].End.X, Tol);
-            Assert.AreEqual(70, b.DiaphragmsOn(l2).Single().Pieces[0].X1, Tol);
-            Assert.IsFalse(ShearWallAdapter.StoreGeometry(b, s), "already stored");
+            b.Walls[1].IsShearWall = false;
+            Assert.IsFalse(ShearWallAdapter.Declares(b));
+            Assert.AreEqual(7, ShearWallAdapter.ShearWalls(b).Count, "before adopting: the marked walls");
+            Assert.AreEqual(7, ShearWallAdapter.Adopt(b));
+            Assert.AreEqual(0, ShearWallAdapter.Adopt(b), "once");
+            Assert.AreEqual(7, ShearWallAdapter.ShearWalls(b).Count);
+            Assert.AreEqual(60, ShearWallAdapter.ShearPartOf(b, b.Walls[0]).To, Tol);
+            // from now on the marks mean nothing: a newly marked wall is not a shear wall
+            b.Walls[1].IsShearWall = true;
+            Assert.IsFalse(ShearWallAdapter.IsShearWall(b, b.Walls[1]));
+        }
+
+        /// <summary>Two shear walls declared over each other on one story: an error; two plain walls so are the model's warning.</summary>
+        [TestMethod]
+        public void Checks_OverlappingShearParts_AreAnError()
+        {
+            var b = Building.New();
+            var l2 = b.AddLevel("Level 2", 10);
+            b.AddDiaphragm(l2, new Rect2(0, 0, 40, 30));
+            var a = b.AddWall(b.Ground, l2, 0, 0, 40, 0);
+            var c = b.AddWall(b.Ground, l2, 10, 0, 30, 0);
+            ShearWallAdapter.Adopt(b);
+            ShearWallAdapter.Declare(b, a, 0, 8, new DesignSettings());
+            ShearWallAdapter.Declare(b, c, 0, 10, new DesignSettings());
+            Assert.IsFalse(ShearWallAdapter.Checks(b).Any(i => i.Code == "WallOverlap"), "0-8 and 10-20: apart");
+            ShearWallAdapter.Declare(b, a, 0, 15, new DesignSettings());
+            var ov = ShearWallAdapter.Checks(b).Single(i => i.Code == "WallOverlap");
+            Assert.AreEqual(BuildingModel.Checks.Severity.Error, ov.Severity);
+            StringAssert.Contains(ov.Message, "5 ft");
         }
 
         /// <summary>A wall drawn after the project's defaults were set starts with the one for where it is: exterior or interior.</summary>
@@ -190,8 +249,8 @@ namespace ShearWallCalculator.Tests
             s[0].Calculator.DesignSettings.NewWallDesign = new WallDesignInputs { EdgeSpacing = 3 };
             s[0].Calculator.DesignSettings.NewInteriorWallDesign = new WallDesignInputs { EdgeSpacing = 2 };
             ShearWallAdapter.StoreDesign(b, s);
-            var inside = b.AddWall(b.Ground, l2, 20, 0, 20, 40);      // across the building: only its ends touch the outline
-            var edge = b.AddWall(b.Ground, l2, 50, 0, 70, 0);         // half of it on the south edge
+            var inside = b.AddWall(b.Ground, l2, 20, 0, 20, 40, shearWall: true);      // across the building: only its ends touch the outline
+            var edge = b.AddWall(b.Ground, l2, 50, 0, 70, 0, shearWall: true);         // half of it on the south edge
             var again = ShearWallAdapter.ToCalculators(b);
             Assert.AreEqual(2, DesignOf(again[0], inside).EdgeSpacing, "interior: the project's interior default");
             Assert.AreEqual(3, DesignOf(again[0], edge).EdgeSpacing, "any part on the outside edge: exterior");
@@ -205,7 +264,7 @@ namespace ShearWallCalculator.Tests
         public void NewWall_ProgramDefaults_StructuralIOutside_GypsumInside()
         {
             var b = Box(out var l2, out _);
-            var inside = b.AddWall(b.Ground, l2, 30, 0, 30, 40);
+            var inside = b.AddWall(b.Ground, l2, 30, 0, 30, 40, shearWall: true);
             var s = ShearWallAdapter.ToCalculators(b);
             var outsideDesign = DesignOf(s[0], b.Walls[0]);
             Assert.AreEqual(SheathingTable.WoodPanels, outsideDesign.EffectiveFace1().Table);
@@ -222,8 +281,8 @@ namespace ShearWallCalculator.Tests
         public void UntouchedDefault_FollowsTheWall_EditedDesignStays()
         {
             var b = Box(out var l2, out _);
-            var a = b.AddWall(b.Ground, l2, 20, 5, 20, 35);
-            var c = b.AddWall(b.Ground, l2, 40, 5, 40, 35);
+            var a = b.AddWall(b.Ground, l2, 20, 5, 20, 35, shearWall: true);
+            var c = b.AddWall(b.Ground, l2, 40, 5, 40, 35, shearWall: true);
             var s = ShearWallAdapter.ToCalculators(b);
             ShearWallAdapter.StoreDesign(b, s);                                     // stored as given: the interior default
             DesignOf(s[0], c).Species = WoodTypes.WOODTYPE_SPF_HF;                 // the user edits wall c
@@ -304,7 +363,7 @@ namespace ShearWallCalculator.Tests
             var b = Box(out var l2, out _);
             var h = new ModelHistory();
             h.Reset(b);
-            b.AddWall(b.Ground, l2, 20, 0, 20, 40);
+            b.AddWall(b.Ground, l2, 20, 0, 20, 40, shearWall: true);
             Assert.IsTrue(h.Record(b));
             Assert.IsNotNull(h.Undo(b));
             ShearWallAdapter.StoreDesign(b, ShearWallAdapter.ToCalculators(b)); // the designer fills in the walls' design

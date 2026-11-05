@@ -97,6 +97,7 @@ namespace ShearWallVisualizer
                 if (!foundationView)
                 {
                     DrawBracedWallLines(e.Context);
+                    DrawShearParts(e.Context); // the declared part of each shear wall, by its check; the rest of the wall stays plain
                     DrawPlanHoldowns(e.Context); // the markers first: the tags and labels keep off them
                     DrawWallDesign(e.Context);
                     DrawCOMandCOR(e.Context);
@@ -109,7 +110,7 @@ namespace ShearWallVisualizer
                 UpdateShowing();    // in a word or two, what the plan shows
                 MeasureLabelRoom(); // what Zoom to the drawing leaves around the plan for these labels
             };
-            s.WallStyle = DesignPen;
+            s.WallStyle = w => null; // every wall plain: a shear wall's declared part is drawn over it (DrawShearParts)
             s.InterceptClick = ClickOnTag; // a wall's design tag picks the wall, as a click on the wall does
             s.ExtraSnapPoints = HoldownSnapPoints;
             s.LevelCaption = l => ""; // no tag on the plan: the strip above it says the level and what is shown
@@ -144,6 +145,9 @@ namespace ShearWallVisualizer
         private void SetBuilding(Building b, IList<ShearWallCalculatorBase> existing, int active = 0)
         {
             building = b ?? Building.New();
+            // the shear walls are declared here; a project from before keeps the walls it marked, each over its whole length
+            int adopted = ShearWallAdapter.Adopt(building);
+            if (adopted > 0) Log.Info("Design", $"A project from before: its {adopted} marked shear wall{(adopted == 1 ? "" : "s")} declared over the whole length. Pick a wall to change its shear part.");
             var levelsUp = ShearWallAdapter.Stories(building);
             if (levelsUp.Count == 0) building.AddLevel("Level 2", defaultWallHeight); // the designer needs a story
             levelsUp = ShearWallAdapter.Stories(building);
@@ -240,14 +244,15 @@ namespace ShearWallVisualizer
             finally { storing = false; }
         }
 
-        /// <summary>Coordinates typed on the Members tab go to the model, that story's (then everything follows from it).</summary>
+        /// <summary>
+        /// An edit on the Members tab: a type typed there is design data and is kept; coordinates are not (the geometry is the
+        /// Building Model's, and the rows show each shear wall's declared part): the rows go back to the model's.
+        /// </summary>
         private void GeometryTyped(int story)
         {
-            var s = story >= 0 && story < stories.Count ? stories[story] : CurrentStory;
-            if (s == null) { UpdateShearWallUI(); return; }
-            ShearWallAdapter.StoreDesign(building, stories); // a height or type typed there as well
-            if (!ShearWallAdapter.StoreGeometry(building, s)) { UpdateShearWallUI(); return; }
-            Sketch.Commit($"Coordinates typed on the Members tab ({s.Level.Name}).");
+            if (CurrentStory == null) { UpdateShearWallUI(); return; }
+            if (ShearWallAdapter.StoreDesign(building, stories)) Sketch.Commit("Design changed on the Members tab.");
+            else { ModelToCalculators(); ShowStatusMessage(LogLevel.Info, Sketch.GeometryLockedMessage); }
         }
 
         /// <summary>A member to delete from the Members tab: members are deleted in the Building Model (the geometry is edited only there).</summary>
@@ -267,6 +272,7 @@ namespace ShearWallVisualizer
             int? key = CurrentStory?.Key(id);
             selectedModelId = null;
             if (o is Wall && key != null) { selectedKind = "Wall"; selectedId = key.Value; }
+            else if (o is Wall) { selectedKind = PlainWallKind; selectedId = -1; selectedModelId = id; } // not a shear wall here: its card offers to declare it
             else if (o is Diaphragm && key != null) { selectedKind = "Diaphragm"; selectedId = key.Value; }
             else if (o is Beam || o is Column) { selectedKind = o is Beam ? "Beam" : "Column"; selectedId = -1; selectedModelId = id; }
             else { selectedKind = null; selectedId = -1; }
@@ -303,7 +309,7 @@ namespace ShearWallVisualizer
         private void DropMissingSelection()
         {
             if (selectedKind == null) return;
-            if ((selectedKind == "Beam" || selectedKind == "Column") && building?.Find(selectedModelId) != null) return;
+            if ((selectedKind == "Beam" || selectedKind == "Column" || selectedKind == PlainWallKind) && building?.Find(selectedModelId) != null) return;
             bool there = selectedKind == "Wall" ? Calculator._wall_system._walls.ContainsKey(selectedId)
                        : selectedKind == "Diaphragm" && Calculator._diaphragm_system._diaphragms.ContainsKey(selectedId);
             if (there) return;
@@ -339,6 +345,73 @@ namespace ShearWallVisualizer
             return false;
         }
 
+        // ------------------------------------------------------------------ the shear walls: declared here
+
+        /// <summary>The selection kind of a wall that is not a shear wall (its card offers to declare it).</summary>
+        private const string PlainWallKind = "PlainWall";
+
+        /// <summary>True when the wall's start is its west (W-E) or south (S-N) end: the card gives distances from that end.</summary>
+        private static bool StartIsLow(Wall w) => w.Direction == WallDirection.SouthNorth ? w.Start.Y <= w.End.Y : w.Start.X <= w.End.X;
+
+        private static string LowEnd(Wall w) => w.Direction == WallDirection.SouthNorth ? "south" : "west";
+
+        /// <summary>After the event that asked for it (a box or a button on the card): the card is rebuilt by the change.</summary>
+        private void Later(Action a) => Dispatcher.BeginInvoke(a, System.Windows.Threading.DispatcherPriority.Input);
+
+        private Wall ShearWallByKey(int key) => building?.Find(CurrentStory?.ModelId("Wall", key)) as Wall;
+
+        /// <summary>The card's shear part row: the declared part, in ft from the wall's west or south end.</summary>
+        private Controls.SelectionCard.ShearPartInfo ShearPartFor(int key)
+        {
+            var w = ShearWallByKey(key);
+            var p = w == null ? null : ShearWallAdapter.ShearPartOf(building, w);
+            if (p == null) return null;
+            double len = w.Length;
+            bool low = StartIsLow(w);
+            return new Controls.SelectionCard.ShearPartInfo
+            {
+                From = low ? p.From : len - p.To, To = low ? p.To : len - p.From, WallLength = len, FromEnd = LowEnd(w),
+            };
+        }
+
+        /// <summary>A shear part typed on the card (ft from the wall's west or south end): declared, saved with the design, undoable.</summary>
+        private void SetShearPart(int key, double a, double e)
+        {
+            var w = ShearWallByKey(key);
+            if (w == null) return;
+            double len = w.Length, lo = Math.Min(a, e), hi = Math.Max(a, e);
+            bool low = StartIsLow(w);
+            if (!ShearWallAdapter.Declare(building, w, low ? lo : len - hi, low ? hi : len - lo, Calculator?.DesignSettings))
+            {
+                ShowStatusMessage(LogLevel.Info, $"{w.Id}: a shear part is at least {ShearWallAdapter.MinShearLength:0.#} ft, inside the wall's {len:0.##} ft.");
+                UpdateShearWallUI();
+                return;
+            }
+            var p = ShearWallAdapter.ShearPartOf(building, w);
+            double f = low ? p.From : len - p.To, t = low ? p.To : len - p.From;
+            Sketch.Commit($"{w.Id}: shear part {f:0.##} to {t:0.##} ft from its {LowEnd(w)} end ({t - f:0.##} of {len:0.##} ft); the hold-downs at its ends.");
+            SelectionFromSketch();
+        }
+
+        /// <summary>A plain wall made a shear wall: over its whole length to start with, with the project's sheathing for where it is.</summary>
+        private void MakeShearWall(string id)
+        {
+            if (!(building?.Find(id) is Wall w)) return;
+            if (!ShearWallAdapter.Declare(building, w, 0, w.Length, Calculator?.DesignSettings)) return;
+            Sketch.Commit($"{w.Id} declared a shear wall over its whole length ({w.Length:0.##} ft). Its shear part and sheathing are on its card.");
+            SelectionFromSketch();
+        }
+
+        /// <summary>A shear wall made a plain wall again: its shear part and sheathing are taken off (undo puts them back).</summary>
+        private void MakePlainWall(int key)
+        {
+            var w = ShearWallByKey(key);
+            if (w == null) return;
+            ShearWallAdapter.Undeclare(w);
+            Sketch.Commit($"{w.Id} is no longer a shear wall: it carries its gravity load only.");
+            SelectionFromSketch();
+        }
+
         // ------------------------------------------------------------------ design colours, level caption
 
         private static readonly Pen ClosePen = FrozenPen(((SolidColorBrush)Controls.Ui.CloseStripe).Color, 4);
@@ -358,11 +431,15 @@ namespace ShearWallVisualizer
         /// A shear wall of the level shown, by its design check: the usual blue when it passes (or before a check), yellow when
         /// close to its limit, crimson and dashed when it fails. The dash tells a fail without colour (colours in Ui).
         /// </summary>
-        private Pen DesignPen(Wall w)
+        private Pen DesignPen(int key) =>
+            !designResults.TryGetValue(key, out var check) ? PassPen : check.State == DesignState.Fail ? FailPen : check.State == DesignState.Close ? ClosePen : PassPen;
+
+        /// <summary>Each shear wall's declared part on the level shown (the calculator's wall is that part), over the plain wall.</summary>
+        private void DrawShearParts(DrawingContext ctx)
         {
-            var key = CurrentStory?.Key(w.Id);
-            if (key == null || !designResults.TryGetValue(key.Value, out var check)) return null;
-            return check.State == DesignState.Fail ? FailPen : check.State == DesignState.Close ? ClosePen : PassPen;
+            if (Calculator?._wall_system == null) return;
+            foreach (var kv in Calculator._wall_system._walls)
+                ctx.DrawLine(DesignPen(kv.Key), Sketch.ToScreen(new Point2(kv.Value.Start.X, kv.Value.Start.Y)), Sketch.ToScreen(new Point2(kv.Value.End.X, kv.Value.End.Y)));
         }
 
 
@@ -375,6 +452,7 @@ namespace ShearWallVisualizer
         private void UpdateIssues()
         {
             var list = ModelChecks.Run(building);
+            list.AddRange(ShearWallAdapter.Checks(building)); // the shear walls: declared here, so checked here
             var s = CurrentStory;
             if (s != null)
             {

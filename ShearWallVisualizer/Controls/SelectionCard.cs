@@ -20,6 +20,8 @@ namespace ShearWallVisualizer.Controls
         public event Action<string, int> EditGeometry;    // go to the Members tab
         public event Action<string, int> DeleteRequested;
         public event Action<string, int> OpenDetail;      // the wall's elevation and calculation
+        public event Action<int, double, double> ShearPartChanged; // a shear wall's declared part typed: from, to (ft from its west or south end)
+        public event Action<int> NotShearWall;                // the wall is to be a plain wall again
         public event EventHandler Closed;
 
         private readonly StackPanel body = new StackPanel();
@@ -57,6 +59,8 @@ namespace ShearWallVisualizer.Controls
             bool ew = w.WallDir == WallDirs.EastWest;
             Header($"Wall {id}", $"{(ew ? "E-W" : "N-S")} · {w.WallLength:0.##} ft long · {w.WallHeight:0.##} ft high");
             Row("From – to", $"({w.Start.X:0.##}, {w.Start.Y:0.##}) – ({w.End.X:0.##}, {w.End.Y:0.##}) ft");
+            var part = ShearPartOf?.Invoke(id);
+            if (part != null) ShearPartRow(part);
 
             if (calc.WallShearRange.TryGetValue(id, out var range))
                 Row("Design shear V", $"{range.Design:0.00} k", range.DesignCase);
@@ -90,7 +94,67 @@ namespace ShearWallVisualizer.Controls
                                             Foreground = Ui.StateInk(r.State), FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap },
                 });
             }
-            Buttons(("Detail", () => OpenDetail?.Invoke(kind, id)), ("Design", () => OpenDesign?.Invoke(kind, id)), ("Edit", () => EditGeometry?.Invoke(kind, id)), ("Delete", () => DeleteRequested?.Invoke(kind, id)));
+            Buttons(("Detail", () => OpenDetail?.Invoke(kind, id)), ("Design", () => OpenDesign?.Invoke(kind, id)), ("Edit", () => EditGeometry?.Invoke(kind, id)),
+                    ("Not a shear wall", NotShearWall == null ? (Action)null : () => NotShearWall(id)));
+        }
+
+        /// <summary>A shear wall's declared part, for the card: from and to (ft from its west or south end), of the wall's length.</summary>
+        public sealed class ShearPartInfo
+        {
+            public double From { get; set; }
+            public double To { get; set; }
+            public double WallLength { get; set; }
+            /// <summary>"west" or "south": the end the distances are from.</summary>
+            public string FromEnd { get; set; }
+        }
+
+        /// <summary>The declared part of a shear wall by its key (set by the window); null: the card shows no part row.</summary>
+        public Func<int, ShearPartInfo> ShearPartOf { get; set; }
+
+        /// <summary>"Shear part  [from] to [to] ft": the part of the wall that counts, its ends the hold-downs'. Enter or leaving a box applies it.</summary>
+        private void ShearPartRow(ShearPartInfo p)
+        {
+            var g = new Grid { Margin = new Thickness(0, 2, 0, 1), ToolTip = $"The part of the {p.WallLength:0.##} ft wall that is a shear wall, in ft from its {p.FromEnd} end. " +
+                                                                           "The hold-downs go at its two ends. Type and press Enter." };
+            g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
+            g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            g.Children.Add(new TextBlock { Text = "Shear part", Foreground = Ui.InkMuted, VerticalAlignment = VerticalAlignment.Center });
+            var sp = new StackPanel { Orientation = Orientation.Horizontal };
+            TextBox Box(double v) => new TextBox { Text = v.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture), Width = 48, FontSize = 12, Padding = new Thickness(2, 0, 2, 0) };
+            var from = Box(p.From);
+            var to = Box(p.To);
+            void Apply()
+            {
+                var inv = System.Globalization.CultureInfo.InvariantCulture;
+                if (!double.TryParse(from.Text, System.Globalization.NumberStyles.Float, inv, out double a) ||
+                    !double.TryParse(to.Text, System.Globalization.NumberStyles.Float, inv, out double e)) { from.Text = p.From.ToString("0.##", inv); to.Text = p.To.ToString("0.##", inv); return; }
+                if (Math.Abs(a - p.From) < 1e-6 && Math.Abs(e - p.To) < 1e-6) return;
+                ShearPartChanged?.Invoke(id, a, e);
+            }
+            foreach (var t in new[] { from, to })
+            {
+                t.KeyDown += (s, e) => { if (e.Key == System.Windows.Input.Key.Enter) { Apply(); e.Handled = true; } };
+                t.LostKeyboardFocus += (s, e) => Apply();
+            }
+            sp.Children.Add(from);
+            sp.Children.Add(new TextBlock { Text = " to ", VerticalAlignment = VerticalAlignment.Center });
+            sp.Children.Add(to);
+            sp.Children.Add(new TextBlock { Text = $" ft of {p.WallLength:0.##}, from the {p.FromEnd} end", Foreground = Ui.InkSecondary, VerticalAlignment = VerticalAlignment.Center });
+            Grid.SetColumn(sp, 1);
+            g.Children.Add(sp);
+            body.Children.Add(g);
+        }
+
+        /// <summary>A wall that is not a shear wall: it carries its gravity load only. One button declares it a shear wall.</summary>
+        public void ShowPlainWall(string title, string subtitle, IEnumerable<(string label, string value)> rows, Action makeShearWall)
+        {
+            kind = null;
+            id = -1;
+            body.Children.Clear();
+            Header(title, subtitle);
+            foreach (var (label, value) in rows) Row(label, value);
+            Buttons(("Make it a shear wall", makeShearWall));
+            Visibility = Visibility.Visible;
         }
 
         /// <summary>A beam or a column (from the building model): a few rows and its buttons.</summary>

@@ -398,6 +398,19 @@ namespace ShearWallVisualizer
                 selectionCard.ShowMember($"Column {col.Id}", $"up to {building.Level(col.TopLevelId)?.Name}", rows,
                     () => RefreshWallBuild(open: true), null); // deleted in the Building Model
             }
+            else if (o is Wall pw)
+            {
+                var lo = building.Level(pw.BaseLevelId);
+                var hi = building.Level(pw.TopLevelId);
+                string dir = pw.Direction == WallDirection.WestEast ? "W-E" : pw.Direction == WallDirection.SouthNorth ? "S-N" : "angled";
+                var plainRows = new List<(string, string)>
+                {
+                    ("Shear wall", "no: it carries its gravity load only"),
+                    ("Height", $"{lo?.Name} → {hi?.Name}"),
+                };
+                selectionCard.ShowPlainWall($"Wall {pw.Id}", $"{dir} · {pw.Length:0.##} ft", plainRows,
+                    pw.Direction == WallDirection.NotOrthogonal ? (Action)null : () => Later(() => MakeShearWall(pw.Id)));
+            }
             else selectionCard.Show(Calculator, null, -1, designResults);
         }
 
