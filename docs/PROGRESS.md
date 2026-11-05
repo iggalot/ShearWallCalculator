@@ -455,7 +455,7 @@ _Branch `dev/shared-sketcher`. Details: `SHARED_SKETCHER.md`._
   - Roof neglected if it lowers the shear ("not less than with the roof neglected").
   - Parapets per §28.3.2 (same as §27.3.4).
 - **Load cases sent to the walls (per direction):** basic (±torsion: end zones at either corner), torsional (zones beyond the center at 25%, ±), and the §28.3.4 minimum (16/8 psf) as its own case. The torsional cases are skipped with the existing exemption checkbox (one story h ≤ 30 ft, or ≤ 2 stories light-frame or flexible diaphragms).
-- **Not covered → falls back to Ch. 27 with a note:** h > 60 ft, h > least plan dimension, hip roofs, open buildings.
+- **Not covered → falls back to Ch. 27 with a note:** h > 60 ft, h > least plan dimension, open buildings. (Hip roofs are now covered, per Fig. C28.3-3; see the 2026-11-04 wind entry at the end.)
 - **Hand check (7-22, 115 mph, C, 60×40×15 flat):** q_h·K_d = 24.5 psf; from W: walls 456·q = 11.17 k, torsion ±16.5 kip-ft, torsional case 7.37 k / ±54.5 kip-ft, minimum 9.6 k; from S 16.24 k. Chapter 27 gives 15.0 / 24.4 k. App matches.
 - **Details:** new "Shear walls: Chapter 28" page (zone plan, zone table, totals, Ch. 27 comparison); load-cases page follows the procedure.
 - **To verify against the printed standard:** see DATA_VERIFICATION.md, Chapter 28.
@@ -1377,3 +1377,40 @@ The Shear Wall Calculator only finds hold-downs. It no longer counts dead load a
   - 0.6 × 10 × 1000 × 10 / 9.75 + 500 = 6,653.8 lb.
   - LRFD: 100,000 / 9.75 + 800 = 11,056.4 lb.
   - WoodFraming 27, all passing; the StudRules tests went with the class.
+
+### Wind from the code and commentary; one wind source for every app (2026-11-04)
+
+**ASCE 7-16 and 7-22 Ch. 27 and 28, checked against the printed code and commentary** (read from C:\AllenEngineering\Codes):
+- **The 16/8 psf minimum is a separate load case**, one per wind, with no torsion and no internal pressure (C27.1.5; C28.3.4 in 7-16, C28.3.6 in 7-22). Cases 1–4 are built on the calculated force. This replaces the earlier "raises the force" rule.
+- **Flat roofs (Ch. 28):** run as though they had a ridge at mid-building, once each way (Case A and Case B in each direction).
+- **Hip roofs (Ch. 28):** now covered, per Fig. C28.3-3. The Case 1 roof coefficients are used for both load cases.
+- **Zone width a:** uses the eave height for θ ≤ 10°, the a ≤ 0.8h cap, and the large-building exception (least dimension > 300 ft).
+- **7-22 Ch. 28 printed values:** the torsional T table as printed, and Kz 0.70 for Exposure B with z < 30 ft (Table 26.10-1 note a).
+- **7-22 Fig. 27.3-8 note 2:** in Cases 3 and 4 each roof area takes 100 % (Case 4: 75 %) of the larger of its two winds' roof pressures. 7-16 keeps 75 % / 56.3 % of each.
+- **Fig. 27.3-1:** a value that isn't printed is 0. Note b's area reduction is applied and cited, with the unreduced value shown beside it in the wind calculator.
+- **Ch. 28 parapets:** not covered (cited); the Ch. 27 parapet force is carried instead.
+
+**One wind source:** the Wind Calculator's own case list is the only wind for every app.
+- `WindCases.For` returns that list for the setup's procedure: 212 cases for Ch. 27 (208 plus 4 minimum cases).
+- `StoryWindLoads.ComputeCases` gives every one of those cases on every floor, under its own name:
+  - the wall part by the wall force on the floor's strip;
+  - the minimum's 16 psf by wall area;
+  - the roof and parapets on the roof.
+- **Shear Wall Calculator:**
+  - designs the walls for those exact cases;
+  - saves only its hold-down couples, under those names, with no direction of its own;
+  - keeps manual loads, which unlink the wind and never reach the Load Manager.
+- **Load Manager:**
+  - `RoofWind.Cases` gives one roof case per calculator case, with that case's own zones, GCpi sign and windward soffit (27.3.3 / 28.3.3);
+  - its own 8 roof cases and the direction pairing are removed;
+  - the hold-downs join by case name, and a stale saved case is left out with a note.
+
+**Speed, timed on lbltwo:**
+- **Load Manager uplift:** 2.9 s → 0.39 s per edit, with identical results (4,452 values compared).
+  - Each point's zone is now found once per zone layout and shared by the cases with that layout.
+  - The cases then run in parallel.
+- **Shear Wall Calculator:** about 0.23 s per change, against 0.08 s with the old 36 cases. The wall analysis itself takes about 7 ms; building the 212 cases takes about 130 ms.
+
+**Tests:** wind 336 pass (the 4 known published-example deviations fail as before), wind UI 65, SWC 219, Load Manager 50.
+
+**Next:** build the wind cases' zone pieces once from the geometry, and fill in each case's values from them.
