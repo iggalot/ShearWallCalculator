@@ -1,5 +1,8 @@
 # Handoff: continuing the shared-sketcher work on another machine
 
+> **Superseded for the current state:** read `CLAUDE.md` and `..\DesignHub\docs\SUITE.md` (2026-11-05). The branches
+> below are from 2026-11-02; all the repos are now on `dev/ui-pass-2` (NDS_WoodLibrary on `dev/nds2018`).
+
 _Written 2026-11-02. This file sums up the instructions, rules and state of the work so it can be picked up on another
 machine (by a person or by Claude Code). Give it to the assistant at the start: "Read docs/HANDOFF.md and continue."_
 

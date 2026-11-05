@@ -8,14 +8,23 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
 
 ## Next up
 
-- [ ] **Central hub (launcher) for the apps.** One window that opens the project (.bldg.json /
-  project folder) and launches each app on it: Building Model editor, Wind Load Calculator,
-  Load Manager, Shear Wall Calculator, and later apps.
-  - Each app can be enabled or disabled by access level or authorization (a per-user or per-license
-    list of the apps they may run; a disabled app shows greyed out with the reason on hover).
-  - For now everything is authorized. Keep the authorization check in one place so it can later
-    read a license or a user file.
-  - Shows the project folder, the model's status, and which outputs are out of date.
+- [~] **Central hub (launcher) for the apps.** The prototype is built: the new repo `..\DesignHub`
+  (`DesignHub.exe`), branch `dev/hub-prototype`. See its `README.md` and `docs/DESIGN.md`.
+  - [x] Opens a project, shows the five steps of the work with each one's state, and the next step.
+  - [x] Launches each app on the project, one at a time.
+  - [x] Access in one place (`IAccessPolicy`; everyone authorized for now).
+  - [x] Flags the out-of-date foundation forces.
+  - [ ] The owner to click through it.
+  - [ ] Access from a real license or user file (`ListedApps` is ready; `HubSettings.Access()`).
+  - [ ] Open an app on a given page (`--page foundation` for the Load Manager's foundation view).
+- [ ] **Merge on save in the Building Model and the Shear Wall Calculator.** Re-read the file and replace only what
+  the app owns, as the Wind Load Calculator and the Load Manager already do. Today the two write the whole file from
+  memory, so a save can undo another app's saves made meanwhile. SWC also rewrites the `Wind` section from its copy.
+  The hub's one-app-per-project rule covers this until then.
+- [ ] **A shared project lock** in `BuildingModel.Core` (`<project>.lock`: app, process, time). Every app would see
+  another app on the same project, not only the apps the hub started.
+- [ ] **Stamp stored results with what they were based on** (model revision, inputs hash), as `Lateral` does with
+  `ModelRevision`, so the hub can say exactly what is out of date.
 
 ## Shear Wall Calculator
 
