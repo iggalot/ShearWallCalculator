@@ -1414,3 +1414,13 @@ The Shear Wall Calculator only finds hold-downs. It no longer counts dead load a
 **Tests:** wind 336 pass (the 4 known published-example deviations fail as before), wind UI 65, SWC 219, Load Manager 50.
 
 **Next:** build the wind cases' zone pieces once from the geometry, and fill in each case's values from them.
+
+**Speed, second pass (2026-11-04), timed on lbltwo:**
+- **Profile:** almost all of the 130 ms for building the 212 wind cases was in `WindLateralLoads.ProjectedAreas` (the wall and roof areas for the 16/8 psf minimum). It was a 2,000-point sum with about 70 roof-height evaluations at each point, about 32 ms a call, called 4 times. The zone overlays took about 1 ms.
+- **Fix:** `ProjectedAreas` is now exact, using the trapezoid rule on the break points where the height changes slope. `ProjectedAreaTests` checks the flat, gable both ways and hip results by hand.
+- **Zone overlays:** each corner wind's two zone maps are now overlaid once (`Overlap`, geometry only), and Cases 3 and 4 each put their own values on that geometry (`Resolve`).
+- **Results:**
+  - building the cases: 130 ms → about 10 ms;
+  - the Shear Wall Calculator's wind step: about 200 ms → about 15–30 ms;
+  - the Load Manager's whole chain: about 0.46 s per edit (3.0 s at the start), with identical uplift results (4,452 values).
+- **Tests:** wind 340 pass (the 4 known deviations fail as before), wind UI 65, SWC 219, Load Manager 50.
