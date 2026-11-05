@@ -14,6 +14,8 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
   - [x] Launches each app on the project, one at a time.
   - [x] Access in one place (`IAccessPolicy`; everyone authorized for now).
   - [x] Flags the out-of-date foundation forces.
+  - [x] Close project (title bar, the project page, Ctrl+W): back to the start page; asks first when an app the hub
+    opened still has the project.
   - [ ] The owner to click through it.
   - [ ] Access from a real license or user file (`ListedApps` is ready; `HubSettings.Access()`).
   - [ ] Open an app on a given page (`--page foundation` for the Load Manager's foundation view).
@@ -25,6 +27,18 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
   another app on the same project, not only the apps the hub started.
 - [ ] **Stamp stored results with what they were based on** (model revision, inputs hash), as `Lateral` does with
   `ModelRevision`, so the hub can say exactly what is out of date.
+
+## Future modules
+
+Shown greyed as "coming" in the hub (`SuiteApps`, in `..\DesignHub\DesignHub.Core\SuiteApps.cs`).
+
+- [ ] **Material takeoff (MTO).** Count the lumber (studs, plates, headers, joists, rafters), sheathing panels,
+  nails and hold-downs from the building model and the stored designs (the shear walls' sheathing, nailing and
+  hold-downs; later the framing). Reads only; a report or CSV in the project folder. It needs the designs stamped
+  with what they were based on (see above), so a takeoff is not made from out-of-date designs. The framing counts
+  belong in `WoodFraming`, not in an app. In the hub as "Material Takeoff" (id `takeoff`).
+- [ ] **Gravity framing** (joists, rafters, beams, columns) and **Foundation design** (footings). Already in the hub
+  as planned.
 
 ## Shear Wall Calculator
 
