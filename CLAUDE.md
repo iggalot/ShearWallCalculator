@@ -21,8 +21,14 @@
   - **Hold-downs only:** SWC does no dead load, gravity or stud work. Gravity loads are edited in the Load Manager
     (Loads > Edit loads); SWC only reads them.
   - On save, the end couples per wind case go into the `Lateral` section, for the foundation.
-- **Known issue:** `SaveProject` writes the whole file from memory, including the `Wind` section from its own copy.
-  If another app saved the file meanwhile, its changes are lost. Edit building and Edit loads are safe because SWC
-  waits for them. The Design Hub allows one app at a time per project. The fix (merge on save, a project lock) is in
-  `ROADMAP.md`.
+  - **SWC writes only its own data** (`OwnsData` in `MainWindow.Project.cs`): `ShearWall.Project`,
+    `ShearWall.DesignSettings`, the walls' and diaphragms' `ShearWall` design, and `Lateral`. `SaveProject` uses
+    `ModelFile.SaveOwnData`: it re-reads the file and replaces only those keys. It never writes the geometry, the wind or
+    the loads. If the building changed meanwhile, the project is reloaded after the save.
+  - **The geometry is the Building Model's.** `Sketch.GeometryLocked` is on and the drawing tools are hidden. Move,
+    copy, delete, notes, cuts and copying a level are done there (Model > Edit building).
+  - **The wind page is read-only** (`WindSetupControl.ReadOnly`, under a bar with **Edit wind**). Edit wind opens
+    `WindLoadCalculator.exe` on the project and waits, as Edit building does. A project with no `Wind` section has no
+    wind here: the walls use manual loads until the wind is set up.
+  - **One SWC per project:** it holds the `shearwalls` project lock (`ProjectLock`).
 - **Line endings:** `ShearWallVisualizer\MainWindow.xaml.cs` uses LF.

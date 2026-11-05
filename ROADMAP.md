@@ -19,12 +19,20 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
   - [ ] The owner to click through it.
   - [ ] Access from a real license or user file (`ListedApps` is ready; `HubSettings.Access()`).
   - [ ] Open an app on a given page (`--page foundation` for the Load Manager's foundation view).
-- [ ] **Merge on save in the Building Model and the Shear Wall Calculator.** Re-read the file and replace only what
-  the app owns, as the Wind Load Calculator and the Load Manager already do. Today the two write the whole file from
-  memory, so a save can undo another app's saves made meanwhile. SWC also rewrites the `Wind` section from its copy.
-  The hub's one-app-per-project rule covers this until then.
-- [ ] **A shared project lock** in `BuildingModel.Core` (`<project>.lock`: app, process, time). Every app would see
-  another app on the same project, not only the apps the hub started.
+- [x] **Merge on save, atomic saves, a shared project lock** (2026-11-05; BuildingModel `063084e` and the commits
+  after it). Every app re-reads the file at save and writes only its own part: the Building Model merges three-way
+  (`ModelFile.SaveMerged`), the Shear Wall Calculator replaces only its keys (`SaveOwnData`), the wind and the loads
+  only their sections. Saves keep a `.bak`. Each app holds `<model>.<app>.lock`; the hub reads the locks.
+- [x] **One owner per piece** (2026-11-05). The geometry is edited only in the Building Model (SWC's sketch is
+  `GeometryLocked`); the wind only in the Wind Load Calculator (SWC's wind page is read-only, with Edit wind).
+  The hub's steps: 1 Building, 2a Gravity loads, 2b Wind, 3 Shear walls, 4 Foundation loads.
+- [ ] **Relax the hub's one-app-at-a-time rule** now that saves merge (for example, allow the Load Manager beside the
+  Shear Wall Calculator), and let each app warn from the locks instead.
+- [ ] **SWC clean-up after the geometry lock:** remove the dead geometry handlers (Export/Apply change set, Copy from
+  below, Move and others); show the stud size in the construction window and the Members-tab coordinates read-only
+  rather than refusing the edit.
+- [ ] **SWC to watch the project file always** (today only while Edit building, loads or wind is open), so a change
+  saved by another app reloads it.
 - [ ] **Stamp stored results with what they were based on** (model revision, inputs hash), as `Lateral` does with
   `ModelRevision`, so the hub can say exactly what is out of date.
 

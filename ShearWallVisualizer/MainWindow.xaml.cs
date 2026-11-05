@@ -121,7 +121,7 @@ namespace ShearWallVisualizer
                 // rebuilt after this event: the box that raised it is on the card
                 Dispatcher.BeginInvoke(new Action(UpdateShearWallUI), System.Windows.Threading.DispatcherPriority.Input);
             };
-            this.Closed += (s, e) => Log.Written -= OnLogWritten;
+            this.Closed += (s, e) => { Log.Written -= OnLogWritten; projectLock?.Dispose(); projectLock = null; };
 
             // Set focus and canvas background
             this.Focusable = true;
@@ -138,7 +138,7 @@ namespace ShearWallVisualizer
                 windSetup.SendLoadsRequested += WindSetup_SendLoadsRequested;
                 windSetup.ShearWallsRequested += (s2, e2) => rbWorkspaceWalls.IsChecked = true;
                 windSetup.EditBuildingRequested += (s2, e2) => EditBuilding(); // the size and roof are edited in the Building Model editor
-                tabWindSetupTabItem.Content = windSetup;
+                tabWindSetupTabItem.Content = WindPage(windSetup); // read-only: the wind is set up in the Wind Load Calculator (Edit wind)
                 windLoadParams = windSetup.Parameters.Clone();
                 windVersion = windSetup.Version;
                 // (the building's size, stories and roof come from the model only: the old BuildingData and WIND input tabs are gone)
@@ -621,6 +621,7 @@ namespace ShearWallVisualizer
         {
             windLoadsLinked = false;
             windSetup?.SetShearWallLink(false, reason);
+            UpdateWindBar();
         }
         /// <summary>
         /// Assigns the three calculators to the appropriate tabs.

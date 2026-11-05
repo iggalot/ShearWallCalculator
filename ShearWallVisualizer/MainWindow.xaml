@@ -38,14 +38,10 @@
                 <MenuItem Header="_Undo" Click="Undo_Click" InputGestureText="Ctrl+Z"/>
                 <MenuItem Header="_Redo" Click="Redo_Click" InputGestureText="Ctrl+Y"/>
                 <Separator/>
-                <MenuItem Header="_Move" Click="btnMove_Click" InputGestureText="M"/>
-                <MenuItem Header="_Copy" Click="btnCopy_Click" InputGestureText="C"/>
-                <MenuItem Header="_Delete" Click="Delete_Click" InputGestureText="Del"/>
-                <Separator/>
-                <MenuItem x:Name="miCopyFromBelow" Header="Copy the level _below onto this level" Click="CopyFromBelow_Click"/>
                 <MenuItem Header="Mea_sure distance" Click="btnMeasure_Click" InputGestureText="T"/>
-                <MenuItem Header="_Note on the plan" Click="btnNote_Click" InputGestureText="N"/>
-                <MenuItem Header="Cu_t from the diaphragms (notch, L, courtyard)" Click="btnCut_Click" InputGestureText="K"/>
+                <Separator/>
+                <MenuItem Header="Move, copy, delete, notes, cuts: in the _Building Model editor..." Click="EditBuilding_Click"
+                          ToolTip="The building is drawn and changed only in the Building Model. This saves the project and opens it there; this window updates each time the editor saves."/>
                 <Separator/>
                 <MenuItem Header="_Ortho (move, copy, measure)" Click="btnOrtho_Click" InputGestureText="F8"/>
                 <MenuItem Header="_Zoom to the drawing" Click="btnZoomExtents_Click" InputGestureText="Z"/>
@@ -58,10 +54,6 @@
                 <Separator/>
                 <MenuItem Header="_Edit building in the Building Model editor..." Click="EditBuilding_Click"
                           ToolTip="Saves the project and opens it in the Building Model editor: the levels, size and roof are edited there. This window updates each time the editor saves."/>
-                <Separator/>
-                <MenuItem Header="_Export changes since opened..." Click="ExportChanges_Click"
-                          ToolTip="What was added, moved or deleted since the project was opened or saved, as a change set another copy of the model can apply"/>
-                <MenuItem Header="_Apply a change set..." Click="ApplyChanges_Click"/>
             </MenuItem>
             <MenuItem Header="_Loads">
                 <MenuItem Header="_Open in the Load Manager..." Click="EditLoads_Click"

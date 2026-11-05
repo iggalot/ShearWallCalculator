@@ -51,19 +51,42 @@ namespace ShearWallVisualizer
         // ------------------------------------------------------------------ the file's contents
 
         /// <summary>
-        /// The building as it is saved: a copy of the one being edited with the wind section (when the project uses the wind
-        /// loads), the designer's section and the plan images written into it.
+        /// The building with this app's data written into it (the designer's section, the walls' and diaphragms' designs).
+        /// Only that data is saved (<see cref="OwnsData"/>): the building is the Building Model's, the wind the Wind Load
+        /// Calculator's, the gravity loads the Load Manager's.
         /// </summary>
         private Building BuildingToSave()
         {
             var b = ModelFile.Clone(building);
-            if (windLoadsLinked && windSetup != null)
-                WindSection.From(windSetup.Version, windSetup.Parameters, windSetup.Building.EnclosureType, windSetup.Building.ParapetEnclosure,
-                                 windSetup.OnlyCases1And3, windSetup.RoofComponent, windSetup.WallComponent).Write(b);
-            else
-                b.SetData(WindSection.Key, null);
             ShearWallProject.Save(b, stories, manualLoads: !windLoadsLinked);
             return b;
+        }
+
+        /// <summary>
+        /// The data keys this app writes into the project file: its section and design settings, each wall's and diaphragm's
+        /// design ("ShearWall"), and the forces it puts on the foundation ("Lateral", for the Load Manager). Nothing else.
+        /// </summary>
+        private static bool OwnsData(string key) =>
+            key == ShearWallProject.Key || key == ShearWallAdapter.SettingsKey || key == ShearWallAdapter.WallKey || key == ShearWallAdapter.DiaphragmKey ||
+            key == LoadManager.LateralSection.Key;
+
+        /// <summary>This app's hold on the open project (one Shear Wall Calculator per project).</summary>
+        private ProjectLock projectLock;
+
+        /// <summary>Takes this app's lock on the project; false (and says so) when another Shear Wall Calculator has it open.</summary>
+        private bool HoldProject(string file)
+        {
+            if (projectLock != null && string.Equals(projectLock.ModelPath, file, StringComparison.OrdinalIgnoreCase)) return true;
+            var taken = ProjectLock.TryTake(file, "shearwalls", "Shear Wall Calculator", out var heldBy);
+            if (taken == null && heldBy != null)
+            {
+                MessageBox.Show(this, $"This project is already open in another Shear Wall Calculator: {heldBy.Describe()}.\n\nSwitch to that window, or close it first.",
+                                "Shear Wall Calculator", MessageBoxButton.OK, MessageBoxImage.Information);
+                return false;
+            }
+            projectLock?.Dispose();
+            projectLock = taken;
+            return true;
         }
 
         private string CurrentProjectJson() => HasProject ? ModelFile.BuildingToJson(BuildingToSave()) : null;
@@ -128,13 +151,14 @@ namespace ShearWallVisualizer
             if (q == null) return false;
             BuildingEdits.BuildFromSize(b, q);
 
+            if (!HoldProject(path)) return false;
             ProjectFolder.OpenFor(path);
             Log.Info("Project", $"New project {path}: {q.Length:0.##} × {q.Width:0.##} ft, {q.StoryHeights.Count} stor{(q.StoryHeights.Count == 1 ? "y" : "ies")} " +
                                 $"({string.Join(", ", q.StoryHeights.Select(h => h.ToString("0.##")))} ft).");
             projectDoc = new ModelDocument { Building = b };
             currentProjectPath = path;
-            var wind = WindSection.New();
-            LoadProject(b, new List<ShearWallCalculatorBase>(), wind, new ShearWallProject());
+            // no wind yet: it is set up in the Wind Load Calculator (Edit wind); this app makes none of its own
+            LoadProject(b, new List<ShearWallCalculatorBase>(), null, new ShearWallProject());
             Calculator.DesignSettings.HoldownsFromStandardList = designer != null && designer.StandardList.Count > 0;
             if (!SaveProject(saveAs: false)) return false;
             AddToRecentFiles(path);
@@ -155,6 +179,7 @@ namespace ShearWallVisualizer
         private bool OpenProject(string path, bool reload = false)
         {
             ModelDocument doc;
+            if (!HoldProject(path)) return false;
             try
             {
                 ProjectFolder.OpenFor(path); // first, so the opening is in the project's log
@@ -173,7 +198,8 @@ namespace ShearWallVisualizer
             var calcs = ShearWallProject.Open(b, manualLoads: wind == null, out var section);
             bool designed = section != null;
             section = section ?? new ShearWallProject();
-            if (!designed && wind == null) wind = WindSection.New(); // a model from the editor: designed with the wind loads
+            // no Wind section: the wind is not set up yet. It is set up in the Wind Load Calculator (Edit wind); this app
+            // makes no wind of its own (the walls wait, or use manual loads)
             b.SetData(WindSection.Key, null);
 
             int keepLevel = reload ? currentLevel : 0;
@@ -211,8 +237,9 @@ namespace ShearWallVisualizer
             ImageForNewProject();
             HideStartScreen();
             if (!windLoadsLinked)
-                UnlinkWindLoads("This project uses manual loads (it has no wind inputs). Click the button below to use the wind loads instead.");
+                UnlinkWindLoads("This project has no wind yet: set it up in the Wind Load Calculator (Edit wind above). Until then the walls use manual loads.");
             RecalculateWind(); // when linked, this sends the wind load cases to every story
+            UpdateWindBar();
             UpdateShearWallUI();
             StartHistory();
             LogWindInputs();
@@ -246,29 +273,54 @@ namespace ShearWallVisualizer
                                                 MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return false;
                 path = file;
             }
+            bool geometryMoved;
+            List<string> lost = new List<string>();
             try
             {
                 RecordHoldowns();
-                var doc = projectDoc ?? new ModelDocument();
-                doc.Building = BuildingToSave();
-                doc.Version = ModelDocument.CurrentVersion;
+                var mine = BuildingToSave();
                 // what the shear walls put on the foundation, for the load manager (not compared for unsaved changes: it is
-                // rewritten from the design on every save); the revision is the one this save gives the file
-                var lateral = LateralForFoundation(doc.Revision + 1);
-                LoadManager.LateralSection.Write(doc.Building, lateral);   // none: an old one is removed
-                ModelFile.Save(path, doc);
-                projectDoc = doc;
-                baseModelJson = ModelFile.BuildingToJson(building); // Model > Export changes: since this save
+                // rewritten from the design on every save), stamped with the revision this save gives the file
+                void Stamp(ModelDocument d) => LoadManager.LateralSection.Write(d.Building, LateralForFoundation(d.Revision + 1)); // none: an old one is removed
+                ModelDocument saved;
+                if (!saveAs && File.Exists(path))
+                {
+                    // the file is read again and only this app's data is replaced: what the other apps saved meanwhile stays
+                    saved = ModelFile.SaveOwnData(path, mine, OwnsData, out lost, Stamp);
+                }
+                else
+                {
+                    // a new project, or a copy in another folder: the whole project (the other apps' sections as the file has them)
+                    if (saveAs && !HoldProject(path)) return false;
+                    saved = saveAs && File.Exists(currentProjectPath) ? ModelFile.Load(currentProjectPath) : new ModelDocument { Building = ModelFile.Clone(mine) };
+                    if (saveAs) lost = ModelMerge.CopyOwnData(mine, saved.Building, OwnsData);
+                    saved.Version = ModelDocument.CurrentVersion;
+                    saved.Revision = 0;
+                    Stamp(saved);
+                    ModelFile.Save(path, saved);
+                }
+                geometryMoved = ModelMerge.GeometryJson(saved.Building) != ModelMerge.GeometryJson(building);
+                projectDoc = saved;
             }
-            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is InvalidDataException ||
+                                       ex is System.Runtime.Serialization.SerializationException)
             {
                 MessageBox.Show(this, "The project could not be saved:\n" + ex.Message, "Save", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return false;
             }
             if (path != currentProjectPath) { ProjectFolder.OpenFor(path); AddToRecentFiles(path); }
             currentProjectPath = path;
-            Log.Info("Project", $"Saved {path} (revision {projectDoc.Revision}; {(windLoadsLinked ? "wind loads" : "manual loads")}).");
+            Log.Info("Project", $"Saved {path} (revision {projectDoc.Revision}; {(windLoadsLinked ? "wind loads" : "manual loads")}; this app's data only).");
             MarkSaved();
+            if (lost.Count > 0)
+                MessageBox.Show(this, "The design of " + string.Join(", ", lost) + " was not saved: the Building Model has deleted it since this project was opened.",
+                                "Save", MessageBoxButton.OK, MessageBoxImage.Information);
+            if (geometryMoved)
+            {
+                // the building was changed in the Building Model while this window had it open: show it as it is now
+                OpenProject(path, reload: true);
+                ShowStatusMessage(LogLevel.Info, "Saved. The building had been changed in the Building Model meanwhile: it is shown as it is now.");
+            }
             return true;
         }
 
@@ -388,6 +440,59 @@ namespace ShearWallVisualizer
         private void EditLoads() => OpenInOtherApp(LoadManagerPath, "Load Manager", "Edit loads",
             "The project is open in the Load Manager.\n\nEdit the floor and roof loads, load zones and wall loads there and save: " +
             "this window updates each time. Close the Load Manager to work here again.");
+
+        /// <summary>The Wind Load Calculator, next to this program (copied there by the build).</summary>
+        private static string WindAppPath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "WindLoadCalculator.exe");
+
+        private void EditWind_Click(object sender, RoutedEventArgs e) => EditWind();
+
+        /// <summary>
+        /// Saves the project and opens it in the Wind Load Calculator, the one place the wind is set up (the site, speed,
+        /// exposure, enclosure, components). This window shows the wind read-only, waits, and reloads the project each time
+        /// the wind calculator saves: the walls then take its wind cases.
+        /// </summary>
+        private void EditWind() => OpenInOtherApp(WindAppPath, "Wind Load Calculator", "Edit wind",
+            "The project is open in the Wind Load Calculator.\n\nSet up the wind there (site, speed, exposure, enclosure) and save: " +
+            "this window updates each time and the walls take the new wind cases. Close the wind calculator to work here again.");
+
+        /// <summary>
+        /// The wind page: the wind calculator's own screen, read-only, under a bar that says where the wind comes from and
+        /// opens the Wind Load Calculator to change it.
+        /// </summary>
+        private FrameworkElement WindPage(WindSetupControl setup)
+        {
+            setup.ReadOnly = true;
+            windBarText = new TextBlock { TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center, Foreground = Controls.Ui.Ink };
+            var edit = new Button
+            {
+                Content = "Edit wind in the Wind Load Calculator…", Padding = new Thickness(12, 4, 12, 4), Margin = new Thickness(12, 0, 0, 0),
+                VerticalAlignment = VerticalAlignment.Center, ToolTip = "Saves this project and opens it in the Wind Load Calculator, the one place the wind is set up. This window updates when it saves.",
+            };
+            edit.Click += EditWind_Click;
+            var bar = new DockPanel { Margin = new Thickness(0) };
+            DockPanel.SetDock(edit, Dock.Right);
+            bar.Children.Add(edit);
+            bar.Children.Add(windBarText);
+            var border = new Border
+            {
+                Child = bar, Padding = new Thickness(12, 8, 12, 8), Background = new SolidColorBrush(Color.FromRgb(0xE8, 0xF4, 0xF5)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(0x8C, 0xC9, 0xCD)), BorderThickness = new Thickness(0, 0, 0, 1),
+            };
+            DockPanel.SetDock(border, Dock.Top);
+            UpdateWindBar();
+            return new DockPanel { Children = { border, setup } };
+        }
+
+        private TextBlock windBarText;
+
+        /// <summary>The wind bar's words: where the wind comes from, or that there is none yet.</summary>
+        private void UpdateWindBar()
+        {
+            if (windBarText == null) return;
+            windBarText.Text = !HasProject ? "The wind is set up in the Wind Load Calculator, on a project."
+                : windLoadsLinked ? "The wind is the Wind Load Calculator's, from this project (shown here, not edited). The walls take every one of its wind cases."
+                : "This project has no wind yet. Set it up in the Wind Load Calculator: the walls then take its wind cases. Until then they use manual loads.";
+        }
 
         private string editorOverlayText;
 

@@ -385,7 +385,7 @@ namespace ShearWallVisualizer
                 foreach (var e in ends)
                     rows.Add((e.From.EndsWith("start") ? "Start" : "End", e.Supported ? $"{DetailCalcs.Support(e)}: {e.Model ?? "none strong enough"}" : "nothing under it", !e.Supported || e.Model == null));
                 selectionCard.ShowMember($"Beam {bm.Id}", $"{building.Level(bm.LevelId)?.Name} · {bm.Length:0.##} ft", rows,
-                    () => RefreshWallBuild(open: true), () => Sketch.Edit($"Deleted {bm.Id}.  Ctrl+Z brings it back.", b => BuildingModel.Edits.BuildingEdits.Delete(b, bm.Id)));
+                    () => RefreshWallBuild(open: true), null); // deleted in the Building Model
             }
             else if (o is Column col)
             {
@@ -396,7 +396,7 @@ namespace ShearWallVisualizer
                 rows.Add(("Carries", onIt.Count == 0 ? "nothing" : $"{onIt.Sum(l => l.TensionAsd):N0} lb up from {onIt.Count} point{(onIt.Count == 1 ? "" : "s")}", false));
                 if (bottom != null) rows.Add(("Base", bottom.Supported ? $"{DetailCalcs.FamilyName(bottom.Family)} {bottom.Model ?? "none strong enough"}" : "nothing under it", !bottom.Supported || bottom.Model == null));
                 selectionCard.ShowMember($"Column {col.Id}", $"up to {building.Level(col.TopLevelId)?.Name}", rows,
-                    () => RefreshWallBuild(open: true), () => Sketch.Edit($"Deleted {col.Id}.  Ctrl+Z brings it back.", b => BuildingModel.Edits.BuildingEdits.Delete(b, col.Id)));
+                    () => RefreshWallBuild(open: true), null); // deleted in the Building Model
             }
             else selectionCard.Show(Calculator, null, -1, designResults);
         }

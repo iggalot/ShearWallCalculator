@@ -230,7 +230,7 @@ namespace ShearWallVisualizer.Controls
         private void Buttons(params (string text, Action click)[] buttons)
         {
             var sp = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 0) };
-            foreach (var (text, click) in buttons)
+            foreach (var (text, click) in buttons.Where(x => x.click != null)) // an action this host does not offer: no button
             {
                 var b = new Button { Content = text, Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(0, 0, 6, 0), Focusable = false };
                 if (text == "Delete") b.Foreground = Ui.FailInk;

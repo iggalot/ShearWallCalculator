@@ -80,6 +80,14 @@ namespace ShearWallVisualizer
             sketchView.ShowBuildingTools = false; // From size... and Roof...: the building's size and roof are edited only in the Building Model editor (Edit building)
             Sketch.ShowWallLabels = false; // a wall picked on the plan opens its card (name, length and the rest)
             foreach (var t in new[] { SketchTool.Calibrate, SketchTool.PlanStraighten, SketchTool.PlanMove }) sketchView.HideTool(t);
+            // The building is drawn and changed only in the Building Model (Model > Edit building): here it is shown and
+            // designed. The drawing tools are hidden, and any edit that would move, add or delete something is put back.
+            // A wall's design is data on the wall, so it still changes (and is what this app saves).
+            foreach (var t in new[] { SketchTool.Wall, SketchTool.Diaphragm, SketchTool.Opening, SketchTool.Note, SketchTool.Move, SketchTool.Copy,
+                                      SketchTool.Split, SketchTool.Mirror, SketchTool.Cut, SketchTool.Beam, SketchTool.Column })
+                sketchView.HideTool(t);
+            Sketch.GeometryLocked = true;
+            Sketch.GeometryLockedMessage = "The building is drawn and changed in the Building Model: Model > Edit building opens it on this project.";
             var s = Sketch;
             s.DrawOver += (o, e) =>
             {
@@ -242,20 +250,11 @@ namespace ShearWallVisualizer
             Sketch.Commit($"Coordinates typed on the Members tab ({s.Level.Name}).");
         }
 
-        /// <summary>
-        /// A member deleted from the Members tab, on any level: from the model (the whole wall when it spans stories, the whole
-        /// diaphragm when openings split it, a column through every story), so every level's list and drawing follow.
-        /// </summary>
+        /// <summary>A member to delete from the Members tab: members are deleted in the Building Model (the geometry is edited only there).</summary>
         private void DeleteMember(string modelId)
         {
             if (modelId == null || building?.Find(modelId) == null) return;
-            if (Sketch.Selection.Contains(modelId) || selectedModelId == modelId || CurrentStory?.ModelId(selectedKind, selectedId) == modelId)
-            {
-                selectionCardOpen = false; selectedKind = null; selectedId = -1; selectedModelId = null;
-                Sketch.ClearSelection();
-            }
-            Sketch.Edit($"Deleted {modelId}.  Ctrl+Z brings it back.", b => BuildingEdits.Delete(b, modelId));
-            Log.Info("Edit", $"{modelId} deleted from the Members tab.");
+            ShowStatusMessage(LogLevel.Info, $"{modelId}: {Sketch.GeometryLockedMessage}");
         }
 
         // ------------------------------------------------------------------ selection: model IDs ↔ calculator keys
@@ -315,22 +314,8 @@ namespace ShearWallVisualizer
 
         private void Delete_Click(object sender, RoutedEventArgs e) => DeleteSelected();
 
-        /// <summary>Deletes the selected wall or diaphragm from the model (the whole diaphragm when openings split it).</summary>
-        private void DeleteSelected()
-        {
-            string modelId = selectedKind == null ? null : CurrentStory?.ModelId(selectedKind, selectedId);
-            if (modelId == null)
-            {
-                if (Sketch.Selection.Count > 0) { Sketch.DeleteSelected(); return; }
-                ShowStatusMessage(LogLevel.Info, "Pick a wall or diaphragm first (Select), then Delete.");
-                return;
-            }
-            selectionCardOpen = false;
-            selectedKind = null;
-            selectedId = -1;
-            Sketch.ClearSelection();
-            Sketch.Edit($"Deleted {modelId}.  Ctrl+Z brings it back.", b => BuildingEdits.Delete(b, modelId));
-        }
+        /// <summary>Delete on a wall or diaphragm: they are deleted in the Building Model (the geometry is edited only there).</summary>
+        private void DeleteSelected() => ShowStatusMessage(LogLevel.Info, Sketch.GeometryLockedMessage);
 
         // ------------------------------------------------------------------ edit menu → the sketch's tools
 

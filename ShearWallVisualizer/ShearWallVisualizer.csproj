@@ -220,6 +220,10 @@
     <ProjectReference Include="..\..\BuildingModel\BuildingModel.App\BuildingModel.App.csproj">
       <Name>BuildingModel.App</Name>
     </ProjectReference>
+    <!-- the Wind Load Calculator: referenced so WindLoadCalculator.exe is copied next to this program (Edit wind) -->
+    <ProjectReference Include="..\..\ASCE7-Wind-Load-Calculator\ASCE7Wind.App\ASCE7Wind.App.csproj">
+      <Name>ASCE7Wind.App</Name>
+    </ProjectReference>
     <!-- the Load Manager: referenced so LoadManagerApp.exe is copied next to this program (Loads > Edit loads) -->
     <ProjectReference Include="..\..\LoadManager\LoadManager.App\LoadManager.App.csproj">
       <Name>LoadManager.App</Name>
