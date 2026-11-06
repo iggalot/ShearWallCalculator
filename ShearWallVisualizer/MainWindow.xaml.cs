@@ -197,7 +197,7 @@ namespace ShearWallVisualizer
                 ShowFramingRows(); // the beams and columns of the level shown
                 if (resultsPanel != null) resultsPanel.Notes = levelNotes;
                 resultsPanel?.Show(Calculator, CalculationTodo(), selectedKind == "Wall" ? selectedId : -1);
-                if (selectionCardOpen && (selectedKind == "Beam" || selectedKind == "Column" || selectedKind == PlainWallKind)) ShowMemberCard();
+                if (selectionCardOpen && (selectedKind == "Beam" || selectedKind == "Column" || selectedKind == PlainWallKind || selectedKind == MultiWallKind)) ShowMemberCard();
                 else selectionCard.Show(Calculator, selectionCardOpen ? selectedKind : null, selectedId, designResults);
                 RefreshWallBuild(); // the wall construction window follows the selected wall and its design
 

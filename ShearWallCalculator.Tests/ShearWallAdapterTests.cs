@@ -204,6 +204,38 @@ namespace ShearWallCalculator.Tests
             Assert.IsNull(south.GetData(ShearWallAdapter.WallKey));
         }
 
+        /// <summary>Several walls at once: declared together (a declared one keeps its part), one sheathing for all, plain together.</summary>
+        [TestMethod]
+        public void SeveralWalls_DeclaredEditedAndMadePlain_Together()
+        {
+            var b = Building.New();
+            var l2 = b.AddLevel("Level 2", 10);
+            var roof = b.AddLevel("Roof", 20);
+            b.AddDiaphragm(l2, new Rect2(0, 0, 40, 30));
+            b.AddDiaphragm(roof, new Rect2(0, 0, 40, 30));
+            var south = b.AddWall(b.Ground, roof, 0, 0, 40, 0); // two stories
+            var north = b.AddWall(b.Ground, l2, 0, 30, 40, 30);
+            var west = b.AddWall(b.Ground, l2, 0, 0, 0, 30);
+            var slant = b.AddWall(b.Ground, l2, 5, 5, 15, 12);
+            ShearWallAdapter.Adopt(b);
+            ShearWallAdapter.Declare(b, north, 10, 30, new DesignSettings());
+            var all = new[] { south, north, west, slant };
+
+            Assert.AreEqual(2, ShearWallAdapter.DeclareAll(b, all, new DesignSettings()), "south and west; north was one; an angled wall is left out");
+            Assert.AreEqual(20, ShearWallAdapter.ShearPartOf(b, north).Length, Tol, "north keeps its part");
+            Assert.AreEqual(40, ShearWallAdapter.ShearPartOf(b, south).Length, Tol);
+            Assert.IsFalse(ShearWallAdapter.IsShearWall(b, slant));
+            Assert.AreEqual(2, ShearWallAdapter.ReadWall(south).Design.Count, "a design on each story it spans");
+
+            Assert.AreEqual(3, ShearWallAdapter.EditDesign(b, all, new DesignSettings(), d => d.HoldownKey = "HDU2"));
+            Assert.IsTrue(new[] { south, north, west }.All(w => ShearWallAdapter.ReadWall(w).Design.Values.All(d => d.HoldownKey == "HDU2")), "every story of every shear wall");
+            Assert.IsNull(slant.GetData(ShearWallAdapter.WallKey), "a plain wall gets no design");
+            Assert.AreEqual(0, ShearWallAdapter.EditDesign(b, all, new DesignSettings(), d => d.HoldownKey = "HDU2"), "nothing changed the second time");
+
+            Assert.AreEqual(2, ShearWallAdapter.UndeclareAll(b, new[] { south, west }));
+            CollectionAssert.AreEqual(new[] { north }, ShearWallAdapter.ShearWalls(b));
+        }
+
         /// <summary>A project from before keeps its shear walls: the walls the model marked, each declared over its whole length.</summary>
         [TestMethod]
         public void Adopt_AProjectFromBefore_KeepsItsMarkedWalls()

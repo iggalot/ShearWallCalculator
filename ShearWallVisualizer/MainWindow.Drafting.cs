@@ -271,7 +271,10 @@ namespace ShearWallVisualizer
             var o = building.Find(id);
             int? key = CurrentStory?.Key(id);
             selectedModelId = null;
-            if (o is Wall && key != null) { selectedKind = "Wall"; selectedId = key.Value; }
+            selectedWallIds = Sketch.Selection.Count > 1 ? Sketch.Selection.Where(x => building.Find(x) is Wall).ToList() : new List<string>();
+            if (selectedWallIds.Count > 0) o = null; // several picked: one card for the walls among them
+            if (selectedWallIds.Count > 0) { selectedKind = MultiWallKind; selectedId = -1; }
+            else if (o is Wall && key != null) { selectedKind = "Wall"; selectedId = key.Value; }
             else if (o is Wall) { selectedKind = PlainWallKind; selectedId = -1; selectedModelId = id; } // not a shear wall here: its card offers to declare it
             else if (o is Diaphragm && key != null) { selectedKind = "Diaphragm"; selectedId = key.Value; }
             else if (o is Beam || o is Column) { selectedKind = o is Beam ? "Beam" : "Column"; selectedId = -1; selectedModelId = id; }
@@ -310,6 +313,7 @@ namespace ShearWallVisualizer
         {
             if (selectedKind == null) return;
             if ((selectedKind == "Beam" || selectedKind == "Column" || selectedKind == PlainWallKind) && building?.Find(selectedModelId) != null) return;
+            if (selectedKind == MultiWallKind && selectedWallIds.Any(x => building?.Find(x) != null)) return;
             bool there = selectedKind == "Wall" ? Calculator._wall_system._walls.ContainsKey(selectedId)
                        : selectedKind == "Diaphragm" && Calculator._diaphragm_system._diaphragms.ContainsKey(selectedId);
             if (there) return;
@@ -349,6 +353,12 @@ namespace ShearWallVisualizer
 
         /// <summary>The selection kind of a wall that is not a shear wall (its card offers to declare it).</summary>
         private const string PlainWallKind = "PlainWall";
+
+        /// <summary>The selection kind when several walls are picked (<see cref="selectedWallIds"/>): one card for all of them.</summary>
+        private const string MultiWallKind = "Walls";
+
+        /// <summary>The walls picked together (two or more objects selected), or none.</summary>
+        private List<string> selectedWallIds = new List<string>();
 
         /// <summary>True when the wall's start is its west (W-E) or south (S-N) end: the card gives distances from that end.</summary>
         private static bool StartIsLow(Wall w) => w.Direction == WallDirection.SouthNorth ? w.Start.Y <= w.End.Y : w.Start.X <= w.End.X;
@@ -399,6 +409,52 @@ namespace ShearWallVisualizer
             if (!(building?.Find(id) is Wall w)) return;
             if (!ShearWallAdapter.Declare(building, w, 0, w.Length, Calculator?.DesignSettings)) return;
             Sketch.Commit($"{w.Id} declared a shear wall over its whole length ({w.Length:0.##} ft). Its shear part and sheathing are on its card.");
+            SelectionFromSketch();
+        }
+
+        private List<Wall> SelectedWalls() => selectedWallIds.Select(x => building?.Find(x)).OfType<Wall>().ToList();
+
+        /// <summary>The card for several walls picked together: how many are shear walls, make them all shear walls or plain, one sheathing for all.</summary>
+        private void ShowWallsCard()
+        {
+            var walls = SelectedWalls();
+            var shear = walls.Where(w => ShearWallAdapter.IsShearWall(building, w)).ToList();
+            int others = Sketch.Selection.Count - walls.Count;
+            // what the shear walls among them have in common, on every story: one face 1 sheathing, one hold-down type
+            var designs = shear.SelectMany(w => ShearWallAdapter.StoriesOf(building, w).Select(l =>
+                              ShearWallAdapter.ReadWall(w).Design.TryGetValue(l.Id, out var d) && d != null ? d : ShearWallAdapter.NewWallDesign(building, w, Calculator?.DesignSettings))).ToList();
+            var faces = designs.Select(d => designer?.FindOption(d.EffectiveFace1())?.Name).Distinct().ToList();
+            var types = designs.Select(d => d.Holdown).Distinct().ToList();
+            selectionCard.ShowWalls($"{walls.Count} walls selected",
+                $"{CurrentStory?.Level.Name}" + (others > 0 ? $" · {others} other object{(others == 1 ? "" : "s")} selected, left as they are" : "") + " · Shift+click to add or take out",
+                shear.Count, walls.Count - shear.Count,
+                () => Later(MakeShearWalls), () => Later(MakePlainWalls),
+                faces.Count == 1 && faces[0] != null ? designs[0].EffectiveFace1() : null, types.Count == 1 ? types[0] : (HoldownFamilies?)null,
+                (what, edit) => Later(() => EditSelectedWalls(what, edit)));
+        }
+
+        private void MakeShearWalls()
+        {
+            int n = ShearWallAdapter.DeclareAll(building, SelectedWalls(), Calculator?.DesignSettings);
+            if (n == 0) return;
+            Sketch.Commit($"{n} wall{(n == 1 ? "" : "s")} declared shear walls over the whole length.");
+            SelectionFromSketch();
+        }
+
+        private void MakePlainWalls()
+        {
+            int n = ShearWallAdapter.UndeclareAll(building, SelectedWalls());
+            if (n == 0) return;
+            Sketch.Commit($"{n} wall{(n == 1 ? "" : "s")} no longer shear walls: they carry their gravity load only.");
+            SelectionFromSketch();
+        }
+
+        /// <summary>One design edit from the card for several walls, on every story of each shear wall among them: one step to undo.</summary>
+        private void EditSelectedWalls(string what, Action<WallDesignInputs> edit)
+        {
+            int n = ShearWallAdapter.EditDesign(building, SelectedWalls(), Calculator?.DesignSettings, edit);
+            if (n == 0) { UpdateShearWallUI(); return; }
+            Sketch.Commit($"{n} shear wall{(n == 1 ? "" : "s")}: {what}.");
             SelectionFromSketch();
         }
 

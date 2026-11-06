@@ -167,6 +167,56 @@ namespace ShearWallCalculator.ModelAdapter
         public static void Undeclare(Wall w) => w.SetData(WallKey, null);
 
         /// <summary>
+        /// Several walls made shear walls at once: each plain one is declared over its whole length (<see cref="Declare"/>); one
+        /// declared already keeps its part. Angled walls are left out. Returns how many were declared.
+        /// </summary>
+        public static int DeclareAll(Building b, IEnumerable<Wall> walls, DesignSettings settings)
+        {
+            Adopt(b);
+            int n = 0;
+            foreach (var w in walls)
+                if (w.Direction != WallDirection.NotOrthogonal && !IsShearWall(b, w) && Declare(b, w, 0, w.Length, settings)) n++;
+            return n;
+        }
+
+        /// <summary>Several walls made plain walls at once. Returns how many were shear walls.</summary>
+        public static int UndeclareAll(Building b, IEnumerable<Wall> walls)
+        {
+            Adopt(b); // a project from before: its marked walls declared first, so only these become plain
+            int n = 0;
+            foreach (var w in walls)
+            {
+                if (IsShearWall(b, w)) n++;
+                if (w.GetData(WallKey) != null) Undeclare(w);
+            }
+            return n;
+        }
+
+        /// <summary>
+        /// One design edit (<see cref="WallDesignEdits"/>: a face, a hold-down type) made on every story of several shear walls at
+        /// once. Plain walls are left out. Returns how many walls changed.
+        /// </summary>
+        public static int EditDesign(Building b, IEnumerable<Wall> walls, DesignSettings settings, Action<WallDesignInputs> edit)
+        {
+            Adopt(b);
+            int n = 0;
+            foreach (var w in walls.Where(w => IsShearWall(b, w)))
+            {
+                var x = ReadWall(w);
+                string before = JsonConvert.SerializeObject(x, Json);
+                foreach (var l in StoriesOf(b, w))
+                {
+                    if (!x.Design.TryGetValue(l.Id, out var d) || d == null) x.Design[l.Id] = d = NewWallDesign(b, w, settings);
+                    edit(d);
+                }
+                x.AutoExterior = null; // picked: the wall's own now
+                WriteWall(w, x);
+                if (JsonConvert.SerializeObject(x, Json) != before) n++;
+            }
+            return n;
+        }
+
+        /// <summary>
         /// On opening a project: from now on this app declares its shear walls (<see cref="DeclaredKey"/>). A project from before keeps
         /// its shear walls: each wall the model marked is declared over its whole length. Returns how many were declared so.
         /// </summary>

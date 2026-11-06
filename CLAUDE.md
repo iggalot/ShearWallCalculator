@@ -24,6 +24,8 @@
     `ShearPartOf`). `ShearWall.Declared` on the building marks a project that declares; an older project is adopted once
     (`Adopt`: the walls it marked, `Wall.IsShearWall`, declared over the whole length). The shear-wall checks are
     `ShearWallAdapter.Checks` (no shear wall both ways, not reached, two overlapping: an error that stops the design).
+    Several walls picked together (Shift+click, or a window) get one card: Make shear walls, Not shear walls, and one face 1
+    sheathing and hold-down type for all (`DeclareAll`, `UndeclareAll`, `EditDesign`; each one undo step).
   - **Hold-downs only:** SWC does no dead load, gravity or stud work. Gravity loads are edited in the Load Manager
     (Loads > Edit loads); SWC only reads them.
   - On save, the end couples per wind case go into the `Lateral` section, for the foundation.

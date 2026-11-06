@@ -157,6 +157,34 @@ namespace ShearWallVisualizer.Controls
             Visibility = Visibility.Visible;
         }
 
+        /// <summary>
+        /// Several walls selected: how many are shear walls, buttons to make them all shear walls or all plain, and (with
+        /// <see cref="Designer"/>) one face 1 sheathing and one hold-down type for all the shear walls among them. Each a single
+        /// step to undo. <paramref name="face1"/> / <paramref name="holdown"/>: the one they all have, or null when they differ.
+        /// </summary>
+        public void ShowWalls(string title, string subtitle, int shear, int plain, Action makeShear, Action makePlain,
+                              FaceSheathing face1, HoldownFamilies? holdown, Action<string, Action<WallDesignInputs>> editAll)
+        {
+            kind = null;
+            id = -1;
+            body.Children.Clear();
+            Header(title, subtitle);
+            Row("Shear walls", shear == 0 ? "none of them" : plain == 0 ? $"all {shear}" : $"{shear} of {shear + plain}");
+            if (shear > 0 && Designer != null && editAll != null)
+            {
+                var o1 = face1 == null ? null : Designer.FindOption(face1);
+                ComboRow("Face 1, all", Designer.SheathingOptions.Cast<object>(), o1, o => editAll($"face 1 {((SheathingOption)o).Name}", x => WallDesignEdits.SetFace1(x, (SheathingOption)o)),
+                         tip: o1 == null ? "They differ: pick one to give it to every shear wall selected." : "Every shear wall selected has this. Pick another to change them all.");
+                ComboRow("Hold-down, all", WallDesignPanel.HoldownTypes.Select(WallDesignPanel.ShortHoldownName).Cast<object>(),
+                         holdown == null ? null : WallDesignPanel.ShortHoldownName(holdown.Value),
+                         o => editAll($"hold-down type {o}", d => WallDesignEdits.SetHoldownType(d, WallDesignPanel.HoldownTypes.First(f => WallDesignPanel.ShortHoldownName(f) == (string)o))),
+                         tip: "The hold-down type of every shear wall selected (each set back to Auto).");
+            }
+            Buttons((plain > 0 ? $"Make {(shear > 0 ? "all " : "")}shear walls" : null, plain > 0 ? makeShear : null),
+                    (shear > 0 ? "Not shear walls" : null, shear > 0 ? makePlain : null));
+            Visibility = Visibility.Visible;
+        }
+
         /// <summary>A beam or a column (from the building model): a few rows and its buttons.</summary>
         public void ShowMember(string title, string subtitle, IEnumerable<(string label, string value, bool fails)> rows, Action detail, Action delete)
         {

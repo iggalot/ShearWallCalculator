@@ -373,6 +373,7 @@ namespace ShearWallVisualizer
         /// <summary>The selection card for a beam or a column: what it carries, its reactions, and Detail.</summary>
         private void ShowMemberCard()
         {
+            if (selectedKind == MultiWallKind) { ShowWallsCard(); return; }
             var o = building?.Find(selectedModelId);
             var rows = new List<(string, string, bool)>();
             var all = AllLandings();
