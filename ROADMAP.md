@@ -29,6 +29,11 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
 - [x] **Shear walls are declared in SWC** (2026-11-05). A wall is a plain wall until declared there (its card: Make it a
   shear wall, then the shear part from–to); the hold-downs go at the part's ends. The Building Model has no shear-wall
   switch; its shear-wall checks moved to SWC (`ShearWallAdapter.Checks`). Older projects keep their marked walls, whole.
+- [x] **One selection for the whole suite** (2026-11-05): the shared sketch's (click, Shift/Ctrl+click, a window, Ctrl+A,
+  Delete), with hooks for each app's own objects. SWC: one card for several walls; Load Manager: several walls get one top
+  load, several zones are deleted together (its own picking removed).
+- [ ] **One undo for the suite:** the Building Model's sketch, SWC and the Load Manager each keep their own undo history
+  today; the same rule as the selection says one shared mechanism.
 - [ ] **More than one shear part on a wall**, and a part per story (today one part, the same on every story the wall
   spans). For now, split the wall in the Building Model.
 - [ ] **Show the declared shear walls in the Building Model** (read-only, e.g. a thicker line on the part), so the

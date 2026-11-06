@@ -271,7 +271,7 @@ namespace ShearWallVisualizer
             var o = building.Find(id);
             int? key = CurrentStory?.Key(id);
             selectedModelId = null;
-            selectedWallIds = Sketch.Selection.Count > 1 ? Sketch.Selection.Where(x => building.Find(x) is Wall).ToList() : new List<string>();
+            selectedWallIds = Sketch.Selection.Count > 1 ? Sketch.SelectedOf<Wall>().Select(w => w.Id).ToList() : new List<string>(); // the core's selection
             if (selectedWallIds.Count > 0) o = null; // several picked: one card for the walls among them
             if (selectedWallIds.Count > 0) { selectedKind = MultiWallKind; selectedId = -1; }
             else if (o is Wall && key != null) { selectedKind = "Wall"; selectedId = key.Value; }
