@@ -32,8 +32,14 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
 - [x] **One selection for the whole suite** (2026-11-05): the shared sketch's (click, Shift/Ctrl+click, a window, Ctrl+A,
   Delete), with hooks for each app's own objects. SWC: one card for several walls; Load Manager: several walls get one top
   load, several zones are deleted together (its own picking removed).
-- [ ] **One undo for the suite:** the Building Model's sketch, SWC and the Load Manager each keep their own undo history
-  today; the same rule as the selection says one shared mechanism.
+- [x] **One undo for the suite** (2026-11-06; BM b53b8c1, LM 701b858): `EditHistory` in BuildingModel.Core is the one
+  undo and redo, with named steps and the saved step. The Building Model and SWC use it through `ModelHistory`, and the
+  Load Manager for its loads. The Wind Load Calculator has none (a plain form; the building is undone in the Building
+  Model). With it, also shared once: `ProjectWatcher` (hub dd89159, LM, SWC's Edit building) and
+  `ProjectDialogs.SaveChangesFirst` and `TakeLock` (BM, SWC, LM, Wind 9f7c920).
+- [ ] **SWC's unsaved `*` from the history:** SWC still compares its whole saved project text, because its design
+  also holds the calculators' loads that are not in the model's undo. Move it onto `EditHistory` once those are kept
+  with the design.
 - [ ] **More than one shear part on a wall**, and a part per story (today one part, the same on every story the wall
   spans). For now, split the wall in the Building Model.
 - [ ] **Show the declared shear walls in the Building Model** (read-only, e.g. a thicker line on the part), so the

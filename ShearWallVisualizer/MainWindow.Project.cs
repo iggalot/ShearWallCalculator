@@ -77,13 +77,8 @@ namespace ShearWallVisualizer
         private bool HoldProject(string file)
         {
             if (projectLock != null && string.Equals(projectLock.ModelPath, file, StringComparison.OrdinalIgnoreCase)) return true;
-            var taken = ProjectLock.TryTake(file, "shearwalls", "Shear Wall Calculator", out var heldBy);
-            if (taken == null && heldBy != null)
-            {
-                MessageBox.Show(this, $"This project is already open in another Shear Wall Calculator: {heldBy.Describe()}.\n\nSwitch to that window, or close it first.",
-                                "Shear Wall Calculator", MessageBoxButton.OK, MessageBoxImage.Information);
-                return false;
-            }
+            var taken = ProjectDialogs.TakeLock(this, file, "shearwalls", "Shear Wall Calculator", out bool refused);
+            if (refused) return false;
             projectLock?.Dispose();
             projectLock = taken;
             return true;
@@ -111,11 +106,7 @@ namespace ShearWallVisualizer
         private bool ConfirmDiscardOrSave()
         {
             if (!HasUnsavedChanges) return true;
-            var answer = MessageBox.Show(this, $"Save the changes to {ProjectName}?", "Shear Wall Calculator",
-                                         MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
-            if (answer == MessageBoxResult.Cancel) return false;
-            if (answer == MessageBoxResult.Yes) return SaveProject(saveAs: false);
-            return true;
+            return ProjectDialogs.SaveChangesFirst(this, $"Save the changes to {ProjectName}?", "Shear Wall Calculator", () => SaveProject(saveAs: false));
         }
 
         private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -406,8 +397,7 @@ namespace ShearWallVisualizer
         // ------------------------------------------------------------------ Edit building: the Building Model editor
 
         private Process editorProcess;
-        private FileSystemWatcher editorWatcher;
-        private DispatcherTimer editorReload;
+        private ProjectWatcher editorWatcher;
         private Border editorOverlay;
 
         /// <summary>The Building Model editor, next to this program (copied there by the build).</summary>
@@ -523,17 +513,8 @@ namespace ShearWallVisualizer
             editorProcess.EnableRaisingEvents = true;
             editorProcess.Exited += (s, a) => Dispatcher.BeginInvoke(new Action(EditorClosed));
 
-            editorReload = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
-            editorReload.Tick += (s, a) => { editorReload.Stop(); ReloadFromEditor(); };
-            editorWatcher = new FileSystemWatcher(Path.GetDirectoryName(currentProjectPath), Path.GetFileName(currentProjectPath))
-            {
-                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.FileName,
-            };
-            FileSystemEventHandler changed = (s, a) => Dispatcher.BeginInvoke(new Action(() => { editorReload.Stop(); editorReload.Start(); }));
-            editorWatcher.Changed += changed;
-            editorWatcher.Created += changed;
-            editorWatcher.Renamed += (s, a) => changed(s, a);
-            editorWatcher.EnableRaisingEvents = true;
+            editorWatcher = new ProjectWatcher(currentProjectPath);
+            editorWatcher.ChangedOnDisk += (s, a) => ReloadFromEditor();
             ShowEditorOverlay(true);
         }
 
@@ -553,7 +534,6 @@ namespace ShearWallVisualizer
         {
             editorWatcher?.Dispose();
             editorWatcher = null;
-            editorReload?.Stop();
             Log.Info("Project", $"{editorName} closed.");
             editorProcess = null;
             ReloadFromEditor(); // a save just before closing
