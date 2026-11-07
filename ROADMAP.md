@@ -47,6 +47,10 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
   only their sections. Saves keep a `.bak`. Each app holds `<model>.<app>.lock`; the hub reads the locks.
 - [x] **One owner per piece** (2026-11-05). The geometry is edited only in the Building Model (SWC's sketch is
   `GeometryLocked`); the wind only in the Wind Load Calculator (SWC's wind page is read-only, with Edit wind).
+  - [x] SWC's wind page is the Wind Load Calculator's results only (2026-11-06; asked for earlier and missed): read-only
+    `WindSetupControl` opens on Results and stays there (no Site or Building pages, no step bar, no Back or Next). No wind
+    yet: the page says so (no starting values shown as if they were the project's). SWC opens on the wind when the project
+    has no current wind (none, or it cannot be calculated: `WindCheck`), else on the shear walls.
   The hub's steps: 1 Building, 2a Gravity loads, 2b Wind, 3 Shear walls, 4 Foundation loads.
 - [x] **Shear walls are declared in SWC** (2026-11-05). A wall is a plain wall until declared there (its card: Make it a
   shear wall, then the shear part from–to); the hold-downs go at the part's ends. The Building Model has no shear-wall

@@ -118,12 +118,12 @@
                         </ControlTemplate>
                     </Button.Template>
                 </Button>
-                <RadioButton x:Name="rbWorkspaceWind" GroupName="workspace" Style="{StaticResource Workspace}" IsChecked="True"
+                <RadioButton x:Name="rbWorkspaceWind" GroupName="workspace" Style="{StaticResource Workspace}"
                              Content="1   Wind loads" Checked="Workspace_Checked"
-                             ToolTip="Site, building and wind results (ASCE 7). These loads go to the shear walls automatically."/>
-                <RadioButton x:Name="rbWorkspaceWalls" GroupName="workspace" Style="{StaticResource Workspace}"
+                             ToolTip="The Wind Load Calculator's results for this project, read only (Edit wind changes them there). The shear walls take every wind case."/>
+                <RadioButton x:Name="rbWorkspaceWalls" GroupName="workspace" Style="{StaticResource Workspace}" IsChecked="True"
                              Content="2   Shear walls" Checked="Workspace_Checked"
-                             ToolTip="Draw the walls and diaphragms, and see the force on each wall."/>
+                             ToolTip="Declare the shear walls (the building is drawn in the Building Model) and see the force on each wall."/>
                 <Grid x:Name="workspaceLoads" VerticalAlignment="Center" Margin="16,2,0,2"/>
             </DockPanel>
         </Border>

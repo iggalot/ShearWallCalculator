@@ -244,6 +244,7 @@ namespace ShearWallVisualizer
             }
             var b = doc.Building;
             var wind = WindSection.Read(b);
+            var windNow = WindCheck.Run(b); // the wind calculator's wind for the building as it is now (the hub's check uses the same)
             // each story's calculator: its plan image and, without wind, its manual load (kept there and in the wind screen
             // while the project is open; written back at save)
             var calcs = ShearWallProject.Open(b, manualLoads: wind == null, out var section);
@@ -267,6 +268,7 @@ namespace ShearWallVisualizer
             savedProjectJson = note == null ? CurrentProjectJson() : string.Empty;
             UpdateTitle();
             WatchProject();
+            if (!reload) OpenOnWorkspace(windNow);
             if (note != null && !reload)
                 MessageBox.Show(this, note, "Open", MessageBoxButton.OK, MessageBoxImage.Information);
             return true;
@@ -531,19 +533,44 @@ namespace ShearWallVisualizer
                 BorderBrush = new SolidColorBrush(Color.FromRgb(0x8C, 0xC9, 0xCD)), BorderThickness = new Thickness(0, 0, 0, 1),
             };
             DockPanel.SetDock(border, Dock.Top);
+            windSetupShown = setup;
+            windNone = new TextBlock
+            {
+                Text = "No wind for this project yet.\n\nThe wind is set up in the Wind Load Calculator (Edit wind above): the site, speed, exposure and enclosure. " +
+                       "This page then shows its results, read only, and the shear walls take every one of its wind cases.",
+                TextWrapping = TextWrapping.Wrap, FontSize = 15, MaxWidth = 560, TextAlignment = TextAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Foreground = Controls.Ui.Ink,
+            };
             UpdateWindBar();
-            return new DockPanel { Children = { border, setup } };
+            return new DockPanel { Children = { border, new Grid { Children = { setup, windNone } } } };
         }
 
-        private TextBlock windBarText;
+        private TextBlock windBarText, windNone;
+        private WindSetupControl windSetupShown;
 
-        /// <summary>The wind bar's words: where the wind comes from, or that there is none yet.</summary>
+        /// <summary>
+        /// The workspace a project opens on: the wind's results when the project has no wind, or its wind cannot be calculated
+        /// for the building as it is now (the walls need it first); else the shear walls, on the current wind.
+        /// </summary>
+        private void OpenOnWorkspace(WindCheckResult wind)
+        {
+            bool current = wind != null && wind.Calculated;
+            if (current) rbWorkspaceWalls.IsChecked = true;
+            else rbWorkspaceWind.IsChecked = true;
+            Log.Info("Project", current ? $"The wind is current ({wind.Cases.Count} cases): opened on the shear walls."
+                                        : "No current wind (" + (wind?.NotChecked ?? string.Join(" ", wind?.Problems ?? new List<string>())) + "): opened on the wind.");
+        }
+
+        /// <summary>The wind bar's words: where the wind comes from, or that there is none yet (then the page says only that).</summary>
         private void UpdateWindBar()
         {
             if (windBarText == null) return;
             windBarText.Text = !HasProject ? "The wind is set up in the Wind Load Calculator, on a project."
-                : windLoadsLinked ? "The wind is the Wind Load Calculator's, from this project (shown here, not edited). The walls take every one of its wind cases."
+                : windLoadsLinked ? "The wind is the Wind Load Calculator's results for this project, read only. The walls take every one of its wind cases. Edit wind changes them there."
                 : "This project has no wind yet. Set it up in the Wind Load Calculator: the walls then take its wind cases. Until then they use manual loads.";
+            bool none = HasProject && !windLoadsLinked; // no results to show: not the calculator's starting values as if they were the project's
+            if (windNone != null) windNone.Visibility = none ? Visibility.Visible : Visibility.Collapsed;
+            if (windSetupShown != null) windSetupShown.Visibility = none ? Visibility.Collapsed : Visibility.Visible;
         }
 
         private string editorOverlayText;

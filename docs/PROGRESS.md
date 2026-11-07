@@ -4,6 +4,8 @@ _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`
 
 ## 2026-11-06 — The design with no window; the project kept in spec
 
+- The wind page is the wind calculator's results only (read-only stays on Results); SWC opens on the wind only when the
+  project has no current wind, else on the shear walls. With no wind the page says so instead of showing starting values.
 - Every app re-runs with no window, in order: `WindCheck` (ASCE7Wind.ModelAdapter), `ShearWallCheck` on that wind,
   `FoundationCheck` (LoadManager) on the shear walls' forces as they are now; the hub chains them (`ProjectCheck`) and
   compares the hold-down forces now with the saved ones. Uplift on the foundation is flagged for the foundation design.

@@ -37,7 +37,9 @@
     the loads. If the building changed meanwhile, the project is reloaded after the save.
   - **The geometry is the Building Model's.** `Sketch.GeometryLocked` is on and the drawing tools are hidden. Move,
     copy, delete, notes, cuts and copying a level are done there (Model > Edit building).
-  - **The wind page is read-only** (`WindSetupControl.ReadOnly`, under a bar with **Edit wind**). Edit wind opens
+  - **The wind page is read-only** (`WindSetupControl.ReadOnly`, under a bar with **Edit wind**). It shows the
+    wind calculator's Results page only (read-only stays on Results: no input pages). SWC opens on the wind when the
+    project has no current wind (`WindCheck`: none, or it cannot be calculated), else on the shear walls (`OpenOnWorkspace`). Edit wind opens
     `WindLoadCalculator.exe` on the project and waits, as Edit building does. A project with no `Wind` section has no
     wind here: the walls use manual loads until the wind is set up.
   - **One SWC per project:** it holds the `shearwalls` project lock (`ProjectLock`).
