@@ -43,10 +43,16 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
   the shared sketch draws them on each level's plan (`SketchCanvas.LevelMarkers`): the walls' own, those coming down
   from the story above (a triangle, "↓ W7 1.5k onto W3"; red when nothing is below), the beam ends and column bases
   carrying them on. SWC's level plans draw them with the same routine.
-- [ ] **One wall window for every app** (2026-11-07, owner: "a single routine for behavior across all of these apps"):
-  SWC's construction window (framing elevation, 3D) moved to WoodFraming.Wpf and opened from the Building Model too. The
-  whole wall's framing; the hold-downs always, with those from above through the floor; a Shear wall toggle (on by
-  default) for SWC's saved design (sheathing, nailing, the shear part). SWC's copy adds its calculation.
+- [x] **One wall window for every app** (2026-11-07, done 2026-11-07; owner: "a single routine for behavior across all
+  of these apps"): `WoodFraming.Wpf` `WallPanel` (Elevation, 3D) and `WallWindow`, made from the model and its `Lateral`
+  section by `WallViews.FromModel`. The whole wall's framing (`WallFraming.Build` with the shear part: the hold-down posts
+  at its ends, a stud at the wall's own ends); the hold-downs always, with those from above; **Shear wall** (on by
+  default) draws SWC's design over it (`LateralSection.Walls`, `ShearWallDesign`: the part, the faces' sheathing and
+  nailing, the arm, the check, the sill bolts). The Building Model opens it from a wall's properties (Framing and 3D…);
+  SWC's construction window hosts the same panel and adds its Pieces and Calculation tabs. Views only: nothing in them
+  is calculated.
+  - [ ] SWC's Pieces tab still lists the shear part's pieces; the whole wall's would match the views.
+  - [ ] An undesigned shear wall (no wind yet) shows no sheathing: its declared faces could be drawn before the design.
 - [~] **Central hub (launcher) for the apps.** The prototype is built: the new repo `..\DesignHub`
   (`DesignHub.exe`), branch `dev/hub-prototype`. See its `README.md` and `docs/DESIGN.md`.
   - [x] Opens a project, shows the five steps of the work with each one's state, and the next step.

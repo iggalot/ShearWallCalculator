@@ -157,6 +157,14 @@ namespace ShearWallVisualizer
             }
             d.StudSize = size;
             d.StudSpacing = mw != null && top != null ? building.StudSpacingOf(mw, top) : defaults.StudSpacing;
+            // the wall view every app shows (WoodFraming.Wpf): the whole wall from the model, with this app's live design
+            if (mw != null)
+            {
+                // (the design this window shows, linked to the wind or not; the foundation takes it only when linked)
+                var live = ShearWallCheck.Lateral(levels, stories, allDesignResults, foundationAnchors, 0, loadPath?.ByLevel, building?.Ground?.Id) ?? BuildingModel.Model.LateralSection.Read(building);
+                d.View = WoodFraming.Wpf.WallViews.FromModel(building, mw, top, live);
+                if (d.View != null) d.View.Name = d.Name;
+            }
             // what the story above stands on this wall: its hold-downs (and beam ends or column bases) landing on it
             string UpperWall(HoldownLanding x)
             {

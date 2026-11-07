@@ -40,6 +40,8 @@ namespace ShearWallVisualizer.Dialogs
         public List<HoldownLanding> Own { get; set; } = new List<HoldownLanding>();
         public List<LoadFromAbove> Above { get; set; } = new List<LoadFromAbove>();
         public List<CalcLine> Lines { get; set; } = new List<CalcLine>();
+        /// <summary>The wall as every app shows it (WoodFraming.Wpf): the whole wall from the model, with this app's design.</summary>
+        public WallView View { get; set; }
         public string Footnote { get; set; }
         public bool FirstStory => Story == 0;
         public bool EastWest => Wall?.WallDir == WallDirs.EastWest;
@@ -99,22 +101,18 @@ namespace ShearWallVisualizer.Dialogs
     {
         private readonly TextBlock title = new TextBlock { FontSize = 18, FontWeight = FontWeights.SemiBold };
         private readonly TextBlock subtitle = new TextBlock { Foreground = Ui.InkSecondary, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 6) };
-        private readonly TabControl tabs = new TabControl();
-        private readonly Grid elevationHost = new Grid();
-        private readonly Framing3DView view3D = new Framing3DView();
+        /// <summary>The wall's views, the same in every app (WoodFraming.Wpf): its framing and 3D, the Shear wall toggle.</summary>
+        private readonly WallPanel panel = new WallPanel();
         private readonly ScrollViewer pieces = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
         private readonly ScrollViewer calc = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
-        private readonly ComboBox face = new ComboBox { Width = 170, Margin = new Thickness(0, 0, 12, 0) };
-        private readonly CheckBox nails = new CheckBox { Content = "Nails", IsChecked = true, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 12, 0) };
-        private readonly CheckBox face1In3D = new CheckBox { Content = "Face 1 sheathing", IsChecked = true, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 12, 0) };
-        private readonly CheckBox face2In3D = new CheckBox { Content = "Face 2 sheathing", IsChecked = true, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 12, 0) };
-        private readonly CheckBox cutaway = new CheckBox { Content = "Cut away the right half", IsChecked = true, VerticalAlignment = VerticalAlignment.Center };
+        /// <summary>The shared views (for the tests).</summary>
+        public WallPanel Panel => panel;
         private readonly CheckBox follow = new CheckBox { Content = "Open when a wall, beam or column is picked", VerticalAlignment = VerticalAlignment.Center, Foreground = Ui.InkSecondary };
         private WallBuildData data;
         /// <summary>The wall shown (null for a beam or column, or nothing).</summary>
         public WallBuildData Data => data;
         private WallFraming framing;
-        private readonly StackPanel elevBar, bar3, studBar;
+        private readonly StackPanel studBar;
         private readonly ComboBox studs = new ComboBox { MinWidth = 150 };
         private void NameStuds() => System.Windows.Automation.AutomationProperties.SetName(studs, "Studs");
         private bool fillingStuds;
@@ -176,39 +174,10 @@ namespace ShearWallVisualizer.Dialogs
             DockPanel.SetDock(head, Dock.Top);
             root.Children.Add(head);
 
-            // Elevation: which face of sheathing, and the nails
-            foreach (var s in new[] { "Face 1 sheathing", "Face 2 sheathing", "Framing only" }) face.Items.Add(s);
-            face.SelectedIndex = 0;
-            face.SelectionChanged += (s, e) => ShowElevation();
-            nails.Checked += (s, e) => ShowElevation();
-            nails.Unchecked += (s, e) => ShowElevation();
-            elevBar = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 4, 0, 6) };
-            elevBar.Children.Add(new TextBlock { Text = "Show ", VerticalAlignment = VerticalAlignment.Center });
-            elevBar.Children.Add(face);
-            elevBar.Children.Add(nails);
-            elevBar.Children.Add(new TextBlock { Text = "Elevation to scale, the low end (west or south) on the left, seen from the face 1 side.", Foreground = Ui.InkMuted, VerticalAlignment = VerticalAlignment.Center });
-            var elevPage = new DockPanel();
-            DockPanel.SetDock(elevBar, Dock.Top);
-            elevPage.Children.Add(elevBar);
-            elevPage.Children.Add(elevationHost);
-
-            bar3 = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 4, 0, 6) };
-            foreach (var cb in new[] { face1In3D, face2In3D, cutaway })
-            {
-                cb.Checked += (s, e) => Show3D();
-                cb.Unchecked += (s, e) => Show3D();
-                bar3.Children.Add(cb);
-            }
-            var page3 = new DockPanel();
-            DockPanel.SetDock(bar3, Dock.Top);
-            page3.Children.Add(bar3);
-            page3.Children.Add(new Border { Child = view3D, BorderBrush = Ui.Hairline, BorderThickness = new Thickness(1) });
-
-            tabs.Items.Add(new TabItem { Header = "Elevation", Content = elevPage });
-            tabs.Items.Add(new TabItem { Header = "3D", Content = page3 });
-            tabs.Items.Add(new TabItem { Header = "Pieces", Content = pieces });
-            tabs.Items.Add(new TabItem { Header = "Calculation", Content = calc });
-            root.Children.Add(tabs);
+            // the views every app shows (Elevation, 3D: WoodFraming.Wpf), then this app's own: the pieces and the calculation
+            panel.AddTab("Pieces", pieces);
+            panel.AddTab("Calculation", calc);
+            root.Children.Add(panel);
             Content = root;
         }
 
@@ -236,15 +205,14 @@ namespace ShearWallVisualizer.Dialogs
         }
 
         /// <summary>Pick a tab: 0 Elevation, 1 3D, 2 Pieces, 3 Calculation.</summary>
-        public void ShowTab(int i) { if (i >= 0 && i < tabs.Items.Count) tabs.SelectedIndex = i; }
+        public void ShowTab(int i) { if (i >= 0 && i < panel.Tabs.Items.Count) panel.Tabs.SelectedIndex = i; }
 
         /// <summary>A beam or a column: its own elevation, 3D model, pieces and calculation (the wall's toolbars hidden).</summary>
         public void ShowMember(MemberView v)
         {
             data = null;
             framing = null;
-            elevBar.Visibility = bar3.Visibility = studBar.Visibility = Visibility.Collapsed;
-            elevationHost.Children.Clear();
+            studBar.Visibility = Visibility.Collapsed;
             if (v == null)
             {
                 Title = "Member";
@@ -252,15 +220,13 @@ namespace ShearWallVisualizer.Dialogs
                 subtitle.Text = "";
                 pieces.Content = null;
                 calc.Content = null;
-                view3D.ShowModel(new Model3DGroup(), null);
+                panel.ShowOther(null, new Model3DGroup(), null);
                 return;
             }
             Title = v.WindowTitle;
             title.Text = v.Title;
             subtitle.Text = v.Subtitle;
-            var e = v.Elevation?.Invoke();
-            if (e != null) elevationHost.Children.Add(e);
-            view3D.ShowModel(v.Model?.Invoke() ?? new Model3DGroup(), v.Key, null, v.North, v.FromPlan);
+            panel.ShowOther(v.Elevation?.Invoke(), v.Model?.Invoke() ?? new Model3DGroup(), v.Key, v.North, v.FromPlan);
             pieces.Content = v.Pieces?.Invoke();
             var cp = new StackPanel { Margin = new Thickness(4) };
             cp.Children.Add(CalcTable.Build(v.Lines ?? new List<CalcLine>()));
@@ -270,33 +236,30 @@ namespace ShearWallVisualizer.Dialogs
 
         public void Show(WallBuildData d)
         {
-            elevBar.Visibility = bar3.Visibility = Visibility.Visible;
             data = d;
-            framing = d?.Wall == null ? null : d.Framing();
+            framing = d?.Wall == null ? null : d.Framing(); // the shear part's pieces (the Pieces tab)
             FillStuds(d);
             if (d?.Wall == null)
             {
                 Title = "Wall";
                 title.Text = "Pick a wall on the plan";
                 subtitle.Text = "";
-                elevationHost.Children.Clear();
+                panel.Show(null);
                 pieces.Content = null;
                 calc.Content = null;
-                view3D.ShowModel(new Model3DGroup(), null);
                 return;
             }
-            var w = d.Wall;
             var r = d.Result;
+            // the views: the whole wall from the model, with this app's design over it (the same as in every app)
+            panel.Show(d.View);
+            var whole = panel.Framing ?? framing;
             Title = $"Wall {d.Name}: elevation, 3D and pieces";
             title.Text = $"{d.Name} · {d.LevelName}";
-            subtitle.Text = $"{(d.EastWest ? "East-west" : "North-south")} wall, {FtIn.Of(framing.Length)} long × {FtIn.Of(framing.Height)} high (story {d.Story + 1} of {d.Stories}). " +
+            subtitle.Text = $"{(d.EastWest ? "East-west" : "North-south")} wall, {FtIn.Of(whole.Length)} long × {FtIn.Of(whole.Height)} high as built" +
+                            (Math.Abs(whole.Length - framing.Length) > 0.01 ? $", the shear wall {FtIn.Of(framing.Length)} of it" : "") + $" (story {d.Story + 1} of {d.Stories}). " +
                             (r == null ? "Not designed yet (no shear on it)." :
                              $"{r.Status}: v = {r.Demand:0} plf of {r.Capacity:0} plf" + (r.HoldownNeeded ? $", hold-downs {r.Holdown?.Model ?? "none strong enough"} for T = {r.TensionAsd:N0} lb (ASD)." : ", no uplift."));
             subtitle.Text += $" Studs {framing.StudSize} at {framing.Spacing:0}\" o.c. (not designed here).";
-            int faces = Faces().Count;
-            face2In3D.IsEnabled = faces > 1;
-            ShowElevation();
-            Show3D();
             pieces.Content = Pieces();
             var cp = new StackPanel { Margin = new Thickness(4) };
             cp.Children.Add(CalcTable.Build(d.Lines ?? new List<CalcLine>()));
@@ -306,31 +269,6 @@ namespace ShearWallVisualizer.Dialogs
 
         /// <summary>The wall's sheathed faces (one or two), as designed.</summary>
         private List<FaceResult> Faces() => data?.Result?.Faces?.Where(f => f?.Face != null && f.Face.Table != SheathingTable.None).ToList() ?? new List<FaceResult>();
-
-        private void ShowElevation()
-        {
-            elevationHost.Children.Clear();
-            if (data?.Wall == null || framing == null) return;
-            var faces = Faces();
-            int pick = face.SelectedIndex;
-            FaceResult shown = pick == 0 && faces.Count > 0 ? faces[0] : pick == 1 && faces.Count > 1 ? faces[1] : null;
-            elevationHost.Children.Add(new FramingElevation(data, framing, shown, pick == 1 && faces.Count < 2 ? "This wall has one sheathed face." : null, nails.IsChecked == true));
-        }
-
-        private void Show3D()
-        {
-            if (data?.Wall == null || framing == null) { view3D.ShowModel(new Model3DGroup(), null); return; }
-            var faces = Faces();
-            var model = WallModel3D.Build(data, framing, face1In3D.IsChecked == true && faces.Count > 0, face2In3D.IsChecked == true && faces.Count > 1, cutaway.IsChecked == true, faces);
-            // the same wall (its size) keeps the turn; fitted on the wall itself, not the footing or the straps
-            // with the building model's north arrow (as in every view), off the wall's north-west corner; the wall's own axes run from
-            // its low end (west or south), seen from the south or the east
-            var w = data.Wall;
-            double x0 = Math.Min(w.Start.X, w.End.X), x1 = Math.Max(w.Start.X, w.End.X), y0 = Math.Min(w.Start.Y, w.End.Y), y1 = Math.Max(w.Start.Y, w.End.Y);
-            var north = BuildingModel.Model.NorthArrow.For(new BuildingModel.Geometry.Rect2(x0, y0, x1, y1), framing.Height / 12);
-            var fromPlan = data.EastWest ? FramingModel.FromPlan(x0, y0, x1, y0, framing.StudDepth) : FramingModel.FromPlan(x0, y0, x0, y1, framing.StudDepth);
-            view3D.ShowModel(model, $"wall {framing.Length:0.##} x {framing.Height:0.##}", new Rect3D(0, 0, 0, framing.Length, framing.Height, framing.StudDepth), north, fromPlan);
-        }
 
         // ---------------------------------------------------------------- the pieces
 
@@ -571,305 +509,6 @@ namespace ShearWallVisualizer.Dialogs
                 for (int c = 0; c < head.Length && c < rows[i].Length; c++) Cell(rows[i][c], i + 1, c, false);
             }
             return g;
-        }
-    }
-
-    /// <summary>
-    /// The wall's framing in elevation, to scale and fitted to the space: plates, studs, posts and blocking, one face of
-    /// sheathing over them with its nails, the hold-downs at the bottom with their anchors and labels, the hold-downs from
-    /// above at the top with their posts, the dimensions (length, height, sheet widths, stud spacing) and callouts.
-    /// </summary>
-    public sealed class FramingElevation : FrameworkElement
-    {
-        private readonly WallBuildData d;
-        private readonly WallFraming f;
-        private readonly FaceResult face;
-        private readonly string note;
-        private readonly bool nails;
-
-        private static readonly Brush StudFill = Ui.Frozen("#EAD7B5"), PlateFill = Ui.Frozen("#D9B98C"), PostFill = Ui.Frozen("#C99A5B"),
-                                      UnderFill = Ui.Frozen("#E9A15C"), SheetFill = Ui.Frozen("#4D9DB8D9"), GypsumFill = Ui.Frozen("#55E5E7EB"),
-                                      EdgeNail = Ui.Frozen("#B42318"), FieldNail = Ui.Frozen("#3F3F46"), AboveInk = Ui.Frozen("#C2410C"), AnchorInk = Ui.Frozen("#1F5F8B");
-        private static readonly Pen Edge = DetailInk.P(DetailInk.Timber, 0.7), SheetEdge = DetailInk.P(Ui.Frozen("#3B6EA8"), 1.3);
-
-        public FramingElevation(WallBuildData data, WallFraming framing, FaceResult shown, string note, bool showNails)
-        {
-            d = data;
-            f = framing;
-            face = shown;
-            this.note = note;
-            nails = showNails;
-            SnapsToDevicePixels = true;
-        }
-
-        protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
-        {
-            base.OnRenderSizeChanged(sizeInfo);
-            InvalidateVisual();
-        }
-
-        /// <summary>
-        /// The sill bolts' dimension chain at <paramref name="y"/>: each end to its bolt, and the bolt spacing, once with
-        /// "TYP." when every space is the same (else each one). An end too short for its text has it just outside the wall.
-        /// </summary>
-        private void AnchorChain(DrawingContext dc, SillAnchorage a, double L, Func<double, double> X, double y)
-        {
-            var pen = DetailInk.P(AnchorInk, 1);
-            var ticks = new List<double> { 0 };
-            ticks.AddRange(a.PositionsIn);
-            ticks.Add(L);
-            dc.DrawLine(pen, new Point(X(0), y), new Point(X(L), y));
-            foreach (double t in ticks)
-            {
-                bool bolt = t > 0 && t < L;
-                dc.DrawLine(pen, new Point(X(t) - 3, y + 3), new Point(X(t) + 3, y - 3)); // architectural tick
-                if (bolt) dc.DrawLine(DetailInk.P(AnchorInk, 0.6), new Point(X(t), y - 6), new Point(X(t), y + 4));
-            }
-            var gaps = a.PositionsIn.Zip(a.PositionsIn.Skip(1), (p, q) => (p, q)).ToList();
-            bool same = gaps.Count > 0 && gaps.All(g => Math.Abs((g.q - g.p) - (gaps[0].q - gaps[0].p)) < 1.0 / 16);
-            void Put(double from, double to, string text, int outside)
-            {
-                double w = DetailInk.Text(this, text, 10, AnchorInk, false).Width;
-                double px = X(to) - X(from);
-                if (w + 6 <= px || outside == 0) DetailInk.Label(dc, this, text, new Point((X(from) + X(to)) / 2, y - 8), AnchorInk, 10, centre: true);
-                else if (outside < 0) DetailInk.Label(dc, this, text, new Point(X(from) - 6, y - 15), AnchorInk, 10, rightAligned: true);
-                else DetailInk.Label(dc, this, text, new Point(X(to) + 6, y - 15), AnchorInk, 10);
-            }
-            Put(0, a.PositionsIn[0], FtIn.Of(a.PositionsIn[0]), -1);
-            Put(a.PositionsIn.Last(), L, FtIn.Of(L - a.PositionsIn.Last()), +1);
-            if (same)
-            {
-                var mid = gaps[gaps.Count / 2];
-                Put(mid.p, mid.q, $"{FtIn.Of(mid.q - mid.p)} TYP.", 0);
-            }
-            else foreach (var g in gaps) Put(g.p, g.q, FtIn.Of(g.q - g.p), 0);
-            DetailInk.Label(dc, this, $"Sill anchor bolts ({a.Count})", new Point(X(0), y + 5), AnchorInk, 9.5);
-        }
-
-        protected override void OnRender(DrawingContext dc)
-        {
-            double W = ActualWidth, Hh = ActualHeight;
-            dc.DrawRectangle(DetailInk.Paper, null, new Rect(0, 0, W, Hh));
-            if (f == null || f.Length <= 0 || f.Height <= 0) return;
-            double L = f.Length, H = f.Height;
-            double left = 96, right = 230, top = 120, bottom = 206;
-            double s = Math.Min((W - left - right) / L, (Hh - top - bottom) / H);
-            if (s <= 0) return;
-            double x0 = left + Math.Max(0, ((W - left - right) - L * s) / 2), yb = top + H * s + Math.Max(0, ((Hh - top - bottom) - H * s) / 2);
-            double X(double x) => x0 + x * s;
-            double Y(double y) => yb - y * s;
-            Rect R(double a, double b, double c, double e) => new Rect(new Point(X(a), Y(c)), new Point(X(b), Y(e)));
-            var r = d.Result;
-
-            // what it stands on
-            if (d.FirstStory) DetailInk.Hatch(dc, new Rect(X(0) - 24, yb, L * s + 48, 22), DetailInk.Concrete);
-            else dc.DrawRectangle(DetailInk.Joint, DetailInk.P(DetailInk.Dim, 0.8), new Rect(X(0) - 14, yb, L * s + 28, 10));
-            DetailInk.Label(dc, this, d.FirstStory ? "Foundation" : "Floor of the story below", new Point(X(L / 2), yb + (d.FirstStory ? 11 : 5)), DetailInk.Dim, 10, centre: true);
-
-            // the framing
-            foreach (var p in f.Pieces)
-            {
-                Brush fill = p.Kind == FramingKind.Stud ? StudFill : p.Kind == FramingKind.EndPost ? PostFill : p.Kind == FramingKind.PostUnder ? UnderFill : PlateFill;
-                dc.DrawRectangle(fill, Edge, R(p.X0, p.X1, p.Y1, p.Y0));
-            }
-
-            // one face of sheathing and its nails
-            if (face != null)
-            {
-                bool gyp = face.Option?.Table == SheathingTable.GypsumAndPlaster;
-                foreach (var sh in f.Sheets)
-                {
-                    var rr = R(sh.X0, sh.X1, sh.Y1, sh.Y0);
-                    rr.Inflate(-0.6, -0.6);
-                    dc.DrawRectangle(gyp ? GypsumFill : SheetFill, SheetEdge, rr);
-                    if (rr.Width > 60 && rr.Height > 30)
-                        DetailInk.Label(dc, this, $"{FtIn.Of(sh.Width)} × {FtIn.Of(sh.Height)}", new Point(rr.X + rr.Width / 2, rr.Y + Math.Min(rr.Height / 2, 40)), Ui.Frozen("#3B6EA8"), 9.5, centre: true);
-                    if (nails && face.Face != null && face.Option != null && face.Option.UsesEdgeSpacing)
-                    {
-                        var (edge, field) = f.Nails(sh, face.Face.EdgeSpacing);
-                        double re = Math.Max(1.1, Math.Min(2.2, 0.28 * s)), rf = re * 0.8;
-                        foreach (var n in edge) dc.DrawEllipse(EdgeNail, null, new Point(X(n.X), Y(n.Y)), re, re);
-                        foreach (var n in field) dc.DrawEllipse(FieldNail, null, new Point(X(n.X), Y(n.Y)), rf, rf);
-                    }
-                }
-            }
-            if (note != null) DetailInk.Label(dc, this, note, new Point(X(L / 2), Y(H / 2)), Ui.InkMuted, 12, centre: true);
-
-            // the hold-downs at the bottom, on the end posts' inner faces, with the anchor
-            double post = f.PostPlies * WallFraming.Ply;
-            if (r != null && r.HoldownNeeded)
-                foreach (bool low in new[] { true, false })
-                {
-                    var l = d.OwnAt(low);
-                    double hx0 = low ? post : L - post - 2.9, hx1 = hx0 + 2.9;
-                    var box = R(hx0, hx1, WallFraming.Ply + 12, WallFraming.Ply);
-                    var fam = l?.Family ?? r.Inputs?.Holdown ?? HoldownFamilies.HDU_ToFoundation;
-                    if (fam == HoldownFamilies.Strap_ToWallBelow || fam == HoldownFamilies.STHD_ToFoundation)
-                    {
-                        // a strap up the post's face, nailed, down past the sill into what is under it
-                        double sx = low ? post / 2 : L - post / 2;
-                        dc.DrawRectangle(DetailInk.Hardware, null, R(sx - 0.625, sx + 0.625, 30, -14));
-                    }
-                    else
-                    {
-                        dc.DrawRectangle(DetailInk.Hardware, null, box);
-                        double rx = (hx0 + hx1) / 2;
-                        dc.DrawLine(DetailInk.P(DetailInk.Hardware, 2.4), new Point(X(rx), Y(WallFraming.Ply)), new Point(X(rx), yb + (d.FirstStory ? 20 : 8)));
-                    }
-                    var ink = l == null ? Ui.Ink : !l.Supported || l.Model == null ? Ui.FailInk : l.Note != null ? Ui.CloseInk : Ui.Ink;
-                    string model = l?.Model ?? r.Holdown?.Model ?? "none strong enough";
-                    string fast = WallBuildWindow.Fast(l?.Choice?.Fasteners ?? r.Holdown?.Fasteners);
-                    string to = l == null ? "" : !l.Supported ? "→ nothing under it" : $"→ {DetailCalcs.Support(l)}";
-                    double tx = low ? X(0) : X(L);
-                    double ty = yb + 34;
-                    DetailInk.Label(dc, this, model, new Point(tx, ty), ink, 12, bold: true, rightAligned: !low);
-                    if (fast != "") DetailInk.Label(dc, this, "fasteners " + fast, new Point(tx, ty + 16), ink, 10.5, rightAligned: !low);
-                    DetailInk.Label(dc, this, $"T = {(l?.TensionAsd ?? r.TensionAsd):N0} lb", new Point(tx, ty + 30), ink, 10.5, rightAligned: !low);
-                    if (to != "") DetailInk.Label(dc, this, to, new Point(tx, ty + 44), ink, 10.5, rightAligned: !low);
-                }
-
-            // the sill's anchor bolts (first story): each down into the concrete, a washer and nut on the sill
-            var an = d.Anchors();
-            if (an != null)
-                foreach (double ax in an.PositionsIn)
-                {
-                    dc.DrawLine(DetailInk.P(AnchorInk, 2), new Point(X(ax), Y(WallFraming.Ply) - 3), new Point(X(ax), yb + 17));
-                    dc.DrawLine(DetailInk.P(AnchorInk, 2), new Point(X(ax), yb + 17), new Point(X(ax) + 5, yb + 17)); // the hook
-                    dc.DrawRectangle(AnchorInk, null, new Rect(X(ax) - Math.Max(3, 1.5 * s), Y(WallFraming.Ply) - 1.5, 2 * Math.Max(3, 1.5 * s), 1.5));
-                }
-
-            // what comes down from above: the hold-downs of the story above standing on the top plates, each over its post
-            int k = 0;
-            foreach (var a in d.Above.OrderBy(x => x.Along))
-            {
-                double x = X(Math.Max(0, Math.Min(L, a.Along)));
-                var pen = DetailInk.P(AboveInk, 1.8);
-                DetailInk.Arrow(dc, pen, new Point(x, Y(H)), new Point(x, Y(H) - 30));
-                double ly = Y(H) - 46 - 30 * (k++ % 2);
-                DetailInk.Label(dc, this, $"↑ {a.Landing.TensionAsd / 1000:0.0}k  {a.Landing.Model ?? ""}", new Point(x, ly), AboveInk, 10.5, bold: true, centre: true);
-                DetailInk.Label(dc, this, $"from {a.From} above", new Point(x, ly + 14), AboveInk, 10, centre: true);
-            }
-
-            // dimensions: the sheet widths along the top, the length and the height
-            double yd = Y(H) - (d.Above.Count > 0 ? 96 : 26);
-            foreach (var sh in f.Sheets.Where(x => x.Y0 < 0.01))
-                DetailInk.Dimension(dc, this, new Point(X(sh.X0), yd), new Point(X(sh.X1), yd), FtIn.Of(sh.Width));
-            if (an != null && an.Count > 0) AnchorChain(dc, an, L, X, yb + 108);
-            DetailInk.Dimension(dc, this, new Point(X(0), yb + 130), new Point(X(L), yb + 130), FtIn.Of(L));
-            DetailInk.Dimension(dc, this, new Point(X(0) - 48, Y(H)), new Point(X(0) - 48, Y(0)), FtIn.Of(H), vertical: true);
-            var studs = f.Pieces.Where(p => p.Kind == FramingKind.Stud).OrderBy(p => p.X0).ToList();
-            if (studs.Count >= 2)
-            {
-                double ys = Y(WallFraming.Ply + 24); // low in the wall, clear of the sheet labels
-                DetailInk.Dimension(dc, this, new Point(X(studs[0].CenterX), ys), new Point(X(studs[1].CenterX), ys), $"{f.Spacing:0}\" o.c.");
-            }
-            if (r != null && r.HoldownNeeded)
-                DetailInk.Dimension(dc, this, new Point(X(post + 1.45), yb + 152), new Point(X(L - post - 1.45), yb + 152), $"d = {FtIn.Of(r.HoldownArm * 12)}");
-            DetailInk.Label(dc, this, d.EastWest ? "W" : "S", new Point(X(0) - 16, Y(H) - 2), DetailInk.Dim, 11, bold: true);
-            DetailInk.Label(dc, this, d.EastWest ? "E" : "N", new Point(X(L) + 6, Y(H) - 2), DetailInk.Dim, 11, bold: true);
-
-            // callouts at the right
-            double cx = X(L) + 46;
-            void Callout(string text, double y, double atX)
-            {
-                dc.DrawLine(DetailInk.P(DetailInk.Dim, 0.8), new Point(cx - 4, y), new Point(atX, y));
-                DetailInk.Label(dc, this, text, new Point(cx, y - 8), Ui.Ink, 10.5);
-            }
-            string sz = f.StudSize;
-            Callout($"Double top plate, 2-{sz} flat", Y(H - WallFraming.Ply), X(L - 2));
-            if (studs.Count > 0) Callout($"{sz} studs @ {f.Spacing:0}\" o.c., {FtIn.Of(studs[0].Length)}", Y(H * 0.62), X(studs.Last().CenterX));
-            Callout($"Hold-down post, {f.PostPlies}-{sz}", Y(H * 0.44), X(L - post / 2));
-            var blk = f.Pieces.FirstOrDefault(p => p.Kind == FramingKind.Blocking);
-            if (blk != null) Callout($"{sz} blocking at the sheet joint", Y(blk.Y0 + 0.75), X(f.Pieces.Last(p => p.Kind == FramingKind.Blocking).CenterX));
-            Callout($"Sill plate, {sz} flat", Y(WallFraming.Ply / 2), X(L - 2));
-            if (an != null && an.Count > 0)
-                DetailInk.Label(dc, this, $"{an.Count} anchor bolts {(an.BoltDia == 0.5 ? "1/2\"" : "5/8\"")} @ {FtIn.Of(an.SpacingIn)} max, {FtIn.Of(an.PositionsIn[0])} from the ends", new Point(cx, Y(WallFraming.Ply / 2) + 8), AnchorInk, 10);
-            if (face != null)
-            {
-                var o = face.Option;
-                Callout(o == null ? "Sheathing" : $"{ShearWallDesigner.MaterialName(o.Material)} {ShearWallDesigner.ThicknessName(o.Thickness)}", Y(H * 0.80), X(L - 6));
-                if (face.Face != null && o != null && o.UsesEdgeSpacing)
-                    DetailInk.Label(dc, this, $"{ShearWallDesigner.NailName(face.Face.Nail)} @ {face.Face.EdgeSpacing}\" edges / 12\" field", new Point(cx, Y(H * 0.80) + 8), Ui.InkSecondary, 10);
-            }
-            if (nails && face != null)
-            {
-                dc.DrawEllipse(EdgeNail, null, new Point(cx + 4, yb + 72), 2, 2);
-                DetailInk.Label(dc, this, "edge nail", new Point(cx + 10, yb + 64), Ui.InkSecondary, 10);
-                dc.DrawEllipse(FieldNail, null, new Point(cx + 4, yb + 88), 1.6, 1.6);
-                DetailInk.Label(dc, this, "field nail", new Point(cx + 10, yb + 80), Ui.InkSecondary, 10);
-            }
-            if (f.Pieces.Any(p => p.Kind == FramingKind.PostUnder))
-            {
-                dc.DrawRectangle(UnderFill, Edge, new Rect(cx, yb + 98, 10, 10));
-                DetailInk.Label(dc, this, "post under a hold-down above", new Point(cx + 14, yb + 96), Ui.InkSecondary, 10);
-            }
-        }
-    }
-
-    /// <summary>
-    /// The wall in 3D for the construction window: the shared framing and sheathing (WoodFraming.Wpf), with this app's design
-    /// added: the hold-downs on the end posts with their anchors, the straps from above, the sill's anchor bolts, and the
-    /// foundation under a first-story wall. Inches: x along the wall, y up, z through it (face 1 at +z).
-    /// </summary>
-    public static class WallModel3D
-    {
-        public static Model3DGroup Build(WallBuildData d, WallFraming f, bool face1, bool face2, bool cut, List<FaceResult> faces)
-        {
-            if (f == null || d == null) return new Model3DGroup();
-            SheathingLayer Face(int i)
-            {
-                var o = faces != null && i < faces.Count ? faces[i]?.Option : null;
-                return new SheathingLayer { Thickness = Thickness(o), Gypsum = o?.Table == SheathingTable.GypsumAndPlaster };
-            }
-            var g = FramingModel.Wall(f, face1 ? Face(0) : null, face2 ? Face(1) : null, cut);
-            double D = f.StudDepth, L = f.Length, H = f.Height;
-            GeometryModel3D Box(double x0, double y0, double z0, double x1, double y1, double z1, Material m) => FramingModel.Box(x0, y0, z0, x1, y1, z1, m);
-            var steel = FramingMaterials.Steel;
-
-            // hold-downs on the end posts' inner faces, the anchor rod down into the foundation
-            var r = d.Result;
-            double post = f.PostPlies * WallFraming.Ply;
-            if (r != null && r.HoldownNeeded)
-                foreach (bool low in new[] { true, false })
-                {
-                    double x0 = low ? post : L - post - 2.9;
-                    var fam = d.OwnAt(low)?.Family ?? r.Inputs?.Holdown ?? HoldownFamilies.HDU_ToFoundation;
-                    if (fam == HoldownFamilies.Strap_ToWallBelow || fam == HoldownFamilies.STHD_ToFoundation)
-                    {
-                        double sx = low ? post / 2 : L - post / 2;
-                        g.Children.Add(Box(sx - 0.625, -14, -0.1, sx + 0.625, 30, -0.02, steel));
-                    }
-                    else
-                    {
-                        g.Children.Add(Box(x0, WallFraming.Ply, D / 2 - 1.5, x0 + 2.9, WallFraming.Ply + 12, D / 2 + 1.5, steel));
-                        g.Children.Add(Box(x0 + 1.15, d.FirstStory ? -10 : -6, D / 2 - 0.3, x0 + 1.75, WallFraming.Ply + 3, D / 2 + 0.3, steel));
-                    }
-                }
-            // straps from above at their posts
-            foreach (var a in d.Above)
-                g.Children.Add(Box(a.Along - 0.625, H - 2, D + 0.05, a.Along + 0.625, H + 18, D + 0.15, FramingMaterials.Strap));
-            // the sill's anchor bolts: a rod through the sill's middle, its washer and nut on top
-            var an = d.Anchors();
-            if (an != null)
-                foreach (double ax in an.PositionsIn)
-                {
-                    double r2 = an.BoltDia / 2;
-                    g.Children.Add(Box(ax - r2, -7, D / 2 - r2, ax + r2, WallFraming.Ply + 1.2, D / 2 + r2, steel));
-                    double w = an.PlateWasher ? 1.5 : 0.9;
-                    g.Children.Add(Box(ax - w, WallFraming.Ply, D / 2 - w, ax + w, WallFraming.Ply + 0.23, D / 2 + w, steel));
-                }
-            if (d.FirstStory) g.Children.Add(Box(-8, -14, -4, L + 8, 0, D + 4, FramingMaterials.Concrete));
-            return g;
-        }
-
-        /// <summary>A sheathing option's thickness (in), from its nominal thickness ("15/32\"" → 0.469); 1/2 in. when not known.</summary>
-        private static double Thickness(SheathingOption o)
-        {
-            if (o == null) return 0.5;
-            string s = ShearWallDesigner.ThicknessName(o.Thickness).Replace("\"", "");
-            var parts = s.Split('/');
-            return parts.Length == 2 && double.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out double a) &&
-                   double.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out double b) && b > 0 ? a / b : 0.5;
         }
     }
 }

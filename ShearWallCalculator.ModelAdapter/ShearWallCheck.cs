@@ -258,6 +258,7 @@ namespace ShearWallCalculator.ModelAdapter
             // its roof pressures) from the wind calculator itself
             s.Cases = cases;
             if (byLevel != null) s.Holdowns = StoryHoldowns(levels, stories, byLevel, groundLevelId);
+            s.Walls = ShearDesigns(levels, stories, byStory);
             return s.IsEmpty ? null : s;
         }
 
@@ -304,6 +305,76 @@ namespace ShearWallCalculator.ModelAdapter
                 }
             }
             return list;
+        }
+
+        /// <summary>
+        /// Every story's shear walls as designed, in the model's plain terms (<see cref="ShearWallDesign"/>), for the wall
+        /// views of every app: the part as built, its faces' sheathing and nailing, the lever arm, the check, the hold-down's
+        /// fasteners, and a first-story wall's sill anchor bolts (<see cref="WoodFraming.SillAnchorage"/>, as the
+        /// construction window lays them out).
+        /// </summary>
+        public static List<ShearWallDesign> ShearDesigns(IList<ShearWallCalculatorBase> levels, IList<StoryMap> stories, IList<Dictionary<int, WallDesignResult>> byStory)
+        {
+            var list = new List<ShearWallDesign>();
+            if (levels == null || stories == null || byStory == null) return list;
+            for (int k = 0; k < levels.Count && k < stories.Count && k < byStory.Count; k++)
+            {
+                var walls = levels[k]?._wall_system?._walls;
+                if (walls == null || byStory[k] == null) continue;
+                foreach (var kv in walls)
+                {
+                    // every declared shear wall (every wall of the calculators): its part as built; designed, its design too
+                    if (!stories[k].Walls.TryGetValue(kv.Key, out var id)) continue;
+                    var w = kv.Value;
+                    byStory[k].TryGetValue(kv.Key, out var r);
+                    var d = new ShearWallDesign
+                    {
+                        WallId = id, LevelId = stories[k].Level?.Id,
+                        X0 = w.Start.X, Y0 = w.Start.Y, X1 = w.End.X, Y1 = w.End.Y,
+                        Check = "Not designed yet (no shear on it).",
+                    };
+                    list.Add(d);
+                    if (r == null) continue;
+                    d.ArmIn = Math.Round(r.HoldownArm * 12, 3);
+                    d.Check = r.Pass ? $"OK: v = {r.Demand:0} plf of {r.Capacity:0} plf" : $"{r.Status}: v = {r.Demand:0} plf of {r.Capacity:0} plf";
+                    d.Fails = !r.Pass;
+                    d.Fasteners = r.Holdown?.Fasteners;
+                    foreach (var f in (r.Faces ?? new List<FaceResult>()).Where(f => f?.Face != null && f.Face.Table != SheathingTable.None))
+                    {
+                        var o = f.Option;
+                        bool nailed = o != null && o.UsesEdgeSpacing;
+                        d.Faces.Add(new ShearFace
+                        {
+                            Sheathing = o == null ? "Sheathing" : $"{ShearWallDesigner.MaterialName(o.Material)} {ShearWallDesigner.ThicknessName(o.Thickness)}",
+                            ThicknessIn = Thickness(o),
+                            Gypsum = o?.Table == SheathingTable.GypsumAndPlaster,
+                            Nail = nailed ? ShearWallDesigner.NailName(f.Face.Nail) : null,
+                            EdgeIn = nailed ? f.Face.EdgeSpacing : 0,
+                            FieldIn = nailed ? 12 : 0,
+                        });
+                    }
+                    if (k == 0 && r.Length > 0)
+                    {
+                        double vAsd = 0.6 * r.V * 1000.0 / r.Length;
+                        double nominal = r.CombinedNominal > 0 ? r.CombinedNominal : r.Nominal;
+                        var species = r.Inputs?.Species == ShearWallCalculator.WoodTypes.WOODTYPE_SPF_HF ? NDS_WoodLibrary.NDS2018.Species.SprucePineFir : NDS_WoodLibrary.NDS2018.Species.DouglasFirLarch;
+                        var a = WoodFraming.SillAnchorage.Design(r.Length, vAsd, species, nominal, r.AspectRatio, false); // the hold-downs are sized without dead load
+                        if (a != null && a.Count > 0)
+                            d.Anchors = new SillAnchors { PositionsIn = a.PositionsIn.ToList(), BoltDiaIn = a.BoltDia, SpacingIn = a.SpacingIn, PlateWasher = a.PlateWasher };
+                    }
+                }
+            }
+            return list;
+        }
+
+        /// <summary>A sheathing option's thickness (in), from its nominal thickness ("15/32\"" → 0.469); 1/2 in. when not known.</summary>
+        public static double Thickness(SheathingOption o)
+        {
+            if (o == null) return 0.5;
+            string s = ShearWallDesigner.ThicknessName(o.Thickness).Replace("\"", "");
+            var parts = s.Split('/');
+            return parts.Length == 2 && double.TryParse(parts[0], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double a) &&
+                   double.TryParse(parts[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double b) && b > 0 ? a / b : 0.5;
         }
     }
 }

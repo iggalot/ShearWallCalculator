@@ -34,6 +34,11 @@
     shared sketch draws the hold-downs on every level's plan, its own and those from above (`ConnectionMarkers` on Ground,
     `LevelMarkers` above; `Sketch.Connections` gives it SWC's live ones before a save). SWC draws only the beam-end
     reactions and the beam ends with no uplift itself.
+  - **The wall window is shared** (`WoodFraming.Wpf` `WallPanel`, made by `WallViews.FromModel` from the model and a
+    `Lateral` section): the Building Model's wall window and SWC's construction window (`Dialogs/WallBuildWindow.cs`,
+    which adds its Pieces and Calculation tabs) draw the same thing. SWC hands it its live design
+    (`ShearWallCheck.Lateral`, whose `Walls` are `ShearDesigns`: every declared wall, designed or not). A change to how a
+    wall is drawn goes into WoodFraming.Wpf, not this app.
   - **SWC writes only its own data** (`OwnsData` in `MainWindow.Project.cs`): `ShearWall.Project`,
     `ShearWall.DesignSettings`, the walls' and diaphragms' `ShearWall` design, and `Lateral`. `SaveProject` uses
     `ModelFile.SaveOwnData`: it re-reads the file and replaces only those keys. It never writes the geometry, the wind or

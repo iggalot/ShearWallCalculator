@@ -2,6 +2,27 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-07 — One wall window for every app
+
+- `WoodFraming.Wpf` has the wall window every app opens: `WallView` (plain data, made from the model and its `Lateral`
+  section by `WallViews.FromModel`), `WallElevation`, `WallModel3D`, `WallPanel` (Elevation and 3D) and `WallWindow`.
+- It draws the whole wall as built (from the faces of the walls it butts into), framed by `WallFraming.Build` with the
+  shear part: the hold-down posts at the part's ends, a stud at the wall's own ends, the sheets over the part. The
+  hold-downs are always drawn, each on its end post's inside face with its connector, tension and what it anchors to,
+  and so is what comes down onto the wall's top from the story above (with a post under each).
+- **Shear wall** (on by default) draws SWC's design over the framing: one face's sheathing and nails over the shear part,
+  the sheathing and nailing callouts, the sill bolts, the lever arm, the check and the shear part's dimension. A plain
+  wall says it is not a shear wall. Off, the framing and the hold-downs stay as they are.
+- The design comes from the model: SWC writes `LateralSection.Walls` (`ShearWallDesign`, `ShearFace`, `SillAnchors`:
+  every declared wall, its part as built, faces, nailing, arm, check, hold-down fasteners, a first-story wall's sill
+  bolts), from `ShearWallCheck.ShearDesigns` in the window and the headless check.
+- The Building Model opens it from a wall's properties (**Framing and 3D…**; `ObjectProperties.OpenWall`, which BM.App
+  sets); it follows the pick and the model. SWC's construction window hosts the same `WallPanel` with its own Pieces
+  and Calculation tabs; its own elevation and 3D classes are gone.
+- The views draw the data and calculate nothing: no design value depends on them.
+- Tests: `WallViewTests` (WoodFraming, 6), `Properties_AWall_FramingAnd3D_OpensTheHostsWallWindow` (Sketch), the hub's
+  `SwcPicksAWall_ItsCardOpens` (the shared panel in SWC's window) and `Run_EveryStorysHoldowns_...` (the walls' designs saved).
+
 ## 2026-11-07 — Hold-downs on every level, in every app
 
 - SWC saves every story's hold-downs into the model: `LateralSection.Holdowns` (`StoryHoldown`: where, the connector,
