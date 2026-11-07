@@ -252,6 +252,7 @@ namespace ShearWallVisualizer
             section = section ?? new ShearWallProject();
             // no Wind section: the wind is not set up yet. It is set up in the Wind Load Calculator (Edit wind); this app
             // makes no wind of its own (the walls wait, or use manual loads)
+            windJsonInUse = b.GetData(WindSection.Key); // the wind the walls are designed with (its stamp at save)
             b.SetData(WindSection.Key, null);
 
             int keepLevel = reload ? currentLevel : 0;

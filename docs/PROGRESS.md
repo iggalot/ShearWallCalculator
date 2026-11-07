@@ -4,6 +4,10 @@ _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`
 
 ## 2026-11-06 — The design with no window; the project kept in spec
 
+- Fixed: a save with nothing changed put the shear walls and the foundation out of date in the hub. SWC takes the Wind
+  section off its own copy of the building, so the stamp fingerprinted no wind; it now stamps the wind it used
+  (`windJsonInUse`, `BasedOnNow` in `MainWindow.Lateral.cs`). The hub's `SwcSaveTests` opens and saves with the real
+  window and checks the hub finds nothing out of date (and that the window's forces match the headless ones).
 - The wind page is the wind calculator's results only (read-only stays on Results); SWC opens on the wind only when the
   project has no current wind, else on the shear walls. With no wind the page says so instead of showing starting values.
 - Every app re-runs with no window, in order: `WindCheck` (ASCE7Wind.ModelAdapter), `ShearWallCheck` on that wind,
