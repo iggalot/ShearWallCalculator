@@ -84,6 +84,18 @@ Shown greyed as "coming" in the hub (`SuiteApps`, in `..\DesignHub\DesignHub.Cor
     derived from the roof by the apps that need it.
   - **Open to above** is already an Opening through the floors; a level with no diaphragm stays a warning
     (`NoDiaphragm`), with no flag of its own.
+  - **Complex roofs:** dormers, extended hips, several gable walls, valleys.
+  - **Vaulted ceilings in lower stories:** a raised ceiling inside a story (the floor above stays the diaphragm), or
+    a two-story room (an Opening). They matter to the framing only at low clearances.
+- [ ] **The vault and the shear walls (SWC):** the walls stop at the eave level, where the roof profile starts.
+  Under a vault there is no ceiling at that level: the sloped roof is the diaphragm.
+  - Model it as the top level's diaphragm: the roof's plan outline, with the vaulted flag on the piece. Removing it
+    instead would give SWC no diaphragm, so no center of mass (today the area centroid of the level's diaphragm
+    pieces, `DiaphragmSystem.ComputeCenterOfMassAndTotalArea`): the design stops.
+  - The eave walls take the roof through the blocking. An interior wall under a vault that stops at the plate is
+    not reached; one that rises to the roof (a bearing wall to the ridge) is. `ShearWallNotReached` must know it.
+  - With part vaulted and part attic, the mass is not uniform: weight the center of mass by the dead load per piece
+    (from the Load Manager), not the area.
 
 ## Shear Wall Calculator
 
