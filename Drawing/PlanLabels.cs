@@ -92,18 +92,7 @@ namespace ShearWallCalculator.Drawing
             return (center, end + u * 6);
         }
 
-        /// <summary>
-        /// Where a member end's hold-down marker of <paramref name="size"/> px goes: on the member, just in from its end at
-        /// <paramref name="end"/> toward <paramref name="other"/> (screen), its edge 2 px in, so two walls or beams meeting at
-        /// one corner or column each show their own marker on their own member.
-        /// </summary>
-        public static Point IconAt(Point end, Point other, double size)
-        {
-            var u = other - end;
-            if (u.Length < 1e-9) return end;
-            u.Normalize();
-            return end + u * (size / 2 + 2);
-        }
+        // a member end's hold-down marker and its label: the shared rule, BuildingModel.Sketch.HoldownMarks (every app's plans)
 
         private static double Clamp(double v, double lo, double hi) => hi < lo ? lo : Math.Max(lo, Math.Min(hi, v));
     }

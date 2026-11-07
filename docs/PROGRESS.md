@@ -2,6 +2,18 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-06 — Hold-downs drawn one way, where they go; wall ends that take the same space
+
+- The hold-downs are a full post in from each end of the shear part, on the end post's inside face
+  (`WallSchedule.HoldownPoints`; it was half a post). That moves the marks, the foundation's anchor points (`Lateral`)
+  and where the uplift lands below. The design's arm is unchanged (`L - post`): on the roadmap for the owner.
+- One drawing of hold-downs in every app: `BuildingModel.Sketch.HoldownMarks`. Each marker is exactly at its point
+  (as wide as the post where it shows, 6 to 10 px), and each label is beside its wall, kept off the others, with an arrow
+  to its marker. SWC's plans and the Building Model's Ground plan both call it. Before, Ground drew one square per
+  quarter foot with the text beside it, so W4's hold-down at a corner hid under W9's.
+- The Building Model flags wall ends that take the same space: `WallEndsMeet` (an L drawn to one point: one runs past,
+  the other stops at its face) and `WallsCross`.
+
 ## 2026-11-06 — The design with no window; the project kept in spec
 
 - Fixed: a save with nothing changed put the shear walls and the foundation out of date in the hub. SWC takes the Wind

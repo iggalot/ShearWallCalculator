@@ -15,6 +15,22 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
   wall, later.
   - [x] The hold-down marks on it (2026-11-06, SWC 36f821f): SWC relays each point's hold-down into `Lateral`
     (`Connector`); the shared sketch draws them on Ground (`Sketch.Connections`), SWC draws nothing there.
+  - [x] One way to draw hold-downs in every app (2026-11-06): `BuildingModel.Sketch.HoldownMarks` (the marker, its
+    label kept off the others, an arrow to it); SWC's plans and the shared sketch's Ground both use it. Each marker is
+    exactly where the hold-down goes: on the end post's inside face, a full post in from the end of the shear part
+    (`WallSchedule.HoldownPoints`). Where two are close (a corner), each label's arrow tells them apart.
+- [ ] **The overturning arm with the hold-down on the post's face** (owner to decide). The hold-downs now sit a full post
+  in from each end, but the design's arm is still `L - post` (post centreline to post centreline, `ShearWallDesign.cs`).
+  Tension at the hold-down on the inside face and compression at the far post's centreline would be `L - 1.5 post`;
+  rod to rod, `L - 2 post`. `MomentFromAbove` uses half a post too.
+- [~] **Wall ends that take the same space** (2026-11-06): the Building Model flags an L drawn to one point
+  (`WallEndsMeet`: one runs past, the other stops at its face) and walls that cross (`WallsCross`). A T (a wall ending
+  part way along another) is taken as built: it butts into the other.
+  - [ ] A one-click fix (pick the wall that runs past), and Quick building drawing its corners that way. Both need the
+    wall's thickness in the Building Model: move the stud depth table (`WallFraming.DepthOf`) into BuildingModel.Core
+    and have WoodFraming read it there.
+  - [ ] At a T, the hold-down of the wall that butts in from its real end: its centreline end less half the other
+    wall's thickness.
 - [~] **Central hub (launcher) for the apps.** The prototype is built: the new repo `..\DesignHub`
   (`DesignHub.exe`), branch `dev/hub-prototype`. See its `README.md` and `docs/DESIGN.md`.
   - [x] Opens a project, shows the five steps of the work with each one's state, and the next step.

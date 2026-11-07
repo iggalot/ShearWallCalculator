@@ -19,18 +19,11 @@ namespace ShearWallVisualizer.Controls
         private static readonly Typeface Face = new Typeface("Segoe UI");
         private static readonly Typeface FaceBold = new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
         private static readonly Brush TagFill = Ui.Frozen("#FFFFFF"), LegendFill = Ui.Frozen("#F2FFFFFF");
-        private static readonly Brush HoldownFill = Ui.Frozen("#1F2933");
-        private static readonly Pen TagPass = Frozen(Ui.PassInk, 1.2), TagFail = Dashed(Ui.FailStripe, 1.8), TagClose = Frozen(Ui.CloseStripe, 1.6), HairlinePen = Frozen(Ui.Hairline, 1),
-                                    HoldownEdge = Frozen(Brushes.White, 1), HoldownMissing = Frozen(Ui.FailInk, 2);
+        private static readonly Pen TagPass = Frozen(Ui.PassInk, 1.2), TagFail = Dashed(Ui.FailStripe, 1.8), TagClose = Frozen(Ui.CloseStripe, 1.6), HairlinePen = Frozen(Ui.Hairline, 1);
 
         private const double TagOffset = 15;   // px from the wall line to the tag center
-        /// <summary>The hold-down marker's size (px): one size on every plan (walls, beam ends, the foundation's anchors).</summary>
-        public const double HoldownSize = 10;
-
-        /// <summary>What a hold-down marker shows: sized, none strong enough, or none needed (an open square).</summary>
-        public enum HoldownMark { Sized, Missing, None }
-
-        private static readonly Pen HoldownNone = Frozen(Ui.Frozen("#8B4A14"), 1.6);
+        /// <summary>The hold-down marker's size (px): one size on every plan and in every app (the shared marker's).</summary>
+        public const double HoldownSize = BuildingModel.Sketch.HoldownMarks.Size;
         private const int LegendRows = 8;
 
         private static Pen Frozen(Brush b, double t)
@@ -118,34 +111,17 @@ namespace ShearWallVisualizer.Controls
         }
 
         /// <summary>True when the boxes share some area (a shared edge is not an overlap: a tag may sit against a column's mark).</summary>
-        public static bool Overlaps(Rect a, Rect b)
-        {
-            var i = Rect.Intersect(a, b);
-            return !i.IsEmpty && i.Width > 0.5 && i.Height > 0.5;
-        }
+        public static bool Overlaps(Rect a, Rect b) => BuildingModel.Sketch.HoldownMarks.Overlaps(a, b);
 
         /// <summary>The area of <paramref name="r"/> covered by the boxes (pixels²; overlaps between them counted twice).</summary>
-        public static double Covered(Rect r, IEnumerable<Rect> boxes) =>
-            boxes.Sum(t => { var i = Rect.Intersect(r, t); return i.IsEmpty ? 0 : i.Width * i.Height; });
+        public static double Covered(Rect r, IEnumerable<Rect> boxes) => BuildingModel.Sketch.HoldownMarks.Covered(r, boxes);
 
-        private static void DrawHoldown(DrawingContext ctx, Point p, bool found) => DrawHoldownIcon(ctx, p, found ? HoldownMark.Sized : HoldownMark.Missing);
+        private static void DrawHoldown(DrawingContext ctx, Point p, bool found) =>
+            DrawHoldownIcon(ctx, p, found ? BuildingModel.Sketch.HoldownMark.Sized : BuildingModel.Sketch.HoldownMark.Missing);
 
-        /// <summary>The hold-down marker centred at <paramref name="p"/>: a dark square; none strong enough, an open red square
-        /// crossed; none needed, an open brown square. Returns its box.</summary>
-        public static Rect DrawHoldownIcon(DrawingContext ctx, Point p, HoldownMark mark)
-        {
-            var box = new Rect(p.X - HoldownSize / 2, p.Y - HoldownSize / 2, HoldownSize, HoldownSize);
-            if (mark == HoldownMark.Sized)
-                ctx.DrawRectangle(HoldownFill, HoldownEdge, box);
-            else if (mark == HoldownMark.None)
-                ctx.DrawRectangle(TagFill, HoldownNone, box);
-            else
-            {
-                ctx.DrawRectangle(TagFill, HoldownMissing, box);   // no hold-down strong enough: open red square
-                ctx.DrawLine(HoldownMissing, box.TopLeft, box.BottomRight);
-            }
-            return box;
-        }
+        /// <summary>The hold-down marker centred at <paramref name="p"/>: the shared one (<see cref="BuildingModel.Sketch.HoldownMarks"/>),
+        /// the same in every app that draws hold-downs. Returns its box.</summary>
+        public static Rect DrawHoldownIcon(DrawingContext ctx, Point p, BuildingModel.Sketch.HoldownMark mark) => BuildingModel.Sketch.HoldownMarks.DrawIcon(ctx, p, mark);
 
         private static FormattedText Text(string s, double size, Brush ink, double dip, bool bold = false) =>
             new FormattedText(s, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, bold ? FaceBold : Face, size * scale, ink, dip);

@@ -53,21 +53,21 @@ namespace ShearWallCalculator.Tests
         }
 
         [TestMethod]
-        public void HoldownPoints_InsetHalfThePost_BothEnds()
+        public void HoldownPoints_AtThePostsInsideFace_AFullPostIn_BothEnds()
         {
-            // E-W wall from (10, 5) to (30, 5); HDU with a 3.5 x 3.5 minimum post: inset 1.75 in = 0.145833 ft
+            // E-W wall from (10, 5) to (30, 5); HDU with a 3.5 x 3.5 minimum post: on its inside face, 3.5 in from the end
             var wall = new WallData(9, 10, 5, 30, 5);
             var h = new HoldownChoice { Model = "HDU2", WoodMinHeight = 3.5, WoodMinWidth = 3.5 };
             var (a, b) = WallSchedule.HoldownPoints(wall, h);
-            Assert.AreEqual(10 + 1.75 / 12, a.X, Tol);
+            Assert.AreEqual(10 + 3.5 / 12, a.X, Tol);
             Assert.AreEqual(5, a.Y, Tol);
-            Assert.AreEqual(30 - 1.75 / 12, b.X, Tol);
+            Assert.AreEqual(30 - 3.5 / 12, b.X, Tol);
 
-            // N-S wall drawn top to bottom (WallData puts Start at the bottom), no member size given: two 2x studs, 3 in → 1.5 in inset
+            // N-S wall drawn top to bottom (WallData puts Start at the bottom), no member size given: two 2x studs, 3 in
             var ns = new WallData(9, 0, 20, 0, 8);
             var (c, d) = WallSchedule.HoldownPoints(ns, null);
-            Assert.AreEqual(8 + 1.5 / 12, c.Y, Tol);
-            Assert.AreEqual(20 - 1.5 / 12, d.Y, Tol);
+            Assert.AreEqual(8 + 3.0 / 12, c.Y, Tol);
+            Assert.AreEqual(20 - 3.0 / 12, d.Y, Tol);
             Assert.AreEqual(0, c.X, Tol);
         }
 

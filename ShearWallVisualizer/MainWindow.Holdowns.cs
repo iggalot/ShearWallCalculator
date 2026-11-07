@@ -238,39 +238,43 @@ namespace ShearWallVisualizer
         }
 
         /// <summary>A hold-down marker on the plan, drawn before the tags and labels, waiting for its own label.</summary>
-        private readonly List<(Point icon, Vector inward, string text, Brush ink)> planIcons = new List<(Point, Vector, string, Brush)>();
+        private readonly List<(Point icon, Vector inward, string text, Brush ink, double size)> planIcons = new List<(Point, Vector, string, Brush, double)>();
 
         /// <summary>
-        /// The level plan's hold-down markers, one at each end of each member that acts there, on the member just in from its
-        /// end: the walls' hold-downs (SHOW Design) and each beam end's connection (SHOW Reactions; an open square, "None",
-        /// where no hold-down is needed). Drawn and kept clear first, so the tags and labels keep off them; each gets its
-        /// label with an arrow later (PlaceIconLabel).
+        /// The level plan's hold-down markers, by the shared rule (<see cref="BuildingModel.Sketch.HoldownMarks"/>, as on the
+        /// building model's foundation plan): each shear wall's hold-downs exactly where they go (WallSchedule.HoldownPoints:
+        /// on the inside face of the end post the hold-down needs, a post in from each end of the shear part), the marker
+        /// as wide as the post where it shows; each beam end's connection just in from the end (SHOW Reactions; an open
+        /// square, "None", where no hold-down is needed). Drawn and kept clear first, so the tags and labels keep off them;
+        /// each gets its label with an arrow later (PlaceIconLabel), so two close together are told apart.
         /// </summary>
         private void DrawPlanHoldowns(DrawingContext ctx)
         {
             planIcons.Clear();
             double size = Controls.DesignOverlay.HoldownSize;
-            void Mark(Point end, Point other, Controls.DesignOverlay.HoldownMark mark, string text, Brush ink)
+            void Mark(Point end, Point other, BuildingModel.Sketch.HoldownMark mark, string text, Brush ink, Point? at = null, double s = BuildingModel.Sketch.HoldownMarks.Size)
             {
                 var u = other - end;
                 if (u.Length < 20) return;
                 u.Normalize();
-                var c = ShearWallCalculator.Drawing.PlanLabels.IconAt(end, other, size);
-                var box = Controls.DesignOverlay.DrawHoldownIcon(ctx, c, mark);
+                var c = at ?? BuildingModel.Sketch.HoldownMarks.IconAt(end, other, size);
+                var box = BuildingModel.Sketch.HoldownMarks.DrawIcon(ctx, c, mark, s);
                 box.Inflate(1, 1);
                 labelsTaken.Add(box);
-                planIcons.Add((c, u, text, ink));
+                planIcons.Add((c, u, text, ink, s));
             }
             if (showHoldowns && Calculator?._wall_system != null)
                 foreach (var kv in Calculator._wall_system._walls)
                 {
                     if (!designResults.TryGetValue(kv.Key, out var r) || !r.HoldownNeeded) continue;
                     Point a = WorldToScreen(kv.Value.Start, m_layers), b = WorldToScreen(kv.Value.End, m_layers);
-                    var mark = r.Holdown != null ? Controls.DesignOverlay.HoldownMark.Sized : Controls.DesignOverlay.HoldownMark.Missing;
+                    var mark = r.Holdown != null ? BuildingModel.Sketch.HoldownMark.Sized : BuildingModel.Sketch.HoldownMark.Missing;
                     var ink = r.Holdown != null ? LandText : Controls.Ui.FailInk;
                     string text = r.Holdown?.Model ?? "no HD";
-                    Mark(a, b, mark, text, ink);
-                    Mark(b, a, mark, text, ink);
+                    var (pa, pb) = ShearWallCalculator.Design.WallSchedule.HoldownPoints(kv.Value, r.Holdown); // the design's own points
+                    double s = BuildingModel.Sketch.HoldownMarks.SizeFor(ShearWallCalculator.Design.WallSchedule.PostAlongWall(r.Holdown) / 12.0 * Sketch.Zoom);
+                    Mark(a, b, mark, text, ink, WorldToScreen(pa, m_layers), s);
+                    Mark(b, a, mark, text, ink, WorldToScreen(pb, m_layers), s);
                 }
             var lv = Sketch.ActiveLevel;
             if (showHoldowns && building != null && lv != null)
@@ -282,8 +286,8 @@ namespace ShearWallVisualizer
                     string endName = $"beam {bm.Id} {(atStart ? "start" : "end")}";
                     var l = onto.FirstOrDefault(x => x.Kind == PathPointKind.BeamEnd && x.From == endName); // null: no uplift here
                     var ink = l == null ? BeamInk : l.Supported && l.Choice != null ? (l.Note != null ? Controls.Ui.CloseInk : BeamInk) : Controls.Ui.FailInk;
-                    var mark = l == null ? Controls.DesignOverlay.HoldownMark.None
-                             : l.Supported && l.Model != null ? Controls.DesignOverlay.HoldownMark.Sized : Controls.DesignOverlay.HoldownMark.Missing;
+                    var mark = l == null ? BuildingModel.Sketch.HoldownMark.None
+                             : l.Supported && l.Model != null ? BuildingModel.Sketch.HoldownMark.Sized : BuildingModel.Sketch.HoldownMark.Missing;
                     string text = l == null ? "None" : !l.Supported ? "nothing under it" : l.Model ?? "none strong enough";
                     Mark(Sketch.ToScreen(atStart ? bm.Start : bm.End), Sketch.ToScreen(atStart ? bm.End : bm.Start), mark, text, ink);
                 }
@@ -291,53 +295,18 @@ namespace ShearWallVisualizer
         }
 
         /// <summary>
-        /// A hold-down marker's label: beside its member a little in from the end, outside the building first when the
-        /// member is on its edge, kept off the other labels; with an arrow to the marker.
+        /// A hold-down marker's label, placed by the shared rule (<see cref="BuildingModel.Sketch.HoldownMarks.LabelBox"/>, the
+        /// same in every app): beside its member a little in from the end, outside the building first when the member is on
+        /// its edge, kept off the other labels; with an arrow to the marker.
         /// </summary>
-        private void PlaceIconLabel(DrawingContext ctx, (Point icon, Vector inward, string text, Brush ink) ic, Rect? outline, double dip)
+        private void PlaceIconLabel(DrawingContext ctx, (Point icon, Vector inward, string text, Brush ink, double size) ic, Rect? outline, double dip)
         {
             var ft = new FormattedText(ic.text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 9.5 * LabelScale, ic.ink, dip);
-            var size = new Size(ft.Width + 4, ft.Height);
-            var u = ic.inward;
-            var side = new Vector(-u.Y, u.X);
-            var sides = new[] { side, -side };
-            if (outline is Rect o && o.Contains(ic.icon + side * 20) && !o.Contains(ic.icon - side * 20)) sides = new[] { -side, side }; // outside first
-            var tries = new List<Rect>();
-            foreach (double along in new[] { 14.0, 30, 48, 68 })
-                foreach (var s in sides)
-                {
-                    double reach = 16 + (Math.Abs(s.X) * size.Width + Math.Abs(s.Y) * size.Height) / 2;
-                    var m = ic.icon + u * along + s * reach;
-                    tries.Add(new Rect(m.X - size.Width / 2, m.Y - size.Height / 2, size.Width, size.Height));
-                }
-            var box = tries.FirstOrDefault(x => !labelsTaken.Any(tk => Controls.DesignOverlay.Overlaps(tk, x)));
-            if (box.Width == 0) box = tries.OrderBy(x => Controls.DesignOverlay.Covered(x, labelsTaken)).First(); // default is a zero box
-            labelsTaken.Add(box);
+            var box = BuildingModel.Sketch.HoldownMarks.LabelBox(ic.icon, ic.inward, new Size(ft.Width + 4, ft.Height), outline, labelsTaken);
             labelReach.Union(box);
-            // the arrow: from the label's nearest edge to the marker's edge
-            var from = new Point(Math.Max(box.Left, Math.Min(box.Right, ic.icon.X)), Math.Max(box.Top, Math.Min(box.Bottom, ic.icon.Y)));
-            var d = ic.icon - from;
-            double half = Controls.DesignOverlay.HoldownSize / 2 + 1;
-            if (d.Length > half + 6)
-            {
-                d.Normalize();
-                double edge = half / Math.Max(Math.Abs(d.X), Math.Abs(d.Y)); // to the square's side
-                var tip = ic.icon - d * edge;
-                var pen = new Pen(ic.ink, 0.9);
-                pen.Freeze();
-                ctx.DrawLine(pen, from, tip - d * 4);
-                var n = new Vector(-d.Y, d.X);
-                var head = new StreamGeometry();
-                using (var g = head.Open())
-                {
-                    g.BeginFigure(tip, true, true);
-                    g.PolyLineTo(new[] { tip - d * 5 + n * 2.5, tip - d * 5 - n * 2.5 }, true, false);
-                }
-                head.Freeze();
-                ctx.DrawGeometry(ic.ink, null, head);
-            }
+            BuildingModel.Sketch.HoldownMarks.Arrow(ctx, box, ic.icon, ic.ink, ic.size);
             if (heldLabels != null) heldLabels.Add((box, ft));
-            else { ctx.DrawRectangle(LabelBack, null, box); ctx.DrawText(ft, new Point(box.X + 2, box.Y)); }
+            else BuildingModel.Sketch.HoldownMarks.DrawLabel(ctx, box, ft);
         }
 
         /// <summary>The level's drawing on screen (as Zoom to the drawing frames it); null when there is none.</summary>

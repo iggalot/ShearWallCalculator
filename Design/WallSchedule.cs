@@ -93,14 +93,16 @@ namespace ShearWallCalculator.Design
             h?.WoodMinHeight is double d && d > 0 ? d : DefaultPostAlongWall;
 
         /// <summary>
-        /// Hold-down locations (world ft) at both ends of the wall, each inset from the wall end by half the post, so the
-        /// marks sit on the post centerlines. Wind reverses, so both ends get one.
+        /// Hold-down locations (world ft) at both ends of the wall (its shear part), each a full post in from the end: the
+        /// hold-down fastens to the inside face of the end post, and the wall's end is the post's other face. Wind reverses,
+        /// so both ends get one. Every plan's marker, the foundation's anchor points (the Lateral section) and where the uplift
+        /// lands on what is below are these points.
         /// </summary>
         public static (Point start, Point end) HoldownPoints(WallData wall, HoldownChoice h)
         {
             double L = wall.WallLength;
             if (L <= 0) return (wall.Start, wall.End);
-            double inset = Math.Min(PostAlongWall(h) / 12.0 / 2.0, L / 2.0);
+            double inset = Math.Min(PostAlongWall(h) / 12.0, L / 2.0);
             var u = new Vector((wall.End.X - wall.Start.X) / L, (wall.End.Y - wall.Start.Y) / L);
             return (wall.Start + u * inset, wall.End - u * inset);
         }

@@ -122,7 +122,7 @@ namespace ShearWallCalculator.Tests
         {
             var lower = new Dictionary<int, WallData> { [11] = new WallData(9, 0, 0, 0, 20), [12] = new WallData(9, 20, 0, 20, 20) };
             var a = new WallData(9, 5, 10, 15, 10);                     // E-W on the beam: both hold-downs on it
-            var h = WallSchedule.HoldownPoints(a, null).Item1.X - 5;    // half a post, ft
+            var h = WallSchedule.HoldownPoints(a, null).Item1.X - 5;    // a post, ft
             var bw = new WallData(9, 12, 10 - h, 12, 20);               // N-S: its low hold-down at (12, 10) on the beam
             var upper = new Dictionary<int, WallData> { [1] = a, [2] = bw };
             var design = new Dictionary<int, WallDesignResult>

@@ -90,18 +90,6 @@ namespace ShearWallCalculator.Tests
         }
 
         [TestMethod]
-        public void IconAt_JustInFromTheEnd_OnItsOwnMember()
-        {
-            // a 10 px marker: its centre 7 px in from the end, so its edge is 2 px in
-            Assert.AreEqual(new Point(107, 200), PlanLabels.IconAt(new Point(100, 200), new Point(300, 200), 10));
-            Assert.AreEqual(new Point(293, 200), PlanLabels.IconAt(new Point(300, 200), new Point(100, 200), 10));
-            // two walls meeting at a corner (0,0): one along x, one along y; each marker on its own wall, apart
-            Assert.AreEqual(new Point(7, 0), PlanLabels.IconAt(new Point(0, 0), new Point(200, 0), 10));
-            Assert.AreEqual(new Point(0, 7), PlanLabels.IconAt(new Point(0, 0), new Point(0, 200), 10));
-            Assert.AreEqual(new Point(5, 5), PlanLabels.IconAt(new Point(5, 5), new Point(5, 5), 10)); // no length: at the end
-        }
-
-        [TestMethod]
         public void OutsideSpot_ACorner_GoesAboveOrBelow()
         {
             Assert.AreEqual(new Vector(0, -1), PlanLabels.OutsideSpot(new Point(0, 0), B, S, 16, Wide).outward);
