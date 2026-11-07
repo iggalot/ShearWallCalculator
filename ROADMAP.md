@@ -8,11 +8,12 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
 
 ## Next up
 
-- [ ] **The Ground plan shows what stands on it** (agreed 2026-11-06): the walls and columns whose base is the lowest
-  level, drawn in a cut-wall style, with the hold-down and anchor marks. Select and edit only; no drawing on Ground
-  (walls are drawn on the level they carry). It is a view only: the same objects, no copies, counted once by their
-  story. Tied to the lowest level, not the name "Ground", for a later basement. Doors and windows are edited in the
+- [x] **The Ground plan shows what stands on it** (2026-11-06, BM 24fb4c4): the walls and columns whose base is the
+  lowest level, drawn cut at their base (a double line). Select and edit only; no drawing on Ground (walls are drawn
+  on the level they carry). It is a view only: the same objects, no copies, counted once by their story. Tied to the
+  lowest level (`IsFoundationPlan`), not the name "Ground", for a later basement. Doors and windows are edited in the
   wall, later.
+  - [ ] The hold-down and anchor marks on it (SWC and the Load Manager's foundation view draw them there).
 - [~] **Central hub (launcher) for the apps.** The prototype is built: the new repo `..\DesignHub`
   (`DesignHub.exe`), branch `dev/hub-prototype`. See its `README.md` and `docs/DESIGN.md`.
   - [x] Opens a project, shows the five steps of the work with each one's state, and the next step.
@@ -96,6 +97,11 @@ Shown greyed as "coming" in the hub (`SuiteApps`, in `..\DesignHub\DesignHub.Cor
     not reached; one that rises to the roof (a bearing wall to the ridge) is. `ShearWallNotReached` must know it.
   - With part vaulted and part attic, the mass is not uniform: weight the center of mass by the dead load per piece
     (from the Load Manager), not the area.
+  - The roof's shear and vertical loads act at the tops of the walls connected to it: the exterior walls, and an
+    interior wall only where it rises to the roof (a high wall inside a vaulted room). The Building Model says which
+    walls rise to the roof (geometry); SWC reads it.
+  - The center of rigidity is taken from the walls the roof diaphragm reaches. The eccentricity (COM to COR, the
+    wind's included) is between those two; a vault changes both, and never leaves the level without a COM.
 
 ## Shear Wall Calculator
 
