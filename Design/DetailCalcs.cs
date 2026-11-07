@@ -55,7 +55,7 @@ namespace ShearWallCalculator.Design
 
             double M = r.V * 1000 * h;
             lines.Add(new CalcLine("Overturning", $"M = V h = {r.V * 1000:0} × {h:0.##}", $"{M:0} lb-ft"));
-            lines.Add(new CalcLine("Lever arm", $"d = L − post = {L:0.##} − {r.PostAlongWall:0.##}/12", $"{r.HoldownArm:0.##} ft"));
+            lines.Add(new CalcLine("Lever arm", $"d = L − 1.5 post = {L:0.##} − 1.5 × {r.PostAlongWall:0.##}/12 (hold-down on its post's inside face, to the far post's centerline)", $"{r.HoldownArm:0.##} ft"));
             lines.Add(new CalcLine("Own uplift", $"T = 0.6 M / d = 0.6 × {M:0} / {r.HoldownArm:0.##} (no dead load counted)", $"{r.OwnTensionAsd:0} lb (ASD)"));
             foreach (var s in r.FromAbove ?? new List<StackedForce>())
                 lines.Add(new CalcLine("From above", $"{s.From}: {(s.Asd >= 0 ? "uplift" : "bearing")} at {s.Along:0.##} ft from the {(w.WallDir == WallDirs.EastWest ? "west" : "south")} end, " +

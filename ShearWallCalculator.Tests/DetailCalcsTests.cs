@@ -26,7 +26,7 @@ namespace ShearWallCalculator.Tests
             var r = Designer.Check(1, wall, 2.0, "Case 1", new DesignSettings(), new WallDesignInputs());
             var lines = DetailCalcs.Wall(wall, r, null);
 
-            double M = 2.0 * 1000 * 9, d = 10 - r.PostAlongWall / 12;
+            double M = 2.0 * 1000 * 9, d = 10 - 1.5 * r.PostAlongWall / 12;
             Assert.AreEqual(d, r.HoldownArm, 1e-9);
             Assert.AreEqual(0.6 * M / d, r.OwnTensionAsd, 1e-6, "the source formula: no dead load");
             Assert.AreEqual($"{M:0} lb-ft", Line(lines, "Overturning").Result);

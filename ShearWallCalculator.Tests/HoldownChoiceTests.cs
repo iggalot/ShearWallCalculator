@@ -35,7 +35,7 @@ namespace ShearWallCalculator.Tests
             var r = Designer.Check(1, Wall(), 5.0, null, Asd, d);
             Assert.AreEqual("HDUE5-SDS3", r.Holdown.Model);
             Assert.IsTrue(r.HoldownChosen);
-            Assert.AreEqual(10 - WallSchedule.PostAlongWall(r.Holdown) / 12.0, r.HoldownArm, 1e-12);
+            Assert.AreEqual(10 - 1.5 * WallSchedule.PostAlongWall(r.Holdown) / 12.0, r.HoldownArm, 1e-12);
             Assert.AreEqual(27000 / r.HoldownArm, r.TensionAsd, 1e-9);
             Assert.IsTrue(r.Holdown.Allowable > 3790, "larger than the HDUE3 auto pick");
             Assert.IsTrue(r.HoldownOk);

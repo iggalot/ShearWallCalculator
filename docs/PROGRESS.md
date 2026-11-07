@@ -6,7 +6,9 @@ _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`
 
 - The hold-downs are a full post in from each end of the shear part, on the end post's inside face
   (`WallSchedule.HoldownPoints`; it was half a post). That moves the marks, the foundation's anchor points (`Lateral`)
-  and where the uplift lands below. The design's arm is unchanged (`L - post`): on the roadmap for the owner.
+  and where the uplift lands below. The design's arm is now `d = L - 1.5 post` (owner): the tension at the hold-down on its post's inside face, the
+  compression at the far post's centreline (`ShearWallDesign.cs`, the details' "Lever arm" line). The hold-downs get a
+  little heavier (a 10 ft wall with a 3 in post: d 9.75 → 9.625 ft, T +1.3 %).
 - One drawing of hold-downs in every app: `BuildingModel.Sketch.HoldownMarks`. Each marker is exactly at its point
   (as wide as the post where it shows, 6 to 10 px), and each label is beside its wall, kept off the others, with an arrow
   to its marker. SWC's plans and the Building Model's Ground plan both call it. Before, Ground drew one square per

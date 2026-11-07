@@ -19,7 +19,8 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
     label kept off the others, an arrow to it); SWC's plans and the shared sketch's Ground both use it. Each marker is
     exactly where the hold-down goes: on the end post's inside face, a full post in from the end of the shear part
     (`WallSchedule.HoldownPoints`). Where two are close (a corner), each label's arrow tells them apart.
-- [ ] **The overturning arm with the hold-down on the post's face** (owner to decide). The hold-downs now sit a full post
+- [x] **The overturning arm with the hold-down on the post's face** (2026-11-06, owner: `L - 1.5 post`, the tension at the
+  hold-down on its post's inside face, the compression at the far post's centreline). Was: The hold-downs now sit a full post
   in from each end, but the design's arm is still `L - post` (post centreline to post centreline, `ShearWallDesign.cs`).
   Tension at the hold-down on the inside face and compression at the far post's centreline would be `L - 1.5 post`;
   rod to rod, `L - 2 post`. `MomentFromAbove` uses half a post too.

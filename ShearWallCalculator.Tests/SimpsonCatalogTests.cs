@@ -117,10 +117,10 @@ namespace ShearWallCalculator.Tests
             var d = new ShearWallDesigner();
             var wall = new calculator.WallData(8, 0, 0, 4, 0); // 8 ft high, 4 ft long
             var inputs = new WallDesignInputs { Holdown = HoldownFamilies.STHD_ToFoundation };
-            // T = 0.6 x 2.2 k x 8 ft / (4 - 0.25) ft ~ 2816 lb (8 ft wall height, 3" post)
-            var defaults = d.Check(1, wall, 2.2, null, new DesignSettings(), inputs);
+            // T = 0.6 x 2.1 k x 8 ft / (4 - 1.5 x 0.25) ft ~ 2781 lb (8 ft wall height, 3" post)
+            var defaults = d.Check(1, wall, 2.1, null, new DesignSettings(), inputs);
             Assert.AreEqual("STHD14#1", defaults.Holdown.Key, "6\" cracked endwall: STHD10 1,635 is too small");
-            var mid = d.Check(1, wall, 2.2, null, new DesignSettings { StrapHoldowns = new StrapHoldownConditions { Position = SthdPositions.Midwall } }, inputs);
+            var mid = d.Check(1, wall, 2.1, null, new DesignSettings { StrapHoldowns = new StrapHoldownConditions { Position = SthdPositions.Midwall } }, inputs);
             Assert.AreEqual("STHD10#1", mid.Holdown.Key, "6\" cracked midwall: STHD10 2,910");
         }
 

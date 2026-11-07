@@ -25,8 +25,8 @@ namespace ShearWallCalculator.Tests
         {
             // L = 10 ft, h = 9 ft, V = 5 k (strength). v = 0.6 x 5000 / 10 = 300 plf.
             // v_w = 785 plf (Table 4.3A); ASD 785 / 2.0 = 392.5 plf; ratio 0.764.
-            // Hold-down arm d = L - post = 10 - 3/12 = 9.75 ft (HDUE3: min. 3 x 3.5 member, 3 in along the wall).
-            // T = 0.6 x 5000 x 9 / 9.75 = 2769.2 lb -> HDUE3-SDS3 (3790 lb DF-SP, C-C-2026 p. 61), the lightest at or above it.
+            // Hold-down arm d = L - 1.5 post = 10 - 1.5 x 3/12 = 9.625 ft (HDUE3: min. 3 x 3.5 member, 3 in along the wall).
+            // T = 0.6 x 5000 x 9 / 9.625 = 2805.2 lb -> HDUE3-SDS3 (3790 lb DF-SP, C-C-2026 p. 61), the lightest at or above it.
             var r = Designer.Check(1, Wall(10), 5.0, "Case 1", Asd);
             Assert.AreEqual(0.6, r.LoadFactor);
             Assert.AreEqual(300.0, r.Demand, 1e-9);
@@ -35,9 +35,9 @@ namespace ShearWallCalculator.Tests
             Assert.AreEqual(392.5, r.Capacity, 1e-9);
             Assert.AreEqual(300.0 / 392.5, r.ShearRatio, 1e-9);
             Assert.AreEqual(3.0, r.PostAlongWall, 1e-12);
-            Assert.AreEqual(9.75, r.HoldownArm, 1e-12);
-            Assert.AreEqual(27000 / 9.75, r.TensionAsd, 1e-9);
-            Assert.AreEqual(45000 / 9.75, r.TensionLrfd, 1e-9, "reported for reference: 1.0W");
+            Assert.AreEqual(9.625, r.HoldownArm, 1e-12); // 10 - 1.5 x 3 in
+            Assert.AreEqual(27000 / 9.625, r.TensionAsd, 1e-9);
+            Assert.AreEqual(45000 / 9.625, r.TensionLrfd, 1e-9, "reported for reference: 1.0W");
             Assert.AreEqual("HDUE3-SDS3", r.Holdown.Model);
             Assert.AreEqual(3790.0, r.Holdown.Allowable);
             Assert.IsTrue(r.Pass);
@@ -51,7 +51,7 @@ namespace ShearWallCalculator.Tests
             var r = Designer.Check(1, Wall(10), 5.0, null, Lrfd);
             Assert.AreEqual(500.0, r.Demand, 1e-9);
             Assert.AreEqual(628.0, r.Capacity, 1e-9);
-            Assert.AreEqual(27000 / 9.75, r.TensionAsd, 1e-9, "hold-downs are always checked at ASD (0.6W)");
+            Assert.AreEqual(27000 / 9.625, r.TensionAsd, 1e-9, "hold-downs are always checked at ASD (0.6W)");
             Assert.AreEqual("HDUE3-SDS3", r.Holdown.Model);
         }
 
@@ -191,7 +191,7 @@ namespace ShearWallCalculator.Tests
                 var r = Designer.Check(id, calc._wall_system._walls[id], calc.TotalWallShear[id], null, Asd);
                 Assert.AreEqual(300.0, r.Demand, 1e-6);
                 Assert.AreEqual(392.5, r.Capacity, 1e-9);
-                Assert.AreEqual(27000 / 9.75, r.TensionAsd, 1e-6, "d = 10 - 3/12 ft");
+                Assert.AreEqual(27000 / 9.625, r.TensionAsd, 1e-6, "d = 10 - 1.5 x 3/12 ft");
                 Assert.AreEqual("HDUE3-SDS3", r.Holdown.Model);
                 Assert.IsTrue(r.Pass);
             }
@@ -199,8 +199,8 @@ namespace ShearWallCalculator.Tests
             {
                 var r = Designer.Check(id, calc._wall_system._walls[id], calc.TotalWallShear[id], null, Asd);
                 Assert.AreEqual(180.0, r.Demand, 1e-6);
-                Assert.AreEqual(1800.0 * 9 / r.HoldownArm, r.TensionAsd, 1e-6, "0.6V = 180 plf x 10 ft; d = L - post");
-                Assert.AreEqual(10 - r.PostAlongWall / 12, r.HoldownArm, 1e-12);
+                Assert.AreEqual(1800.0 * 9 / r.HoldownArm, r.TensionAsd, 1e-6, "0.6V = 180 plf x 10 ft; d = L - 1.5 post");
+                Assert.AreEqual(10 - 1.5 * r.PostAlongWall / 12, r.HoldownArm, 1e-12);
                 Assert.IsTrue(r.Holdown.Allowable >= r.TensionAsd);
                 Assert.IsTrue(r.Pass);
             }

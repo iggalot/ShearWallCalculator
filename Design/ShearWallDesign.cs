@@ -508,9 +508,9 @@ namespace ShearWallCalculator.Design
 
         /// <summary>Post dimension along the wall at each hold-down (in.), from the hold-down's minimum member.</summary>
         public double PostAlongWall { get; set; }
-        /// <summary>Hold-down lever arm d = L - post (ft): between the hold-down centerlines.</summary>
+        /// <summary>Hold-down lever arm d = L - 1.5 post (ft): from the hold-down (on its end post's inside face) to the far post's centerline.</summary>
         public double HoldownArm { get; set; }
-        public double TensionAsd { get; set; }      // lb: 0.6 V h / d, d = L - post (no dead load counted)
+        public double TensionAsd { get; set; }      // lb: 0.6 V h / d, d = L - 1.5 post (no dead load counted)
         public double TensionLrfd { get; set; }     // lb: 1.0 V h / d (for reference)
         public HoldownChoice Holdown { get; set; }  // null if none in the pool is strong enough
 
@@ -614,7 +614,7 @@ namespace ShearWallCalculator.Design
     /// Wood structural panel shear-wall checks for wind (SDPWS), per wall segment (each drawn wall is one
     /// full-height segment):
     /// v = factor V / L; capacity = v_w x species x footnote-10 x aspect factor x sides / Omega (ASD) or x phi (LRFD);
-    /// hold-down tension T = M / d, d = L - post (no dead load counted), always at ASD (0.6W) against Simpson allowables.
+    /// hold-down tension T = M / d, d = L - 1.5 post (no dead load counted), always at ASD (0.6W) against Simpson allowables.
     /// </summary>
     public class ShearWallDesigner
     {
@@ -731,8 +731,9 @@ namespace ShearWallCalculator.Design
             r.CombineRule = rule;
             r.Capacity = SdpwsSource.DesignUnitShearWind(nominal, settings.Method);
 
-            // Hold-down: overturning moment about the compression post over the lever arm d = L - post (hold-down
-            // centerlines at half a post in from each end). No dead load is counted against it: this app finds the
+            // Hold-down: overturning moment about the compression post over the lever arm d = L - 1.5 post: the tension at
+            // the hold-down on the inside face of its end post (a post in from that end), the compression at the far post's
+            // centerline (half a post in). No dead load is counted against it: this app finds the
             // hold-downs from the overturning alone. The post comes from the hold-down chosen, which depends on T: start
             // with two 2x studs and repeat until the choice settles.
             double M = V * 1000.0 * h;                      // lb-ft
@@ -742,7 +743,7 @@ namespace ShearWallCalculator.Design
             for (int pass = 0; pass < 5; pass++)
             {
                 r.PostAlongWall = post;
-                r.HoldownArm = L - post / 12.0;
+                r.HoldownArm = L - 1.5 * post / 12.0;
                 double arm = r.HoldownArm;
                 // The walls above: their moment about the compression post at the far end, for the worse wind direction
                 // (both ends get the same hold-down). A wall stacked end to end adds its own T.
