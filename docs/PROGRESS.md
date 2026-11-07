@@ -2,6 +2,26 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-07 — The body is the selection (WISE everywhere); the Internal forces toggle (step 3)
+
+- The owner's rule: a free body is the selected objects; every member connected to it that is not selected gives its
+  reaction on the body, and those are the internal forces (I) that show because the view is split, one half of each pair.
+  A pair between two selected members is inside the body and cancels. S is the foundation, E the applied loads (the
+  wind among them, never dropped), W the weight.
+- The Load Manager: `FreeBody.OfBody` (any set of members). Every force knows its other member (`Other`); the gravity
+  load path now records where each load comes from and goes (`ConcentratedLoad.Source`, `Onto`, `WallTopLoad.AboveParts`),
+  so a wall's base on a wall or beam is I (split by what is under each stretch), the walls standing on it I, a beam's ends
+  on columns I, the foundation's S. The wind's balance is ΣF and ΣM about three axes; the whole structure is checked as
+  one body as well. In the window: Ctrl or Shift + click members in the 3D foundation (orange), then click or Free body
+  of them; Ctrl + click takes one out; the cut in purple, the pairs inside in grey (with the internal forces shown).
+- The plans (the shared sketch): `ShowInternalForces` by one rule (`ConnectionPairs.Drawn`). On: both halves of every
+  connection. Off: the selection is the body (none: the whole structure), only its halves at the cut and on the
+  foundation. Hold-downs landing within 1 ft on one member share a label with their sum case by case (`Near`, `Sum`:
+  SWC's old grouped labels, back for every app). Building Model and Load Manager: View > Internal forces; SWC: SHOW
+  Internal.
+- Tests: `FreeBodyTests` (the beam and column as one body; `StackedWalls_TheCutMovesWithTheSelection`), the balance
+  tests with the whole structure, `LevelPlan_InternalForces_TheBodyIsTheSelection` (Sketch).
+
 ## 2026-11-07 — Every connection a pair of equal and opposite forces (steps 1 and 2)
 
 - The owner's plan (ROADMAP): the Load Manager reports every connection between members as a pair of equal and

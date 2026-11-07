@@ -303,6 +303,8 @@
                                     ToolTip="Shear wall marks (SW2-9: wall 9 on the Level 2 plan) and the shear wall schedule"/>
                             <Button x:Name="btnHoldowns" Style="{StaticResource ViewLevel}" Content="Hold-downs" Tag="on" Click="btnHoldowns_Click"
                                     ToolTip="The hold-downs: a marker at each wall end and each beam end they act on, each labelled with an arrow; what lands on this floor from the walls above; on the foundation (G), the anchors"/>
+                            <Button x:Name="btnInternalForces" Style="{StaticResource ViewLevel}" Content="Internal" Tag="on" Click="btnInternalForces_Click"
+                                    ToolTip="Internal forces. On: both halves of every connection, each on its plan (the check that everything is accounted for). Off, for reports: the selected walls are the body (none: the whole structure); the connections inside it are not drawn, those at the cut and on the foundation only on the body's side."/>
                             <Button x:Name="btnLoads" Style="{StaticResource ViewLevel}" Content="Loads" Click="btnLoads_Click"
                                     ToolTip="One load case on the plan: the shear each wall of the level above puts into this floor (orange) and what the top of each wall here receives (blue). Pick the case with ▾ or on the Calculations tab"/>
                             <Button x:Name="btnLoadsOptions" Style="{StaticResource ViewLevel}" Content="▾" Padding="5,3" MinWidth="0" Click="btnLoadsOptions_Click"

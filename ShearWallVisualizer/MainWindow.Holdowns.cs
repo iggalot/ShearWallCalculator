@@ -492,6 +492,15 @@ namespace ShearWallVisualizer
             RedrawDrawing();
         }
 
+        /// <summary>SHOW Internal: the internal forces toggle of every plan (the shared sketch's, <see cref="BuildingModel.Sketch.SketchCanvas.ShowInternalForces"/>).</summary>
+        private void btnInternalForces_Click(object sender, RoutedEventArgs e)
+        {
+            Sketch.SetInternalForces(!Sketch.ShowInternalForces);
+            btnInternalForces.Tag = Sketch.ShowInternalForces ? "on" : null;
+            Log.Info($"Internal forces {(Sketch.ShowInternalForces ? "on" : "off")}.");
+            RedrawDrawing();
+        }
+
         private void btnReactions_Click(object sender, RoutedEventArgs e)
         {
             showReactions = !showReactions;
