@@ -35,6 +35,8 @@ namespace ShearWallCalculator.ModelAdapter
         /// <summary>The foundation's hold-down points as this design gives them (what the shear wall app saves).</summary>
         public LateralSection Lateral { get; set; }
         public bool Passes => NotChecked == null && Failures.Count == 0;
+        /// <summary>The wind the design took (null when it stopped before the wind).</summary>
+        public WindCheckResult Wind { get; set; }
     }
 
     /// <summary>
@@ -46,7 +48,8 @@ namespace ShearWallCalculator.ModelAdapter
     public static class ShearWallCheck
     {
         /// <summary>The parts of the project the design is based on (<see cref="ModelFingerprint"/>).</summary>
-        public const string WindPart = "wind", DesignPart = "shear walls";
+        public static readonly string WindPart = ModelFingerprint.DataPart(WindSection.Key); // "data:Wind": the Load Manager finds it again too
+        public const string DesignPart = "shear walls";
 
         /// <summary>The fingerprints of what the shear wall design uses, as the project is now.</summary>
         public static Dictionary<string, string> InputsNow(Building b) => new Dictionary<string, string>
@@ -115,7 +118,8 @@ namespace ShearWallCalculator.ModelAdapter
         /// Runs the design on <paramref name="building"/> as it is (a copy: the building is not changed). Nothing is checked
         /// without declared shear walls, with model errors (no design, as in the app) or without a wind section.
         /// </summary>
-        public static ShearWallCheckResult Run(Building building, ShearWallDesigner designer = null)
+        /// <param name="windNow">The wind already found for this building (<see cref="WindCheck.Run"/>); null: found here.</param>
+        public static ShearWallCheckResult Run(Building building, ShearWallDesigner designer = null, WindCheckResult windNow = null)
         {
             var result = new ShearWallCheckResult();
             if (building == null) { result.NotChecked = "no project"; return result; }
@@ -124,20 +128,22 @@ namespace ShearWallCalculator.ModelAdapter
             if (ShearWallAdapter.ShearWalls(b).Count == 0) { result.NotChecked = "no shear walls declared"; return result; }
             int errors = ModelChecks.Run(b).Concat(ShearWallAdapter.Checks(b)).Count(i => i.Severity == Severity.Error);
             if (errors > 0) { result.NotChecked = $"the building has {errors} error{(errors == 1 ? "" : "s")}, so the shear walls are not designed"; return result; }
-            var ws = WindSection.Read(b);
-            if (ws == null) { result.NotChecked = "no wind set up"; return result; }
+            // the wind as the wind calculator finds it for the building as it is now (given, or run here)
+            var wind = windNow ?? WindCheck.Run(b);
+            result.Wind = wind;
+            if (wind.NotChecked != null) { result.NotChecked = wind.NotChecked; return result; }
+            if (!wind.Calculated) { result.NotChecked = "the wind cannot be calculated for this building: " + string.Join(" ", wind.Problems); return result; }
 
             var stories = ShearWallAdapter.ToCalculators(b);
             result.Stories = stories;
             var levels = stories.Select(s => s.Calculator).ToList();
             try
             {
-                var input = ws.BuildingFor(b);
-                SetWindLoads(levels, WindAnalysis.Run(ws.Edition, ws.ToParameters(), input.Building), ws.OnlyCases1And3);
+                SetWindLoads(levels, wind.Analysis, wind.Section.OnlyCases1And3);
             }
             catch (Exception ex) when (ex is InvalidOperationException || ex is ArgumentException || ex is NullReferenceException || ex is IndexOutOfRangeException)
             {
-                result.NotChecked = "the wind could not be calculated for this building: " + ex.Message;
+                result.NotChecked = "the wind could not be put on the stories: " + ex.Message;
                 return result;
             }
             var (beams, columns) = Framing(b, stories);

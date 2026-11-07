@@ -35,8 +35,11 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
   - [ ] **View-only mode for the apps** (the owner's idea, 2026-11-06): someone else's project opened in an app to look at
     only: the plan, the results and the reports, no edits and no saves (the Building Model's and SWC's tools off, the
     Load Manager's grids read-only, no lock taken). Today they refuse it.
-  - [ ] The other apps' re-checks with no window, as the shear walls have: the foundation (the Load Manager's
-    combinations against the gravity loads as they are now) and the wind (cases that changed).
+  - [x] Every app's calculation re-run with no window, in order (2026-11-06): `WindCheck` (the wind calculator's),
+    `ShearWallCheck` on that wind, the hold-downs now against saved (by how much), `FoundationCheck` (the Load Manager's)
+    on the forces as they are now; `ProjectCheck` chains them. The wind app and the Load Manager watch the file too, and
+    the Load Manager says when the saved shear wall forces are older than the building or the wind. Uplift on the
+    foundation is a flag for the foundation design (amber), not a fault.
   - [ ] Show the hub's problems in the apps too (SWC: the walls the hub marked, on opening).
 - [x] **Merge on save, atomic saves, a shared project lock** (2026-11-05; BuildingModel `063084e` and the commits
   after it). Every app re-reads the file at save and writes only its own part: the Building Model merges three-way

@@ -44,6 +44,8 @@
   - **The design runs with no window too:** `ShearWallCheck.Run(building)` (ModelAdapter) is the window's design pass
     (`Design/DesignPass.cs`) on a copy, with the wind from the `Wind` section. The hub runs it in the background. Keep the
     window and it on the same code: a design change goes into `DesignPass` or `ShearWallCheck`, not the window.
+  - **The wind comes from `WindCheck.Run`** (the wind calculator's own headless run) in the headless check; the
+    Load Manager's foundation and the hub use the same. The hub chains them in `ProjectCheck` (DesignHub).
   - **The file is watched the whole time** (`WatchProject`, `ProjectChangedOnDisk` in `MainWindow.Project.cs`): another
     app's save reloads (when nothing is unsaved) and names the walls that newly fail. Nothing is saved in answer.
 - **Line endings:** `ShearWallVisualizer\MainWindow.xaml.cs` uses LF.

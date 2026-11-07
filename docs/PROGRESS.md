@@ -4,6 +4,10 @@ _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`
 
 ## 2026-11-06 — The design with no window; the project kept in spec
 
+- Every app re-runs with no window, in order: `WindCheck` (ASCE7Wind.ModelAdapter), `ShearWallCheck` on that wind,
+  `FoundationCheck` (LoadManager) on the shear walls' forces as they are now; the hub chains them (`ProjectCheck`) and
+  compares the hold-down forces now with the saved ones. Uplift on the foundation is flagged for the foundation design.
+  The wind app watches the file too; the Load Manager reads the `BasedOn` stamps.
 - The design pass is out of the window: `Design/DesignPass.cs` (`TopDown`, `All`, `CheckLevel`) and, in the ModelAdapter,
   `ShearWallCheck` (`Run`: the whole design on a copy of a building, as the window does it, with the wind from the `Wind`
   section; `SetWindLoads`, `Framing`, `Lateral`, `InputsNow`). The window calls the same code. `WallDesignResult.FailureReason`.
