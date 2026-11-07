@@ -543,6 +543,7 @@ namespace ShearWallCalculator.Design
         {
             TensionByCase = new Dictionary<string, double[]>();
             EndForceByCase = new Dictionary<string, double[]>();
+            ShearByCase = forceByCase.ToDictionary(kv => kv.Key, kv => kv.Value);
             double arm = HoldownArm, V = Math.Abs(this.V);
             if (!(arm > 0) || double.IsInfinity(arm)) return;
             foreach (var kv in forceByCase)
@@ -567,6 +568,12 @@ namespace ShearWallCalculator.Design
         /// (<see cref="FoundationForces"/>).
         /// </summary>
         public Dictionary<string, double[]> EndForceByCase { get; set; }
+
+        /// <summary>
+        /// The wall's force in each load case as <see cref="SetCaseTensions"/> was given it (kips, strength level, on the
+        /// diaphragm in building axes: the top of the wall is pushed the other way). Null until then.
+        /// </summary>
+        public Dictionary<string, double> ShearByCase { get; set; }
 
         /// <summary>Where the load path anchors this wall's hold-down with another type than its own (e.g. "ST9 strap on beam BM2"): set by the load path.</summary>
         public List<string> HoldownElsewhere { get; } = new List<string>();

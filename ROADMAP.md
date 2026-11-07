@@ -62,16 +62,31 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
   reads them, adds the gravity and roof uplift it already has, makes the pairs and checks each member; the sketch draws
   them. Two kinds: a point pair (a hold-down, a compression post, later a rafter end) and a line pair (per ft along a
   wall: today the roof diaphragm on its top walls, a continuous connection).
-  - [ ] 1. SWC saves each story hold-down's tension per wind case, and the compression at the couple's other end per
-    case (`StoryHoldown`), not only the worst case.
-  - [ ] 2. The Load Manager makes the pairs and checks each member's balance (vertical force; then overturning). The
-    foundation is the bottom row, with today's numbers.
+  **WISE applies to every free body** (owner, 2026-11-07), one member or a whole system: the wind is an external load (E)
+  and is never dropped; the connections are its reactions, and whether one is internal (I), a support (S) or applied (E)
+  depends only on where the body's boundary is drawn and which members are in it. A pair with both members inside the
+  body is internal; with the member below outside (or the foundation), a support; with the member above outside, applied.
+  - [x] 1. (2026-11-07, BM 5f55eed, SWC cd84027, hub 4f46745; the rest in the step 2 commits) SWC saves each story
+    hold-down's force per wind case (`StoryHoldown.Up`, W at strength level, + tension / − compression: the couple's two
+    ends), where an end presses (`CompressionX`, `CompressionY`: the end post's centreline, the arm L − 1.5 post), and each
+    shear wall's wind shear on its top per case and its height (`ShearWallDesign.ShearOnTop`, `HeightFt`).
+  - [x] 2. (2026-11-07) The pairs (`BuildingModel.Model.ConnectionPairs`, one derivation for every app) and each member's
+    free body with the wind on it in the Load Manager (`FreeBody.Connections`, `Shears`: E the wind's shear on its top and
+    the members standing on it, S its own hold-downs, posts and sill), checked in every case: ΣFx, ΣFy, ΣM
+    (`ConnectionBalance`, `FreeBody.WindOutOfBalance`; in `FoundationCheck.Run` and on the foundation page). The free body's
+    side panel lists them case by case. The foundation's report is unchanged.
+    - [ ] SWC's load path carries only the tension through beams and columns: a wall end pressing on a beam or a column
+      shows as not balanced there (its compression is not passed on). Carry the compression too.
+    - [ ] The roof's wind on the top walls (the uplift pass's) on the same free bodies, and the gravity with the wind in
+      the W combinations.
+    - [ ] Free bodies of several members (a stack of walls, a level, the whole structure): the pairs inside become I.
+    - [ ] Drawn in 3D on the free body (today in its side panel only).
   - [ ] 3. The sketch's level labels from the pairs: several landing within 1 ft (the Load Manager's `Near`) in one label,
     the sum per case and its worst case (computed in the Load Manager, drawn by the sketch).
     - [ ] **An Internal forces toggle** in every drawing of the forces (owner, 2026-11-07). On: every pair drawn, both
-      members' forces (the visual check that everything is accounted for). Off: two forces equal and opposite at a
-      connection cancel and neither is drawn; only what is not balanced there shows (the reactions on the foundation), the
-      cleaner drawing for reports and clients.
+      members' forces (the visual check that everything is accounted for). Off: two forces equal and opposite inside the
+      body drawn cancel and neither is drawn; the wind and what is not balanced inside it (the reactions on the foundation)
+      always show: the cleaner drawing for reports and clients.
   - [ ] 4. The roof ties as the top row: a line pair today (uplift − 0.6D per ft along each top wall, the diaphragm being
     continuous); the owner to decide MWFRS or C&C uplift for them.
   - [ ] 5. Upper-floor beams and columns carrying hold-downs from above: their uplift checked from their pairs.

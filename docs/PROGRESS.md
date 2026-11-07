@@ -2,6 +2,29 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-07 — Every connection a pair of equal and opposite forces (steps 1 and 2)
+
+- The owner's plan (ROADMAP): the Load Manager reports every connection between members as a pair of equal and
+  opposite forces, and checks every member's free body. WISE for every body, one member or a whole system: the wind is an
+  external load and is never dropped; whether a connection's force is I, S or E depends on the body's boundary.
+- SWC saves, case by case, what the free bodies need: each story hold-down's force (`StoryHoldown.Up`, W at strength
+  level, + tension / − compression, both ends of every couple, from `EndForceByCase`; a beam end's or column base's
+  tensions), where an end presses (`CompressionX`/`Y`, the end post's centreline), and each shear wall's wind shear on its
+  top and its height (`ShearWallDesign.ShearOnTop`, `HeightFt`, from the new `WallDesignResult.ShearByCase`). The rigid and
+  flexible shares govern the same way everywhere (`ShearWallCheck.Bare`, `Govern`).
+- `BuildingModel.Model.ConnectionPairs` makes the pairs (one derivation for every app: the Load Manager's free bodies now,
+  the plans' drawing and the Internal forces toggle next).
+- The Load Manager's `FreeBody` has the wind's side (`Connections`, `Shears`); `ConnectionBalance` checks every wall, beam
+  and column in every case: ΣFx, ΣFy, ΣM. In the box test every member balances (ΣM within rounding, e.g. 28 lb·ft of
+  99,250). The free body's side panel lists the wind forces case by case with the three sums; the foundation page says how
+  many pairs and members, and names any that do not balance. The foundation's own report is unchanged.
+- Known: SWC's load path carries only tension through beams and columns, so a wall end pressing on one would show as not
+  balanced there (ROADMAP).
+- Tests: `ConnectionBalanceTests` (Load Manager, 4, by hand: two stacked walls balance; a missing force and a landing on
+  nothing show; a file saved before the cases has nothing to check), the hub's
+  `EveryMember_BalancesTheWind_EveryConnectionAPair` and `Run_EveryStorysHoldowns_...` (the per-case forces, each wall's two
+  ends a couple, the first story's as on the foundation).
+
 ## 2026-11-07 — One wall window for every app
 
 - `WoodFraming.Wpf` has the wall window every app opens: `WallView` (plain data, made from the model and its `Lateral`

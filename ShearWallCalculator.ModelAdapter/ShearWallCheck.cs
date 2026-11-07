@@ -273,7 +273,7 @@ namespace ShearWallCalculator.ModelAdapter
                                 : l.Support == SupportKind.Wall && l.LowerWallId != null ? $"wall {ModelWall(kv.Key, l.LowerWallId.Value)}"
                                 : l.Support == SupportKind.None ? null : l.SupportId;
                     var fam = l.Choice != null || wall ? l.Family : HoldownFamilies.HDU_ToFoundation;
-                    list.Add(new StoryHoldown
+                    var h = new StoryHoldown
                     {
                         From = from,
                         WallId = wallId,
@@ -287,7 +287,10 @@ namespace ShearWallCalculator.ModelAdapter
                         PostAlongWall = wall ? WallSchedule.PostAlongWall(l.Choice) : 0,
                         Family = fam == HoldownFamilies.Strap_ToWallBelow || fam == HoldownFamilies.STHD_ToFoundation ? "strap" : "bolted",
                         Up = CaseForces(l, story, levels, byStory),
-                    });
+                    };
+                    var cp = wall ? CompressionAt(l, story, levels, byStory) : null;
+                    if (cp != null) { h.CompressionX = Math.Round(cp.Value.X, 4); h.CompressionY = Math.Round(cp.Value.Y, 4); }
+                    list.Add(h);
                 }
             }
             return list;
@@ -316,6 +319,24 @@ namespace ShearWallCalculator.ModelAdapter
             bool atLow = ew ? l.At.X < (w.Start.X + w.End.X) / 2 : l.At.Y < (w.Start.Y + w.End.Y) / 2;
             foreach (var c in r.EndForceByCase) Govern(up, Bare(c.Key), Math.Round(c.Value[atLow ? 0 : 1] / 0.6, 1));
             return up;
+        }
+
+        /// <summary>
+        /// Where a wall's hold-down end presses down in the cases it does not lift: its end post's centreline, half a post from
+        /// the end of the shear part (the hold-down is a full post in, on the post's inside face: the arm is L − 1.5 post).
+        /// Null when the wall or its design is not found.
+        /// </summary>
+        private static System.Windows.Point? CompressionAt(HoldownLanding l, int story, IList<ShearWallCalculatorBase> levels, IList<Dictionary<int, WallDesignResult>> byStory)
+        {
+            if (story < 0 || story >= levels.Count || levels[story]?._wall_system?._walls.TryGetValue(l.WallId, out var w) != true) return null;
+            WallDesignResult r = null;
+            if (byStory != null && story < byStory.Count) byStory[story]?.TryGetValue(l.WallId, out r);
+            double half = WallSchedule.PostAlongWall(r?.Holdown ?? l.Choice) / 12.0 / 2.0;
+            var end = (l.At - w.Start).Length <= (l.At - w.End).Length ? w.Start : w.End;
+            var toEnd = end - l.At;
+            if (toEnd.Length < 1e-9) return l.At;
+            toEnd.Normalize();
+            return l.At + toEnd * half;
         }
 
         /// <summary>
@@ -371,6 +392,14 @@ namespace ShearWallCalculator.ModelAdapter
                     d.Check = r.Pass ? $"OK: v = {r.Demand:0} plf of {r.Capacity:0} plf" : $"{r.Status}: v = {r.Demand:0} plf of {r.Capacity:0} plf";
                     d.Fails = !r.Pass;
                     d.Fasteners = r.Holdown?.Fasteners;
+                    // the wind's shear on its top per case, the external load its connections take (strength level, + toward the
+                    // high end: the force on the diaphragm is the other way)
+                    if (r.ShearByCase != null && r.ShearByCase.Count > 0)
+                    {
+                        d.ShearOnTop = new Dictionary<string, double>();
+                        foreach (var c in r.ShearByCase) Govern(d.ShearOnTop, Bare(c.Key), Math.Round(-1000.0 * c.Value, 1));
+                        d.HeightFt = r.Height;
+                    }
                     foreach (var f in (r.Faces ?? new List<FaceResult>()).Where(f => f?.Face != null && f.Face.Table != SheathingTable.None))
                     {
                         var o = f.Option;
