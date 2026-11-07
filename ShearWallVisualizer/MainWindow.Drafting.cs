@@ -114,7 +114,7 @@ namespace ShearWallVisualizer
             s.InterceptClick = ClickOnTag; // a wall's design tag picks the wall, as a click on the wall does
             s.ExtraSnapPoints = HoldownSnapPoints;
             // the foundation plan's hold-downs: what this app relays to the model (live, before it saves; else what it saved)
-            s.Connections = () => LateralForFoundation(0) ?? BuildingModel.Model.LateralSection.Read(building);
+            s.Connections = () => (windLoadsLinked ? ShearWallCheck.Lateral(levels, stories, allDesignResults, foundationAnchors, 0) : null) ?? BuildingModel.Model.LateralSection.Read(building);
             s.LevelCaption = l => ""; // no tag on the plan: the strip above it says the level and what is shown
             s.FitPadding = () => labelRoom; // room for the labels outside the building (the foundation's anchors, a level's hold-down landings)
             s.Escaped += (o, e) =>
@@ -518,9 +518,7 @@ namespace ShearWallVisualizer
                 {
                     if (!s.Walls.TryGetValue(kv.Key, out var id) || !(building.Find(id) is Wall w)) continue;
                     var r = kv.Value;
-                    string why = !r.AspectOk ? $"aspect ratio {r.AspectRatio:0.##} over {r.MaxAspectRatio:0.##}"
-                               : !r.ShearOk ? $"shear {r.Demand:0} plf over the capacity {r.Capacity:0} plf"
-                               : r.Status;
+                    string why = r.FailureReason;
                     list.Add(new ModelIssue { Severity = Severity.Error, Code = "WallFails", Message = $"{id} fails on {s.Level.Name}: {why}.", Ids = { id }, LevelId = s.Level.Id, At = w.Middle });
                 }
                 AddLandingIssues(list);

@@ -203,12 +203,7 @@ namespace ShearWallVisualizer
         /// </summary>
         private void SetWindLoadsPerLevel(ASCE7WindLoadCalculator.WindAnalysisResult analysis, bool onlyCases1And3, out string message)
         {
-            int n = Math.Max(1, Math.Min(levels.Count, ASCE7WindLoadCalculator.BuildingData.MaxStories));
-            var r = ASCE7WindLoadCalculator.StoryWindLoads.ComputeCases(analysis, onlyCases1And3, n);
-            for (int i = 0; i < levels.Count; i++)
-                levels[i].SetLoadCases(i < r.Levels.Count
-                    ? r.Levels[i].Select(c => new LateralLoadCase(c.Name, c.Vx, c.Vy, c.Mt, applyMinimumEccentricity: false))
-                    : Enumerable.Empty<LateralLoadCase>());
+            var r = ShearWallCheck.SetWindLoads(levels, analysis, onlyCases1And3); // the same as the headless check
             double maxX = r.Cases.Max(c => Math.Abs(c.Vx)), maxY = r.Cases.Max(c => Math.Abs(c.Vy));
             message = $"{r.Cases.Count} wind cases from the wind calculator (the largest base shear {maxX:0.0} k along X, {maxY:0.0} k along Y). ";
             if (levels.Count > 1)

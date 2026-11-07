@@ -14,6 +14,9 @@
   <ItemGroup>
     <ProjectReference Include="..\..\BuildingModel\BuildingModel.Core\BuildingModel.Core.csproj" />
     <ProjectReference Include="..\ShearWallCalculator.csproj" />
+    <!-- the wind calculator's own wind cases, for the headless check (ShearWallCheck) -->
+    <ProjectReference Include="..\..\ASCE7-Wind-Load-Calculator\ASCE7Wind.ModelAdapter\ASCE7Wind.ModelAdapter.csproj" />
+    <ProjectReference Include="..\..\ASCE7-Wind-Load-Calculator\ASCE7Wind.Core\ASCE7Wind.Core.csproj" />
     <Reference Include="PresentationCore" />
     <Reference Include="WindowsBase" />
     <!-- the designer's own copy (no download) -->

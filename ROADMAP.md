@@ -13,7 +13,8 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
   on the level they carry). It is a view only: the same objects, no copies, counted once by their story. Tied to the
   lowest level (`IsFoundationPlan`), not the name "Ground", for a later basement. Doors and windows are edited in the
   wall, later.
-  - [ ] The hold-down and anchor marks on it (SWC and the Load Manager's foundation view draw them there).
+  - [x] The hold-down marks on it (2026-11-06, SWC 36f821f): SWC relays each point's hold-down into `Lateral`
+    (`Connector`); the shared sketch draws them on Ground (`Sketch.Connections`), SWC draws nothing there.
 - [~] **Central hub (launcher) for the apps.** The prototype is built: the new repo `..\DesignHub`
   (`DesignHub.exe`), branch `dev/hub-prototype`. See its `README.md` and `docs/DESIGN.md`.
   - [x] Opens a project, shows the five steps of the work with each one's state, and the next step.
@@ -25,6 +26,18 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
   - [ ] The owner to click through it.
   - [ ] Access from a real license or user file (`ListedApps` is ready; `HubSettings.Access()`).
   - [ ] Open an app on a given page (`--page foundation` for the Load Manager's foundation view).
+  - [x] Keeps the project in spec (2026-11-06): the stamps on the foundation forces (`Lateral.BasedOn`, by
+    `ModelFingerprint`), the shear walls designed again with no window in the background (`ShearWallCheck.Run`), a red
+    "Fails" step, a problems banner with "Show W4" (opens SWC at the wall, `--select`), and the problems marked in the file
+    (`Hub.Status`: since when, seen by whom). SWC watches the file the whole time and names the walls that newly fail.
+  - [x] One person per project; the rest look only (2026-11-06): the hub's own lock, `ProjectLock.HeldByOthers`; the apps
+    refuse a project someone else has, and the hub opens it view only (no apps, no writes).
+  - [ ] **View-only mode for the apps** (the owner's idea, 2026-11-06): someone else's project opened in an app to look at
+    only: the plan, the results and the reports, no edits and no saves (the Building Model's and SWC's tools off, the
+    Load Manager's grids read-only, no lock taken). Today they refuse it.
+  - [ ] The other apps' re-checks with no window, as the shear walls have: the foundation (the Load Manager's
+    combinations against the gravity loads as they are now) and the wind (cases that changed).
+  - [ ] Show the hub's problems in the apps too (SWC: the walls the hub marked, on opening).
 - [x] **Merge on save, atomic saves, a shared project lock** (2026-11-05; BuildingModel `063084e` and the commits
   after it). Every app re-reads the file at save and writes only its own part: the Building Model merges three-way
   (`ModelFile.SaveMerged`), the Shear Wall Calculator replaces only its keys (`SaveOwnData`), the wind and the loads

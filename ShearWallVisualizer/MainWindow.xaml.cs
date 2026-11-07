@@ -125,7 +125,7 @@ namespace ShearWallVisualizer
                 // rebuilt after this event: the box that raised it is on the card
                 Dispatcher.BeginInvoke(new Action(UpdateShearWallUI), System.Windows.Threading.DispatcherPriority.Input);
             };
-            this.Closed += (s, e) => { Log.Written -= OnLogWritten; projectLock?.Dispose(); projectLock = null; };
+            this.Closed += (s, e) => { Log.Written -= OnLogWritten; projectLock?.Dispose(); projectLock = null; projectWatcher?.Dispose(); projectWatcher = null; };
 
             // Set focus and canvas background
             this.Focusable = true;
@@ -178,6 +178,13 @@ namespace ShearWallVisualizer
                 // opened from Explorer), else the start screen
                 string arg = Environment.GetCommandLineArgs().Skip(1).FirstOrDefault(a => a.EndsWith(".json", StringComparison.OrdinalIgnoreCase));
                 if (arg == null || !File.Exists(arg) || !OpenProject(arg)) ShowStartScreen();
+                else
+                {
+                    // the hub's "Show in the Shear Wall Calculator": a wall to go to (--select W4)
+                    var all = Environment.GetCommandLineArgs();
+                    int at = Array.FindIndex(all, a => string.Equals(a, "--select", StringComparison.OrdinalIgnoreCase));
+                    if (at > 0 && at + 1 < all.Length && building?.Find(all[at + 1]) != null) Sketch.SelectAndShow(all[at + 1]);
+                }
             };
         }
 
@@ -380,23 +387,8 @@ namespace ShearWallVisualizer
         /// </summary>
         private LoadPathTrace DesignTopDown(IList<ShearWallCalculatorBase> calcs, int down, Dictionary<int, WallDesignResult>[] all)
         {
-            var trace = NewLoadPath(calcs);
-            Dictionary<int, WallDesignResult> above = null;
-            for (int k = calcs.Count - 1; k >= down; k--)
-            {
-                all[k] = above = CheckLevel(calcs[k], k + 1 < calcs.Count ? calcs[k + 1] : null, above, k + 2, trace.ExtraOn(k));
-                trace.Land(k, calcs[k]?._wall_system?._walls, above, k > 0 ? calcs[k - 1]?._wall_system?._walls : null);
-            }
-            return trace;
-        }
-
-        /// <summary>A trace with the model's beams and columns by story, sizing new connections from the project's catalog.</summary>
-        private LoadPathTrace NewLoadPath(IList<ShearWallCalculatorBase> calcs)
-        {
             var (beams, columns) = Framing();
-            var settings = calcs.FirstOrDefault(c => c != null)?.DesignSettings ?? new DesignSettings();
-            return new LoadPathTrace(beams, columns, (f, species, t) =>
-                designer?.SelectHoldown(f, species, t, settings.HoldownsFromStandardList, settings.StrapHoldownsOrDefault()));
+            return DesignPass.TopDown(calcs, down, all, designer, beams, columns); // the one design pass (the hub's re-check runs it too)
         }
 
         /// <summary>
@@ -413,24 +405,8 @@ namespace ShearWallVisualizer
         }
 
         private Dictionary<int, WallDesignResult> CheckLevel(ShearWallCalculatorBase calc, ShearWallCalculatorBase upper,
-            Dictionary<int, WallDesignResult> upperDesign, int upperLevel, Dictionary<int, List<StackedForce>> extra = null)
-        {
-            var results = new Dictionary<int, WallDesignResult>();
-            if (calc == null || designer == null || !calc.IsValidForCalculation) return results;
-            // every wall's force in every case: its hold-down tension case by case (the load path adds those that share a support)
-            var byWall = ShearWallCalculator.CaseBreakdown.Rows(calc).GroupBy(x => x.Wall).ToDictionary(g => g.Key, g => g.ToList());
-            foreach (var kv in calc._wall_system._walls)
-            {
-                if (!calc.TotalWallShear.TryGetValue(kv.Key, out double v)) continue;
-                calc.GoverningLoadCase.TryGetValue(kv.Key, out string governing);
-                var above = upper == null ? null : StoryCascade.HoldownForcesOn(kv.Value, upper._wall_system._walls, upperDesign, upperLevel);
-                if (extra != null && extra.TryGetValue(kv.Key, out var more)) (above = above ?? new List<StackedForce>()).AddRange(more);
-                results[kv.Key] = designer.Check(kv.Key, kv.Value, v, governing, calc.DesignSettings, null, above);
-                if (byWall.TryGetValue(kv.Key, out var rows))
-                    results[kv.Key].SetCaseTensions(rows.GroupBy(x => x.Case).Select(g => new KeyValuePair<string, double>(g.Key, g.First().Total)));
-            }
-            return results;
-        }
+            Dictionary<int, WallDesignResult> upperDesign, int upperLevel, Dictionary<int, List<StackedForce>> extra = null) =>
+            DesignPass.CheckLevel(calc, upper, upperDesign, upperLevel, designer, extra);
 
         private Dialogs.HoldownCatalogWindow holdownCatalog;
 

@@ -2,6 +2,18 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-06 — The design with no window; the project kept in spec
+
+- The design pass is out of the window: `Design/DesignPass.cs` (`TopDown`, `All`, `CheckLevel`) and, in the ModelAdapter,
+  `ShearWallCheck` (`Run`: the whole design on a copy of a building, as the window does it, with the wind from the `Wind`
+  section; `SetWindLoads`, `Framing`, `Lateral`, `InputsNow`). The window calls the same code. `WallDesignResult.FailureReason`.
+- The `Lateral` section is stamped with what it was found from (`BasedOn`: the geometry, the wind, SWC's design inputs).
+- SWC watches the project file the whole time. When another app saves and nothing is unsaved here, it reloads, designs
+  again and names the walls that newly fail; with unsaved changes it only says so. `--select W4` opens it at a wall
+  (the hub's "Show W4").
+- The hub re-checks in the background after every read, shows a red "Fails" step and a problems banner, and marks the
+  problems in the file (`Hub.Status`). Someone else's project is open view only in the hub; the apps refuse it.
+
 ## 2026-11-03 — The drawing key beside the plan
 
 - The shear wall schedule and the Loads legend are no longer drawn over the plan. They sit in a drawing key under the

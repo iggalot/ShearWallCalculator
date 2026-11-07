@@ -601,6 +601,13 @@ namespace ShearWallCalculator.Design
             : !HoldownOk ? (Holdown != null ? $"hold-down {Holdown.Model} {Holdown.Allowable:0} lb < T {TensionAsd:0} lb"
                             : HoldownFromStandardList ? "no standard-list hold-down strong enough" : "no hold-down strong enough")
             : "OK";
+
+        /// <summary>Why the wall fails, in words, for an issue or a notice ("shear 412 plf over the capacity 380 plf"); null when it passes.</summary>
+        public string FailureReason =>
+            Pass ? null
+            : !AspectOk ? $"aspect ratio {AspectRatio:0.##} over {MaxAspectRatio:0.##}"
+            : !ShearOk ? $"shear {Demand:0} plf over the capacity {Capacity:0} plf"
+            : Status;
     }
 
     /// <summary>

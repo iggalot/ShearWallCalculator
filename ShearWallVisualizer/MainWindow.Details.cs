@@ -4,6 +4,7 @@ using BuildingModel.Model;
 using calculator;
 using ShearWallCalculator;
 using ShearWallCalculator.Design;
+using ShearWallCalculator.ModelAdapter;
 using ShearWallVisualizer.Controls;
 using System;
 using System.Collections.Generic;
@@ -175,26 +176,7 @@ namespace ShearWallVisualizer
         }
 
         /// <summary>The beams and columns of the model, by story (for the load path and the details).</summary>
-        private (List<FramingBeam> beams, List<FramingColumn> columns) Framing()
-        {
-            var beams = new List<FramingBeam>();
-            var columns = new List<FramingColumn>();
-            if (building == null || stories.Count == 0) return (beams, columns);
-            int StoryOf(string levelId) => stories.FindIndex(s => s.Level.Id == levelId);
-            foreach (var bm in building.Beams)
-            {
-                int i = StoryOf(bm.LevelId);
-                if (i >= 0) beams.Add(new FramingBeam { Id = bm.Id, Start = new Point(bm.Start.X, bm.Start.Y), End = new Point(bm.End.X, bm.End.Y), OnStory = i });
-            }
-            foreach (var c in building.Columns)
-            {
-                int top = StoryOf(c.TopLevelId);
-                int below = StoryOf(c.BaseLevelId);
-                int bas = building.Ground != null && c.BaseLevelId == building.Ground.Id ? 0 : below < 0 ? -1 : below + 1;
-                if (top >= 0 && bas >= 0 && bas <= top) columns.Add(new FramingColumn { Id = c.Id, At = new Point(c.At.X, c.At.Y), BaseStory = bas, TopStory = top });
-            }
-            return (beams, columns);
-        }
+        private (List<FramingBeam> beams, List<FramingColumn> columns) Framing() => ShearWallCheck.Framing(building, stories);
 
         /// <summary>
         /// The Members tab's beams (each in its level's framing) and columns (listed at their top level), every level, with

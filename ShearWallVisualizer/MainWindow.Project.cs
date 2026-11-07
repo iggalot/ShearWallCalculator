@@ -84,6 +84,66 @@ namespace ShearWallVisualizer
             return true;
         }
 
+        // ------------------------------------------------------------------ the project file, watched while it is open
+
+        private ProjectWatcher projectWatcher;
+
+        /// <summary>
+        /// The open project's file is watched the whole time it is open (also with no Edit building open): another app saving
+        /// it (the wind, the loads, the building) is seen at once. Called after every open and save (this app's own save is
+        /// then not taken for another's).
+        /// </summary>
+        private void WatchProject()
+        {
+            if (!HasProject) { projectWatcher?.Dispose(); projectWatcher = null; return; }
+            if (projectWatcher != null && string.Equals(projectWatcher.ModelPath, currentProjectPath, StringComparison.OrdinalIgnoreCase)) { projectWatcher.SavedByMe(); return; }
+            projectWatcher?.Dispose();
+            projectWatcher = new ProjectWatcher(currentProjectPath);
+            projectWatcher.ChangedOnDisk += (s, a) => ProjectChangedOnDisk();
+        }
+
+        /// <summary>
+        /// Another app saved the project: with nothing unsaved here it is read again and the walls designed again, and the
+        /// walls that fail now but did not before are named (the change elsewhere broke them). With unsaved changes here it
+        /// is only said: a save puts this app's data into the file as it is now (<see cref="ModelFile.SaveOwnData"/>).
+        /// Only reads: nothing is saved because the file changed (no app writes in answer to another's save).
+        /// </summary>
+        private void ProjectChangedOnDisk()
+        {
+            if (!HasProject || !File.Exists(currentProjectPath)) return;
+            if (editorProcess != null && !editorProcess.HasExited) return; // Edit building / wind / loads: its own watcher reloads
+            if (HasUnsavedChanges)
+            {
+                Log.Info("Project", "The project was saved by another app while this one has unsaved changes.");
+                ShowStatusMessage(LogLevel.Warning, "Another app saved this project meanwhile. Save here to put your design into it (the building, wind and loads stay as it has them): the walls are then designed for it as it is now.");
+                return;
+            }
+            var before = FailingWalls();
+            OpenProject(currentProjectPath, reload: true);
+            var newly = FailingWalls().Except(before).ToList();
+            if (newly.Count == 0)
+            {
+                ShowStatusMessage(LogLevel.Info, "Another app saved this project: it was read again and the walls designed again.");
+                return;
+            }
+            string list = string.Join("\n", newly.Take(12)) + (newly.Count > 12 ? $"\n(and {newly.Count - 12} more)" : "");
+            Log.Warning("Project", "After another app's save these walls fail: " + string.Join("; ", newly), null);
+            ShowStatusMessage(LogLevel.Warning, $"Another app saved this project: {newly.Count} wall{(newly.Count == 1 ? "" : "s")} fail now: {newly[0]}" + (newly.Count > 1 ? " …" : ""));
+            MessageBox.Show(this, "Another app saved this project (the building, the wind or the loads changed). It was read again and the walls designed again; " +
+                                  $"{(newly.Count == 1 ? "this wall fails" : "these walls fail")} now:\n\n{list}\n\nThey are red on the plan. Fix them and save.",
+                            "Shear Wall Calculator", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+
+        /// <summary>The walls that fail now, "W4 on Level 2".</summary>
+        private HashSet<string> FailingWalls()
+        {
+            var set = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < stories.Count && i < allDesignResults.Count; i++)
+                foreach (var kv in allDesignResults[i].Where(kv => !kv.Value.Pass))
+                    set.Add((stories[i].Walls.TryGetValue(kv.Key, out var id) ? id : "W" + kv.Key) + " on " + stories[i].Level.Name);
+            return set;
+        }
+
         private string CurrentProjectJson() => HasProject ? ModelFile.BuildingToJson(BuildingToSave()) : null;
 
         private bool HasUnsavedChanges => HasProject && savedProjectJson != null && CurrentProjectJson() != savedProjectJson;
@@ -206,6 +266,7 @@ namespace ShearWallVisualizer
             // loads or hold-downs that changed count as unsaved so the user is asked before closing
             savedProjectJson = note == null ? CurrentProjectJson() : string.Empty;
             UpdateTitle();
+            WatchProject();
             if (note != null && !reload)
                 MessageBox.Show(this, note, "Open", MessageBoxButton.OK, MessageBoxImage.Information);
             return true;
@@ -272,7 +333,7 @@ namespace ShearWallVisualizer
                 var mine = BuildingToSave();
                 // what the shear walls put on the foundation, for the load manager (not compared for unsaved changes: it is
                 // rewritten from the design on every save), stamped with the revision this save gives the file
-                void Stamp(ModelDocument d) => BuildingModel.Model.LateralSection.Write(d.Building, LateralForFoundation(d.Revision + 1)); // none: an old one is removed
+                void Stamp(ModelDocument d) => BuildingModel.Model.LateralSection.Write(d.Building, LateralForFoundation(d.Revision + 1, mine)); // none: an old one is removed
                 ModelDocument saved;
                 if (!saveAs && File.Exists(path))
                 {
@@ -303,6 +364,7 @@ namespace ShearWallVisualizer
             currentProjectPath = path;
             Log.Info("Project", $"Saved {path} (revision {projectDoc.Revision}; {(windLoadsLinked ? "wind loads" : "manual loads")}; this app's data only).");
             MarkSaved();
+            WatchProject(); // this save is not another app's
             if (lost.Count > 0)
                 MessageBox.Show(this, "The design of " + string.Join(", ", lost) + " was not saved: the Building Model has deleted it since this project was opened.",
                                 "Save", MessageBoxButton.OK, MessageBoxImage.Information);
