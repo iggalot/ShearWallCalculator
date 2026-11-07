@@ -8,6 +8,11 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
 
 ## Next up
 
+- [ ] **The Ground plan shows what stands on it** (agreed 2026-11-06): the walls and columns whose base is the lowest
+  level, drawn in a cut-wall style, with the hold-down and anchor marks. Select and edit only; no drawing on Ground
+  (walls are drawn on the level they carry). It is a view only: the same objects, no copies, counted once by their
+  story. Tied to the lowest level, not the name "Ground", for a later basement. Doors and windows are edited in the
+  wall, later.
 - [~] **Central hub (launcher) for the apps.** The prototype is built: the new repo `..\DesignHub`
   (`DesignHub.exe`), branch `dev/hub-prototype`. See its `README.md` and `docs/DESIGN.md`.
   - [x] Opens a project, shows the five steps of the work with each one's state, and the next step.
@@ -66,7 +71,19 @@ Shown greyed as "coming" in the hub (`SuiteApps`, in `..\DesignHub\DesignHub.Cor
   with what they were based on (see above), so a takeoff is not made from out-of-date designs. The framing counts
   belong in `WoodFraming`, not in an app. In the hub as "Material Takeoff" (id `takeoff`).
 - [ ] **Gravity framing** (joists, rafters, beams, columns) and **Foundation design** (footings). Already in the hub
-  as planned.
+  as planned. The roof questions it needs settled first (discussed 2026-11-06):
+  - **A vaulted roof still has a diaphragm:** the roof sheathing is the diaphragm, sloped. The top level keeps its
+    diaphragm; "vaulted" is a property of the roof, best per roof diaphragm piece (a vaulted great room, an attic
+    elsewhere).
+  - **The vault changes the gravity path:** no ceiling joists to tie the rafters, so a ridge beam and its posts down
+    to the foundation (or rafter thrust on the walls). The framer and the Load Manager read the flag; the Building
+    Model owns it.
+  - **More than one roof** (`Building.Roof` is one shape, pitch and overhang for the whole building): a garage roof
+    lower than the house, a shed beside a gable.
+  - **Gable walls to the slope:** wall tops stay flat at their level. The gable triangle (wind area, wall weight) is
+    derived from the roof by the apps that need it.
+  - **Open to above** is already an Opening through the floors; a level with no diaphragm stays a warning
+    (`NoDiaphragm`), with no flag of its own.
 
 ## Shear Wall Calculator
 
