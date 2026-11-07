@@ -2,6 +2,22 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-07 — Wall joints: one runs past, the other stops at its face
+
+- `WallJoints` (BuildingModel.Core), one rule for every app: at a corner the longer wall runs past the shorter, an E-W one
+  past an N-S one of the same length; at a tee the wall that ends part way along the other butts into it. Flip in the
+  Building Model's wall properties turns a corner round (one undo step; kept in `Building.FlippedJoints`, file format 7).
+  The plans mark each joint with a bar across the wall that stops.
+- A shear wall's part starts at the face of the wall it butts into (`ShearWallAdapter.BuiltEnds`), half that wall's stud
+  depth short of the centrelines' point, so its length and its hold-downs are as built. The stud depths moved to
+  BuildingModel.Core (`StudSizes`); WoodFraming reads them there.
+- The corner warning is gone (every corner has its rule); walls that cross are still flagged (`WallsCross`).
+- Fixed: undo in the Building Model did not bring back the roof, the defaults (or now the joints).
+- Checked: a wall picked in SWC opens its card and its construction window, on a story and on Ground (a test with the
+  real window). The Building Model has no wall window yet; one shared window is on the roadmap.
+- Hold-down lever arm d = L − 1.5 post (owner): the tension at the hold-down on its post's inside face, the compression at
+  the far post's centreline.
+
 ## 2026-11-06 — Hold-downs drawn one way, where they go; wall ends that take the same space
 
 - The hold-downs are a full post in from each end of the shear part, on the end post's inside face

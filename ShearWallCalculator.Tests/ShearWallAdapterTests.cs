@@ -127,10 +127,13 @@ namespace ShearWallCalculator.Tests
         {
             var direct = new ShearWallCalculator_RigidDiaphragm();
             direct._diaphragm_system.AddDiaphragm(new DiaphragmData_Rectangular(new System.Windows.Point(0, 0), new System.Windows.Point(60, 40)));
+            // drawn as built: the 60 ft wall runs past both N-S walls, which stop short of it, and the 40 ft N-S wall past the
+            // 30 ft one; stopped 3 in short, they meet nothing (WallJoints), so the model keeps them as drawn
+            double t = 0.25;
             direct._wall_system.AddWall(new WallData(12, 0, 0, 60, 0));
-            direct._wall_system.AddWall(new WallData(12, 0, 40, 30, 40));
-            direct._wall_system.AddWall(new WallData(12, 0, 0, 0, 40));
-            direct._wall_system.AddWall(new WallData(12, 60, 0, 60, 40));
+            direct._wall_system.AddWall(new WallData(12, t, 40, 30, 40));
+            direct._wall_system.AddWall(new WallData(12, 0, t, 0, 40));
+            direct._wall_system.AddWall(new WallData(12, 60, t, 60, 40));
             direct.PerformCalculations();
 
             var b = ShearWallAdapter.FromCalculators(new ShearWallCalculatorBase[] { direct }, new[] { 12.0 });
@@ -139,6 +142,28 @@ namespace ShearWallCalculator.Tests
             Assert.AreEqual(direct._wall_system.CtrRigidity.X, via._wall_system.CtrRigidity.X, 1e-9);
             Assert.AreEqual(direct._wall_system.CtrRigidity.Y, via._wall_system.CtrRigidity.Y, 1e-9);
             Assert.AreEqual(direct._diaphragm_system.CtrMass.X, via._diaphragm_system.CtrMass.X, 1e-9);
+        }
+
+        [TestMethod]
+        public void AShearWallThatButtsIn_StartsAtTheOthersFace_ItsHoldownAPostInFromThere()
+        {
+            var b = Building.New();
+            var l2 = BuildingModel.Edits.BuildingEdits.AddStory(b, 10);
+            b.AddDiaphragm(l2, new Rect2(0, 0, 40, 30));
+            var south = b.AddWall(b.Ground, l2, 0, 0, 40, 0, shearWall: true);  // 40 ft: runs past
+            var west = b.AddWall(b.Ground, l2, 0, 0, 0, 30, shearWall: true);   // 30 ft: stops at the south wall's face
+            b.AddWall(b.Ground, l2, 0, 30, 40, 30, shearWall: true);
+            b.AddWall(b.Ground, l2, 40, 0, 40, 30, shearWall: true);
+            var calc = ShearWallAdapter.ToCalculators(b)[0];
+            int key = calc.Walls.First(kv => kv.Value == west.Id).Key;
+            var w = calc.Calculator._wall_system._walls[key];
+            double face = 5.5 / 2 / 12; // half the south wall's 2x6
+            Assert.AreEqual(face, Math.Min(w.Start.Y, w.End.Y), 1e-6, "starts at the south wall's face");
+            Assert.AreEqual(30 - 2 * face, w.WallLength, 1e-6, "as built: it stops at the north wall's face too (40 > 30)");
+            var (lowHd, _) = WallSchedule.HoldownPoints(w, null);
+            Assert.AreEqual(face + 3.0 / 12, lowHd.Y, 1e-6, "the hold-down a post (two 2x, 3 in) in from the face");
+            int sk = calc.Walls.First(kv => kv.Value == south.Id).Key;
+            Assert.AreEqual(40, calc.Calculator._wall_system._walls[sk].WallLength, 1e-9, "the wall that runs past, as drawn");
         }
 
         [TestMethod]

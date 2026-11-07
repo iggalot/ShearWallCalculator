@@ -24,14 +24,27 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
   in from each end, but the design's arm is still `L - post` (post centreline to post centreline, `ShearWallDesign.cs`).
   Tension at the hold-down on the inside face and compression at the far post's centreline would be `L - 1.5 post`;
   rod to rod, `L - 2 post`. `MomentFromAbove` uses half a post too.
-- [~] **Wall ends that take the same space** (2026-11-06): the Building Model flags an L drawn to one point
-  (`WallEndsMeet`: one runs past, the other stops at its face) and walls that cross (`WallsCross`). A T (a wall ending
-  part way along another) is taken as built: it butts into the other.
-  - [ ] A one-click fix (pick the wall that runs past), and Quick building drawing its corners that way. Both need the
-    wall's thickness in the Building Model: move the stud depth table (`WallFraming.DepthOf`) into BuildingModel.Core
-    and have WoodFraming read it there.
-  - [ ] At a T, the hold-down of the wall that butts in from its real end: its centreline end less half the other
-    wall's thickness.
+- [x] **Wall joints** (2026-11-07, owner): one rule for every app (`WallJoints`, BuildingModel.Core). At a corner the
+  longer wall runs past the shorter, an E-W one past an N-S one of the same length; at a tee the wall that ends part way
+  along the other butts into it. The engineer turns a corner round with Flip in the wall's properties (only the turned
+  ones are kept, `Building.FlippedJoints`, format version 7). A wall that butts stops at the other's face (half its stud
+  depth, `StudSizes` now in BuildingModel.Core, WoodFraming reads it there); the plans show a bar where it stops. A shear
+  wall's part, and its hold-downs, start at the face (`ShearWallAdapter.BuiltEnds`). Walls that cross are flagged.
+  - [ ] Quick building and a DXF import drawing corners with their joints in mind.
+- [ ] **Drawing walls on a DXF** (owner's question, 2026-11-07: plans rarely show centrelines). Suggestions:
+  - [ ] Draw by a face: the wall tool's option centreline / left face / right face; an exterior wall drawn along its
+    outside face puts the centreline half the stud depth inside.
+  - [ ] Snap between two lines: where the DXF shows a wall as two parallel lines 3.5 to 7.25 in apart, a snap to the
+    line midway between them.
+  - [ ] Walls from the DXF: pick a layer, find its pairs of parallel lines, propose walls on their centrelines to accept
+    or reject one by one.
+- [ ] **Hold-downs on every level in the Building Model** (2026-11-07): SWC saves every story's hold-downs (connector,
+  post, what each anchors to: the foundation, a wall or beam below) into the model; the shared sketch draws them on each
+  level, with those from above passing through the floor.
+- [ ] **One wall window for every app** (2026-11-07, owner: "a single routine for behavior across all of these apps"):
+  SWC's construction window (framing elevation, 3D) moved to WoodFraming.Wpf and opened from the Building Model too. The
+  whole wall's framing; the hold-downs always, with those from above through the floor; a Shear wall toggle (on by
+  default) for SWC's saved design (sheathing, nailing, the shear part). SWC's copy adds its calculation.
 - [~] **Central hub (launcher) for the apps.** The prototype is built: the new repo `..\DesignHub`
   (`DesignHub.exe`), branch `dev/hub-prototype`. See its `README.md` and `docs/DESIGN.md`.
   - [x] Opens a project, shows the five steps of the work with each one's state, and the next step.

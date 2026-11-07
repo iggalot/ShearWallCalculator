@@ -134,6 +134,22 @@ namespace ShearWallCalculator.ModelAdapter
             return (At(p.From), At(p.To));
         }
 
+        /// <summary>
+        /// The shear part as built (ft, world): its ends, kept within the wall's real ends (<see cref="WallJoints.RealEnds"/>):
+        /// where the wall stops at another wall's face, the part (and so its hold-downs) starts at that face, not at the
+        /// centrelines' point. The design takes this length.
+        /// </summary>
+        public static (Point2 a, Point2 e) BuiltEnds(Building b, Wall w, ShearPart p)
+        {
+            double len = w.Length;
+            if (b == null || !(len > 0)) return Ends(w, p);
+            var (rs, re) = WallJoints.RealEnds(b, w);
+            double inS = new Segment2(w.Start, rs).Length, inE = new Segment2(w.End, re).Length;
+            double from = Math.Max(p.From, inS), to = Math.Min(p.To, len - inE);
+            if (to - from < 1e-6) return Ends(w, p);
+            return Ends(w, new ShearPart { From = from, To = to });
+        }
+
         /// <summary>The levels whose diaphragms the wall can hold up: the stories it spans (above its base, up to its top).</summary>
         public static List<Level> StoriesOf(Building b, Wall w)
         {
@@ -404,7 +420,7 @@ namespace ShearWallCalculator.ModelAdapter
             {
                 var part = ShearPartOf(b, w);
                 if (part == null) continue; // not a shear wall: it carries only its gravity load
-                var (p0, p1) = Ends(w, part);
+                var (p0, p1) = BuiltEnds(b, w, part); // as built: a wall that butts in stops at the other's face
                 if (!(net.LengthAlong(p0, p1, BuildingQueries.WallTolerance) > 0)) continue;
                 int key = Number(w.Id) ?? 0;
                 if (calc._wall_system._walls.ContainsKey(key)) continue;
