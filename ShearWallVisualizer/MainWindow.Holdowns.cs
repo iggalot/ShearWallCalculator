@@ -114,30 +114,9 @@ namespace ShearWallVisualizer
         private void DrawLandingMarks(DrawingContext ctx)
         {
             double dip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
-            if (foundationView)
-            {
-                if (!showHoldowns) return; // (the foundation's reactions: DrawReactions)
-                // the anchors at one point share one label (a line each), with a leader to the point: wherever the label has
-                // to go to keep clear of the others, it still says which point it is
-                foreach (var grp in foundationAnchors.GroupBy(a => ((long)Math.Round(a.At.X * 4), (long)Math.Round(a.At.Y * 4))))
-                {
-                    var list = grp.ToList();
-                    var p = WorldToScreen(list[0].At, m_layers);
-                    bool missing = list.Any(a => a.Model == null);
-                    Controls.DesignOverlay.DrawHoldownIcon(ctx, p, missing ? Controls.DesignOverlay.HoldownMark.Missing : Controls.DesignOverlay.HoldownMark.Sized); // the plans' one marker
-                    string Line(HoldownLanding a)
-                    {
-                        // short: "W1 HDUE5-SDS3 4,655", "C2 DTT1Z 870" (lb ASD, in the caption)
-                        string wallId = a.Kind != PathPointKind.WallHoldown ? (a.From ?? "").Replace("column ", "").Replace(" base", "")
-                                      : stories.Count > 0 && stories[0].Walls.TryGetValue(a.WallId, out var id) ? id : $"W{a.WallId}";
-                        return $"{wallId}  {a.Model ?? "no HD"}  {a.TensionAsd:N0}";
-                    }
-                    var ink = missing ? Controls.Ui.FailInk : list.Any(a => a.Note != null) ? Controls.Ui.CloseInk : LandText;
-                    // the hold-downs only; what the foundation takes at the point is its own overlay (SHOW Reactions)
-                    Label(ctx, string.Join("\n", list.Select(Line)), new Point(p.X + 10, p.Y - 10), ink, dip, above: true, leader: p);
-                }
-                return;
-            }
+            // the foundation plan's hold-downs are the model's: this app relays them (Sketch.Connections, the Lateral
+            // section it saves) and the shared sketch draws them, as in every app
+            if (foundationView) return;
             var onto = landingsOnto.TryGetValue(currentLevel, out var here) ? here : new List<HoldownLanding>();
             var outline = BuildingOutline(); // the labels go outside it, each with an arrow to its point
             // Each end of every beam on its own (SHOW Reactions): its reaction along the beam and its own connection, pointing
@@ -665,6 +644,7 @@ namespace ShearWallVisualizer
         private void btnHoldowns_Click(object sender, RoutedEventArgs e)
         {
             showHoldowns = !showHoldowns;
+            Sketch.ShowConnections = showHoldowns; // the foundation plan's, drawn by the shared sketch
             btnHoldowns.Tag = showHoldowns ? "on" : null;
             Log.Info($"Hold-downs overlay {(showHoldowns ? "on" : "off")}.");
             RedrawDrawing();

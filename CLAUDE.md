@@ -28,7 +28,9 @@
     sheathing and hold-down type for all (`DeclareAll`, `UndeclareAll`, `EditDesign`; each one undo step).
   - **Hold-downs only:** SWC does no dead load, gravity or stud work. Gravity loads are edited in the Load Manager
     (Loads > Edit loads); SWC only reads them.
-  - On save, the end couples per wind case go into the `Lateral` section, for the foundation.
+  - On save, the end couples per wind case go into the `Lateral` section (`BuildingModel.Model.LateralSection`), for the
+    foundation, with each point's hold-down (`Connector`). SWC relays; it draws nothing on Ground: the shared sketch
+    draws the hold-downs there (`Sketch.Connections` gives it SWC's live ones before a save).
   - **SWC writes only its own data** (`OwnsData` in `MainWindow.Project.cs`): `ShearWall.Project`,
     `ShearWall.DesignSettings`, the walls' and diaphragms' `ShearWall` design, and `Lateral`. `SaveProject` uses
     `ModelFile.SaveOwnData`: it re-reads the file and replaces only those keys. It never writes the geometry, the wind or

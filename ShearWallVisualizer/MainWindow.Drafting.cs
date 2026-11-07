@@ -113,6 +113,8 @@ namespace ShearWallVisualizer
             s.WallStyle = w => null; // every wall plain: a shear wall's declared part is drawn over it (DrawShearParts)
             s.InterceptClick = ClickOnTag; // a wall's design tag picks the wall, as a click on the wall does
             s.ExtraSnapPoints = HoldownSnapPoints;
+            // the foundation plan's hold-downs: what this app relays to the model (live, before it saves; else what it saved)
+            s.Connections = () => LateralForFoundation(0) ?? BuildingModel.Model.LateralSection.Read(building);
             s.LevelCaption = l => ""; // no tag on the plan: the strip above it says the level and what is shown
             s.FitPadding = () => labelRoom; // room for the labels outside the building (the foundation's anchors, a level's hold-down landings)
             s.Escaped += (o, e) =>
@@ -208,7 +210,7 @@ namespace ShearWallVisualizer
                 Calculator = levels[0];
                 UpdateLevelButtons();
                 UpdateFromSketch();
-                ShowStatusMessage(LogLevel.Info, FoundationCaption() + ". Pick a level to edit walls again.");
+                ShowStatusMessage(LogLevel.Info, FoundationCaption() + ". The walls here are the first story's: pick one to see it.");
                 return;
             }
             bool wasFoundation = foundationView;

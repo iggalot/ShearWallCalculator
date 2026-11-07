@@ -15,12 +15,12 @@ namespace ShearWallVisualizer
         /// none): the load manager adds the dead load from its own loads and combines. Column bases carrying
         /// hold-downs from above are added as this app's ASD force ÷ 0.6. Null when there is no design yet.
         /// </summary>
-        private LoadManager.LateralSection LateralForFoundation(int revision)
+        private BuildingModel.Model.LateralSection LateralForFoundation(int revision)
         {
             if (!windLoadsLinked || levels.Count == 0 || allDesignResults.Count == 0 || levels[0]?._wall_system == null) return null;
             var design = allDesignResults[0];
             if (design == null) return null;
-            var s = new LoadManager.LateralSection
+            var s = new BuildingModel.Model.LateralSection
             {
                 Source = "Shear Wall Calculator",
                 Saved = DateTime.UtcNow.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'"),
@@ -68,14 +68,14 @@ namespace ShearWallVisualizer
                     upHigh[k] = -upLow[k];
                     Case(k);
                 }
-                s.Points.Add(new LoadManager.LateralPoint { From = $"{name} {(ew ? "west" : "south")} end", WallId = modelId, X = low.X, Y = low.Y, Up = upLow });
-                s.Points.Add(new LoadManager.LateralPoint { From = $"{name} {(ew ? "east" : "north")} end", WallId = modelId, X = high.X, Y = high.Y, Up = upHigh });
+                s.Points.Add(new BuildingModel.Model.LateralPoint { From = $"{name} {(ew ? "west" : "south")} end", WallId = modelId, X = low.X, Y = low.Y, Up = upLow, Connector = r.Holdown?.Model });
+                s.Points.Add(new BuildingModel.Model.LateralPoint { From = $"{name} {(ew ? "east" : "north")} end", WallId = modelId, X = high.X, Y = high.Y, Up = upHigh, Connector = r.Holdown?.Model });
             }
             foreach (var a in foundationAnchors.Where(a => a.Kind == PathPointKind.ColumnBase && a.CaseAsd != null && a.CaseAsd.Count > 0))
             {
                 var up = new Dictionary<string, double>();
                 foreach (var kv in a.CaseAsd) { string k = Bare(kv.Key); Govern(up, k, Math.Round(kv.Value / 0.6, 1)); Case(k); }
-                s.Points.Add(new LoadManager.LateralPoint { From = a.From, X = a.At.X, Y = a.At.Y, Up = up });
+                s.Points.Add(new BuildingModel.Model.LateralPoint { From = a.From, X = a.At.X, Y = a.At.Y, Up = up, Connector = a.Model });
             }
             // the wind calculator's case names, nothing else about the wind: the load manager takes each case (its direction,
             // its roof pressures) from the wind calculator itself
