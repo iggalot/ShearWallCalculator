@@ -53,6 +53,31 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
   is calculated.
   - [ ] SWC's Pieces tab still lists the shear part's pieces; the whole wall's would match the views.
   - [ ] An undesigned shear wall (no wind yet) shows no sheathing: its declared faces could be drawn before the design.
+- [~] **Every connection as a pair of equal and opposite forces** (owner, 2026-11-07). The Load Manager reports every
+  connection between members: the connector's force once (tension or compression, per wind case), and on each member
+  as a direction (↓ on the upper, ↑ on the lower). Every member then has its whole free-body diagram (its own loads and
+  its connections' forces) and is checked to balance; a cut at any level is the sum of the pairs across it, so the
+  levels can be split for analysis and verification. The foundation is the bottom row (its report unchanged). Who does
+  what: SWC designs the hold-downs and saves the forces at both ends of each couple (its own data); the Load Manager
+  reads them, adds the gravity and roof uplift it already has, makes the pairs and checks each member; the sketch draws
+  them. Two kinds: a point pair (a hold-down, a compression post, later a rafter end) and a line pair (per ft along a
+  wall: today the roof diaphragm on its top walls, a continuous connection).
+  - [ ] 1. SWC saves each story hold-down's tension per wind case, and the compression at the couple's other end per
+    case (`StoryHoldown`), not only the worst case.
+  - [ ] 2. The Load Manager makes the pairs and checks each member's balance (vertical force; then overturning). The
+    foundation is the bottom row, with today's numbers.
+  - [ ] 3. The sketch's level labels from the pairs: several landing within 1 ft (the Load Manager's `Near`) in one label,
+    the sum per case and its worst case (computed in the Load Manager, drawn by the sketch).
+    - [ ] **An Internal forces toggle** in every drawing of the forces (owner, 2026-11-07). On: every pair drawn, both
+      members' forces (the visual check that everything is accounted for). Off: two forces equal and opposite at a
+      connection cancel and neither is drawn; only what is not balanced there shows (the reactions on the foundation), the
+      cleaner drawing for reports and clients.
+  - [ ] 4. The roof ties as the top row: a line pair today (uplift − 0.6D per ft along each top wall, the diaphragm being
+    continuous); the owner to decide MWFRS or C&C uplift for them.
+  - [ ] 5. Upper-floor beams and columns carrying hold-downs from above: their uplift checked from their pairs.
+  - [ ] 6. Horizontal pairs at the same joints: the shear through the sill nailing and the anchor bolts.
+  - [ ] 7. With joists and rafters framed under the diaphragm: the roof tie line pair becomes a point pair at each rafter
+    end (its tributary width); the points along a wall must add up to the line load they replace, case by case.
 - [~] **Central hub (launcher) for the apps.** The prototype is built: the new repo `..\DesignHub`
   (`DesignHub.exe`), branch `dev/hub-prototype`. See its `README.md` and `docs/DESIGN.md`.
   - [x] Opens a project, shows the five steps of the work with each one's state, and the next step.

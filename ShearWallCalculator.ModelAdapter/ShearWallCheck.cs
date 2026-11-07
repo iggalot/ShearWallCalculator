@@ -205,22 +205,7 @@ namespace ShearWallCalculator.ModelAdapter
                 Note = "Each shear wall end's overturning couple by wind case, W at strength level (this app's ASD couple ÷ 0.6), the walls above " +
                        "included as designed; no dead load (the load manager's is added).",
             };
-            // one entry per wind case of the wind calculator (its own name). The wind is the same whether the diaphragm is taken rigid or
-            // flexible (the pressures come from the geometry); the two are only two ways of sharing it among the walls, so each
-            // wall end takes the governing of the two for that wind ("Case 1, ... (rigid)" and "(flexible)" become "Case 1, ...")
-            string Bare(string key)
-            {
-                foreach (var tag in new[] { ShearWallCalculator_Envelope.RigidTag, ShearWallCalculator_Envelope.FlexibleTag })
-                {
-                    string tail = $" ({tag})";
-                    if (key.EndsWith(tail, StringComparison.Ordinal)) return key.Substring(0, key.Length - tail.Length);
-                }
-                return key;
-            }
-            void Govern(Dictionary<string, double> d, string key, double v)
-            {
-                if (!d.TryGetValue(key, out var was) || Math.Abs(v) > Math.Abs(was)) d[key] = v;
-            }
+            // one entry per wind case of the wind calculator (its own name), the governing of rigid and flexible (Bare, Govern)
             var cases = new List<string>();
             void Case(string c) { if (!cases.Contains(c)) cases.Add(c); }
             foreach (var kv in levels[0]._wall_system._walls)
@@ -257,7 +242,7 @@ namespace ShearWallCalculator.ModelAdapter
             // the wind calculator's case names, nothing else about the wind: the load manager takes each case (its direction,
             // its roof pressures) from the wind calculator itself
             s.Cases = cases;
-            if (byLevel != null) s.Holdowns = StoryHoldowns(levels, stories, byLevel, groundLevelId);
+            if (byLevel != null) s.Holdowns = StoryHoldowns(levels, stories, byLevel, groundLevelId, byStory);
             s.Walls = ShearDesigns(levels, stories, byStory);
             return s.IsEmpty ? null : s;
         }
@@ -268,7 +253,7 @@ namespace ShearWallCalculator.ModelAdapter
         /// and wall view to draw.
         /// </summary>
         public static List<StoryHoldown> StoryHoldowns(IList<ShearWallCalculatorBase> levels, IList<StoryMap> stories,
-            IDictionary<int, List<HoldownLanding>> byLevel, string groundLevelId)
+            IDictionary<int, List<HoldownLanding>> byLevel, string groundLevelId, IList<Dictionary<int, WallDesignResult>> byStory = null)
         {
             var list = new List<StoryHoldown>();
             if (byLevel == null || stories == null) return list;
@@ -301,10 +286,57 @@ namespace ShearWallCalculator.ModelAdapter
                         Kind = wall ? "wall" : l.Kind == PathPointKind.BeamEnd ? "beam end" : "column base",
                         PostAlongWall = wall ? WallSchedule.PostAlongWall(l.Choice) : 0,
                         Family = fam == HoldownFamilies.Strap_ToWallBelow || fam == HoldownFamilies.STHD_ToFoundation ? "strap" : "bolted",
+                        Up = CaseForces(l, story, levels, byStory),
                     });
                 }
             }
             return list;
+        }
+
+        /// <summary>
+        /// A story hold-down's force on what is under it, per wind case (lb, W at strength level: ASD ÷ 0.6), + up / − down
+        /// (<see cref="StoryHoldown.Up"/>). A wall's: its end's overturning couple in every case
+        /// (<see cref="WallDesignResult.EndForceByCase"/>: the tension where this end lifts, the compression where it does not,
+        /// the walls above included). A beam end's or a column base's: the tensions it carries, case by case. Empty when the
+        /// cases are not known.
+        /// </summary>
+        private static Dictionary<string, double> CaseForces(HoldownLanding l, int story, IList<ShearWallCalculatorBase> levels, IList<Dictionary<int, WallDesignResult>> byStory)
+        {
+            var up = new Dictionary<string, double>();
+            if (l.Kind != PathPointKind.WallHoldown)
+            {
+                foreach (var kv in l.CaseAsd ?? new Dictionary<string, double>()) Govern(up, Bare(kv.Key), Math.Round(kv.Value / 0.6, 1));
+                return up;
+            }
+            if (byStory == null || story < 0 || story >= byStory.Count || story >= levels.Count || byStory[story] == null) return up;
+            if (!byStory[story].TryGetValue(l.WallId, out var r) || r?.EndForceByCase == null) return up;
+            if (levels[story]?._wall_system?._walls.TryGetValue(l.WallId, out var w) != true) return up;
+            // which end of the wall this hold-down is: the load path's own test (LoadPathTrace.Land)
+            bool ew = w.WallDir == calculator.WallDirs.EastWest;
+            bool atLow = ew ? l.At.X < (w.Start.X + w.End.X) / 2 : l.At.Y < (w.Start.Y + w.End.Y) / 2;
+            foreach (var c in r.EndForceByCase) Govern(up, Bare(c.Key), Math.Round(c.Value[atLow ? 0 : 1] / 0.6, 1));
+            return up;
+        }
+
+        /// <summary>
+        /// A case's name as the wind calculator gives it. The wind is the same whether the diaphragm is taken rigid or flexible
+        /// (the pressures come from the geometry); the two are only two ways of sharing it among the walls, so each point takes
+        /// the governing of the two for that wind ("Case 1, ... (rigid)" and "(flexible)" become "Case 1, ...": <see cref="Govern"/>).
+        /// </summary>
+        private static string Bare(string key)
+        {
+            foreach (var tag in new[] { ShearWallCalculator_Envelope.RigidTag, ShearWallCalculator_Envelope.FlexibleTag })
+            {
+                string tail = $" ({tag})";
+                if (key.EndsWith(tail, StringComparison.Ordinal)) return key.Substring(0, key.Length - tail.Length);
+            }
+            return key;
+        }
+
+        /// <summary>Keeps, for one case, the larger in size of its two ways of sharing (rigid, flexible).</summary>
+        private static void Govern(Dictionary<string, double> d, string key, double v)
+        {
+            if (!d.TryGetValue(key, out var was) || Math.Abs(v) > Math.Abs(was)) d[key] = v;
         }
 
         /// <summary>
