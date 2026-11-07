@@ -95,9 +95,8 @@ namespace ShearWallVisualizer
             }
         }
 
-        private static readonly Brush LandFill = Controls.Ui.Frozen("#1F2933"), LandText = Controls.Ui.InkSecondary, LabelBack = Controls.Ui.Frozen("#E6FFFFFF");
+        private static readonly Brush LabelBack = Controls.Ui.Frozen("#E6FFFFFF");
         private static readonly Brush BeamInk = Controls.Ui.Frozen("#8B4A14");
-        private static readonly Pen LandEdge = FrozenPen(Colors.White, 1), MissingEdge = MakePen(Controls.Ui.FailInk, 2);
 
         private static Pen MakePen(Brush b, double t) { var p = new Pen(b, t); p.Freeze(); return p; }
 
@@ -123,69 +122,8 @@ namespace ShearWallVisualizer
             // at that end; two beams on one column are two connections, never one label
             if (showReactions) DrawBeamEnds(ctx, onto.Where(l => l.Kind == PathPointKind.BeamEnd).ToList(), outline, dip);
             foreach (var ic in planIcons) PlaceIconLabel(ctx, ic, outline, dip); // each hold-down marker's label, an arrow to it
-            if (!showHoldowns || onto.Count == 0) return;
-            // Everything else at one point gets one label: the hold-downs landing there from above ("↓ 1.0k + 0.6k on column C2")
-            // and the column bases there with their connection. The beam's own summary is on the Members tab and its selection
-            // card, not on the plan.
-            var atPoint = new Dictionary<(long, long), (Point p, List<string> downs, List<string> ups, Brush ink)>();
-            var cases = new Dictionary<((long, long), string), List<Dictionary<string, double>>>(); // each down load's tension by case
-            Brush Worse(Brush a, Brush b) => ReferenceEquals(a, Controls.Ui.FailInk) || ReferenceEquals(b, Controls.Ui.FailInk) ? Controls.Ui.FailInk
-                                           : ReferenceEquals(a, Controls.Ui.CloseInk) || ReferenceEquals(b, Controls.Ui.CloseInk) ? Controls.Ui.CloseInk : LandText;
-            void Add(Point world, Point screen, string down, string up, Brush ink)
-            {
-                var k = ((long)Math.Round(world.X * 4), (long)Math.Round(world.Y * 4)); // within 3 in
-                if (!atPoint.TryGetValue(k, out var g0)) atPoint[k] = g0 = (screen, new List<string>(), new List<string>(), ink);
-                if (down != null) g0.downs.Add(down);
-                if (up != null) g0.ups.Add(up);
-                atPoint[k] = (g0.p, g0.downs, g0.ups, Worse(g0.ink, ink));
-            }
-            foreach (var l in onto)
-            {
-                if (l.Kind == PathPointKind.BeamEnd) continue; // above (DrawBeamEnds)
-                if (l.Kind != PathPointKind.WallHoldown)
-                {
-                    // a column base: a new hold-down point, sized for its reaction
-                    var q = WorldToScreen(l.At, m_layers);
-                    var r = new Rect(q.X - 5, q.Y - 5, 10, 10);
-                    ctx.DrawRectangle(l.Supported ? BeamInk : Controls.Ui.FailFill, l.Supported ? LandEdge : MissingEdge, r);
-                    // short: "BM2 ↑ 2.7k MSTI26" (the leader shows which end; the column under it is labelled at the point)
-                    string up = l.Supported ? $"{ShearWallCalculator.Drawing.PlanLabels.ShortFrom(l.From)} ↑ {l.TensionAsd / 1000:0.0}k {l.Model ?? "none strong enough"}|"
-                                            : $"{ShearWallCalculator.Drawing.PlanLabels.ShortFrom(l.From)} ↑ {l.TensionAsd / 1000:0.0}k, nothing under it|";
-                    Add(l.At, q, null, up, l.Supported && l.Choice != null ? (l.Note != null ? Controls.Ui.CloseInk : LandText) : Controls.Ui.FailInk);
-                    continue;
-                }
-                var p = WorldToScreen(l.At, m_layers);
-                // a triangle pointing down: a load coming down onto this story
-                var tri = new StreamGeometry();
-                using (var g = tri.Open())
-                {
-                    g.BeginFigure(new Point(p.X - 6, p.Y - 9), true, true);
-                    g.PolyLineTo(new[] { new Point(p.X + 6, p.Y - 9), new Point(p.X, p.Y) }, true, false);
-                }
-                tri.Freeze();
-                ctx.DrawGeometry(l.Supported ? LandFill : Controls.Ui.FailFill, l.Supported ? LandEdge : MissingEdge, tri);
-                // "load|what it lands on": loads landing on the same thing at one point are listed once ("↓ 1.0k + 0.6k on column C2")
-                string rest = !l.Supported ? "  nothing below: draw a beam (B) or a column (P)" : l.Support == SupportKind.Wall ? "" : $" on {l.SupportId}";
-                if (l.Note != null) rest += $"  · {l.Model ?? "none"} ({HoldownRules.Name(l.Family)} here)";
-                Add(l.At, p, $"{l.TensionAsd / 1000:0.0}k|{rest}", null, !l.Supported ? Controls.Ui.FailInk : l.Note != null ? Controls.Ui.CloseInk : LandText);
-                var ck = (((long)Math.Round(l.At.X * 4), (long)Math.Round(l.At.Y * 4)), rest);
-                if (!cases.TryGetValue(ck, out var cl)) cases[ck] = cl = new List<Dictionary<string, double>>();
-                cl.Add(l.CaseAsd);
-            }
-            foreach (var kv in atPoint)
-            {
-                var g = kv.Value;
-                // two walls' hold-downs on one support: each is its wall's worst case, which are not at the same time; what
-                // acts at once is the worst case of their sum (what the support is sized for)
-                string Together(string rest) =>
-                    rest.StartsWith(" on ") && cases.TryGetValue((kv.Key, rest), out var cl) && cl.Count > 1 && LoadPathTrace.SumByCase(cl) is Dictionary<string, double> sum && sum.Count > 0
-                        ? $" (at once {Math.Max(0, sum.Values.Max()) / 1000:0.0}k)" : "";
-                var parts = g.downs.Select(t => t.Split('|')).GroupBy(t => t[1]).Select(x => "↓ " + string.Join(" + ", x.Select(t => t[0])) + Together(x.Key) + x.Key).ToList();
-                parts.AddRange(g.ups.Select(t => t.Split('|')[0])); // "C3 ↑ 2.7k DTT2Z": the column is labelled at the point
-                string text = string.Join("   ", parts);
-                if (outline is Rect o) LabelOutside(ctx, text, g.p, o, g.ink, dip);
-                else Label(ctx, text, new Point(g.p.X + 8, g.p.Y - 10), g.ink, dip, above: true, leader: g.p);
-            }
+            // the hold-downs landing from above, the column bases and the beam ends carrying them on down: the model's, drawn
+            // by the shared sketch from what this app relays (Sketch.Connections), the same on every level and in every app
         }
 
         /// <summary>
@@ -263,19 +201,8 @@ namespace ShearWallVisualizer
                 labelsTaken.Add(box);
                 planIcons.Add((c, u, text, ink, s));
             }
-            if (showHoldowns && Calculator?._wall_system != null)
-                foreach (var kv in Calculator._wall_system._walls)
-                {
-                    if (!designResults.TryGetValue(kv.Key, out var r) || !r.HoldownNeeded) continue;
-                    Point a = WorldToScreen(kv.Value.Start, m_layers), b = WorldToScreen(kv.Value.End, m_layers);
-                    var mark = r.Holdown != null ? BuildingModel.Sketch.HoldownMark.Sized : BuildingModel.Sketch.HoldownMark.Missing;
-                    var ink = r.Holdown != null ? LandText : Controls.Ui.FailInk;
-                    string text = r.Holdown?.Model ?? "no HD";
-                    var (pa, pb) = ShearWallCalculator.Design.WallSchedule.HoldownPoints(kv.Value, r.Holdown); // the design's own points
-                    double s = BuildingModel.Sketch.HoldownMarks.SizeFor(ShearWallCalculator.Design.WallSchedule.PostAlongWall(r.Holdown) / 12.0 * Sketch.Zoom);
-                    Mark(a, b, mark, text, ink, WorldToScreen(pa, m_layers), s);
-                    Mark(b, a, mark, text, ink, WorldToScreen(pb, m_layers), s);
-                }
+            // the walls' hold-downs, and the beam ends carrying hold-downs on down: the model's (the Lateral section this app
+            // relays), drawn by the shared sketch on every level as in every app; here only the beam ends with no uplift ("None")
             var lv = Sketch.ActiveLevel;
             if (showHoldowns && building != null && lv != null)
             {
@@ -284,12 +211,8 @@ namespace ShearWallVisualizer
                 foreach (bool atStart in new[] { true, false })
                 {
                     string endName = $"beam {bm.Id} {(atStart ? "start" : "end")}";
-                    var l = onto.FirstOrDefault(x => x.Kind == PathPointKind.BeamEnd && x.From == endName); // null: no uplift here
-                    var ink = l == null ? BeamInk : l.Supported && l.Choice != null ? (l.Note != null ? Controls.Ui.CloseInk : BeamInk) : Controls.Ui.FailInk;
-                    var mark = l == null ? BuildingModel.Sketch.HoldownMark.None
-                             : l.Supported && l.Model != null ? BuildingModel.Sketch.HoldownMark.Sized : BuildingModel.Sketch.HoldownMark.Missing;
-                    string text = l == null ? "None" : !l.Supported ? "nothing under it" : l.Model ?? "none strong enough";
-                    Mark(Sketch.ToScreen(atStart ? bm.Start : bm.End), Sketch.ToScreen(atStart ? bm.End : bm.Start), mark, text, ink);
+                    if (onto.Any(x => x.Kind == PathPointKind.BeamEnd && x.From == endName)) continue; // the shared sketch's
+                    Mark(Sketch.ToScreen(atStart ? bm.Start : bm.End), Sketch.ToScreen(atStart ? bm.End : bm.Start), BuildingModel.Sketch.HoldownMark.None, "None", BeamInk);
                 }
             }
         }
@@ -317,56 +240,6 @@ namespace ShearWallVisualizer
             var a = Sketch.ToScreen(new Point2(ext.Value.X0, ext.Value.Y0 + ext.Value.Height));
             var b = Sketch.ToScreen(new Point2(ext.Value.X0 + ext.Value.Width, ext.Value.Y0));
             return new Rect(a, b);
-        }
-
-        /// <summary>
-        /// A label outside the building, past its side nearest <paramref name="p"/>, with a leader ending in an arrow at the
-        /// point. Kept off the other labels and tags: along the side first, then a row further out; with no clear spot, the
-        /// one covering the least.
-        /// </summary>
-        private void LabelOutside(DrawingContext ctx, string text, Point p, Rect outline, Brush ink, double dip)
-        {
-            var ft = new FormattedText(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 10.5 * LabelScale, ink, dip);
-            var size = new Size(ft.Width + 4, ft.Height);
-            var canvas = new Rect(2, 2, Math.Max(4, (m_layers?.ActualWidth ?? 4) - 4), Math.Max(4, (m_layers?.ActualHeight ?? 4) - 4));
-            var (first, outward) = ShearWallCalculator.Drawing.PlanLabels.OutsideSpot(p, outline, size, 16 * LabelScale, canvas);
-            labelReach.Union(first); // Zoom to the drawing leaves room for it
-            var along = new Vector(Math.Abs(outward.Y), Math.Abs(outward.X)); // along the side
-            double alongStep = outward.Y != 0 ? size.Width * 0.5 + 4 : size.Height + 2, outStep = outward.Y != 0 ? size.Height + 2 : size.Width + 6;
-            var tries = new List<Rect>();
-            for (int row = 0; row <= 3; row++)
-                foreach (int k in new[] { 0, 1, -1, 2, -2 })
-                    tries.Add(Rect.Offset(first, along * (k * alongStep) + outward * (row * outStep)));
-            if (tries.Any(canvas.Contains)) tries = tries.Where(canvas.Contains).ToList(); // none slid off the plan
-            var box = tries.FirstOrDefault(x => !labelsTaken.Any(t => Controls.DesignOverlay.Overlaps(t, x)));
-            if (box.Width == 0) box = tries.OrderBy(x => Controls.DesignOverlay.Covered(x, labelsTaken)).First(); // default is a zero box
-            labelsTaken.Add(box);
-
-            // the leader: from the label's edge, outside the building, to the point, an arrow at the point
-            var path = ShearWallCalculator.Drawing.PlanLabels.Leader(p, outline, box, 34 * LabelScale); // out past the beam and column labels along the outline
-            var last = path[path.Length - 2];
-            var d = p - last;
-            if (d.Length > 8)
-            {
-                var pen = new Pen(ink, 0.9);
-                pen.Freeze();
-                for (int i = 0; i + 2 < path.Length; i++) ctx.DrawLine(pen, path[i], path[i + 1]);
-                d.Normalize();
-                var tip = p - d * 5; // stops at the mark's edge
-                ctx.DrawLine(pen, last, tip);
-                var n = new Vector(-d.Y, d.X);
-                var head = new StreamGeometry();
-                using (var g = head.Open())
-                {
-                    g.BeginFigure(tip, true, true);
-                    g.PolyLineTo(new[] { tip - d * 6 + n * 3, tip - d * 6 - n * 3 }, true, false);
-                }
-                head.Freeze();
-                ctx.DrawGeometry(ink, null, head);
-            }
-            if (heldLabels != null) { heldLabels.Add((box, ft)); return; }
-            ctx.DrawRectangle(LabelBack, null, box);
-            ctx.DrawText(ft, new Point(box.X + 2, box.Y));
         }
 
         /// <summary>

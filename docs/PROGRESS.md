@@ -2,6 +2,19 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-07 — Hold-downs on every level, in every app
+
+- SWC saves every story's hold-downs into the model: `LateralSection.Holdowns` (`StoryHoldown`: where, the connector,
+  the tension, the post, the level it is on and the one it lands on, and what it anchors to: the foundation, a wall, a
+  beam or a column below, or nothing). `ShearWallCheck.StoryHoldowns` maps the load-path trace; the window and the
+  headless check both write it.
+- The shared sketch draws them on every level's plan (`SketchCanvas.LevelMarkers`; Ground keeps `ConnectionMarkers`):
+  the walls' own hold-downs exactly at their points; those coming down from the story above as a triangle ("↓ W7 1.5k
+  onto W3"; red, "nothing below", when there is no wall, beam or column under it); the beam ends and column bases
+  carrying them on as their own connections. SWC's level plans now use it too (its own copies removed), so the Building
+  Model and SWC show the same thing.
+- Tests: `LevelPlan_ItsWallsHoldowns_AndThoseComingDownFromAbove` (Sketch), `Run_EveryStorysHoldowns_IntoTheModel_ForEveryLevelsPlan` (hub).
+
 ## 2026-11-07 — Wall joints: one runs past, the other stops at its face
 
 - `WallJoints` (BuildingModel.Core), one rule for every app: at a corner the longer wall runs past the shorter, an E-W one

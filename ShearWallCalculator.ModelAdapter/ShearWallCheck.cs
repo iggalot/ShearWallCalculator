@@ -177,7 +177,7 @@ namespace ShearWallCalculator.ModelAdapter
                 }
             }
             var anchors = trace.ByLevel.TryGetValue(-1, out var a) ? a : new List<HoldownLanding>();
-            result.Lateral = Lateral(levels, stories, byStory, anchors, 0);
+            result.Lateral = Lateral(levels, stories, byStory, anchors, 0, trace.ByLevel, b.Ground?.Id);
             if (result.Lateral != null) result.Lateral.BasedOn = InputsNow(building);
             return result;
         }
@@ -187,10 +187,12 @@ namespace ShearWallCalculator.ModelAdapter
         /// wall app): each first-story shear wall's two ends, per wind case, the overturning couple alone (its hold-down's
         /// uplift at one end, the same pressing down at the other) at the wind's own level (the ASD couple ÷ 0.6), with no
         /// dead load (the load manager adds its own), and each end's hold-down. Column bases carrying hold-downs from above
-        /// are added as the ASD force ÷ 0.6. Null when there is no design yet.
+        /// are added as the ASD force ÷ 0.6. With the load-path trace (<paramref name="byLevel"/>), every story's hold-downs
+        /// too (<see cref="StoryHoldowns"/>), for the plans of every level. Null when there is no design yet.
         /// </summary>
         public static LateralSection Lateral(IList<ShearWallCalculatorBase> levels, IList<StoryMap> stories,
-            IList<Dictionary<int, WallDesignResult>> byStory, IEnumerable<HoldownLanding> foundationAnchors, int revision)
+            IList<Dictionary<int, WallDesignResult>> byStory, IEnumerable<HoldownLanding> foundationAnchors, int revision,
+            IDictionary<int, List<HoldownLanding>> byLevel = null, string groundLevelId = null)
         {
             if (levels == null || levels.Count == 0 || byStory == null || byStory.Count == 0 || levels[0]?._wall_system == null) return null;
             var design = byStory[0];
@@ -255,7 +257,53 @@ namespace ShearWallCalculator.ModelAdapter
             // the wind calculator's case names, nothing else about the wind: the load manager takes each case (its direction,
             // its roof pressures) from the wind calculator itself
             s.Cases = cases;
+            if (byLevel != null) s.Holdowns = StoryHoldowns(levels, stories, byLevel, groundLevelId);
             return s.IsEmpty ? null : s;
+        }
+
+        /// <summary>
+        /// Every story's hold-downs and the connections carrying them down, from the load-path trace (by the level each lands
+        /// on: -1 the foundation, k the top of story k), in the model's plain terms (<see cref="StoryHoldown"/>), for every plan
+        /// and wall view to draw.
+        /// </summary>
+        public static List<StoryHoldown> StoryHoldowns(IList<ShearWallCalculatorBase> levels, IList<StoryMap> stories,
+            IDictionary<int, List<HoldownLanding>> byLevel, string groundLevelId)
+        {
+            var list = new List<StoryHoldown>();
+            if (byLevel == null || stories == null) return list;
+            string ModelWall(int story, int key) => story >= 0 && story < stories.Count && stories[story].Walls.TryGetValue(key, out var id) ? id : $"W{key}";
+            foreach (var kv in byLevel.OrderBy(x => x.Key))
+            {
+                string onto = kv.Key < 0 ? groundLevelId : kv.Key < stories.Count ? stories[kv.Key].Level?.Id : null;
+                foreach (var l in kv.Value)
+                {
+                    int story = l.UpperStory - 1;
+                    bool wall = l.Kind == PathPointKind.WallHoldown;
+                    string wallId = wall ? ModelWall(story, l.WallId) : null;
+                    string from = l.From;
+                    if (wall && story >= 0 && story < levels.Count && levels[story]?._wall_system?._walls.TryGetValue(l.WallId, out var wd) == true)
+                        from = $"{wallId} {DetailCalcs.EndName(wd, l.At).ToLowerInvariant()} end";
+                    string what = l.OnFoundation || l.Support == SupportKind.Foundation ? "the foundation"
+                                : l.Support == SupportKind.Wall && l.LowerWallId != null ? $"wall {ModelWall(kv.Key, l.LowerWallId.Value)}"
+                                : l.Support == SupportKind.None ? null : l.SupportId;
+                    var fam = l.Choice != null || wall ? l.Family : HoldownFamilies.HDU_ToFoundation;
+                    list.Add(new StoryHoldown
+                    {
+                        From = from,
+                        WallId = wallId,
+                        X = l.At.X, Y = l.At.Y,
+                        LevelId = wall && story >= 0 && story < stories.Count ? stories[story].Level?.Id : null,
+                        OntoLevelId = onto,
+                        Connector = l.Model,
+                        TensionAsd = Math.Round(l.TensionAsd, 1),
+                        Onto = what,
+                        Kind = wall ? "wall" : l.Kind == PathPointKind.BeamEnd ? "beam end" : "column base",
+                        PostAlongWall = wall ? WallSchedule.PostAlongWall(l.Choice) : 0,
+                        Family = fam == HoldownFamilies.Strap_ToWallBelow || fam == HoldownFamilies.STHD_ToFoundation ? "strap" : "bolted",
+                    });
+                }
+            }
+            return list;
         }
     }
 }

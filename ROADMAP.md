@@ -38,9 +38,11 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
     line midway between them.
   - [ ] Walls from the DXF: pick a layer, find its pairs of parallel lines, propose walls on their centrelines to accept
     or reject one by one.
-- [ ] **Hold-downs on every level in the Building Model** (2026-11-07): SWC saves every story's hold-downs (connector,
-  post, what each anchors to: the foundation, a wall or beam below) into the model; the shared sketch draws them on each
-  level, with those from above passing through the floor.
+- [x] **Hold-downs on every level in the Building Model** (2026-11-07, done 2026-11-07): SWC saves every story's
+  hold-downs (`LateralSection.Holdowns`, `StoryHoldown`: connector, tension, post, what each anchors to) into the model;
+  the shared sketch draws them on each level's plan (`SketchCanvas.LevelMarkers`): the walls' own, those coming down
+  from the story above (a triangle, "↓ W7 1.5k onto W3"; red when nothing is below), the beam ends and column bases
+  carrying them on. SWC's level plans draw them with the same routine.
 - [ ] **One wall window for every app** (2026-11-07, owner: "a single routine for behavior across all of these apps"):
   SWC's construction window (framing elevation, 3D) moved to WoodFraming.Wpf and opened from the Building Model too. The
   whole wall's framing; the hold-downs always, with those from above through the floor; a Shear wall toggle (on by
