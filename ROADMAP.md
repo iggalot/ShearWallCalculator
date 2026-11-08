@@ -166,12 +166,21 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
       `ModelDefaults.FloorSheathing` 23/32" and `SillNail` 16d; the app's limits 16" most, 3" least (not code values).
     - [x] (2026-11-07) The diaphragm's boundary nailing and the collectors designed, by the line shear (owner's choice):
       each line of shear walls in a level's diaphragm takes R per case; v = R / the diaphragm's depth along the line
-      (`DiaphragmLines`, saved as `Lateral.DiaphragmLines`); the nailing from SDPWS-2015 Table 4.2A (blocked) or 4.2C
+      (`DiaphragmLines`, saved as `Lateral.DiaphragmLines`; now `Connections.DiaphragmLines`); the nailing from SDPWS-2015 Table 4.2A (blocked) or 4.2C
       (unblocked, Cases 2-6), ASD / 2.0 (`DiaphragmNailing`); the top plates a collector for the diaphragm's even delivery
       less the walls' shear parts (`WoodFraming.TopPlateCollector`: one ply in tension and compression, the splice nails).
       Defaults: floors 23/32" Sheathing and Single-Floor, 10d, blocked; the roof 7/16", 8d, unblocked; 2" framing; 16d splices.
       Table 4.2C's Structural I 8d 3" row was filed as 5/16" (fixed: 3/8", as printed); both tables tested row by row.
-    - [ ] A page to edit the project's defaults (`ModelDefaults`: the sheathing, nails, blocking): only in the file today.
+    - [x] (2026-11-07) The connection details moved out of the building model (owner: the model is the structure and
+      geometry, the details that hold it together are separate, no god class): `..\WoodFraming\WoodFraming.Connections`,
+      its own "Connections" section (the sills' bolts and nailing, the diaphragm lines; SWC writes it) and
+      "ConnectionDefaults" (the sheathing, nails, blocking, framing width, splice nail), keyed by the model's ids,
+      references one way only. The hold-downs and the force pairs stay in the model's `Lateral` (they carry the load).
+      Older files' `Lateral` sill and line fields and `ModelDefaults` detail fields are ignored and drop on the next save.
+    - [ ] A page to edit the connection defaults (`ConnectionDefaults`: the sheathing, nails, blocking): only in the file
+      today. Which app owns it (SWC, or a details app of its own) is the owner's call.
+    - [ ] Ask the owner: a shear wall's face sheathing and nailing (`ShearWallDesign.Faces`, `ShearFace`) are still in the
+      model's `Lateral` section, read by the wall window. Move them to the Connections too?
     - [ ] A collector where no wall is under the line (the floor's rim or blocking, walls standing on it only): not designed.
     - [ ] The diaphragm's field nailing zones and chords (the line's nailing is given at the line only).
     - [ ] The rim or blocking to the lower wall's top plates designed (toe-nails, NDS 12.5.4, or framing clips from the

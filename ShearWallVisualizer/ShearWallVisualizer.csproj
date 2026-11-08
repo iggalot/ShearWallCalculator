@@ -206,6 +206,10 @@
     <ProjectReference Include="..\..\WoodFraming\WoodFraming\WoodFraming.csproj">
       <Name>WoodFraming</Name>
     </ProjectReference>
+    <!-- the connections (sill bolts and nailing, diaphragm lines) and their defaults: details, not the building model's -->
+    <ProjectReference Include="..\..\WoodFraming\WoodFraming.Connections\WoodFraming.Connections.csproj">
+      <Name>WoodFraming.Connections</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\NDS_WoodLibrary\NDS_WoodLibrary.csproj">
       <Name>NDS_WoodLibrary</Name>
     </ProjectReference>

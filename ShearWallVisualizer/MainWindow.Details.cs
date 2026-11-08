@@ -145,7 +145,7 @@ namespace ShearWallVisualizer
             var defaults = building?.Defaults ?? new ModelDefaults();
             d.ModelWallId = mw?.Id;
             d.TopLevelId = top;
-            d.Defaults = defaults;
+            d.Connections = WoodFraming.Connections.ConnectionDefaults.Read(building);
             bool first = building != null && top != null ? building.IsFirstStory(top) : d.FirstStory;
             d.DefaultStudSize = first ? defaults.StudSizeFirstStory : defaults.StudSizeAbove;
             string size = mw != null && top != null ? building.StudSizeOf(mw, top) : d.DefaultStudSize;
@@ -162,9 +162,12 @@ namespace ShearWallVisualizer
             if (mw != null)
             {
                 // (the design this window shows, linked to the wind or not; the foundation takes it only when linked)
-                var live = ShearWallCheck.Lateral(levels, stories, allDesignResults, foundationAnchors, 0, loadPath?.ByLevel, building?.Ground?.Id, building) ?? BuildingModel.Model.LateralSection.Read(building);
-                d.View = WoodFraming.Wpf.WallViews.FromModel(building, mw, top, live);
-                d.Line = live?.LineOf(top, mw.Id);
+                var designed = ShearWallCheck.Lateral(levels, stories, allDesignResults, foundationAnchors, 0, loadPath?.ByLevel, building?.Ground?.Id);
+                var live = designed ?? BuildingModel.Model.LateralSection.Read(building);
+                // its connections (the sill's bolts or nailing, the diaphragm line on top): details, not the model's
+                var joints = designed != null ? ShearWallCheck.Connections(levels, stories, allDesignResults, building, designed, 0) : WoodFraming.Connections.ConnectionsSection.Read(building);
+                d.View = WoodFraming.Wpf.WallViews.FromModel(building, mw, top, live, joints ?? new WoodFraming.Connections.ConnectionsSection());
+                d.Line = joints?.LineOf(top, mw.Id);
                 if (d.View != null) d.View.Name = d.Name;
             }
             // what the story above stands on this wall: its hold-downs (and beam ends or column bases) landing on it

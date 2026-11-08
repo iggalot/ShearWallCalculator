@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using BuildingModel.Geometry;
 using BuildingModel.Model;
+using WoodFraming.Connections;
 using NDS_WoodLibrary.NDS2018;
 using ShearWallCalculator.Design;
 
@@ -22,11 +23,12 @@ namespace ShearWallCalculator.ModelAdapter
         /// <summary>Parallel walls this close across (ft) are on one line: the app's, for walls drawn a little off a common line.</summary>
         public const double LineTolerance = 0.5;
 
-        public static List<DiaphragmLine> Design(Building b, LateralSection s, ModelDefaults defaults = null)
+        public static List<DiaphragmLine> Design(Building b, LateralSection s, ConnectionDefaults connections = null)
         {
             var list = new List<DiaphragmLine>();
             if (b == null || s?.Walls == null || s.Walls.Count == 0) return list;
-            var def = defaults ?? b.Defaults ?? new ModelDefaults();
+            var def = b.Defaults ?? new ModelDefaults();
+            var cd = connections ?? ConnectionDefaults.Read(b);
             var levels = b.LevelsBottomUp;
             var roof = levels.LastOrDefault();
             var pairs = ShearPairs.Of(b, s).Where(p => !p.OnFoundation).ToList();
@@ -43,7 +45,7 @@ namespace ShearWallCalculator.ModelAdapter
                         if (clusters.Count > 0 && Math.Abs(Across(p.Middle, ew) - Across(clusters.Last()[0].Middle, ew)) <= LineTolerance) clusters.Last().Add(p);
                         else clusters.Add(new List<ShearPair> { p });
                     }
-                    foreach (var c in clusters) list.Add(Line(level, levels.IndexOf(level), level == roof, ew, c, cells, s.Cases, def));
+                    foreach (var c in clusters) list.Add(Line(level, levels.IndexOf(level), level == roof, ew, c, cells, s.Cases, def, cd));
                 }
             }
             return list;
@@ -52,7 +54,7 @@ namespace ShearWallCalculator.ModelAdapter
         private static double Across(Point2 p, bool ew) => ew ? p.Y : p.X;
         private static double Along(Point2 p, bool ew) => ew ? p.X : p.Y;
 
-        private static DiaphragmLine Line(Level level, int index, bool isRoof, bool ew, List<ShearPair> pairs, List<Rect2> cells, IList<string> cases, ModelDefaults def)
+        private static DiaphragmLine Line(Level level, int index, bool isRoof, bool ew, List<ShearPair> pairs, List<Rect2> cells, IList<string> cases, ModelDefaults def, ConnectionDefaults cd)
         {
             double at = pairs.Average(p => Across(p.Middle, ew));
             // the diaphragm on the line: the cells it crosses or runs along, merged
@@ -97,9 +99,9 @@ namespace ShearWallCalculator.ModelAdapter
             var species = Enum.TryParse(def.StudSpecies, out Species sp1) ? sp1 : Species.DouglasFirLarch;
             var grade = Enum.TryParse(def.StudGrade, out Grade gr1) ? gr1 : Grade.No2;
             double sg = DiaphragmNailing.SpecificGravityFactor(SpeciesInfo.SpecificGravity(species), species == Species.DouglasFirLarch || species == Species.SouthernPine);
-            var nailing = DiaphragmNailing.Design(line.ShearAsdPlf, def.DiaphragmGrade == "StructuralI", isRoof ? def.RoofNail : def.FloorNail,
-                isRoof ? def.RoofSheathing : def.FloorSheathing, def.DiaphragmFramingWidth, isRoof ? def.RoofBlocked : def.FloorBlocked, sg);
-            line.Sheathing = nailing.Row ?? $"{nailing.GradeName}, {nailing.Nail}, {(isRoof ? def.RoofSheathing : def.FloorSheathing):0.###}\"";
+            var nailing = DiaphragmNailing.Design(line.ShearAsdPlf, cd.StructuralI, isRoof ? cd.RoofNail : cd.FloorNail,
+                isRoof ? cd.RoofSheathing : cd.FloorSheathing, cd.DiaphragmFramingWidth, isRoof ? cd.RoofBlocked : cd.FloorBlocked, sg);
+            line.Sheathing = nailing.Row ?? $"{nailing.GradeName}, {nailing.Nail}, {(isRoof ? cd.RoofSheathing : cd.FloorSheathing):0.###}\"";
             line.Blocked = nailing.Blocked;
             line.Nail = nailing.Nail;
             line.BoundaryIn = nailing.BoundaryIn;
@@ -117,7 +119,7 @@ namespace ShearWallCalculator.ModelAdapter
             else
             {
                 string nominal = index <= 1 ? def.StudSizeFirstStory : def.StudSizeAbove;
-                var c = WoodFraming.TopPlateCollector.Design(line.CollectorLb, species, grade, nominal, def.SpliceNail);
+                var c = WoodFraming.TopPlateCollector.Design(line.CollectorLb, species, grade, nominal, cd.SpliceNail);
                 line.Collector = c.Fails != null && c.Z <= 0 ? c.Fails :
                     $"{c.Lumber} double top plate: {c.NailsEachSide} {c.Nail} each side of a splice (Z' = {c.ZPrime:0} lb); one ply {c.TensionLb:0} lb in tension, {c.CompressionLb:0} lb in compression.";
                 if (c.Fails != null) line.Fails = line.Fails == null ? c.Fails : $"{line.Fails} {c.Fails}";

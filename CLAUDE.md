@@ -42,14 +42,20 @@
     Each level's own wind on its diaphragm per case goes in too (`Lateral.Diaphragms`, `DiaphragmWinds`, from
     `CaseBreakdown.OwnLoads`: at the center of mass, the torsion in the rigid cases), so every diaphragm's free body is
     checked with the walls' shears as pairs (`ShearPairs`: top, and sill into the floor or the anchor bolts).
-    An upper story's sill nailing is designed (`ShearWallCheck.SillNailingOf`, `WoodFraming.SillNailing`: TR12 with the
-    floor sheathing as the gap, the owner's choice; `ModelDefaults.FloorSheathing`, `SillNail`) and saved on each wall
-    (`ShearWallDesign.SillNails`); the construction window's Pieces tab shows its check and sources.
+    **The connection details are not the building model's** (owner 2026-11-07: no god class): they are
+    `..\WoodFraming\WoodFraming.Connections`, saved as its own "Connections" section (`ShearWallCheck.Connections`,
+    `ShearWallCheckResult.Connections`; written in the save's stamp, in `OwnsData`), with their defaults in
+    "ConnectionDefaults" (`ConnectionDefaults.Read`; nobody writes it yet). The forces stay in `Lateral`.
+    Each sill is a `SillConnection`: the first story's anchor bolts (`WoodFraming.SillAnchorage`), an upper story's
+    nailing (`ShearWallCheck.SillNailingOf`, `WoodFraming.SillNailing`: TR12 with the floor sheathing as the gap, the
+    owner's choice; `ConnectionDefaults.FloorSheathing`, `SillNail`); the construction window's Pieces tab shows its
+    check and sources.
     Each diaphragm's lines of shear walls are designed by the line shear, v = R / the diaphragm's depth along the line
     (owner 2026-11-07), with the boundary nailing (`Design/DiaphragmNailing.cs`: SDPWS-2015 Tables 4.2A and 4.2C, the
     `Table4_2Manager` and `Table4_2CManager` data) and the top plates as collectors (`WoodFraming.TopPlateCollector`):
-    `DiaphragmLines.Design`, saved as `Lateral.DiaphragmLines`. The defaults are `ModelDefaults` (`DiaphragmGrade`,
-    `FloorNail`, `FloorBlocked`, `RoofSheathing`, `RoofNail`, `RoofBlocked`, `DiaphragmFramingWidth`, `SpliceNail`).
+    `DiaphragmLines.Design`, saved as `Connections.DiaphragmLines`. The defaults are `ConnectionDefaults` (`DiaphragmGrade`,
+    `FloorNail`, `FloorBlocked`, `RoofSheathing`, `RoofNail`, `RoofBlocked`, `DiaphragmFramingWidth`, `SpliceNail`); the
+    framing's species, grade and stud sizes are the model's `ModelDefaults`.
   - **Conservative, kept by the owner (2026-11-07):** a beam end's or column's connection is sized for the hold-downs'
     tension alone, no dead load against it (`LoadPath`); the Load Manager's `UpperUplift` gives the net. Change it only if
     it becomes an issue.
@@ -59,7 +65,7 @@
     (`ShearWallCheck.Lateral`, whose `Walls` are `ShearDesigns`: every declared wall, designed or not). A change to how a
     wall is drawn goes into WoodFraming.Wpf, not this app.
   - **SWC writes only its own data** (`OwnsData` in `MainWindow.Project.cs`): `ShearWall.Project`,
-    `ShearWall.DesignSettings`, the walls' and diaphragms' `ShearWall` design, and `Lateral`. `SaveProject` uses
+    `ShearWall.DesignSettings`, the walls' and diaphragms' `ShearWall` design, `Lateral` and `Connections`. `SaveProject` uses
     `ModelFile.SaveOwnData`: it re-reads the file and replaces only those keys. It never writes the geometry, the wind or
     the loads. If the building changed meanwhile, the project is reloaded after the save.
   - **The geometry is the Building Model's.** `Sketch.GeometryLocked` is on and the drawing tools are hidden. Move,

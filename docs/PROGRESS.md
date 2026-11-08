@@ -2,6 +2,21 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-07 — The connection details out of the building model (WoodFraming.Connections)
+
+- Owner: the building model is the structure and geometry; the nailing, bolts and diaphragm patterns that hold it
+  together are details and belong apart, or the model becomes a god class. The hold-downs stay: they carry the forces.
+- New project `..\WoodFraming\WoodFraming.Connections` (references BuildingModel.Core only): `ConnectionsSection`
+  ("Connections": `SillConnection` with `SillAnchors` or `SillNails`, `DiaphragmLine`, and `Describe`/`Describer` for a
+  shear pair's words) and `ConnectionDefaults` ("ConnectionDefaults", the starting values in one place).
+- Removed from BuildingModel: `ShearWallDesign.Anchors` and `SillNails`, `LateralSection.DiaphragmLines`, and the
+  `ModelDefaults` detail fields. `ShearPairs.Of` takes a describer; each pair has `StoryLevelId`.
+- SWC: `ShearWallCheck.Connections` builds the section (the headless run's `ShearWallCheckResult.Connections`, the
+  window's save stamp, the construction window); `OwnsData` includes "Connections". The Load Manager and the hub word
+  the pairs from it. Old files' removed fields are ignored and drop on the next save.
+- Tests: WoodFraming's round trip, the words for each pair, the defaults and a missing value; the hub's assertions
+  read the sills and lines from the Connections. All suites pass (WF 40, BM 99, Sketch 78, LM 59, SWC 228, Hub 58).
+
 ## 2026-11-07 — The diaphragms' boundary nailing and collectors, by the line shear (step 6)
 
 - Owner's choice: the diaphragm's line shear plus collectors (not the wall's own shear). Each line of shear walls in a

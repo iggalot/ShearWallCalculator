@@ -85,13 +85,13 @@ namespace ShearWallVisualizer.Dialogs
             return SillAnchorage.Design(r.Length, vAsd, NdsSpecies(r.Inputs?.Species ?? WoodTypes.WOODTYPE_DF_SP), nominal, r.AspectRatio, false); // the hold-downs are sized without dead load
         }
 
-        /// <summary>The model's defaults (the floor sheathing and the sill nail for an upper story's sill).</summary>
-        public BuildingModel.Model.ModelDefaults Defaults { get; set; }
+        /// <summary>The connection defaults (the floor sheathing and the sill nail for an upper story's sill): details, not the model's.</summary>
+        public WoodFraming.Connections.ConnectionDefaults Connections { get; set; }
         /// <summary>The line of shear walls in the diaphragm on top of it, as designed: its unit shear, boundary nailing and collector (null: none).</summary>
-        public BuildingModel.Model.DiaphragmLine Line { get; set; }
+        public WoodFraming.Connections.DiaphragmLine Line { get; set; }
 
         /// <summary>An upper-story wall's sill nailing (null on the first story or before a design): the saved design's own routine.</summary>
-        public SillNailing SillNails() => FirstStory ? null : ShearWallCalculator.ModelAdapter.ShearWallCheck.SillNailingOf(Result, Defaults);
+        public SillNailing SillNails() => FirstStory ? null : ShearWallCalculator.ModelAdapter.ShearWallCheck.SillNailingOf(Result, Connections);
 
         /// <summary>The hold-down at the low (left) or high (right) end, as traced.</summary>
         public HoldownLanding OwnAt(bool low) =>
@@ -491,7 +491,7 @@ namespace ShearWallVisualizer.Dialogs
         /// The diaphragm on top of the wall along its line (owner 2026-11-07: the line shear and the collectors): what the
         /// boundary nailing over the top plates is, how it was found, and the collector in the plates.
         /// </summary>
-        private static void DiaphragmLineSection(Panel p, BuildingModel.Model.DiaphragmLine l)
+        private static void DiaphragmLineSection(Panel p, WoodFraming.Connections.DiaphragmLine l)
         {
             Section(p, "Diaphragm boundary nailing and collector (at the top)", l.Fails ?? $"{l.Nailing}; the top plates a collector of {l.CollectorLb:0} lb.");
             if (l.DepthFt <= 0) return;

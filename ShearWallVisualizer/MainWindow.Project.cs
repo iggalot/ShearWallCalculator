@@ -64,11 +64,13 @@ namespace ShearWallVisualizer
 
         /// <summary>
         /// The data keys this app writes into the project file: its section and design settings, each wall's and diaphragm's
-        /// design ("ShearWall"), and the forces it puts on the foundation (the shear walls are declared there: the part of each that counts), the mark that it declares them ("ShearWall.Declared"), and the forces it puts on the foundation ("Lateral", for the Load Manager). Nothing else.
+        /// design ("ShearWall": the shear walls are declared there, the part of each that counts), the mark that it declares
+        /// them ("ShearWall.Declared"), the forces it puts on the foundation ("Lateral", for the Load Manager) and the
+        /// connections it designs ("Connections": the sills' bolts or nailing, the diaphragm lines). Nothing else.
         /// </summary>
         private static bool OwnsData(string key) =>
             key == ShearWallProject.Key || key == ShearWallAdapter.SettingsKey || key == ShearWallAdapter.WallKey || key == ShearWallAdapter.DiaphragmKey || key == ShearWallAdapter.DeclaredKey ||
-            key == BuildingModel.Model.LateralSection.Key;
+            key == BuildingModel.Model.LateralSection.Key || key == WoodFraming.Connections.ConnectionsSection.Key;
 
         /// <summary>This app's hold on the open project (one Shear Wall Calculator per project).</summary>
         private ProjectLock projectLock;
@@ -336,7 +338,13 @@ namespace ShearWallVisualizer
                 var mine = BuildingToSave();
                 // what the shear walls put on the foundation, for the load manager (not compared for unsaved changes: it is
                 // rewritten from the design on every save), stamped with the revision this save gives the file
-                void Stamp(ModelDocument d) => BuildingModel.Model.LateralSection.Write(d.Building, LateralForFoundation(d.Revision + 1, mine)); // none: an old one is removed
+                // (and the connections designed from it: none, an old one is removed too)
+                void Stamp(ModelDocument d)
+                {
+                    var lat = LateralForFoundation(d.Revision + 1, mine);
+                    BuildingModel.Model.LateralSection.Write(d.Building, lat); // none: an old one is removed
+                    WoodFraming.Connections.ConnectionsSection.Write(d.Building, lat == null ? null : ShearWallCheck.Connections(levels, stories, allDesignResults, d.Building, lat, d.Revision + 1));
+                }
                 ModelDocument saved;
                 if (!saveAs && File.Exists(path))
                 {

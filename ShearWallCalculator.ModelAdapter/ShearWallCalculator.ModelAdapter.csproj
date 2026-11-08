@@ -16,6 +16,8 @@
     <ProjectReference Include="..\ShearWallCalculator.csproj" />
     <!-- a first-story shear wall's sill bolts (SillAnchorage), in the design it saves for the wall views of every app -->
     <ProjectReference Include="..\..\WoodFraming\WoodFraming\WoodFraming.csproj" />
+    <!-- the connections it designs (sills, diaphragm lines) and their defaults: details, not the building model's -->
+    <ProjectReference Include="..\..\WoodFraming\WoodFraming.Connections\WoodFraming.Connections.csproj" />
     <ProjectReference Include="..\..\NDS_WoodLibrary\NDS_WoodLibrary.csproj" />
     <!-- the wind calculator's own wind cases, for the headless check (ShearWallCheck) -->
     <ProjectReference Include="..\..\ASCE7-Wind-Load-Calculator\ASCE7Wind.ModelAdapter\ASCE7Wind.ModelAdapter.csproj" />
