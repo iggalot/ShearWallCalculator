@@ -137,7 +137,14 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
       (the MWFRS: the C&C is the tie's design, not a case of the whole building). Today the roof is not a member: its wind
       is E on the top walls.
     - [ ] The tie's own value along a wall (the C&C zones change along it): today one value per wall, its worst place.
-  - [ ] 5. Upper-floor beams and columns carrying hold-downs from above: their uplift checked from their pairs.
+  - [x] 5. (2026-11-07) Upper-floor beams and columns carrying hold-downs from above: their uplift checked from their
+    pairs (`UpperUplift`, in `FoundationCheck.Run`, on the foundation page): at each beam end and column base above the
+    foundation, in every combination with W and every wind case, the net force on its support: its gravity reaction (each
+    load on its own), the roof's wind in the case, the hold-downs' pair at the W factor. Where it pulls up with no
+    connection, a problem (tie it down). Test: the wall on a beam, by hand 0.6 × 900 − 562 = 22 lb up at each end in
+    0.6D + 0.6W (SWC's ST9 there sized for the 562 alone), the same as the beam's own free body gives.
+    - [ ] SWC sizes a beam end's or column's connection for the hold-downs' tension alone: it could take the dead load
+      (the net) from the Load Manager. A choice for the owner (ASCE 7 lets the dead load resist at 0.6D).
   - [ ] 6. Horizontal pairs at the same joints: the shear through the sill nailing and the anchor bolts.
   - [ ] 7. With joists and rafters framed under the diaphragm: the roof tie line pair becomes a point pair at each rafter
     end (its tributary width); the points along a wall must add up to the line load they replace, case by case.

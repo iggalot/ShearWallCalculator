@@ -2,6 +2,16 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-07 — The hub fails a member out of balance; upper beams and columns carrying hold-downs (step 5)
+
+- The hub: a member not in equilibrium (the gravity's `GravityBalance` or the wind's `ConnectionBalance`) fails the
+  foundation step, named on the problems list (`ProjectCheck.OutOfBalance`): a load not accounted for is a fault.
+- Step 5 (`UpperUplift`, Load Manager): each beam end and column base above the foundation that carries hold-downs, in
+  every combination with W and every wind case: its gravity reaction, the roof's wind, the hold-downs' pair at the W
+  factor; the worst net force on its support, and where. Pulling up with no connection: a problem. The foundation page
+  lists them. Hub test, by hand: 0.6 × 900 − 562 = 22 lb up at each end of the beam under a wall, the same as the beam's
+  own free body.
+
 ## 2026-11-07 — ΣM for the gravity free bodies; every member checked
 
 - The owner asked whether a wall on a beam or a wall is a distributed load in the checks: it is (its profile step by
