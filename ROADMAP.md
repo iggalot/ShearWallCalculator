@@ -111,6 +111,12 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
       of each, summed, each kind and each wind case's pass alike. Test: a beam under a wall with a roof zone over part of
       it and a floor zone over part of the beam: ΣFz, ΣM about its start, the pair with the wall place by place; by hand
       3200 lb at 13.875 ft in D (the largest over the wall would have been 5000 lb).
+    - [x] (2026-11-07) ΣM for the gravity too (it was ΣFz only): `FreeBody.Moment`, `OutOfBalance` (the wind's rule, 0.5 %),
+      each load at its own place (a wall on a beam or a wall a distributed load step by step, a post or beam end a point),
+      with the wind case's shear walls in the combinations with W. `GravityBalance` checks every member and the whole
+      structure in every combination (in `FoundationCheck.Run`, and on the foundation page); the free body's table gives
+      ΣM. Test: a load moved 3 ft along a beam keeps ΣFz right and fails ΣM.
+    - [ ] The hub's foundation step to show the gravity check's problems (it has `FoundationCheckResult.Gravity`).
   - [x] 3. (2026-11-07) The sketch's level labels from the pairs: several landing within 1 ft on one member in one label,
     the sum case by case, its worst case in ASD (`ConnectionPairs.Near`, `Sum`; in BuildingModel.Core, since the sketch
     cannot read the Load Manager: the same 1 ft as the Load Manager's `Near`).

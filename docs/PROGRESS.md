@@ -2,6 +2,16 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-07 — ΣM for the gravity free bodies; every member checked
+
+- The owner asked whether a wall on a beam or a wall is a distributed load in the checks: it is (its profile step by
+  step, `Partials` on a beam, `AboveParts` on a wall; posts, beam ends and columns point loads). But the gravity checks
+  were ΣFz only, blind to a load in the wrong place. Now `FreeBody.Moment` and `OutOfBalance` give ΣFz and ΣM (about the
+  body's middle, the wind's 0.5 % rule), the shear walls' forces included in a combination with W. `GravityBalance`
+  checks every wall, beam and column and the whole structure in every combination (`FoundationCheckResult.Gravity`; the
+  foundation page says how many balance). Tests: the beam with zones (every member and the whole), a load moved 3 ft
+  (ΣFz right, ΣM fails), the hub's box in every combination with W.
+
 ## 2026-11-07 — Every load on a beam on its own
 
 - The owner: a beam can have several loads; never take the largest, take each on its own and solve its reactions (and
