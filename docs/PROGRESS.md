@@ -2,6 +2,18 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-07 — Roof ties the worse of C&C and MWFRS; the gravity and the wind on one free body
+
+- Roof ties (owner): the C&C uplift where it is higher than the MWFRS uplift at the same wall or beam, else the MWFRS
+  (`RoofTie.Cladding`, `Mwfrs`, `Governs`; with no C&C, the MWFRS alone). The Wind uplift window shows both and which
+  governs.
+- A free body in one wind case (`FreeBody.OfBody(..., uplift, windCase)`): its gravity loads, the roof's wind in that case
+  from its uplift pass (the same forces again, each with its wind alone, `ServiceLoad.PathWind` → `Winds`), and the shear
+  walls' connections in it at the combination's W factor (`ConnectionsUp`). Its combinations now include those with W.
+  The load path is linear, so every combination balances (hub test: a wall, a stack, the whole structure).
+- Load Manager window: the wind case picked under the free body's Wind is the W of its combination list (and the title);
+  an uplift is drawn away from the face it acts on.
+
 ## 2026-11-07 — The compression goes down too; rigid and flexible kept apart; every member in equilibrium
 
 - The owner: the compression is transmitted as well, "it just doesn't use the hold-down to do it" (the hold-down's bolt,

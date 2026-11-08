@@ -90,8 +90,13 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
       mixed (a point taking the larger of the two put two analyses in one free body: a torsion case 270 lb out). Every
       case is saved under "<name> (rigid)" and "<name> (flexible)" (`LateralSection.Cases`, `WindOf`); the Load Manager
       takes each wind once for each, with the same roof pressures.
-    - [ ] The roof's wind on the top walls (the uplift pass's) on the same free bodies, and the gravity with the wind in
-      the W combinations.
+    - [x] (2026-11-07) The roof's wind on the same free bodies, and the gravity with the wind in the W combinations: a
+      free body in one wind case (`FreeBody.OfBody(..., uplift, windCase)`, `WindCase`) takes that case's uplift pass, its
+      wind alone in the same parts (the roof's on a top wall E, the cut's I, the foundation's S), and the shear walls'
+      connections in it at the combination's W factor (`ConnectionsUp`, in `Imbalance`). The load path is linear, so each
+      part balances and so does every combination (test: a wall, a stack and the whole structure, ΣFz in every
+      combination with W). The window: the wind case picked under Wind is the W of the combination list; an uplift drawn
+      away from the face it acts on. A wall's own couple is +T and −T: nothing in ΣFz, its check is ΣM under Wind.
     - [x] (2026-11-07) The body is the selection (`FreeBody.OfBody`): every force knows the member at its other end
       (`Other`; the gravity load path now records it: `ConcentratedLoad.Source`, `Onto`, `WallTopLoad.AboveParts`), so a
       wall under it or standing on it, a beam end, a column base are I (the cut), the foundation S; a pair between two
@@ -115,6 +120,13 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
     continuous). **Decided (owner, 2026-11-07): the ties carry the C&C uplift where it is higher than the MWFRS uplift in
     the same place (the worst case).** The MWFRS uplift stays in the load path (the walls, the foundation); the tie's own
     design takes the larger of the two along each top wall, and says which one governs where.
+    - [x] (2026-11-07) `RoofTie`: the C&C at the rafters' area and the MWFRS case lifting it most at the same wall or beam,
+      both kept (`Cladding`, `Mwfrs`, their cases), the worse the tie's (`Line`, `Governs`); with no C&C, the MWFRS alone.
+      Wind uplift window: both columns and which governs. Tests: C&C 45 over MWFRS 35 psf, MWFRS 35 over C&C 25.
+    - [ ] The tie as a line pair on the free bodies (the roof a member: its half up, the top wall's down), per wind case
+      (the MWFRS: the C&C is the tie's design, not a case of the whole building). Today the roof is not a member: its wind
+      is E on the top walls.
+    - [ ] The tie's own value along a wall (the C&C zones change along it): today one value per wall, its worst place.
   - [ ] 5. Upper-floor beams and columns carrying hold-downs from above: their uplift checked from their pairs.
   - [ ] 6. Horizontal pairs at the same joints: the shear through the sill nailing and the anchor bolts.
   - [ ] 7. With joists and rafters framed under the diaphragm: the roof tie line pair becomes a point pair at each rafter
