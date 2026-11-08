@@ -162,7 +162,7 @@ namespace ShearWallCalculator.NDSProvisions
                 SheathingGrade = SheathingMaterials.SHEATH_MAT_STRUCTURAL_1,
                 CommonNailSize = CommonNailSizes.NAILSIZE_8D,
                 MinimumFastenerPenetration = 1.375,
-                NominalPanelThickness = NominalPanelThicknesses.THICKNESS_5_16IN,
+                NominalPanelThickness = NominalPanelThicknesses.THICKNESS_3_8IN,
                 NominalWidthOfNailedFaceAtBoundaries = 3.0,
                 Seismic6_Case1 = new Table4_2_SeismicEntry
                 {

@@ -87,6 +87,8 @@ namespace ShearWallVisualizer.Dialogs
 
         /// <summary>The model's defaults (the floor sheathing and the sill nail for an upper story's sill).</summary>
         public BuildingModel.Model.ModelDefaults Defaults { get; set; }
+        /// <summary>The line of shear walls in the diaphragm on top of it, as designed: its unit shear, boundary nailing and collector (null: none).</summary>
+        public BuildingModel.Model.DiaphragmLine Line { get; set; }
 
         /// <summary>An upper-story wall's sill nailing (null on the first story or before a design): the saved design's own routine.</summary>
         public SillNailing SillNails() => FirstStory ? null : ShearWallCalculator.ModelAdapter.ShearWallCheck.SillNailingOf(Result, Defaults);
@@ -354,6 +356,7 @@ namespace ShearWallVisualizer.Dialogs
             if (an != null) SillAnchorSection(p, an, f);
             var sn = data.SillNails();
             if (sn != null) SillNailSection(p, sn);
+            if (data.Line != null) DiaphragmLineSection(p, data.Line);
 
             Section(p, "Connections at the top (from the story above)", data.Above.Count == 0 ? "Nothing from above stands on this wall." :
                     "Each hold-down above pulls up on this wall's top at its post: it is carried by the post under it to this wall's bottom.");
@@ -479,6 +482,31 @@ namespace ShearWallVisualizer.Dialogs
             var src = new Expander { Header = "Sources (quoted)", IsExpanded = false, Margin = new Thickness(0, 4, 0, 0) };
             var sp = new StackPanel();
             foreach (var c in SillNailing.Citations)
+                sp.Children.Add(new TextBlock { Text = "•  " + c, TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkSecondary, FontSize = 11.5, Margin = new Thickness(6, 2, 0, 2) });
+            src.Content = sp;
+            p.Children.Add(src);
+        }
+
+        /// <summary>
+        /// The diaphragm on top of the wall along its line (owner 2026-11-07: the line shear and the collectors): what the
+        /// boundary nailing over the top plates is, how it was found, and the collector in the plates.
+        /// </summary>
+        private static void DiaphragmLineSection(Panel p, BuildingModel.Model.DiaphragmLine l)
+        {
+            Section(p, "Diaphragm boundary nailing and collector (at the top)", l.Fails ?? $"{l.Nailing}; the top plates a collector of {l.CollectorLb:0} lb.");
+            if (l.DepthFt <= 0) return;
+            int walls = l.WallIds?.Count ?? 0;
+            p.Children.Add(Table(new[] { "Check (ASD)", "Value" }, new List<string[]>
+            {
+                new[] { "Line", $"{(l.Roof ? "The roof" : "The floor")} along this wall's line: {walls} shear wall{(walls == 1 ? "" : "s")} on it (under it, and standing on it), the diaphragm {l.DepthFt:0.##} ft deep along it" },
+                new[] { "Unit shear", $"v = R / depth, R the walls' shear on the line per wind case (the rigid and flexible runs each); worst 0.6 × {l.ShearAsdPlf / 0.6:0.0} = {l.ShearAsdPlf:0.0} plf" },
+                new[] { "Sheathing", $"{l.Sheathing}; {(l.Blocked ? "blocked (SDPWS Table 4.2A)" : "unblocked (SDPWS Table 4.2C, Cases 2-6: the panel layout is not in the model)")}" },
+                new[] { "Nailing", $"{l.Nailing}: {l.AllowablePlf:0.0} plf ≥ {l.ShearAsdPlf:0.0} plf ({(l.AllowablePlf > 0 ? l.ShearAsdPlf / l.AllowablePlf : 0):0.00})" + (l.Note != null ? $". {l.Note}" : "") },
+                new[] { "Collector", $"{l.CollectorLb:0} lb at {l.CollectorAtFt:0.##} ft from the line's west or south end: the diaphragm's even delivery less the walls' shear parts. {l.Collector}" },
+            }));
+            var src = new Expander { Header = "Sources (quoted)", IsExpanded = false, Margin = new Thickness(0, 4, 0, 0) };
+            var sp = new StackPanel();
+            foreach (var c in ShearWallCalculator.Design.DiaphragmNailing.Citations.Concat(WoodFraming.TopPlateCollector.Citations))
                 sp.Children.Add(new TextBlock { Text = "•  " + c, TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkSecondary, FontSize = 11.5, Margin = new Thickness(6, 2, 0, 2) });
             src.Content = sp;
             p.Children.Add(src);

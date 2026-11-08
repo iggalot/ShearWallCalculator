@@ -177,7 +177,7 @@ namespace ShearWallCalculator.ModelAdapter
                 }
             }
             var anchors = trace.ByLevel.TryGetValue(-1, out var a) ? a : new List<HoldownLanding>();
-            result.Lateral = Lateral(levels, stories, byStory, anchors, 0, trace.ByLevel, b.Ground?.Id, b.Defaults);
+            result.Lateral = Lateral(levels, stories, byStory, anchors, 0, trace.ByLevel, b.Ground?.Id, b);
             if (result.Lateral != null) result.Lateral.BasedOn = InputsNow(building);
             return result;
         }
@@ -192,8 +192,9 @@ namespace ShearWallCalculator.ModelAdapter
         /// </summary>
         public static LateralSection Lateral(IList<ShearWallCalculatorBase> levels, IList<StoryMap> stories,
             IList<Dictionary<int, WallDesignResult>> byStory, IEnumerable<HoldownLanding> foundationAnchors, int revision,
-            IDictionary<int, List<HoldownLanding>> byLevel = null, string groundLevelId = null, ModelDefaults defaults = null)
+            IDictionary<int, List<HoldownLanding>> byLevel = null, string groundLevelId = null, Building building = null)
         {
+            var defaults = building?.Defaults;
             if (levels == null || levels.Count == 0 || byStory == null || byStory.Count == 0 || levels[0]?._wall_system == null) return null;
             var design = byStory[0];
             if (design == null) return null;
@@ -246,6 +247,8 @@ namespace ShearWallCalculator.ModelAdapter
             if (byLevel != null) s.Holdowns = StoryHoldowns(levels, stories, byLevel, groundLevelId, byStory);
             s.Walls = ShearDesigns(levels, stories, byStory, defaults);
             s.Diaphragms = DiaphragmWinds(levels, stories);
+            // each diaphragm's lines of shear walls: the line shear, the boundary nailing, the collector (owner 2026-11-07)
+            if (building != null) s.DiaphragmLines = DiaphragmLines.Design(building, s, defaults);
             return s.IsEmpty ? null : s;
         }
 

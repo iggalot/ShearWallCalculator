@@ -164,7 +164,19 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
       through the floor sheathing into the rim or blocking, Z by AWC TR12 Table 1-1 with the sheathing as the gap (the
       owner's choice: NDS 12.3.1 needs the members in contact, SDPWS is silent), Z' = 1.6 Z, the spacing Z'/v. Defaults
       `ModelDefaults.FloorSheathing` 23/32" and `SillNail` 16d; the app's limits 16" most, 3" least (not code values).
-    - [ ] The diaphragm's boundary nailing at the top plates designed.
+    - [x] (2026-11-07) The diaphragm's boundary nailing and the collectors designed, by the line shear (owner's choice):
+      each line of shear walls in a level's diaphragm takes R per case; v = R / the diaphragm's depth along the line
+      (`DiaphragmLines`, saved as `Lateral.DiaphragmLines`); the nailing from SDPWS-2015 Table 4.2A (blocked) or 4.2C
+      (unblocked, Cases 2-6), ASD / 2.0 (`DiaphragmNailing`); the top plates a collector for the diaphragm's even delivery
+      less the walls' shear parts (`WoodFraming.TopPlateCollector`: one ply in tension and compression, the splice nails).
+      Defaults: floors 23/32" Sheathing and Single-Floor, 10d, blocked; the roof 7/16", 8d, unblocked; 2" framing; 16d splices.
+      Table 4.2C's Structural I 8d 3" row was filed as 5/16" (fixed: 3/8", as printed); both tables tested row by row.
+    - [ ] A page to edit the project's defaults (`ModelDefaults`: the sheathing, nails, blocking): only in the file today.
+    - [ ] A collector where no wall is under the line (the floor's rim or blocking, walls standing on it only): not designed.
+    - [ ] The diaphragm's field nailing zones and chords (the line's nailing is given at the line only).
+    - [ ] The rim or blocking to the lower wall's top plates designed (toe-nails, NDS 12.5.4, or framing clips from the
+      catalog): the floor's shear from the rim down into the wall below. The link between the sill nailing above and the
+      wall below (owner, 2026-11-07).
     - [ ] The horizontal pairs drawn on the plans and in the Load Manager's free body of a diaphragm (a diaphragm is not a
       member you can pick yet).
   - [ ] 7. With joists and rafters framed under the diaphragm: the roof tie line pair becomes a point pair at each rafter

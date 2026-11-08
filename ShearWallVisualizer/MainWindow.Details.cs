@@ -162,8 +162,9 @@ namespace ShearWallVisualizer
             if (mw != null)
             {
                 // (the design this window shows, linked to the wind or not; the foundation takes it only when linked)
-                var live = ShearWallCheck.Lateral(levels, stories, allDesignResults, foundationAnchors, 0, loadPath?.ByLevel, building?.Ground?.Id, building?.Defaults) ?? BuildingModel.Model.LateralSection.Read(building);
+                var live = ShearWallCheck.Lateral(levels, stories, allDesignResults, foundationAnchors, 0, loadPath?.ByLevel, building?.Ground?.Id, building) ?? BuildingModel.Model.LateralSection.Read(building);
                 d.View = WoodFraming.Wpf.WallViews.FromModel(building, mw, top, live);
+                d.Line = live?.LineOf(top, mw.Id);
                 if (d.View != null) d.View.Name = d.Name;
             }
             // what the story above stands on this wall: its hold-downs (and beam ends or column bases) landing on it

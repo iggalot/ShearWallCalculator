@@ -89,6 +89,7 @@
     <Compile Include="Design\HoldownPictures.cs" />
     <Compile Include="Design\ShearWallFraming.cs" />
     <Compile Include="Design\DesignPass.cs" />
+    <Compile Include="Design\DiaphragmNailing.cs" />
     <Compile Include="Design\ShearWallDesign.cs" />
     <Compile Include="Design\Sheathing.cs" />
     <Compile Include="Design\WallSchedule.cs" />

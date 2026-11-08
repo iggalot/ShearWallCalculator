@@ -2,6 +2,17 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-07 — The diaphragms' boundary nailing and collectors, by the line shear (step 6)
+
+- Owner's choice: the diaphragm's line shear plus collectors (not the wall's own shear). Each line of shear walls in a
+  level's diaphragm (the walls under it and standing on it, within 0.5 ft across) takes R per case; v = R / depth along the
+  line. The boundary nailing: SDPWS-2015 Table 4.2A (blocked) or 4.2C (unblocked, the lower Cases 2-6), ASD = nominal /
+  2.0, footnote 2's SG factor; 2-1/2" or closer needs 3" framing (4.2.7.1.1). The collector: the diaphragm's even delivery
+  less the walls' shear parts along the line; a double top plate checked one ply in tension and compression, the splice
+  nails each side (NDS 12.3.1). The top pair's connector names it; the construction window shows it with its sources.
+- Tables 4.2A and 4.2C tested against the printed pages row by row; 4.2C's Structural I 8d 3" row fixed (3/8", not 5/16").
+- Hub test: the box with the south wall declared over its middle 20 ft: v × 10 ft by hand at each end of the part.
+
 ## 2026-11-07 — The upper sills' nailing designed (step 6)
 
 - `WoodFraming.SillNailing`: an upper story's shear wall sill nailed through the floor sheathing into the rim or

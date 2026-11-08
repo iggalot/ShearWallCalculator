@@ -45,6 +45,11 @@
     An upper story's sill nailing is designed (`ShearWallCheck.SillNailingOf`, `WoodFraming.SillNailing`: TR12 with the
     floor sheathing as the gap, the owner's choice; `ModelDefaults.FloorSheathing`, `SillNail`) and saved on each wall
     (`ShearWallDesign.SillNails`); the construction window's Pieces tab shows its check and sources.
+    Each diaphragm's lines of shear walls are designed by the line shear, v = R / the diaphragm's depth along the line
+    (owner 2026-11-07), with the boundary nailing (`Design/DiaphragmNailing.cs`: SDPWS-2015 Tables 4.2A and 4.2C, the
+    `Table4_2Manager` and `Table4_2CManager` data) and the top plates as collectors (`WoodFraming.TopPlateCollector`):
+    `DiaphragmLines.Design`, saved as `Lateral.DiaphragmLines`. The defaults are `ModelDefaults` (`DiaphragmGrade`,
+    `FloorNail`, `FloorBlocked`, `RoofSheathing`, `RoofNail`, `RoofBlocked`, `DiaphragmFramingWidth`, `SpliceNail`).
   - **Conservative, kept by the owner (2026-11-07):** a beam end's or column's connection is sized for the hold-downs'
     tension alone, no dead load against it (`LoadPath`); the Load Manager's `UpperUplift` gives the net. Change it only if
     it becomes an issue.
