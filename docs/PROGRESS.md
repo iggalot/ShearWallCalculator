@@ -2,6 +2,18 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-07 — Every load on a beam on its own
+
+- The owner: a beam can have several loads; never take the largest, take each on its own and solve its reactions (and
+  free body) for each. The Load Manager's beam now takes a wall standing on it step by step along the wall's profile
+  and its own floor or roof share step by step (`BeamLoad.FromLevelProfile`), as well as each point load; its reactions
+  are the statics of each, summed (`GravityLoadPath.Reactions`), and its free body shows the same steps. SWC's hold-down
+  trace already did this case by case (`LoadPathTrace`: each load's lever-rule share per case, summed).
+- Test: a beam with a roof zone over part of the wall on it and a floor zone over part of it: ΣFz and ΣM about its
+  start in every gravity combination, the pair with the wall equal and opposite; by hand 3200 lb at 13.875 ft in D.
+- The free body's profile steps now keep the roof's wind apart too (`AddProfile`: a step with wind only is kept, and
+  two steps are joined only when their wind is the same).
+
 ## 2026-11-07 — Roof ties the worse of C&C and MWFRS; the gravity and the wind on one free body
 
 - Roof ties (owner): the C&C uplift where it is higher than the MWFRS uplift at the same wall or beam, else the MWFRS

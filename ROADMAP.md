@@ -105,8 +105,12 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
       structure is checked as one body too (`ConnectionBalanceResult.Whole`).
     - [x] (2026-11-07) In the Load Manager: Ctrl or Shift + click members in the 3D foundation (orange), then click or
       Free body of them; Ctrl + click takes one out. The cut drawn in purple in 3D, the pairs inside in grey.
-    - [ ] A wall on a beam: the beam's partial load is the wall's largest along it (the load path's), not its profile, so
-      a body of the two can be off by the difference. Give the beam the wall's profile.
+    - [x] (2026-11-07) Every load on a beam on its own (owner: "you don't just take the largest... you take each individual
+      case and solve for reactions"): a wall standing on it step by step along its profile (`Partials`, as onto a wall), the
+      beam's own floor or roof share step by step (`BeamLoad.FromLevelProfile`), each point load; the reactions by statics
+      of each, summed, each kind and each wind case's pass alike. Test: a beam under a wall with a roof zone over part of
+      it and a floor zone over part of the beam: ΣFz, ΣM about its start, the pair with the wall place by place; by hand
+      3200 lb at 13.875 ft in D (the largest over the wall would have been 5000 lb).
   - [x] 3. (2026-11-07) The sketch's level labels from the pairs: several landing within 1 ft on one member in one label,
     the sum case by case, its worst case in ASD (`ConnectionPairs.Near`, `Sum`; in BuildingModel.Core, since the sketch
     cannot read the Load Manager: the same 1 ft as the Load Manager's `Near`).
