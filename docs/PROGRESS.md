@@ -2,6 +2,12 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-07 — The roof tie place by place along its wall (step 4)
+
+- `RoofTie.Along` (Load Manager): the tie cut wherever the C&C zones or any MWFRS case change along the wall or beam, the
+  worse of the two at each place; the whole tie stays its worst place. The wind uplift window lists the ties that change
+  (collapsed). Test by hand: a 6 ft corner zone, C&C −108 plf there, the MWFRS −72 plf beyond.
+
 ## 2026-11-07 — The horizontal pairs and every diaphragm's free body (step 6)
 
 - Each shear wall story's shear is two pairs (`ShearPairs`, BuildingModel.Core): its top into its diaphragm, its sill into

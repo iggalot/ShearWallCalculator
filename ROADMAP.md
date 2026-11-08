@@ -137,7 +137,10 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
     - [ ] The tie as a line pair on the free bodies (the roof a member: its half up, the top wall's down), per wind case
       (the MWFRS: the C&C is the tie's design, not a case of the whole building). Today the roof is not a member: its wind
       is E on the top walls.
-    - [ ] The tie's own value along a wall (the C&C zones change along it): today one value per wall, its worst place.
+    - [x] (2026-11-07) The tie's own value along a wall (the C&C zones change along it): `RoofTie.Along` (`RoofTieStep`), cut
+      wherever the C&C or any MWFRS case changes, the worse of the two at each place (the owner's rule), the whole tie still
+      its worst place. Wind uplift window: a collapsed table of the ties that change along their length. Test: C&C −45 psf in a
+      6 ft corner zone, −20 beyond, the MWFRS −35: 0 to 6 ft the C&C −108 plf, 6 to 30 ft the MWFRS −72.
   - [x] 5. (2026-11-07) Upper-floor beams and columns carrying hold-downs from above: their uplift checked from their
     pairs (`UpperUplift`, in `FoundationCheck.Run`, on the foundation page): at each beam end and column base above the
     foundation, in every combination with W and every wind case, the net force on its support: its gravity reaction (each
