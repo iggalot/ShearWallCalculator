@@ -2,6 +2,16 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-08 — The rim or blocking toe-nailed into the walls' top plates (step 6)
+
+- The owner's choices: toe-nails by NDS Figure 12A's geometry (12.1.6.3: 30°, started L/3 from the end; along the nail
+  ts = (L/3)/cos 30° = 0.385 L in the rim, p = 0.615 L into the plate, as the NDS gives no rule for the yield equations),
+  and the wall's own ASD shear over its shear part (conservative). Z' = Z × CD 1.6 × Ctn 0.83 (12.5.4.2); spacing Z'/v to
+  the 1/2" below, the app's 16" most and 3" least. Hand check: 8d DF-L, Z 97.1 lb (mode IV), Z' 129.0 lb, 7-1/2" at 200 plf.
+- `WoodFraming.RimToPlate`; `ShearWallCheck.RimToPlateOf` (one routine for the save and the window), saved as
+  `Connections.Tops` (`TopConnection`: the roof's blocking or a floor's rim). `ConnectionDefaults.ToeNail` 8d, in the
+  defaults window. The top pair's words, the construction window's Pieces tab (check and sources), the wall elevation.
+
 ## 2026-11-08 — The face nailing into the Connections; the connection defaults window
 
 - Owner: the nailing moves into the connections, the sheathing and the shear stay in the model; the defaults editor is

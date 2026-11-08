@@ -163,7 +163,7 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
     - [x] (2026-11-07) The sill nailing of an upper story's shear wall designed (`WoodFraming.SillNailing`): common nails
       through the floor sheathing into the rim or blocking, Z by AWC TR12 Table 1-1 with the sheathing as the gap (the
       owner's choice: NDS 12.3.1 needs the members in contact, SDPWS is silent), Z' = 1.6 Z, the spacing Z'/v. Defaults
-      `ModelDefaults.FloorSheathing` 23/32" and `SillNail` 16d; the app's limits 16" most, 3" least (not code values).
+      (now `ConnectionDefaults`) `FloorSheathing` 23/32" and `SillNail` 16d; the app's limits 16" most, 3" least (not code values).
     - [x] (2026-11-07) The diaphragm's boundary nailing and the collectors designed, by the line shear (owner's choice):
       each line of shear walls in a level's diaphragm takes R per case; v = R / the diaphragm's depth along the line
       (`DiaphragmLines`, saved as `Lateral.DiaphragmLines`; now `Connections.DiaphragmLines`); the nailing from SDPWS-2015 Table 4.2A (blocked) or 4.2C
@@ -185,9 +185,14 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
       order of `ShearWallDesign.Faces`); `ShearFace` keeps the sheathing, thickness and gypsum. The wall window reads both.
     - [ ] A collector where no wall is under the line (the floor's rim or blocking, walls standing on it only): not designed.
     - [ ] The diaphragm's field nailing zones and chords (the line's nailing is given at the line only).
-    - [ ] The rim or blocking to the lower wall's top plates designed (toe-nails, NDS 12.5.4, or framing clips from the
-      catalog): the floor's shear from the rim down into the wall below. The link between the sill nailing above and the
-      wall below (owner, 2026-11-07).
+    - [x] (2026-11-08) The rim (a floor) or the roof's blocking toe-nailed into each shear wall's top plates
+      (`WoodFraming.RimToPlate`, saved as `Connections.Tops`): the owner's choices, NDS Figure 12A's geometry for the yield
+      equations (ts = (L/3)/cos 30° in the rim, the rest into the plate; the NDS gives no rule) and the wall's own ASD shear
+      over its shear part (conservative); Z' = Z × 1.6 × Ctn 0.83 (12.5.4.2); the starting toe-nail 8d
+      (`ConnectionDefaults.ToeNail`, in the defaults window). The top pair's words name it; the construction window and
+      the wall elevation show it.
+    - [ ] Framing clips (A35, LTP4) where the toe-nails need closer than 3": the catalog page copied in first, as the
+      hold-downs' pictures were.
     - [ ] The horizontal pairs drawn on the plans and in the Load Manager's free body of a diaphragm (a diaphragm is not a
       member you can pick yet).
   - [ ] 7. With joists and rafters framed under the diaphragm: the roof tie line pair becomes a point pair at each rafter

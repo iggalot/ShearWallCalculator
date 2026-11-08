@@ -146,6 +146,7 @@ namespace ShearWallVisualizer
             d.ModelWallId = mw?.Id;
             d.TopLevelId = top;
             d.Connections = WoodFraming.Connections.ConnectionDefaults.Read(building);
+            d.Roof = building != null && ShearWallCheck.IsRoof(building, top);
             bool first = building != null && top != null ? building.IsFirstStory(top) : d.FirstStory;
             d.DefaultStudSize = first ? defaults.StudSizeFirstStory : defaults.StudSizeAbove;
             string size = mw != null && top != null ? building.StudSizeOf(mw, top) : d.DefaultStudSize;

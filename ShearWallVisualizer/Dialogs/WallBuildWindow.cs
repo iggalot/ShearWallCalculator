@@ -93,6 +93,12 @@ namespace ShearWallVisualizer.Dialogs
         /// <summary>An upper-story wall's sill nailing (null on the first story or before a design): the saved design's own routine.</summary>
         public SillNailing SillNails() => FirstStory ? null : ShearWallCalculator.ModelAdapter.ShearWallCheck.SillNailingOf(Result, Connections);
 
+        /// <summary>The story on top of it is the roof (blocking over it, not a rim).</summary>
+        public bool Roof { get; set; }
+
+        /// <summary>Its rim or blocking toe-nailed into its top plates (null before a design): the saved design's own routine.</summary>
+        public RimToPlate TopToeNails() => ShearWallCalculator.ModelAdapter.ShearWallCheck.RimToPlateOf(Result, Connections, Roof);
+
         /// <summary>The hold-down at the low (left) or high (right) end, as traced.</summary>
         public HoldownLanding OwnAt(bool low) =>
             Own.FirstOrDefault(l => (DetailCalcs.EndName(Wall, l.At) == (EastWest ? "West" : "South")) == low);
@@ -356,6 +362,8 @@ namespace ShearWallVisualizer.Dialogs
             if (an != null) SillAnchorSection(p, an, f);
             var sn = data.SillNails();
             if (sn != null) SillNailSection(p, sn);
+            var toe = data.TopToeNails();
+            if (toe != null) RimToPlateSection(p, toe);
             if (data.Line != null) DiaphragmLineSection(p, data.Line);
 
             Section(p, "Connections at the top (from the story above)", data.Above.Count == 0 ? "Nothing from above stands on this wall." :
@@ -482,6 +490,31 @@ namespace ShearWallVisualizer.Dialogs
             var src = new Expander { Header = "Sources (quoted)", IsExpanded = false, Margin = new Thickness(0, 4, 0, 0) };
             var sp = new StackPanel();
             foreach (var c in SillNailing.Citations)
+                sp.Children.Add(new TextBlock { Text = "•  " + c, TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkSecondary, FontSize = 11.5, Margin = new Thickness(6, 2, 0, 2) });
+            src.Content = sp;
+            p.Children.Add(src);
+        }
+
+        /// <summary>
+        /// The rim (or the roof's blocking) toe-nailed into the top plates: what to install, how it was found (NDS Figure 12A's
+        /// geometry, Ctn), and the code text (owner 2026-11-08).
+        /// </summary>
+        private static void RimToPlateSection(Panel p, RimToPlate n)
+        {
+            Section(p, $"The {n.Member} to the top plates (toe-nailed)", n.Fails ?? $"The {n.Member} on the top plates toe-nailed down with {n.Nail} at {FtIn.Of(n.SpacingIn)} o.c., one row along the wall, each nail at 30° started 1/3 of its length up the {n.Member}'s face.");
+            if (n.Z <= 0) return;
+            string spacing = double.IsInfinity(n.SpacingByShearIn) ? "no limit" : FtIn.Of(n.SpacingByShearIn);
+            p.Children.Add(Table(new[] { "Check (ASD)", "Value" }, new List<string[]>
+            {
+                new[] { "Shear at the top", $"v = 0.6 V / L = {n.ShearAsdPlf:0} plf, over the shear part (conservative: the owner's choice)" },
+                new[] { "Nail", $"{n.Nail}: {FtIn.Inches(n.NailLengthIn)} × {n.NailDiaIn:0.000} in. (NDS Table L4); along it, {n.SideIn:0.###} in. in the {n.Member} = (L/3)/cos 30°, {n.PenetrationIn:0.###} in. into the plate (6D = {6 * n.NailDiaIn:0.###} in. the least, NDS 12.1.6.4)" },
+                new[] { "Nail value", $"Z = {n.Z:0.0} lb (NDS 12.3.1, single shear, {n.SpeciesGroup}; mode {n.Mode}); Z' = Z × CD × Ctn = {n.Z:0.0} × {n.CD:0.0} × {RimToPlate.Ctn:0.00} = {n.ZPrime:0.0} lb" },
+                new[] { "Spacing", $"Z'/v = {n.ZPrime:0.0} / {n.ShearAsdPlf:0} plf = {spacing}; used {FtIn.Of(n.SpacingIn)} (to the 1/2 in. below; the app's most {FtIn.Of(n.MaxSpacingIn)}, least {FtIn.Of(n.MinSpacingIn)}: not code values)" },
+                new[] { "Capacity", n.SpacingIn > 0 ? $"{n.CapacityPlf:0} plf ≥ {n.ShearAsdPlf:0} plf ({(n.CapacityPlf > 0 ? n.ShearAsdPlf / n.CapacityPlf : 0):0.00})" : "" },
+            }));
+            var src = new Expander { Header = "Sources (quoted)", IsExpanded = false, Margin = new Thickness(0, 4, 0, 0) };
+            var sp = new StackPanel();
+            foreach (var c in RimToPlate.Citations)
                 sp.Children.Add(new TextBlock { Text = "•  " + c, TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkSecondary, FontSize = 11.5, Margin = new Thickness(6, 2, 0, 2) });
             src.Content = sp;
             p.Children.Add(src);

@@ -48,7 +48,10 @@
     "ConnectionDefaults" (`ConnectionDefaults.Read`; edited in Details > Connection defaults, the connection details'
     own window `WoodFraming.Wpf.ConnectionDefaultsWindow`, one undo step, in `OwnsData`). The forces stay in `Lateral`,
     and so does each wall's sheathing (`ShearFace`); its nailing is `Connections.Walls` (`ShearWallCheck.NailingOf`, the
-    same faces in the same order, owner 2026-11-08).
+    same faces in the same order, owner 2026-11-08). Each wall story's top is a `TopConnection` (`Connections.Tops`):
+    the rim, or the roof's blocking (`IsRoof`), toe-nailed into its plates (`ShearWallCheck.RimToPlateOf`,
+    `WoodFraming.RimToPlate`: NDS Figure 12A's geometry, Ctn 0.83, the wall's own shear over its shear part; owner
+    2026-11-08).
     Each sill is a `SillConnection`: the first story's anchor bolts (`WoodFraming.SillAnchorage`), an upper story's
     nailing (`ShearWallCheck.SillNailingOf`, `WoodFraming.SillNailing`: TR12 with the floor sheathing as the gap, the
     owner's choice; `ConnectionDefaults.FloorSheathing`, `SillNail`); the construction window's Pieces tab shows its

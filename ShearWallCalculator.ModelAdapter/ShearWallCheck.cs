@@ -498,6 +498,11 @@ namespace ShearWallCalculator.ModelAdapter
                             sill.Nails = new SillNails { Nail = n.Nail, SpacingIn = n.SpacingIn, ZPrimeLb = Math.Round(n.ZPrime, 1), SheathingIn = n.SheathingIn, Fails = n.Fails };
                     }
                     if (sill.Anchors != null || sill.Nails != null) c.Sills.Add(sill);
+                    // its top: the rim (a floor) or the roof's blocking toe-nailed into its plates (owner 2026-11-08)
+                    bool roof = building != null && IsRoof(building, stories[k].Level?.Id);
+                    var t = RimToPlateOf(r, cd, roof);
+                    if (t != null)
+                        c.Tops.Add(new TopConnection { WallId = id, LevelId = stories[k].Level?.Id, Blocking = roof, Nail = t.Nail, SpacingIn = t.SpacingIn, ZPrimeLb = Math.Round(t.ZPrime, 1), Fails = t.Fails });
                 }
             }
             if (building != null) c.DiaphragmLines = DiaphragmLines.Design(building, lateral, cd);
@@ -517,6 +522,25 @@ namespace ShearWallCalculator.ModelAdapter
             var species = r.Inputs?.Species == ShearWallCalculator.WoodTypes.WOODTYPE_SPF_HF ? NDS_WoodLibrary.NDS2018.Species.SprucePineFir : NDS_WoodLibrary.NDS2018.Species.DouglasFirLarch;
             return WoodFraming.SillNailing.Design(r.Length, vAsd, species, def.FloorSheathing, def.SillNail);
         }
+
+        /// <summary>
+        /// A wall's top (<see cref="WoodFraming.RimToPlate"/>): the rim, or the roof's blocking (<paramref name="blocking"/>),
+        /// toe-nailed into its plates for the wall's ASD shear over its shear part (the owner's choice, 2026-11-08: conservative,
+        /// the plf the wall is designed for), with the toe-nail of the connection defaults. One routine for the saved design
+        /// and the wall window.
+        /// </summary>
+        public static WoodFraming.RimToPlate RimToPlateOf(WallDesignResult r, ConnectionDefaults defaults, bool blocking)
+        {
+            if (r == null || r.Length <= 0) return null;
+            var def = defaults ?? new ConnectionDefaults();
+            double vAsd = 0.6 * r.V * 1000.0 / r.Length;
+            var species = r.Inputs?.Species == ShearWallCalculator.WoodTypes.WOODTYPE_SPF_HF ? NDS_WoodLibrary.NDS2018.Species.SprucePineFir : NDS_WoodLibrary.NDS2018.Species.DouglasFirLarch;
+            return WoodFraming.RimToPlate.Design(vAsd, species, def.ToeNail, blocking);
+        }
+
+        /// <summary>The level is the building's top (its roof: blocking, not a rim, over the walls under it).</summary>
+        public static bool IsRoof(Building b, string levelId) =>
+            levelId != null && b?.LevelsBottomUp?.LastOrDefault()?.Id == levelId;
 
         /// <summary>A sheathing option's thickness (in), from its nominal thickness ("15/32\"" → 0.469); 1/2 in. when not known.</summary>
         public static double Thickness(SheathingOption o)
