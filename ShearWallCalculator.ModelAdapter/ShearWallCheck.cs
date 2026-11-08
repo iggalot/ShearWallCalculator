@@ -416,18 +416,15 @@ namespace ShearWallCalculator.ModelAdapter
                         foreach (var c in r.ShearByCase) Put(d.ShearOnTop, c.Key, Math.Round(-1000.0 * c.Value, 1));
                         d.HeightFt = r.Height;
                     }
-                    foreach (var f in (r.Faces ?? new List<FaceResult>()).Where(f => f?.Face != null && f.Face.Table != SheathingTable.None))
+                    // the sheathing is the model's; its nailing a connection detail (Connections, the same faces in this order)
+                    foreach (var f in SheathedFaces(r))
                     {
                         var o = f.Option;
-                        bool nailed = o != null && o.UsesEdgeSpacing;
                         d.Faces.Add(new ShearFace
                         {
                             Sheathing = o == null ? "Sheathing" : $"{ShearWallDesigner.MaterialName(o.Material)} {ShearWallDesigner.ThicknessName(o.Thickness)}",
                             ThicknessIn = Thickness(o),
                             Gypsum = o?.Table == SheathingTable.GypsumAndPlaster,
-                            Nail = nailed ? ShearWallDesigner.NailName(f.Face.Nail) : null,
-                            EdgeIn = nailed ? f.Face.EdgeSpacing : 0,
-                            FieldIn = nailed ? 12 : 0,
                         });
                     }
                 }
@@ -435,9 +432,27 @@ namespace ShearWallCalculator.ModelAdapter
             return list;
         }
 
+        /// <summary>A design's sheathed faces, in the order both the model's faces and their nailing are saved.</summary>
+        private static IEnumerable<FaceResult> SheathedFaces(WallDesignResult r) =>
+            (r?.Faces ?? new List<FaceResult>()).Where(f => f?.Face != null && f.Face.Table != SheathingTable.None);
+
+        /// <summary>A design's sheathing nailing, face by face (<see cref="SheathedFaces"/>); null when it has no faces.</summary>
+        public static WallNailing NailingOf(WallDesignResult r, string wallId, string levelId)
+        {
+            var faces = SheathedFaces(r).ToList();
+            if (faces.Count == 0) return null;
+            var n = new WallNailing { WallId = wallId, LevelId = levelId };
+            foreach (var f in faces)
+            {
+                bool nailed = f.Option != null && f.Option.UsesEdgeSpacing;
+                n.Faces.Add(nailed ? new FaceNailing { Nail = ShearWallDesigner.NailName(f.Face.Nail), EdgeIn = f.Face.EdgeSpacing, FieldIn = 12 } : new FaceNailing());
+            }
+            return n;
+        }
+
         /// <summary>
         /// The connections the design gives (details, not the building model's: the "Connections" section of
-        /// WoodFraming.Connections): every shear wall's sill, a first story's anchor bolts (<see cref="WoodFraming.SillAnchorage"/>,
+        /// WoodFraming.Connections): every shear wall's sheathing nailing (<see cref="NailingOf"/>; owner 2026-11-08), its sill, a first story's anchor bolts (<see cref="WoodFraming.SillAnchorage"/>,
         /// as the construction window lays them out) or an upper story's nailing through the floor sheathing
         /// (<see cref="SillNailingOf"/>), and each diaphragm's lines of shear walls (<see cref="DiaphragmLines.Design"/>: the line
         /// shear, the boundary nailing, the collector; owner 2026-11-07). Null when there is nothing.
@@ -460,7 +475,10 @@ namespace ShearWallCalculator.ModelAdapter
                 foreach (var kv in walls)
                 {
                     if (!stories[k].Walls.TryGetValue(kv.Key, out var id)) continue;
-                    if (!byStory[k].TryGetValue(kv.Key, out var r) || r == null || r.Length <= 0) continue;
+                    if (!byStory[k].TryGetValue(kv.Key, out var r) || r == null) continue;
+                    var nailing = NailingOf(r, id, stories[k].Level?.Id);
+                    if (nailing != null) c.Walls.Add(nailing);
+                    if (r.Length <= 0) continue;
                     var sill = new SillConnection { WallId = id, LevelId = stories[k].Level?.Id };
                     if (k == 0)
                     {

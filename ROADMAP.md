@@ -177,10 +177,12 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
       "ConnectionDefaults" (the sheathing, nails, blocking, framing width, splice nail), keyed by the model's ids,
       references one way only. The hold-downs and the force pairs stay in the model's `Lateral` (they carry the load).
       Older files' `Lateral` sill and line fields and `ModelDefaults` detail fields are ignored and drop on the next save.
-    - [ ] A page to edit the connection defaults (`ConnectionDefaults`: the sheathing, nails, blocking): only in the file
-      today. Which app owns it (SWC, or a details app of its own) is the owner's call.
-    - [ ] Ask the owner: a shear wall's face sheathing and nailing (`ShearWallDesign.Faces`, `ShearFace`) are still in the
-      model's `Lateral` section, read by the wall window. Move them to the Connections too?
+    - [x] (2026-11-08) A window to edit the connection defaults, part of the connection details (owner):
+      `WoodFraming.Wpf.ConnectionDefaultsWindow` (the choices with table rows; a hand-edited value not offered is kept;
+      Starting values). SWC opens it (Details > Connection defaults), one undo step, saved with its own data.
+    - [x] (2026-11-08) A shear wall's face nailing moved to the Connections (owner: the nailing is a detail, the sheathing
+      and the shear stay in the model): `ConnectionsSection.Walls` (`WallNailing`, a `FaceNailing` per face in the
+      order of `ShearWallDesign.Faces`); `ShearFace` keeps the sheathing, thickness and gypsum. The wall window reads both.
     - [ ] A collector where no wall is under the line (the floor's rim or blocking, walls standing on it only): not designed.
     - [ ] The diaphragm's field nailing zones and chords (the line's nailing is given at the line only).
     - [ ] The rim or blocking to the lower wall's top plates designed (toe-nails, NDS 12.5.4, or framing clips from the

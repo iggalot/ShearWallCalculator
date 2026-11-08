@@ -66,11 +66,13 @@ namespace ShearWallVisualizer
         /// The data keys this app writes into the project file: its section and design settings, each wall's and diaphragm's
         /// design ("ShearWall": the shear walls are declared there, the part of each that counts), the mark that it declares
         /// them ("ShearWall.Declared"), the forces it puts on the foundation ("Lateral", for the Load Manager) and the
-        /// connections it designs ("Connections": the sills' bolts or nailing, the diaphragm lines). Nothing else.
+        /// connections it designs ("Connections": the walls' nailing, the sills' bolts or nailing, the diaphragm lines) and the
+        /// defaults they start from ("ConnectionDefaults", edited in Details > Connection defaults). Nothing else.
         /// </summary>
         private static bool OwnsData(string key) =>
             key == ShearWallProject.Key || key == ShearWallAdapter.SettingsKey || key == ShearWallAdapter.WallKey || key == ShearWallAdapter.DiaphragmKey || key == ShearWallAdapter.DeclaredKey ||
-            key == BuildingModel.Model.LateralSection.Key || key == WoodFraming.Connections.ConnectionsSection.Key;
+            key == BuildingModel.Model.LateralSection.Key || key == WoodFraming.Connections.ConnectionsSection.Key ||
+            key == WoodFraming.Connections.ConnectionDefaults.Key;
 
         /// <summary>This app's hold on the open project (one Shear Wall Calculator per project).</summary>
         private ProjectLock projectLock;

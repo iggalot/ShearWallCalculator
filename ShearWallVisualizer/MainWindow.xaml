@@ -55,6 +55,10 @@
                 <MenuItem Header="_Edit building in the Building Model editor..." Click="EditBuilding_Click"
                           ToolTip="Saves the project and opens it in the Building Model editor: the levels, size and roof are edited there. This window updates each time the editor saves."/>
             </MenuItem>
+            <MenuItem Header="_Details">
+                <MenuItem Header="_Connection defaults (sheathing, nails, blocking)..." Click="ConnectionDefaults_Click"
+                          ToolTip="The project's choices the connection details start from: the diaphragms' sheathing, nails and blocking, the upper sills' nail, the top plates' splice nail. Part of the connection details, not the building model."/>
+            </MenuItem>
             <MenuItem Header="_Loads">
                 <MenuItem Header="_Open in the Load Manager..." Click="EditLoads_Click"
                           ToolTip="The gravity loads, the wind uplift and the foundation (the gravity loads combined with these hold-down forces) are in the Load Manager. This app uses no gravity loads: it finds the hold-downs from the overturning alone."/>

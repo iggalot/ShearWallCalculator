@@ -45,7 +45,10 @@
     **The connection details are not the building model's** (owner 2026-11-07: no god class): they are
     `..\WoodFraming\WoodFraming.Connections`, saved as its own "Connections" section (`ShearWallCheck.Connections`,
     `ShearWallCheckResult.Connections`; written in the save's stamp, in `OwnsData`), with their defaults in
-    "ConnectionDefaults" (`ConnectionDefaults.Read`; nobody writes it yet). The forces stay in `Lateral`.
+    "ConnectionDefaults" (`ConnectionDefaults.Read`; edited in Details > Connection defaults, the connection details'
+    own window `WoodFraming.Wpf.ConnectionDefaultsWindow`, one undo step, in `OwnsData`). The forces stay in `Lateral`,
+    and so does each wall's sheathing (`ShearFace`); its nailing is `Connections.Walls` (`ShearWallCheck.NailingOf`, the
+    same faces in the same order, owner 2026-11-08).
     Each sill is a `SillConnection`: the first story's anchor bolts (`WoodFraming.SillAnchorage`), an upper story's
     nailing (`ShearWallCheck.SillNailingOf`, `WoodFraming.SillNailing`: TR12 with the floor sheathing as the gap, the
     owner's choice; `ConnectionDefaults.FloorSheathing`, `SillNail`); the construction window's Pieces tab shows its

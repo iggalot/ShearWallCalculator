@@ -2,6 +2,18 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-08 — The face nailing into the Connections; the connection defaults window
+
+- Owner: the nailing moves into the connections, the sheathing and the shear stay in the model; the defaults editor is
+  part of the connection details. `ShearFace` keeps the sheathing, thickness and gypsum; the nails and edge and field
+  spacing are `ConnectionsSection.Walls` (`WallNailing`, `FaceNailing`, face by face in the same order:
+  `ShearWallCheck.NailingOf`, one list of sheathed faces for both). The wall view takes `WallView.Nailing`.
+- `WoodFraming.Wpf.ConnectionDefaultsWindow`: the diaphragms' grade, the floors' and roof's sheathing, nails and blocking,
+  the framing width, the upper sills' nail, the splice nail; Starting values; a value not offered is kept. SWC opens it
+  from Details > Connection defaults (one undo step; "ConnectionDefaults" added to its `OwnsData`).
+- Tests: the face nailing's round trip and the wall view's; the window's values and starting values; the hub's each face
+  nailed. All suites pass (WF 41, BM 99, Sketch 78, LM 59, SWC 228, Hub 58).
+
 ## 2026-11-07 — The connection details out of the building model (WoodFraming.Connections)
 
 - Owner: the building model is the structure and geometry; the nailing, bolts and diaphragm patterns that hold it

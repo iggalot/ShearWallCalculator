@@ -35,5 +35,21 @@ namespace ShearWallVisualizer
             on[ShearWallCheck.WindPart] = BuildingModel.Serialization.ModelFingerprint.Of(windJsonInUse);
             return on;
         }
+
+        /// <summary>
+        /// Details > Connection defaults: the window of the connection details (WoodFraming.Wpf, owner 2026-11-08), its values
+        /// written into the project's "ConnectionDefaults" section as one undo step, saved with this app's own data.
+        /// </summary>
+        private void ConnectionDefaults_Click(object sender, System.Windows.RoutedEventArgs e)
+        {
+            if (building == null) return;
+            var now = WoodFraming.Connections.ConnectionDefaults.Read(building);
+            var d = WoodFraming.Wpf.ConnectionDefaultsWindow.Edit(this, now);
+            if (d == null || d.ToJson() == now.ToJson()) return;
+            Sketch.Edit("Connection defaults changed: the sills above the first story and the diaphragm lines are designed with them.",
+                b => WoodFraming.Connections.ConnectionDefaults.Write(b, d));
+            UpdateShearWallUI();
+            UpdateTitle();
+        }
     }
 }
