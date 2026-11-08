@@ -78,8 +78,18 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
     its connections I where it is cut, S on the foundation), checked in every case: ΣF, ΣM
     (`ConnectionBalance`, `FreeBody.WindOutOfBalance`; in `FoundationCheck.Run` and on the foundation page). The free body's
     side panel lists them case by case. The foundation's report is unchanged.
-    - [ ] SWC's load path carries only the tension through beams and columns: a wall end pressing on a beam or a column
-      shows as not balanced there (its compression is not passed on). Carry the compression too.
+    - [x] (2026-11-07) The compression goes down too (owner: "it just doesn't use the hold-down to do it": the hold-down's
+      bolt, or the sill pushing on the floor framing into the wall below; a point load all the same, the other way; tension
+      or compression by the wind's direction). The load path carries each point's signed force per case (`CaseUp`) through
+      beams (`Σ F (L − a) / L`, both signs) and columns; an end that only presses lands in bearing (no hold-down to size).
+      Each wall's end forces are its own statics (`SetCaseTensions` with `DesignPass.CaseForcesOn`): its couple, and every
+      force from above shared between its ends by the lever rule, each end at its hold-down where it pulls and its post's
+      centreline where it presses. The hold-down is sized for the worst of those cases when that is more than the design's
+      envelope (`AtLeastTheWorstCase`). Test: a shear wall on a beam, every member and the whole in equilibrium in every case.
+    - [x] (2026-11-07) Rigid and flexible kept apart (owner): the same wind, two ways of sharing it among the walls, never
+      mixed (a point taking the larger of the two put two analyses in one free body: a torsion case 270 lb out). Every
+      case is saved under "<name> (rigid)" and "<name> (flexible)" (`LateralSection.Cases`, `WindOf`); the Load Manager
+      takes each wind once for each, with the same roof pressures.
     - [ ] The roof's wind on the top walls (the uplift pass's) on the same free bodies, and the gravity with the wind in
       the W combinations.
     - [x] (2026-11-07) The body is the selection (`FreeBody.OfBody`): every force knows the member at its other end
@@ -102,7 +112,9 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
       under it always. Building Model: View > Internal forces; SWC: SHOW Internal; Load Manager: View > Internal forces,
       one setting with its free body's box.
   - [ ] 4. The roof ties as the top row: a line pair today (uplift − 0.6D per ft along each top wall, the diaphragm being
-    continuous); the owner to decide MWFRS or C&C uplift for them.
+    continuous). **Decided (owner, 2026-11-07): the ties carry the C&C uplift where it is higher than the MWFRS uplift in
+    the same place (the worst case).** The MWFRS uplift stays in the load path (the walls, the foundation); the tie's own
+    design takes the larger of the two along each top wall, and says which one governs where.
   - [ ] 5. Upper-floor beams and columns carrying hold-downs from above: their uplift checked from their pairs.
   - [ ] 6. Horizontal pairs at the same joints: the shear through the sill nailing and the anchor bolts.
   - [ ] 7. With joists and rafters framed under the diaphragm: the roof tie line pair becomes a point pair at each rafter

@@ -2,6 +2,27 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-07 — The compression goes down too; rigid and flexible kept apart; every member in equilibrium
+
+- The owner: the compression is transmitted as well, "it just doesn't use the hold-down to do it" (the hold-down's bolt,
+  or the sill pushing on the floor framing into the wall below): a point load like the tension, the other way, either one
+  by the wind's direction.
+- SWC's load path (`LoadPathTrace`) carries each point's signed force per case (`CaseUp`, + tension / − compression)
+  through beams (the lever rule, both signs) and columns. A beam end that only presses lands in bearing: no hold-down to
+  size, not an error.
+- Each wall's end forces per case are its own statics (`WallDesignResult.SetCaseTensions` with
+  `DesignPass.CaseForcesOn`): its couple, and every force from above (the wall ends over it, the beam ends and column
+  bases on it) shared between its two ends by the lever rule, each end at its hold-down where it pulls and at its post's
+  centreline where it presses (where the Load Manager puts it). Where that worst case is more than the design's envelope
+  (the walls above taken at their worst, scaled by this wall's case), the hold-down is sized for it (`AtLeastTheWorstCase`).
+- Rigid and flexible (the owner's choice): the same wind, two ways of sharing it among the walls, saved apart as
+  "<name> (rigid)" and "<name> (flexible)" (`LateralSection.Cases`, `WindOf`). The Load Manager takes each wind once for
+  each, with the same roof pressures. A point taking the larger of the two had put two analyses in one free body (a
+  torsion case 270 lb out of balance).
+- Test (hub): a shear wall standing on a beam, the beam on the walls below: every member and the whole structure balance
+  in every case (ΣF, ΣM), the beam's ends pass on all that lands on it, a beam end presses in some case.
+- Roof ties (owner): the C&C uplift where it is higher than the MWFRS uplift, the worst case. In the ROADMAP, step 4.
+
 ## 2026-11-07 — The body is the selection (WISE everywhere); the Internal forces toggle (step 3)
 
 - The owner's rule: a free body is the selected objects; every member connected to it that is not selected gives its

@@ -468,6 +468,22 @@ namespace ShearWallCalculator.Design
         /// <summary>The wind direction this force goes with: true when the low end of the walls is in tension.</summary>
         public bool LowEndUp { get; set; }
         public string From { get; set; }
+        /// <summary>A beam end's or column base's force case by case (lb ASD, + up / − down; null when not known).</summary>
+        public Dictionary<string, double> CaseUp { get; set; }
+    }
+
+    /// <summary>
+    /// A force from above on a wall, case by case (<see cref="WallDesignResult.SetCaseTensions(IEnumerable{KeyValuePair{string, double}}, IList{CaseForceFromAbove})"/>):
+    /// a wall end over it, a beam end or a column base on it.
+    /// </summary>
+    public sealed class CaseForceFromAbove
+    {
+        /// <summary>ft from the wall's low end where it acts when it pulls up (a hold-down) and when it presses down (the end post's centreline).</summary>
+        public double AtPull { get; set; }
+        public double AtPress { get; set; }
+        /// <summary>Case → lb ASD, + up / − down, on this wall.</summary>
+        public Dictionary<string, double> Up { get; set; }
+        public string From { get; set; }
     }
 
     /// <summary>How a wall's check reads at a glance.</summary>
@@ -539,13 +555,48 @@ namespace ShearWallCalculator.Design
         /// at |V_case|; the walls above are scaled by |V_case| / V (they are stacked on the same line, so they follow the
         /// same cases), which gives exactly <see cref="TensionAsd"/> in the governing case.
         /// </summary>
-        public void SetCaseTensions(IEnumerable<KeyValuePair<string, double>> forceByCase)
+        public void SetCaseTensions(IEnumerable<KeyValuePair<string, double>> forceByCase) => SetCaseTensions(forceByCase, null);
+
+        /// <summary>
+        /// The same, with the forces from above case by case (<paramref name="fromAbove"/>: ft from the wall's low end → lb
+        /// ASD by case, + up / − down: the end forces of the walls above on its line, the beam ends and column bases on it,
+        /// the compression as well as the tension). Then every case is the wall's own statics: its couple (0.6 V h over the
+        /// arm) and each force from above shared between its two ends by the lever rule (Σ F = 0, Σ M = 0), each end at its
+        /// hold-down where it pulls and at its post's centreline where it presses (where the load manager puts it). With
+        /// none given, the walls above are taken as before (scaled by |V_case| / V, the same at both ends).
+        /// </summary>
+        public void SetCaseTensions(IEnumerable<KeyValuePair<string, double>> forceByCase, IList<CaseForceFromAbove> fromAbove)
         {
             TensionByCase = new Dictionary<string, double[]>();
             EndForceByCase = new Dictionary<string, double[]>();
             ShearByCase = forceByCase.ToDictionary(kv => kv.Key, kv => kv.Value);
             double arm = HoldownArm, V = Math.Abs(this.V);
             if (!(arm > 0) || double.IsInfinity(arm)) return;
+            if (fromAbove != null)
+            {
+                double post = PostAlongWall / 12.0, L = arm + 1.5 * post;
+                foreach (var kv in forceByCase)
+                {
+                    double M = Math.Abs(kv.Value) * 1000.0 * Height;
+                    bool lowLifts = kv.Value < 0;
+                    var loads = fromAbove.Select(f => { double u = f.Up != null && f.Up.TryGetValue(kv.Key, out var x) ? x : 0; return (at: u > 0 ? f.AtPull : f.AtPress, up: u); }).ToList();
+                    // each end where it pulls (the hold-down, a post in) or presses (the post's centreline, half a post in):
+                    // the pair of places that agrees with the forces it gives
+                    double fl = 0, fh = 0;
+                    foreach (var (lowPulls, highPulls) in new[] { (lowLifts, !lowLifts), (true, true), (false, false), (!lowLifts, lowLifts) })
+                    {
+                        double xl = lowPulls ? post : post / 2, xh = highPulls ? L - post : L - post / 2, d = xh - xl;
+                        if (!(d > 0)) continue;
+                        double own = 0.6 * M / d;
+                        fl = (lowLifts ? own : -own) + loads.Sum(x => x.up * (xh - x.at) / d);
+                        fh = (lowLifts ? -own : own) + loads.Sum(x => x.up * (x.at - xl) / d);
+                        if ((fl > 0) == lowPulls && (fh > 0) == highPulls) break;
+                    }
+                    EndForceByCase[kv.Key] = new[] { fl, fh };
+                    TensionByCase[kv.Key] = new[] { Math.Max(0, fl), Math.Max(0, fh), Math.Max(0, fl) / 0.6, Math.Max(0, fh) / 0.6 };
+                }
+                return;
+            }
             foreach (var kv in forceByCase)
             {
                 double vc = Math.Abs(kv.Value), share = V > 1e-12 ? vc / V : 0, M = vc * 1000.0 * Height;

@@ -177,6 +177,8 @@ namespace ShearWallCalculator
             public WallDesignResult Result; // a wall's hold-down: its design (told where it is anchored with another type)
             /// <summary>The tension in each load case (lb ASD / LRFD); null when not known (the envelope is used).</summary>
             public Dictionary<string, double> CaseAsd, CaseLrfd;
+            /// <summary>The force on what is under it in each load case (lb ASD, + up: tension / − down: compression), both ends of every couple; null when not known.</summary>
+            public Dictionary<string, double> CaseUp;
         }
 
         /// <summary>Σ case by case of loads that act together; null when any of them has no cases (then the envelope rules apply).</summary>
@@ -203,7 +205,7 @@ namespace ShearWallCalculator
             {
                 int id = int.Parse(f.From.Split('|')[0]);
                 if (!d.TryGetValue(id, out var l)) d[id] = l = new List<StackedForce>();
-                l.Add(new StackedForce { Along = f.Along, Asd = f.Asd, Lrfd = f.Lrfd, LowEndUp = f.LowEndUp, From = f.From.Substring(f.From.IndexOf('|') + 1) });
+                l.Add(new StackedForce { Along = f.Along, Asd = f.Asd, Lrfd = f.Lrfd, LowEndUp = f.LowEndUp, CaseUp = f.CaseUp, From = f.From.Substring(f.From.IndexOf('|') + 1) });
             }
             return d;
         }
@@ -230,6 +232,7 @@ namespace ShearWallCalculator
                     f.Lrfd = cLrfd != null ? Max(cLrfd) : Math.Max(upL, dnL);
                     f.CaseAsd = cAsd;
                     f.CaseLrfd = cLrfd;
+                    f.CaseUp = SumByCase(g.Select(x => x.CaseUp));
                     f.LowEndUp = g.All(x => x.LowEndUp == true) ? true : g.All(x => x.LowEndUp == false) ? (bool?)false : null;
                     arriving.Add(f);
                 }
@@ -253,6 +256,7 @@ namespace ShearWallCalculator
                             Family = d.Holdown, Species = d.Species, Chosen = r.Holdown, Result = r,
                             CaseAsd = r.TensionByCase?.ToDictionary(c => c.Key, c => c.Value[atLow ? 0 : 1]),
                             CaseLrfd = r.TensionByCase?.ToDictionary(c => c.Key, c => c.Value[atLow ? 2 : 3]),
+                            CaseUp = r.EndForceByCase?.ToDictionary(c => c.Key, c => c.Value[atLow ? 0 : 1]),
                         });
                     }
                 }
@@ -290,6 +294,9 @@ namespace ShearWallCalculator
                 var eAsd = SumByCase(kv.Value.Select(a => a.CaseAsd), toEnd);
                 var sLrfd = SumByCase(kv.Value.Select(a => a.CaseLrfd), toStart);
                 var eLrfd = SumByCase(kv.Value.Select(a => a.CaseLrfd), toEnd);
+                // the compression too: a wall end pressing on the beam is a load on it as much as one lifting it
+                var sUp = SumByCase(kv.Value.Select(a => a.CaseUp), toStart);
+                var eUp = SumByCase(kv.Value.Select(a => a.CaseUp), toEnd);
                 if (sAsd != null && eAsd != null && sLrfd != null && eLrfd != null)
                 {
                     reactions.StartAsd = Max(sAsd);
@@ -299,14 +306,15 @@ namespace ShearWallCalculator
                 }
                 Beams.Add(reactions);
                 var first = kv.Value[0];
-                foreach (var (end, asd, lrfd, which, cA, cL) in new[] { (bm.Start, reactions.StartAsd, reactions.StartLrfd, "start", sAsd, sLrfd), (bm.End, reactions.EndAsd, reactions.EndLrfd, "end", eAsd, eLrfd) })
+                foreach (var (end, asd, lrfd, which, cA, cL, cU) in new[] { (bm.Start, reactions.StartAsd, reactions.StartLrfd, "start", sAsd, sLrfd, sUp), (bm.End, reactions.EndAsd, reactions.EndLrfd, "end", eAsd, eLrfd, eUp) })
                 {
-                    if (!(asd > 0)) continue;
+                    // an end that only presses down still lands on what is under it (in bearing: no hold-down to size)
+                    if (!(asd > 0) && (cU == null || cU.Values.All(v => Math.Abs(v) < 0.05))) continue;
                     Place(new Arrival
                     {
                         At = end, Asd = asd, Lrfd = lrfd, LowEndUp = null, Kind = PathPointKind.BeamEnd, From = $"beam {bm.Id} {which}",
                         UpperStory = first.UpperStory, WallId = first.WallId, Family = first.Family, Species = first.Species,
-                        CaseAsd = cA, CaseLrfd = cL,
+                        CaseAsd = cA, CaseLrfd = cL, CaseUp = cU,
                     }, level, wallsBelow, null);
                 }
             }
@@ -318,7 +326,7 @@ namespace ShearWallCalculator
             var l = new HoldownLanding
             {
                 UpperStory = a.UpperStory, WallId = a.WallId, At = a.At, TensionAsd = a.Asd, TensionLrfd = a.Lrfd, Kind = a.Kind, From = a.From,
-                LowEndUp = a.LowEndUp, CaseAsd = a.CaseAsd,
+                LowEndUp = a.LowEndUp, CaseAsd = a.CaseAsd, CaseUp = a.CaseUp,
             };
             ByLevel[level].Add(l);
 
@@ -346,7 +354,7 @@ namespace ShearWallCalculator
                 var fam = a.Kind == PathPointKind.WallHoldown ? HoldownRules.For(l.Support, a.Family) : HoldownRules.NewConnection(l.Support, a.Family);
                 l.Family = fam;
                 if (a.Kind == PathPointKind.WallHoldown && fam == a.Family) l.Choice = a.Chosen;
-                else l.Choice = size(fam, a.Species, a.Asd);
+                else if (a.Asd > 0) l.Choice = size(fam, a.Species, a.Asd);
                 if (a.Kind == PathPointKind.WallHoldown && fam != a.Family)
                 {
                     // a valid type is picked here automatically; the wall's Hold-down type (Design tab) overrides it
@@ -370,7 +378,7 @@ namespace ShearWallCalculator
                         if (!extra.TryGetValue(level, out var list)) extra[level] = list = new List<StackedForce>();
                         foreach (bool up in new[] { true, false })
                             if (a.LowEndUp == null || a.LowEndUp == up)
-                                list.Add(new StackedForce { Along = along, Asd = a.Asd, Lrfd = a.Lrfd, LowEndUp = up, From = $"{wallId}|{a.From} (story {a.UpperStory} wall {a.WallId})" });
+                                list.Add(new StackedForce { Along = along, Asd = a.Asd, Lrfd = a.Lrfd, LowEndUp = up, CaseUp = a.CaseUp, From = $"{wallId}|{a.From} (story {a.UpperStory} wall {a.WallId})" });
                     }
                     break;
                 case SupportKind.Column:
@@ -380,7 +388,7 @@ namespace ShearWallCalculator
                     down.Add(new Arrival
                     {
                         At = col.At, Asd = a.Asd, Lrfd = a.Lrfd, LowEndUp = a.LowEndUp, Kind = PathPointKind.ColumnBase, From = $"column {col.Id} base",
-                        UpperStory = a.UpperStory, WallId = a.WallId, Family = a.Family, Species = a.Species, CaseAsd = a.CaseAsd, CaseLrfd = a.CaseLrfd,
+                        UpperStory = a.UpperStory, WallId = a.WallId, Family = a.Family, Species = a.Species, CaseAsd = a.CaseAsd, CaseLrfd = a.CaseLrfd, CaseUp = a.CaseUp,
                     });
                     break;
                 case SupportKind.Beam:

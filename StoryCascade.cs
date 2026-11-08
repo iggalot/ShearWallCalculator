@@ -371,6 +371,14 @@ namespace ShearWallCalculator
         /// <summary>The tension in each load case (lb, ASD); null when not known. Loads at one point add case by case.</summary>
         public Dictionary<string, double> CaseAsd { get; set; }
 
+        /// <summary>
+        /// The force on what is under it in each load case (lb ASD, + up: tension / − down: compression; null when not
+        /// known). A wall end gives both: the tension where it lifts, the compression where it presses. A beam end or column
+        /// base carries both down too: the compression goes through the sill and the framing (bearing), not the hold-down,
+        /// but it is a point load all the same.
+        /// </summary>
+        public Dictionary<string, double> CaseUp { get; set; }
+
         /// <summary>What it anchors to, and its id ("wall 2", "beam BM1", "column C1").</summary>
         public SupportKind Support { get; set; }
         public string SupportId { get; set; }

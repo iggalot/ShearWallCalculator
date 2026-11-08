@@ -172,7 +172,7 @@ namespace ShearWallCalculator.ModelAdapter
                     string what = l.Kind == PathPointKind.WallHoldown ? $"A hold-down of {wallId}" : $"The {l.From} (carrying {wallId}'s hold-down)";
                     if (!l.Supported)
                         result.Failures.Add(new CheckFailure { Id = from != null && from.Walls.TryGetValue(l.WallId, out var w1) ? w1 : null, LevelId = lvl?.Id, LevelName = where, Message = $"{what} lands on {where} with nothing under it." });
-                    else if (l.Choice == null && l.Kind != PathPointKind.WallHoldown)
+                    else if (l.Choice == null && l.Kind != PathPointKind.WallHoldown && l.TensionAsd > 0)
                         result.Failures.Add(new CheckFailure { Id = null, LevelId = lvl?.Id, LevelName = where, Message = $"{what}: no connection strong enough for {l.TensionAsd:N0} lb on {l.SupportId ?? where}." });
                 }
             }
@@ -205,7 +205,8 @@ namespace ShearWallCalculator.ModelAdapter
                 Note = "Each shear wall end's overturning couple by wind case, W at strength level (this app's ASD couple ÷ 0.6), the walls above " +
                        "included as designed; no dead load (the load manager's is added).",
             };
-            // one entry per wind case of the wind calculator (its own name), the governing of rigid and flexible (Bare, Govern)
+            // one entry per wind case of the wind calculator and way of sharing it: "<name> (rigid)" and "<name> (flexible)", kept
+            // apart (owner 2026-11-07: two analyses of the same wind, never mixed; LateralSection.WindOf gives the wind's name)
             var cases = new List<string>();
             void Case(string c) { if (!cases.Contains(c)) cases.Add(c); }
             foreach (var kv in levels[0]._wall_system._walls)
@@ -225,18 +226,18 @@ namespace ShearWallCalculator.ModelAdapter
                 {
                     // [low, high]: the couple alone, + up at the low end (no dead load in this app)
                     double couple = Math.Round(c.Value[0] / 0.6, 1);
-                    string k = Bare(c.Key);
-                    Govern(upLow, k, couple);
+                    string k = c.Key;
+                    Put(upLow, k, couple);
                     upHigh[k] = -upLow[k];
                     Case(k);
                 }
                 s.Points.Add(new LateralPoint { From = $"{name} {(ew ? "west" : "south")} end", WallId = modelId, X = low.X, Y = low.Y, Up = upLow, Connector = r.Holdown?.Model });
                 s.Points.Add(new LateralPoint { From = $"{name} {(ew ? "east" : "north")} end", WallId = modelId, X = high.X, Y = high.Y, Up = upHigh, Connector = r.Holdown?.Model });
             }
-            foreach (var a in (foundationAnchors ?? Enumerable.Empty<HoldownLanding>()).Where(a => a.Kind == PathPointKind.ColumnBase && a.CaseAsd != null && a.CaseAsd.Count > 0))
+            foreach (var a in (foundationAnchors ?? Enumerable.Empty<HoldownLanding>()).Where(a => a.Kind == PathPointKind.ColumnBase && (a.CaseUp ?? a.CaseAsd) != null && (a.CaseUp ?? a.CaseAsd).Count > 0))
             {
                 var up = new Dictionary<string, double>();
-                foreach (var kv in a.CaseAsd) { string k = Bare(kv.Key); Govern(up, k, Math.Round(kv.Value / 0.6, 1)); Case(k); }
+                foreach (var kv in a.CaseUp ?? a.CaseAsd) { string k = kv.Key; Put(up, k, Math.Round(kv.Value / 0.6, 1)); Case(k); }
                 s.Points.Add(new LateralPoint { From = a.From, X = a.At.X, Y = a.At.Y, Up = up, Connector = a.Model });
             }
             // the wind calculator's case names, nothing else about the wind: the load manager takes each case (its direction,
@@ -300,7 +301,7 @@ namespace ShearWallCalculator.ModelAdapter
         /// A story hold-down's force on what is under it, per wind case (lb, W at strength level: ASD ÷ 0.6), + up / − down
         /// (<see cref="StoryHoldown.Up"/>). A wall's: its end's overturning couple in every case
         /// (<see cref="WallDesignResult.EndForceByCase"/>: the tension where this end lifts, the compression where it does not,
-        /// the walls above included). A beam end's or a column base's: the tensions it carries, case by case. Empty when the
+        /// the walls above included). A beam end's or a column base's: what it carries, case by case, the compression too (it goes down through the bearing, not the hold-down). Empty when the
         /// cases are not known.
         /// </summary>
         private static Dictionary<string, double> CaseForces(HoldownLanding l, int story, IList<ShearWallCalculatorBase> levels, IList<Dictionary<int, WallDesignResult>> byStory)
@@ -308,7 +309,7 @@ namespace ShearWallCalculator.ModelAdapter
             var up = new Dictionary<string, double>();
             if (l.Kind != PathPointKind.WallHoldown)
             {
-                foreach (var kv in l.CaseAsd ?? new Dictionary<string, double>()) Govern(up, Bare(kv.Key), Math.Round(kv.Value / 0.6, 1));
+                foreach (var kv in l.CaseUp ?? l.CaseAsd ?? new Dictionary<string, double>()) Put(up, kv.Key, Math.Round(kv.Value / 0.6, 1));
                 return up;
             }
             if (byStory == null || story < 0 || story >= byStory.Count || story >= levels.Count || byStory[story] == null) return up;
@@ -317,7 +318,7 @@ namespace ShearWallCalculator.ModelAdapter
             // which end of the wall this hold-down is: the load path's own test (LoadPathTrace.Land)
             bool ew = w.WallDir == calculator.WallDirs.EastWest;
             bool atLow = ew ? l.At.X < (w.Start.X + w.End.X) / 2 : l.At.Y < (w.Start.Y + w.End.Y) / 2;
-            foreach (var c in r.EndForceByCase) Govern(up, Bare(c.Key), Math.Round(c.Value[atLow ? 0 : 1] / 0.6, 1));
+            foreach (var c in r.EndForceByCase) Put(up, c.Key, Math.Round(c.Value[atLow ? 0 : 1] / 0.6, 1));
             return up;
         }
 
@@ -340,25 +341,10 @@ namespace ShearWallCalculator.ModelAdapter
         }
 
         /// <summary>
-        /// A case's name as the wind calculator gives it. The wind is the same whether the diaphragm is taken rigid or flexible
-        /// (the pressures come from the geometry); the two are only two ways of sharing it among the walls, so each point takes
-        /// the governing of the two for that wind ("Case 1, ... (rigid)" and "(flexible)" become "Case 1, ...": <see cref="Govern"/>).
+        /// One case's value, under the case's own name: the wind calculator's and the way the walls share it ("(rigid)",
+        /// "(flexible)": <see cref="LateralSection.Cases"/>). The two are never mixed: no "larger of" across them.
         /// </summary>
-        private static string Bare(string key)
-        {
-            foreach (var tag in new[] { ShearWallCalculator_Envelope.RigidTag, ShearWallCalculator_Envelope.FlexibleTag })
-            {
-                string tail = $" ({tag})";
-                if (key.EndsWith(tail, StringComparison.Ordinal)) return key.Substring(0, key.Length - tail.Length);
-            }
-            return key;
-        }
-
-        /// <summary>Keeps, for one case, the larger in size of its two ways of sharing (rigid, flexible).</summary>
-        private static void Govern(Dictionary<string, double> d, string key, double v)
-        {
-            if (!d.TryGetValue(key, out var was) || Math.Abs(v) > Math.Abs(was)) d[key] = v;
-        }
+        private static void Put(Dictionary<string, double> d, string key, double v) => d[key] = v;
 
         /// <summary>
         /// Every story's shear walls as designed, in the model's plain terms (<see cref="ShearWallDesign"/>), for the wall
@@ -397,7 +383,7 @@ namespace ShearWallCalculator.ModelAdapter
                     if (r.ShearByCase != null && r.ShearByCase.Count > 0)
                     {
                         d.ShearOnTop = new Dictionary<string, double>();
-                        foreach (var c in r.ShearByCase) Govern(d.ShearOnTop, Bare(c.Key), Math.Round(-1000.0 * c.Value, 1));
+                        foreach (var c in r.ShearByCase) Put(d.ShearOnTop, c.Key, Math.Round(-1000.0 * c.Value, 1));
                         d.HeightFt = r.Height;
                     }
                     foreach (var f in (r.Faces ?? new List<FaceResult>()).Where(f => f?.Face != null && f.Face.Table != SheathingTable.None))

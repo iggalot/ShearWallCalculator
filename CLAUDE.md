@@ -34,8 +34,10 @@
     shared sketch draws the hold-downs on every level's plan, its own and those from above (`ConnectionMarkers` on Ground,
     `LevelMarkers` above; `Sketch.Connections` gives it SWC's live ones before a save). SWC draws only the beam-end
     reactions and the beam ends with no uplift itself. Each story hold-down keeps its force per wind case (`Up`: + tension,
-    − compression, both ends of every couple) and where its end presses (`CompressionX`/`Y`); each shear wall its wind shear
-    on top per case (`ShearWallDesign.ShearOnTop`, `HeightFt`). The Load Manager makes every connection a pair of equal and
+    − compression, both ends of every couple), the compression carried through beams and columns as the tension (in bearing, not
+    the hold-down), each wall's ends its own statics with everything landing on it (`DesignPass.CaseForcesOn`) and where its end presses (`CompressionX`/`Y`); each shear wall its wind shear
+    on top per case (`ShearWallDesign.ShearOnTop`, `HeightFt`). Every case is saved once for each way the walls share it, `<name> (rigid)` and `<name> (flexible)`
+    (`LateralSection.Cases`, `WindOf`): two analyses of one wind, never mixed (owner 2026-11-07), so every free body balances. The Load Manager makes every connection a pair of equal and
     opposite forces from them (`ConnectionPairs`) and checks each member's free body (WISE: the wind is an external load).
   - **The wall window is shared** (`WoodFraming.Wpf` `WallPanel`, made by `WallViews.FromModel` from the model and a
     `Lateral` section): the Building Model's wall window and SWC's construction window (`Dialogs/WallBuildWindow.cs`,

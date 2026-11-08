@@ -85,7 +85,7 @@ namespace ShearWallVisualizer
                     // none of that type is strong enough
                     else if (l.Note != null && l.Choice == null)
                         list.Add(new ModelIssue { Severity = Severity.Error, Code = "HoldownTypeReplaced", LevelId = levelId, At = at, Message = $"{what} on {l.SupportId ?? levelName}: {l.Note}" });
-                    else if (l.Choice == null && l.Kind != PathPointKind.WallHoldown)
+                    else if (l.Choice == null && l.Kind != PathPointKind.WallHoldown && l.TensionAsd > 0)
                         list.Add(new ModelIssue
                         {
                             Severity = Severity.Error, Code = "HoldownTooWeak", LevelId = levelId, At = at,
@@ -143,7 +143,7 @@ namespace ShearWallVisualizer
                 var l = ends.FirstOrDefault(x => x.From == endName); // null: no uplift at this end
                 Point end = Sketch.ToScreen(atStart ? bm.Start : bm.End), other = Sketch.ToScreen(atStart ? bm.End : bm.Start);
                 if ((other - end).Length < 20) continue;
-                var ink = l == null ? BeamInk : l.Supported && l.Choice != null ? (l.Note != null ? Controls.Ui.CloseInk : BeamInk) : Controls.Ui.FailInk;
+                var ink = l == null ? BeamInk : l.Supported && (l.Choice != null || l.TensionAsd <= 0) ? (l.Note != null ? Controls.Ui.CloseInk : BeamInk) : Controls.Ui.FailInk;
 
                 // the reaction, along the beam just inside its end
                 var rft = new FormattedText($"({(l?.TensionAsd ?? 0) / 1000:0.0}k)", CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 9.5 * LabelScale, ink, dip);
