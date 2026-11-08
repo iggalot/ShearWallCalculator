@@ -143,8 +143,9 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
     load on its own), the roof's wind in the case, the hold-downs' pair at the W factor. Where it pulls up with no
     connection, a problem (tie it down). Test: the wall on a beam, by hand 0.6 × 900 − 562 = 22 lb up at each end in
     0.6D + 0.6W (SWC's ST9 there sized for the 562 alone), the same as the beam's own free body gives.
-    - [ ] SWC sizes a beam end's or column's connection for the hold-downs' tension alone: it could take the dead load
-      (the net) from the Load Manager. A choice for the owner (ASCE 7 lets the dead load resist at 0.6D).
+    - [ ] SWC sizes a beam end's or column's connection for the hold-downs' tension alone: CONSERVATIVE, kept so by the owner
+      (2026-11-07) for future consideration: it could take the dead load (the net, the Load Manager's `UpperUplift`;
+      ASCE 7 lets the dead load resist at 0.6D). Change it if it becomes an issue.
   - [ ] 6. Horizontal pairs at the same joints: the shear through the sill nailing and the anchor bolts.
   - [ ] 7. With joists and rafters framed under the diaphragm: the roof tie line pair becomes a point pair at each rafter
     end (its tributary width); the points along a wall must add up to the line load they replace, case by case.

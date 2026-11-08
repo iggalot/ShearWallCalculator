@@ -4,6 +4,9 @@ _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`
 
 ## 2026-11-07 — The hub fails a member out of balance; upper beams and columns carrying hold-downs (step 5)
 
+- Conservative, kept by the owner for now: SWC sizes a beam end's or column's connection for the hold-downs' tension
+  alone, no dead load (marked in `LoadPath`, `UpperUplift`, the foundation page and ROADMAP step 5); to change if it
+  becomes an issue.
 - The hub: a member not in equilibrium (the gravity's `GravityBalance` or the wind's `ConnectionBalance`) fails the
   foundation step, named on the problems list (`ProjectCheck.OutOfBalance`): a load not accounted for is a fault.
 - Step 5 (`UpperUplift`, Load Manager): each beam end and column base above the foundation that carries hold-downs, in

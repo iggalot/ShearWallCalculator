@@ -132,7 +132,10 @@ namespace ShearWallCalculator
     /// </list>
     /// Each connection is checked against <see cref="HoldownRules"/>; where the wall's hold-down family cannot anchor to what
     /// is under it, the connection is sized as the family that can, and flagged. New connections (beam ends, column bases)
-    /// are sized for their reaction: a strap onto wood, the chosen anchored hold-down at the foundation.
+    /// are sized for their reaction: a strap onto wood, the chosen anchored hold-down at the foundation. CONSERVATIVE (owner,
+    /// 2026-11-07): a beam end's or column's connection is sized for the hold-downs' tension alone, no dead load counted
+    /// against it; the Load Manager finds the net (<c>UpperUplift</c>: 0.6D and the roof's wind with it), often far less.
+    /// Kept for now; to change if it becomes an issue (ROADMAP, step 5).
     /// </summary>
     public sealed class LoadPathTrace
     {
@@ -354,6 +357,7 @@ namespace ShearWallCalculator
                 var fam = a.Kind == PathPointKind.WallHoldown ? HoldownRules.For(l.Support, a.Family) : HoldownRules.NewConnection(l.Support, a.Family);
                 l.Family = fam;
                 if (a.Kind == PathPointKind.WallHoldown && fam == a.Family) l.Choice = a.Chosen;
+                // conservative (owner): the hold-downs' tension alone, no dead load against it (see the class's notes)
                 else if (a.Asd > 0) l.Choice = size(fam, a.Species, a.Asd);
                 if (a.Kind == PathPointKind.WallHoldown && fam != a.Family)
                 {
