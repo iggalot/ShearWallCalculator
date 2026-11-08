@@ -116,7 +116,8 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
       with the wind case's shear walls in the combinations with W. `GravityBalance` checks every member and the whole
       structure in every combination (in `FoundationCheck.Run`, and on the foundation page); the free body's table gives
       ΣM. Test: a load moved 3 ft along a beam keeps ΣFz right and fails ΣM.
-    - [ ] The hub's foundation step to show the gravity check's problems (it has `FoundationCheckResult.Gravity`).
+    - [x] (2026-11-07, already in step 5's commits) The hub's foundation step shows the gravity check's problems
+      (`ProjectCheck.OutOfBalance`: `Gravity` and `Connections`).
   - [x] 3. (2026-11-07) The sketch's level labels from the pairs: several landing within 1 ft on one member in one label,
     the sum case by case, its worst case in ASD (`ConnectionPairs.Near`, `Sum`; in BuildingModel.Core, since the sketch
     cannot read the Load Manager: the same 1 ft as the Load Manager's `Near`).
@@ -146,7 +147,20 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
     - [ ] SWC sizes a beam end's or column's connection for the hold-downs' tension alone: CONSERVATIVE, kept so by the owner
       (2026-11-07) for future consideration: it could take the dead load (the net, the Load Manager's `UpperUplift`;
       ASCE 7 lets the dead load resist at 0.6D). Change it if it becomes an issue.
-  - [ ] 6. Horizontal pairs at the same joints: the shear through the sill nailing and the anchor bolts.
+  - [x] 6. (2026-11-07) Horizontal pairs at the same joints: the shear through the sill nailing and the anchor bolts.
+    Each shear wall story's shear is two pairs (`ShearPairs`, BuildingModel.Core): its top into its diaphragm (the boundary
+    nailing into the top plates), its sill into the floor under it (the sill nailing) or the foundation (the sill's anchor
+    bolts, as designed). SWC saves every level's own wind on its diaphragm per case (`Lateral.Diaphragms`, `DiaphragmWind`:
+    at the center of mass, with its torsion in the rigid cases). Every diaphragm's free body (its own wind, the walls under
+    it pushing back, the walls above standing on it) is checked in every case: ΣFx, ΣFy, and ΣMz where the analysis puts
+    the wind at a known place (rigid; the flexible run spreads it by tributary width: ΣF only), in `ConnectionBalance`, so
+    the hub fails a diaphragm out of balance. The walls' free bodies name the connector at the top and the sill. Hub test:
+    the box, both diaphragms in every case, the first story's shear = level 2's wind + the roof's by hand, the torsion taken
+    out fails ΣMz, the roof's wind doubled fails ΣFx.
+    - [ ] The sill nailing of an upper story's shear wall designed (today "not designed": the nails through the sheathing
+      into the rim or blocking for the wall's shear per ft), and the diaphragm's boundary nailing at the top plates.
+    - [ ] The horizontal pairs drawn on the plans and in the Load Manager's free body of a diaphragm (a diaphragm is not a
+      member you can pick yet).
   - [ ] 7. With joists and rafters framed under the diaphragm: the roof tie line pair becomes a point pair at each rafter
     end (its tributary width); the points along a wall must add up to the line load they replace, case by case.
 - [~] **Central hub (launcher) for the apps.** The prototype is built: the new repo `..\DesignHub`

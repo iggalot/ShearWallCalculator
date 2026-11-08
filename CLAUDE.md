@@ -39,6 +39,12 @@
     on top per case (`ShearWallDesign.ShearOnTop`, `HeightFt`). Every case is saved once for each way the walls share it, `<name> (rigid)` and `<name> (flexible)`
     (`LateralSection.Cases`, `WindOf`): two analyses of one wind, never mixed (owner 2026-11-07), so every free body balances. The Load Manager makes every connection a pair of equal and
     opposite forces from them (`ConnectionPairs`) and checks each member's free body (WISE: the wind is an external load).
+    Each level's own wind on its diaphragm per case goes in too (`Lateral.Diaphragms`, `DiaphragmWinds`, from
+    `CaseBreakdown.OwnLoads`: at the center of mass, the torsion in the rigid cases), so every diaphragm's free body is
+    checked with the walls' shears as pairs (`ShearPairs`: top, and sill into the floor or the anchor bolts).
+  - **Conservative, kept by the owner (2026-11-07):** a beam end's or column's connection is sized for the hold-downs'
+    tension alone, no dead load against it (`LoadPath`); the Load Manager's `UpperUplift` gives the net. Change it only if
+    it becomes an issue.
   - **The wall window is shared** (`WoodFraming.Wpf` `WallPanel`, made by `WallViews.FromModel` from the model and a
     `Lateral` section): the Building Model's wall window and SWC's construction window (`Dialogs/WallBuildWindow.cs`,
     which adds its Pieces and Calculation tabs) draw the same thing. SWC hands it its live design

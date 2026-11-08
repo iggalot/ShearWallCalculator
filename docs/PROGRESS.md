@@ -2,6 +2,16 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-07 — The horizontal pairs and every diaphragm's free body (step 6)
+
+- Each shear wall story's shear is two pairs (`ShearPairs`, BuildingModel.Core): its top into its diaphragm, its sill into
+  the floor (sill nailing) or the foundation (its anchor bolts). SWC saves each level's own wind per case
+  (`Lateral.Diaphragms`: at the center of mass, the torsion with it in the rigid cases; `CaseBreakdown.OwnLoads`).
+- `ConnectionBalance` checks every diaphragm in every case: ΣFx, ΣFy, and ΣMz in the rigid cases (the flexible run's load
+  is spread by tributary width: ΣF only). Out of balance fails the hub's foundation step. Hub test: the box; the first
+  story's shear is level 2's wind plus the roof's, by hand; the roof's torsion taken out fails ΣMz; its wind doubled
+  fails ΣFx. Next: the upper sills' nailing designed, and the pairs drawn.
+
 ## 2026-11-07 — The hub fails a member out of balance; upper beams and columns carrying hold-downs (step 5)
 
 - Conservative, kept by the owner for now: SWC sizes a beam end's or column's connection for the hold-downs' tension

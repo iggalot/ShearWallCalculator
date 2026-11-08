@@ -140,6 +140,30 @@ namespace ShearWallCalculator
                         .ThenByDescending(x => x.mt).ThenBy(x => x.run).ThenBy(x => x.order).Select(x => x.item).ToList();
         }
 
+        /// <summary>
+        /// This level's own load in every case as listed (kips, kip-ft about the center of mass; the walls above left out), with
+        /// its run, and whether the analysis puts it at a known place (the rigid run, with no minimum eccentricity added: its
+        /// torsion is the moment of the load; the flexible run spreads it by tributary width).
+        /// </summary>
+        public static List<(string listed, string run, double vx, double vy, double mt, bool momentKnown)> OwnLoads(ShearWallCalculatorBase calc)
+        {
+            var list = new List<(string, string, double, double, double, bool)>();
+            if (calc == null) return list;
+            foreach (var (run, tag) in Runs(calc))
+            {
+                var names = run is ShearWallCalculator_RigidDiaphragm r ? r.CaseResults.Select(c => c.Name)
+                          : run is ShearWallCalculator_FlexibleDiaphragm f ? f.CaseResults.Select(c => c.Name) : Enumerable.Empty<string>();
+                var cases = run.CasesToAnalyse().GroupBy(c => c.Name).ToDictionary(g => g.Key, g => g.First());
+                foreach (var name in names)
+                {
+                    if (!cases.TryGetValue(name, out var lc)) continue;
+                    bool known = run is ShearWallCalculator_RigidDiaphragm && !lc.ApplyMinimumEccentricity;
+                    list.Add((Listed(calc, name, tag), tag, lc.Vx - lc.AboveVx, lc.Vy - lc.AboveVy, lc.Mt - lc.AboveMt, known));
+                }
+            }
+            return list;
+        }
+
         /// <summary>Every wall in every case (wall order, then case order).</summary>
         public static List<WallCaseRow> Rows(ShearWallCalculatorBase calc)
         {

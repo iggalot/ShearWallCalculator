@@ -245,7 +245,34 @@ namespace ShearWallCalculator.ModelAdapter
             s.Cases = cases;
             if (byLevel != null) s.Holdowns = StoryHoldowns(levels, stories, byLevel, groundLevelId, byStory);
             s.Walls = ShearDesigns(levels, stories, byStory);
+            s.Diaphragms = DiaphragmWinds(levels, stories);
             return s.IsEmpty ? null : s;
+        }
+
+        /// <summary>
+        /// Every level's own wind on its diaphragm per case as the design applied it (W at strength level, lb at the center of
+        /// mass, lb·ft about it where the rigid run puts it at a known place), for the diaphragms' free bodies
+        /// (<see cref="BuildingModel.Model.ShearPairs"/>): with the walls' shears under it and from above, each balances.
+        /// </summary>
+        public static List<DiaphragmWind> DiaphragmWinds(IList<ShearWallCalculatorBase> levels, IList<StoryMap> stories)
+        {
+            var list = new List<DiaphragmWind>();
+            if (levels == null || stories == null) return list;
+            for (int k = 0; k < levels.Count && k < stories.Count; k++)
+            {
+                var calc = levels[k];
+                var cm = calc?._diaphragm_system?.CtrMass;
+                if (calc == null || !calc.IsValidForCalculation || stories[k]?.Level == null || cm == null || double.IsNaN(cm.Value.X)) continue;
+                var d = new DiaphragmWind { LevelId = stories[k].Level.Id, X = Math.Round(cm.Value.X, 4), Y = Math.Round(cm.Value.Y, 4) };
+                foreach (var c in CaseBreakdown.OwnLoads(calc))
+                {
+                    Put(d.Fx, c.listed, Math.Round(1000.0 * c.vx, 1));
+                    Put(d.Fy, c.listed, Math.Round(1000.0 * c.vy, 1));
+                    if (c.momentKnown) Put(d.Mz, c.listed, Math.Round(1000.0 * c.mt, 1));
+                }
+                if (d.Fx.Count > 0) list.Add(d);
+            }
+            return list;
         }
 
         /// <summary>
