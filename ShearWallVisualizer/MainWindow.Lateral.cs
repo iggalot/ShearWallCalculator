@@ -19,7 +19,7 @@ namespace ShearWallVisualizer
         private BuildingModel.Model.LateralSection LateralForFoundation(int revision, BuildingModel.Model.Building basedOn = null)
         {
             if (!windLoadsLinked) return null;
-            var s = ShearWallCheck.Lateral(levels, stories, allDesignResults, foundationAnchors, revision, loadPath?.ByLevel, building?.Ground?.Id);
+            var s = ShearWallCheck.Lateral(levels, stories, allDesignResults, foundationAnchors, revision, loadPath?.ByLevel, building?.Ground?.Id, building?.Defaults);
             if (s != null && (basedOn ?? building) != null) s.BasedOn = BasedOnNow(basedOn ?? building);
             return s;
         }

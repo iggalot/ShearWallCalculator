@@ -145,6 +145,7 @@ namespace ShearWallVisualizer
             var defaults = building?.Defaults ?? new ModelDefaults();
             d.ModelWallId = mw?.Id;
             d.TopLevelId = top;
+            d.Defaults = defaults;
             bool first = building != null && top != null ? building.IsFirstStory(top) : d.FirstStory;
             d.DefaultStudSize = first ? defaults.StudSizeFirstStory : defaults.StudSizeAbove;
             string size = mw != null && top != null ? building.StudSizeOf(mw, top) : d.DefaultStudSize;
@@ -161,7 +162,7 @@ namespace ShearWallVisualizer
             if (mw != null)
             {
                 // (the design this window shows, linked to the wind or not; the foundation takes it only when linked)
-                var live = ShearWallCheck.Lateral(levels, stories, allDesignResults, foundationAnchors, 0, loadPath?.ByLevel, building?.Ground?.Id) ?? BuildingModel.Model.LateralSection.Read(building);
+                var live = ShearWallCheck.Lateral(levels, stories, allDesignResults, foundationAnchors, 0, loadPath?.ByLevel, building?.Ground?.Id, building?.Defaults) ?? BuildingModel.Model.LateralSection.Read(building);
                 d.View = WoodFraming.Wpf.WallViews.FromModel(building, mw, top, live);
                 if (d.View != null) d.View.Name = d.Name;
             }

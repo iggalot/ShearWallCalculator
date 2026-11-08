@@ -160,8 +160,11 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
     the hub fails a diaphragm out of balance. The walls' free bodies name the connector at the top and the sill. Hub test:
     the box, both diaphragms in every case, the first story's shear = level 2's wind + the roof's by hand, the torsion taken
     out fails ΣMz, the roof's wind doubled fails ΣFx.
-    - [ ] The sill nailing of an upper story's shear wall designed (today "not designed": the nails through the sheathing
-      into the rim or blocking for the wall's shear per ft), and the diaphragm's boundary nailing at the top plates.
+    - [x] (2026-11-07) The sill nailing of an upper story's shear wall designed (`WoodFraming.SillNailing`): common nails
+      through the floor sheathing into the rim or blocking, Z by AWC TR12 Table 1-1 with the sheathing as the gap (the
+      owner's choice: NDS 12.3.1 needs the members in contact, SDPWS is silent), Z' = 1.6 Z, the spacing Z'/v. Defaults
+      `ModelDefaults.FloorSheathing` 23/32" and `SillNail` 16d; the app's limits 16" most, 3" least (not code values).
+    - [ ] The diaphragm's boundary nailing at the top plates designed.
     - [ ] The horizontal pairs drawn on the plans and in the Load Manager's free body of a diaphragm (a diaphragm is not a
       member you can pick yet).
   - [ ] 7. With joists and rafters framed under the diaphragm: the roof tie line pair becomes a point pair at each rafter

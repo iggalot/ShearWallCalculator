@@ -2,6 +2,17 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-07 — The upper sills' nailing designed (step 6)
+
+- `WoodFraming.SillNailing`: an upper story's shear wall sill nailed through the floor sheathing into the rim or
+  blocking. NDS-2018 12.3.1 needs the members in contact and SDPWS gives no rule for the gap, so (owner's choice) the
+  nail's Z is AWC TR12 Table 1-1's, with the sheathing as the gap (`NDS2018.GeneralDowel`, checked against TR12's
+  printed examples; with no gap it is Table 12N to the pound). 16d common through 23/32": Z 64 lb (mode IV), against 141
+  lb with no gap. Z' = 1.6 Z; spacing Z'/v to the 1/2" below; the app's limits 16" most and 3" least are not code values.
+- The defaults (`ModelDefaults.FloorSheathing` 23/32", `SillNail` 16d), the design saved on each upper wall
+  (`ShearWallDesign.SillNails`), the sill's pair names it, and the construction window's Pieces tab gives the check and
+  the sources. Hub test: every upper wall's sill nailed with 16d.
+
 ## 2026-11-07 — The roof tie place by place along its wall (step 4)
 
 - `RoofTie.Along` (Load Manager): the tie cut wherever the C&C zones or any MWFRS case change along the wall or beam, the

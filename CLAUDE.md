@@ -42,6 +42,9 @@
     Each level's own wind on its diaphragm per case goes in too (`Lateral.Diaphragms`, `DiaphragmWinds`, from
     `CaseBreakdown.OwnLoads`: at the center of mass, the torsion in the rigid cases), so every diaphragm's free body is
     checked with the walls' shears as pairs (`ShearPairs`: top, and sill into the floor or the anchor bolts).
+    An upper story's sill nailing is designed (`ShearWallCheck.SillNailingOf`, `WoodFraming.SillNailing`: TR12 with the
+    floor sheathing as the gap, the owner's choice; `ModelDefaults.FloorSheathing`, `SillNail`) and saved on each wall
+    (`ShearWallDesign.SillNails`); the construction window's Pieces tab shows its check and sources.
   - **Conservative, kept by the owner (2026-11-07):** a beam end's or column's connection is sized for the hold-downs'
     tension alone, no dead load against it (`LoadPath`); the Load Manager's `UpperUplift` gives the net. Change it only if
     it becomes an issue.

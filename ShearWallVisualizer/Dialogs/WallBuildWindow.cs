@@ -85,6 +85,12 @@ namespace ShearWallVisualizer.Dialogs
             return SillAnchorage.Design(r.Length, vAsd, NdsSpecies(r.Inputs?.Species ?? WoodTypes.WOODTYPE_DF_SP), nominal, r.AspectRatio, false); // the hold-downs are sized without dead load
         }
 
+        /// <summary>The model's defaults (the floor sheathing and the sill nail for an upper story's sill).</summary>
+        public BuildingModel.Model.ModelDefaults Defaults { get; set; }
+
+        /// <summary>An upper-story wall's sill nailing (null on the first story or before a design): the saved design's own routine.</summary>
+        public SillNailing SillNails() => FirstStory ? null : ShearWallCalculator.ModelAdapter.ShearWallCheck.SillNailingOf(Result, Defaults);
+
         /// <summary>The hold-down at the low (left) or high (right) end, as traced.</summary>
         public HoldownLanding OwnAt(bool low) =>
             Own.FirstOrDefault(l => (DetailCalcs.EndName(Wall, l.At) == (EastWest ? "West" : "South")) == low);
@@ -282,7 +288,7 @@ namespace ShearWallVisualizer.Dialogs
             Section(p, "Framing", $"Studs and plates {sz} ({(data.FirstStory ? "first story" : "above the first story")}); the plates are laid flat, as wide as the studs ({FtIn.Inches(f.StudDepth)} in).");
             var rows = new List<string[]>
             {
-                new[] { "Sill plate (flat)", sz, "1", FtIn.Of(f.Length), data.FirstStory ? "On the foundation: preservative-treated; anchor bolts below (Sill anchors)." :"On the floor sheathing of the story below." },
+                new[] { "Sill plate (flat)", sz, "1", FtIn.Of(f.Length), data.FirstStory ? "On the foundation: preservative-treated; anchor bolts below (Sill anchors)." : "On the floor sheathing of the story below, nailed through it into the rim or blocking (Sill nailing)." },
                 new[] { "Top plates (flat, double)", sz, "2", FtIn.Of(f.Length), "Splices in the two plies 4 ft apart at least." },
             };
             var studs = f.Pieces.Where(x => x.Kind == FramingKind.Stud).ToList();
@@ -346,6 +352,8 @@ namespace ShearWallVisualizer.Dialogs
 
             var an = data.Anchors();
             if (an != null) SillAnchorSection(p, an, f);
+            var sn = data.SillNails();
+            if (sn != null) SillNailSection(p, sn);
 
             Section(p, "Connections at the top (from the story above)", data.Above.Count == 0 ? "Nothing from above stands on this wall." :
                     "Each hold-down above pulls up on this wall's top at its post: it is carried by the post under it to this wall's bottom.");
@@ -450,6 +458,28 @@ namespace ShearWallVisualizer.Dialogs
             foreach (var c in SillAnchorage.Citations)
                 sp.Children.Add(new TextBlock { Text = "•  " + c, TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkSecondary, FontSize = 11.5, Margin = new Thickness(6, 2, 0, 2) });
             sp.Children.Add(new TextBlock { Text = "Over two stories in SDC D0–D2 (IRC R403.1.6.1), bolts go to 4 ft o.c. with 3 × 3 plate washers on braced wall lines: seismic, not checked here.", TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkSecondary, FontSize = 11.5, Margin = new Thickness(6, 2, 0, 2) });
+            src.Content = sp;
+            p.Children.Add(src);
+        }
+
+        /// <summary>An upper story's sill nailing: what to install, how it was found (TR12, the sheathing as the gap), and the code text.</summary>
+        private static void SillNailSection(Panel p, SillNailing n)
+        {
+            Section(p, "Sill nailing (to the floor below)", n.Fails ?? $"{n.Nail} nails at {FtIn.Of(n.SpacingIn)} o.c., through the {FtIn.Inches(n.SheathingIn)} in. floor sheathing into the rim or blocking, one row along the sill.");
+            if (n.Z <= 0) return;
+            string spacing = double.IsInfinity(n.SpacingByShearIn) ? "no limit" : FtIn.Of(n.SpacingByShearIn);
+            p.Children.Add(Table(new[] { "Check (ASD)", "Value" }, new List<string[]>
+            {
+                new[] { "Wall shear", $"v = 0.6 V / L = {n.ShearAsdPlf:0} plf" },
+                new[] { "Nail", $"{n.Nail}: {FtIn.Inches(n.NailLengthIn)} × {n.NailDiaIn:0.000} in. (NDS Table L4); through the {FtIn.Inches(n.SillIn)} in. sill and {FtIn.Inches(n.SheathingIn)} in. sheathing, {n.PenetrationIn:0.###} in. into the rim (6D = {6 * n.NailDiaIn:0.###} in. the least, NDS 12.1.6.4)" },
+                new[] { "Nail value", $"Z = {n.Z:0.0} lb (AWC TR12 Table 1-1, single shear, the sheathing as the gap g = {n.SheathingIn:0.###} in., {n.SpeciesGroup}; mode {n.Mode}); Z' = Z × CD = {n.Z:0.0} × {n.CD:0.0} = {n.ZPrime:0.0} lb" },
+                new[] { "Spacing", $"Z'/v = {n.ZPrime:0.0} / {n.ShearAsdPlf:0} plf = {spacing}; used {FtIn.Of(n.SpacingIn)} (to the 1/2 in. below; the app's most {FtIn.Of(n.MaxSpacingIn)}, least {FtIn.Of(n.MinSpacingIn)}: not code values)" },
+                new[] { "Capacity", n.SpacingIn > 0 ? $"{n.CapacityPlf:0} plf ≥ {n.ShearAsdPlf:0} plf ({(n.CapacityPlf > 0 ? n.ShearAsdPlf / n.CapacityPlf : 0):0.00})" : "" },
+            }));
+            var src = new Expander { Header = "Sources (quoted)", IsExpanded = false, Margin = new Thickness(0, 4, 0, 0) };
+            var sp = new StackPanel();
+            foreach (var c in SillNailing.Citations)
+                sp.Children.Add(new TextBlock { Text = "•  " + c, TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkSecondary, FontSize = 11.5, Margin = new Thickness(6, 2, 0, 2) });
             src.Content = sp;
             p.Children.Add(src);
         }

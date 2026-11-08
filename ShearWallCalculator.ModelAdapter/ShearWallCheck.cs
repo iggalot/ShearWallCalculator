@@ -177,7 +177,7 @@ namespace ShearWallCalculator.ModelAdapter
                 }
             }
             var anchors = trace.ByLevel.TryGetValue(-1, out var a) ? a : new List<HoldownLanding>();
-            result.Lateral = Lateral(levels, stories, byStory, anchors, 0, trace.ByLevel, b.Ground?.Id);
+            result.Lateral = Lateral(levels, stories, byStory, anchors, 0, trace.ByLevel, b.Ground?.Id, b.Defaults);
             if (result.Lateral != null) result.Lateral.BasedOn = InputsNow(building);
             return result;
         }
@@ -192,7 +192,7 @@ namespace ShearWallCalculator.ModelAdapter
         /// </summary>
         public static LateralSection Lateral(IList<ShearWallCalculatorBase> levels, IList<StoryMap> stories,
             IList<Dictionary<int, WallDesignResult>> byStory, IEnumerable<HoldownLanding> foundationAnchors, int revision,
-            IDictionary<int, List<HoldownLanding>> byLevel = null, string groundLevelId = null)
+            IDictionary<int, List<HoldownLanding>> byLevel = null, string groundLevelId = null, ModelDefaults defaults = null)
         {
             if (levels == null || levels.Count == 0 || byStory == null || byStory.Count == 0 || levels[0]?._wall_system == null) return null;
             var design = byStory[0];
@@ -244,7 +244,7 @@ namespace ShearWallCalculator.ModelAdapter
             // its roof pressures) from the wind calculator itself
             s.Cases = cases;
             if (byLevel != null) s.Holdowns = StoryHoldowns(levels, stories, byLevel, groundLevelId, byStory);
-            s.Walls = ShearDesigns(levels, stories, byStory);
+            s.Walls = ShearDesigns(levels, stories, byStory, defaults);
             s.Diaphragms = DiaphragmWinds(levels, stories);
             return s.IsEmpty ? null : s;
         }
@@ -379,7 +379,7 @@ namespace ShearWallCalculator.ModelAdapter
         /// fasteners, and a first-story wall's sill anchor bolts (<see cref="WoodFraming.SillAnchorage"/>, as the
         /// construction window lays them out).
         /// </summary>
-        public static List<ShearWallDesign> ShearDesigns(IList<ShearWallCalculatorBase> levels, IList<StoryMap> stories, IList<Dictionary<int, WallDesignResult>> byStory)
+        public static List<ShearWallDesign> ShearDesigns(IList<ShearWallCalculatorBase> levels, IList<StoryMap> stories, IList<Dictionary<int, WallDesignResult>> byStory, ModelDefaults defaults = null)
         {
             var list = new List<ShearWallDesign>();
             if (levels == null || stories == null || byStory == null) return list;
@@ -436,9 +436,31 @@ namespace ShearWallCalculator.ModelAdapter
                         if (a != null && a.Count > 0)
                             d.Anchors = new SillAnchors { PositionsIn = a.PositionsIn.ToList(), BoltDiaIn = a.BoltDia, SpacingIn = a.SpacingIn, PlateWasher = a.PlateWasher };
                     }
+                    else if (k > 0 && r.Length > 0)
+                    {
+                        // above the first story: the sill nailed through the floor sheathing into the rim (AWC TR12, the
+                        // sheathing as the gap; the floor's sheathing and the nail from the model's defaults)
+                        var n = SillNailingOf(r, defaults);
+                        if (n != null)
+                            d.SillNails = new SillNails { Nail = n.Nail, SpacingIn = n.SpacingIn, ZPrimeLb = Math.Round(n.ZPrime, 1), SheathingIn = n.SheathingIn, Fails = n.Fails };
+                    }
                 }
             }
             return list;
+        }
+
+        /// <summary>
+        /// An upper-story wall's sill nailing (<see cref="WoodFraming.SillNailing"/>) for its ASD shear (0.6 × its strength-level
+        /// shear over its length), the sill's species, and the floor sheathing and sill nail of the model's defaults (null:
+        /// the program's starting values). One routine for the saved design and the wall window.
+        /// </summary>
+        public static WoodFraming.SillNailing SillNailingOf(WallDesignResult r, ModelDefaults defaults)
+        {
+            if (r == null || r.Length <= 0) return null;
+            var def = defaults ?? new ModelDefaults();
+            double vAsd = 0.6 * r.V * 1000.0 / r.Length;
+            var species = r.Inputs?.Species == ShearWallCalculator.WoodTypes.WOODTYPE_SPF_HF ? NDS_WoodLibrary.NDS2018.Species.SprucePineFir : NDS_WoodLibrary.NDS2018.Species.DouglasFirLarch;
+            return WoodFraming.SillNailing.Design(r.Length, vAsd, species, def.FloorSheathing, def.SillNail);
         }
 
         /// <summary>A sheathing option's thickness (in), from its nominal thickness ("15/32\"" → 0.469); 1/2 in. when not known.</summary>
