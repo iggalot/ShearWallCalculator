@@ -63,7 +63,9 @@
     cantilever w a² / 2), T = M / d, the edge walls' top plates, else the floor's rim or the roof's continuous blocking (owner 2026-11-08/09;
     `DiaphragmLines.Chords`, `Connections.Chords`), with two field nailing zones per span (the line's nailing out to where
     the shear is under the lightest row's, owner 2026-11-09). A roof line past its walls: the roof's blocking
-    (`ModelDefaults.RoofBlockingSize`). The defaults are `ConnectionDefaults` (`DiaphragmGrade`,
+    (`ModelDefaults.RoofBlockingSize`). Each splice's strap is picked from the catalog's strap ties (`SpliceStrap`), and the
+    top of a wall gets LTP4 framing plates where its toe-nails would be closer than 3" (`TopClip`, `TopClipOf`; C-C-2026
+    p. 310). The defaults are `ConnectionDefaults` (`DiaphragmGrade`,
     `FloorNail`, `FloorBlocked`, `RoofSheathing`, `RoofNail`, `RoofBlocked`, `DiaphragmFramingWidth`, `SpliceNail`); the
     framing's species, grade and stud sizes are the model's `ModelDefaults`.
   - **Conservative, kept by the owner (2026-11-07):** a beam end's or column's connection is sized for the hold-downs'

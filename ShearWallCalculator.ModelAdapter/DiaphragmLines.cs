@@ -197,10 +197,12 @@ namespace ShearWallCalculator.ModelAdapter
                 else
                 {
                     var c = NoWallUnder(t, isRoof, species, grade, def);
+                    var strap = Strap(c, species);
                     parts.Add(c.Fails != null && c.AreaIn2 <= 0 ? c.Fails :
                         $"At {where} (no wall under the edge): {MemberWords(c, level, isRoof)}, {c.TensionLb:0} lb in tension, {c.CompressionLb:0} lb in compression; " +
-                        $"a strap across {(isRoof ? "every joint" : "each splice")} for {c.StrapLb:0} lb (ASD; the strap from the catalog: not picked by the program yet).");
+                        $"a strap across {(isRoof ? "every joint" : "each splice")} for {c.StrapLb:0} lb (ASD): {strap?.Describe() ?? "none"}.");
                     chord.StrapLb = Math.Max(chord.StrapLb, Math.Round(c.StrapLb, 1));
+                    if (strap != null) { chord.Strap = strap.Describe(); Fail(strap.Fails); }
                     Fail(c.Fails);
                 }
             }
@@ -211,6 +213,10 @@ namespace ShearWallCalculator.ModelAdapter
         /// <summary>Where no wall is under a line or an edge: the floor's rim (the joists' size), or the roof's continuous blocking (its own size).</summary>
         private static WoodFraming.RimCollector NoWallUnder(double forceLb, bool isRoof, Species species, Grade grade, ModelDefaults def) =>
             WoodFraming.RimCollector.Design(forceLb, species, grade, isRoof ? def.RoofBlockingSize : def.FloorJoistSize, isRoof ? "blocking" : "rim");
+
+        /// <summary>The strap across a splice or joint of the rim or blocking, from the catalog (null: the member does not work).</summary>
+        private static SpliceStrap Strap(WoodFraming.RimCollector c, Species species) =>
+            c == null || c.DepthIn <= 0 ? null : SpliceStrap.Pick(c.StrapLb, species == Species.SprucePineFir || species == Species.HemFir, c.DepthIn);
 
         private static string MemberWords(WoodFraming.RimCollector c, Level level, bool isRoof) =>
             isRoof ? $"the roof's {c.Lumber} blocking (continuous, between the rafters)" : $"the {level.Name} floor's {c.Lumber} rim";
@@ -311,11 +317,13 @@ namespace ShearWallCalculator.ModelAdapter
                 // joists' depth in the framing's lumber, a strap across each of its butt splices (owner 2026-11-08); on the roof
                 // its continuous blocking, a strap across every joint (owner 2026-11-09)
                 var c = NoWallUnder(rimLb, isRoof, species, grade, def);
+                var strap = Strap(c, species);
                 string where = plates.Count == 0 ? "no wall under the line" : $"past the walls under the line: {rimLb:0} lb at {rimAt - start:0.##} ft";
                 parts.Add(c.Fails != null && c.AreaIn2 <= 0 ? c.Fails :
                     $"{Cap(MemberWords(c, level, isRoof))} ({where}): {c.TensionLb:0} lb in tension, {c.CompressionLb:0} lb in compression; " +
-                    $"a strap across {(isRoof ? "every joint" : "each splice")} for {c.StrapLb:0} lb (ASD; the strap from the catalog: not picked by the program yet).");
+                    $"a strap across {(isRoof ? "every joint" : "each splice")} for {c.StrapLb:0} lb (ASD): {strap?.Describe() ?? "none"}.");
                 line.StrapLb = Math.Round(c.StrapLb, 1);
+                if (strap != null) { line.Strap = strap.Describe(); Fail(strap.Fails); }
                 Fail(c.Fails);
             }
             line.Collector = string.Join(" ", parts);

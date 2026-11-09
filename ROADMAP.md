@@ -188,7 +188,10 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
       in tension and compression (`WoodFraming.RimCollector`, CP 1.0, CD 1.6), and a strap across each butt splice for
       the whole force (`DiaphragmLine.StrapLb`). The NDS library now has 2x10 and 2x12 (Table 1B; Table 4A's CF). Hub
       test: a wall on a beam, v × 6 ft by hand.
-    - [ ] The rim splices' strap picked from the catalog (MSTA, CS16...): the catalog page copied in first.
+    - [x] (2026-11-09) The rim's and the roof blocking's splice strap picked from the catalog (`SpliceStrap`): the lightest
+      strap tie of C-C-2026 p. 291 (the copy in docs/references) whose (160) tension takes the whole force and whose
+      width fits the member's face less 1"; saved as `DiaphragmLine.Strap`, `DiaphragmChord.Strap`. Tests: 1,662 lb on a
+      2x10 ST2215 (1,875), 301 lb HRS6 (605), 3,000 lb on a 2x4 MSTI36 (the 3" MSTC28 does not fit).
     - [ ] Southern Pine 2x10 and 2x12 (NDS Supplement Table 4B): not read into the NDS library yet (the rim check says so).
     - [x] (2026-11-09) A line partly over walls: the top plates take the collector over the walls under the line (within
       their length only: none past a wall's end, owner), the floor's rim past their ends, each checked for its
@@ -219,8 +222,11 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
       over its shear part (conservative); Z' = Z × 1.6 × Ctn 0.83 (12.5.4.2); the starting toe-nail 8d
       (`ConnectionDefaults.ToeNail`, in the defaults window). The top pair's words name it; the construction window and
       the wall elevation show it.
-    - [ ] Framing clips (A35, LTP4) where the toe-nails need closer than 3": the catalog page copied in first, as the
-      hold-downs' pictures were.
+    - [x] (2026-11-09) Framing plates where the toe-nails need closer than 3" (`TopClip`, `ShearWallCheck.TopClipOf`, saved
+      on `TopConnection.Clip`): LTP4, C-C-2026 p. 310 configuration 7 (top plates to rim), direction G, (160) DF/SP 715,
+      SPF/HF 615 lb (`FramingPlates_Manager`); s = 12 A / v to the inch below, 24" at most, 6" at least. On a face with no
+      wood panel (gypsum goes on after) with 0.131 x 1-1/2 nails; both faces paneled: over the thinner, up to 1/2", with
+      0.131 x 2-1/2 nails at the full load (footnote 3). The program's placement; tell it otherwise if you place them differently.
     - [ ] The horizontal pairs drawn on the plans and in the Load Manager's free body of a diaphragm (a diaphragm is not a
       member you can pick yet).
   - [ ] 7. With joists and rafters framed under the diaphragm: the roof tie line pair becomes a point pair at each rafter

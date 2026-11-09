@@ -503,7 +503,17 @@ namespace ShearWallCalculator.ModelAdapter
                     bool roof = building != null && IsRoof(building, stories[k].Level?.Id);
                     var t = RimToPlateOf(r, cd, roof);
                     if (t != null)
-                        c.Tops.Add(new TopConnection { WallId = id, LevelId = stories[k].Level?.Id, Blocking = roof, Nail = t.Nail, SpacingIn = t.SpacingIn, ZPrimeLb = Math.Round(t.ZPrime, 1), Fails = t.Fails });
+                    {
+                        var top = new TopConnection { WallId = id, LevelId = stories[k].Level?.Id, Blocking = roof, Nail = t.Nail, SpacingIn = t.SpacingIn, ZPrimeLb = Math.Round(t.ZPrime, 1), Fails = t.Fails };
+                        // toe-nails closer than the app's least: framing plates instead (C-C-2026 p. 310)
+                        var clip = TopClipOf(r, t);
+                        if (clip != null)
+                        {
+                            top.Clip = ShearWallCalculator.Design.TopClip.Model; top.ClipSpacingIn = clip.SpacingIn; top.ClipFastener = clip.Fastener;
+                            top.ClipAllowableLb = clip.AllowableLb; top.Fails = clip.Fails;
+                        }
+                        c.Tops.Add(top);
+                    }
                 }
             }
             if (building != null)
@@ -541,6 +551,19 @@ namespace ShearWallCalculator.ModelAdapter
             double vAsd = 0.6 * r.V * 1000.0 / r.Length;
             var species = r.Inputs?.Species == ShearWallCalculator.WoodTypes.WOODTYPE_SPF_HF ? NDS_WoodLibrary.NDS2018.Species.SprucePineFir : NDS_WoodLibrary.NDS2018.Species.DouglasFirLarch;
             return WoodFraming.RimToPlate.Design(vAsd, species, def.ToeNail, blocking);
+        }
+
+        /// <summary>
+        /// Framing plates (LTP4, <see cref="ShearWallCalculator.Design.TopClip"/>) where the toe-nails do not work (closer than
+        /// the app's least, or too short): placed by the wall's wood panel faces (gypsum goes on after). Null: the toe-nails do.
+        /// One routine for the saved design and the wall window.
+        /// </summary>
+        public static ShearWallCalculator.Design.TopClip TopClipOf(WallDesignResult r, WoodFraming.RimToPlate toe)
+        {
+            if (r == null || toe == null || toe.Fails == null) return null;
+            bool spf = r.Inputs?.Species == ShearWallCalculator.WoodTypes.WOODTYPE_SPF_HF;
+            var panels = SheathedFaces(r).Where(f => f.Face.Table != SheathingTable.GypsumAndPlaster).Select(f => Thickness(f.Option)).ToList();
+            return ShearWallCalculator.Design.TopClip.Design(toe.ShearAsdPlf, spf, panels);
         }
 
         /// <summary>The level is the building's top (its roof: blocking, not a rim, over the walls under it).</summary>

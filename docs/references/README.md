@@ -10,6 +10,8 @@ All hold-down values in `NDSProvisions/SimpsonCatalog/*_Manager.cs` come from th
 - LTT / HTT / HTTH: p. 63.
 - LSTHD / STHD: p. 67.
 - Strap ties: p. 291.
+- Splice straps of the rims and the roof blocking: the same strap ties, p. 291 (`Design/Ties.cs`, `SpliceStrap`).
+- LTP4/LTP5 framing plates (rim or blocking to the top plates): p. 310 (`FramingPlates_Manager.cs`, `TopClip`).
 
 The PDF's page numbers are the catalog's printed page numbers. When Simpson publishes a new edition, download it here and update the pages:
 - in `SimpsonCatalog.Edition` and the `Pages*` constants;

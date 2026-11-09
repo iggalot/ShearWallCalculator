@@ -368,6 +368,8 @@ namespace ShearWallVisualizer.Dialogs
             if (sn != null) SillNailSection(p, sn);
             var toe = data.TopToeNails();
             if (toe != null) RimToPlateSection(p, toe);
+            var clip = ShearWallCalculator.ModelAdapter.ShearWallCheck.TopClipOf(data.Result, toe);
+            if (clip != null) TopClipSection(p, clip, toe.Member);
             if (data.Line != null) DiaphragmLineSection(p, data.Line);
             if (data.LineBelow != null && !ReferenceEquals(data.LineBelow, data.Line)) DiaphragmLineSection(p, data.LineBelow, under: true);
             if (data.Chords != null && data.Chords.Count > 0) ChordSection(p, data.Chords);
@@ -505,6 +507,18 @@ namespace ShearWallVisualizer.Dialogs
         /// The rim (or the roof's blocking) toe-nailed into the top plates: what to install, how it was found (NDS Figure 12A's
         /// geometry, Ctn), and the code text (owner 2026-11-08).
         /// </summary>
+        /// <summary>Framing plates where the toe-nails would be too close: LTP4 (C-C-2026 p. 310).</summary>
+        private static void TopClipSection(Panel p, ShearWallCalculator.Design.TopClip c, string member)
+        {
+            Section(p, $"The {member} to the top plates (framing plates, in place of the toe-nails)", c.Describe());
+            var src = new Expander { Header = "Sources (quoted)", IsExpanded = false, Margin = new Thickness(0, 4, 0, 0) };
+            var sp = new StackPanel();
+            foreach (var s in ShearWallCalculator.Design.TopClip.Citations)
+                sp.Children.Add(new TextBlock { Text = "•  " + s, TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkSecondary, FontSize = 11.5, Margin = new Thickness(6, 2, 0, 2) });
+            src.Content = sp;
+            p.Children.Add(src);
+        }
+
         private static void RimToPlateSection(Panel p, RimToPlate n)
         {
             Section(p, $"The {n.Member} to the top plates (toe-nailed)", n.Fails ?? $"The {n.Member} on the top plates toe-nailed down with {n.Nail} at {FtIn.Of(n.SpacingIn)} o.c., one row along the wall, each nail at 30° started 1/3 of its length up the {n.Member}'s face.");
@@ -548,7 +562,7 @@ namespace ShearWallVisualizer.Dialogs
             }));
             var src = new Expander { Header = "Sources (quoted)", IsExpanded = false, Margin = new Thickness(0, 4, 0, 0) };
             var sp = new StackPanel();
-            foreach (var c in ShearWallCalculator.Design.DiaphragmNailing.Citations.Concat(l.StrapLb > 0 ? (l.Roof ? WoodFraming.RimCollector.BlockingCitations : WoodFraming.RimCollector.Citations) : WoodFraming.TopPlateCollector.Citations))
+            foreach (var c in ShearWallCalculator.Design.DiaphragmNailing.Citations.Concat(l.StrapLb > 0 ? (l.Roof ? WoodFraming.RimCollector.BlockingCitations : WoodFraming.RimCollector.Citations) : WoodFraming.TopPlateCollector.Citations).Concat(l.StrapLb > 0 ? ShearWallCalculator.Design.SpliceStrap.Citations : new string[0]))
                 sp.Children.Add(new TextBlock { Text = "•  " + c, TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkSecondary, FontSize = 11.5, Margin = new Thickness(6, 2, 0, 2) });
             src.Content = sp;
             p.Children.Add(src);
@@ -572,7 +586,7 @@ namespace ShearWallVisualizer.Dialogs
             var src = new Expander { Header = "Sources (quoted)", IsExpanded = false, Margin = new Thickness(0, 4, 0, 0) };
             var sp = new StackPanel();
             foreach (var c in new[] { "Simple spans between the lines of shear walls, M = w L² / 8, a cantilever past the last line w a² / 2, T = C = M / d (owner's choice, 2026-11-08)." }
-                         .Concat(chords.Any(c => c.StrapLb > 0) ? (chords[0].Roof ? WoodFraming.RimCollector.BlockingCitations : WoodFraming.RimCollector.Citations) : WoodFraming.TopPlateCollector.Citations))
+                         .Concat(chords.Any(c => c.StrapLb > 0) ? (chords[0].Roof ? WoodFraming.RimCollector.BlockingCitations : WoodFraming.RimCollector.Citations) : WoodFraming.TopPlateCollector.Citations).Concat(chords.Any(c => c.StrapLb > 0) ? ShearWallCalculator.Design.SpliceStrap.Citations : new string[0]))
                 sp.Children.Add(new TextBlock { Text = "•  " + c, TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkSecondary, FontSize = 11.5, Margin = new Thickness(6, 2, 0, 2) });
             src.Content = sp;
             p.Children.Add(src);

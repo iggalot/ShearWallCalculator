@@ -2,6 +2,19 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-09 — The splice straps and the framing plates picked from the catalog
+
+- The strap across each splice of a rim or each joint of the roof's blocking (collectors and chords) is picked from the
+  strap ties of C-C-2026 p. 291 (`Design/Ties.cs`, `SpliceStrap`): the lightest whose (160) tension takes the whole force,
+  its width at most the member's depth less 1". Saved as `DiaphragmLine.Strap` and `DiaphragmChord.Strap`.
+- Where the toe-nails would need closer than 3", LTP4 framing plates tie the rim or blocking to the top plates instead
+  (C-C-2026 p. 310, configuration 7, direction G, (160): DF/SP 715 lb, SPF/HF 615; `FramingPlates_Manager`,
+  `TopClip`, `ShearWallCheck.TopClipOf`, `TopConnection.Clip`): s = 12 A / v to the inch below, 6" to 24". On a face
+  with no wood panel with 0.131 x 1-1/2 nails; a wall paneled on both faces over the thinner (1/2" at most) with
+  0.131 x 2-1/2 nails at the full load (footnote 3). The pair's words, the wall elevation and the construction window
+  show it.
+- Tests: the straps by hand from p. 291 (ST2215, HRS6, MSTI36 vs. MSTC28 on a 2x4); the plate's spacing and placement.
+
 ## 2026-11-09 — The roof's blocking past the walls; the diaphragm's field nailing zones
 
 - The owner's choices: on the roof, where no wall is under a line of shear walls or an edge, its continuous blocking

@@ -90,6 +90,7 @@
     <Compile Include="Design\ShearWallFraming.cs" />
     <Compile Include="Design\DesignPass.cs" />
     <Compile Include="Design\DiaphragmNailing.cs" />
+    <Compile Include="Design\Ties.cs" />
     <Compile Include="Design\ShearWallDesign.cs" />
     <Compile Include="Design\Sheathing.cs" />
     <Compile Include="Design\WallSchedule.cs" />
@@ -131,6 +132,7 @@
     <Compile Include="NDSProvisions\SimpsonCatalog\SimpsonCatalog.cs" />
     <Compile Include="NDSProvisions\SimpsonCatalog\StrapTies_FastenerConfig.cs" />
     <Compile Include="NDSProvisions\SimpsonCatalog\StrapTies_Manager.cs" />
+    <Compile Include="NDSProvisions\SimpsonCatalog\FramingPlates_Manager.cs" />
     <Compile Include="NDSProvisions\SimpsonCatalog\STHD_Data.cs" />
     <Compile Include="NDSProvisions\SimpsonCatalog\STHD_Manager.cs" />
     <Compile Include="WallData.cs" />
