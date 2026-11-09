@@ -194,17 +194,23 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
       their length only: none past a wall's end, owner), the floor's rim past their ends, each checked for its
       own stretch's worst (both at the hand-off); the strap for the rim's. Hub test: a lower wall under 12 of 30 ft, N(t)
       recomputed by hand along the line.
-    - [ ] The roof's lines past the walls under them: the blocking or the rafters' ends as the collector (today the plates
-      are checked for the whole line).
+    - [x] (2026-11-09) The roof's lines past the walls under them: the roof's continuous blocking between the rafters
+      (owner's choice; `ModelDefaults.RoofBlockingSize`, 2x6 to start), checked as the rim is (`RimCollector`, member
+      "blocking"), a strap across every joint for the whole force. Hub tests: the upper north wall shortened to 10..30 ft,
+      v × 10 ft; the wall at x = 20 from 6 to 24 ft, v × 6 ft.
     - [ ] A page to edit the Building Model's defaults (`ModelDefaults`: stud sizes, the floor joists): only in the file.
-    - [ ] The diaphragm's field nailing zones (the line's nailing is given at the line only).
+    - [x] (2026-11-09) The diaphragm's field nailing zones (owner's choice: two per span): the shear falls linearly from
+      each line to nothing at mid-span (a cantilever's free end), from the larger of the line's v and 0.6 w (L/2) / d; the
+      line's nailing out to where v is under the lightest row's (rounded up to the 2 ft), the lightest row beyond
+      (`DiaphragmChord.HeavyFromFt`, `HeavyToFt`, `LightNailing`). Hub test: 6d on 5/16" at 170 mph, 8 ft from each line
+      (20 × (1 − 237.5 / 363.1) = 6.9 ft).
     - [x] (2026-11-09) The diaphragm's chords (owner's choices: simple spans between the lines of shear walls,
       M = w L² / 8, a cantilever w a² / 2 past the last line, w = the level's own wind (worst case) over its length;
       T = C = M / d, ASD): the edge walls' double top plates spliced as a collector (16d each side), the floor's rim where
       no wall is under the edge (a strap at each splice for the whole force). `DiaphragmLines.Chords`, saved as
       `Connections.Chords`; the construction window's Pieces tab. Hub tests: the box by hand (30 and 40 ft spans), and the
       rim with the lower north wall taken out.
-    - [ ] The roof's chord where no wall is under its edge (the blocking or the rafters): reported, not designed.
+    - [x] (2026-11-09) The roof's chord where no wall is under its edge: its continuous blocking, strapped at every joint.
     - [ ] The chords by the diaphragm's real moment (the walls' reactions per case, flexible or rigid) and the plates'
       splice layout (each splice placed, its force where it is), rather than the worst span's at every splice.
     - [x] (2026-11-08) The rim (a floor) or the roof's blocking toe-nailed into each shear wall's top plates

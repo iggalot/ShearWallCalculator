@@ -16,8 +16,9 @@ namespace ShearWallCalculator.ModelAdapter
     /// gives it along its whole depth on the line, v = R / depth, and the boundary nailing along the line is sized for the
     /// worst v (ASD, 0.6 W; <see cref="DiaphragmNailing"/>). The collector gathers it into the walls' shear parts: its force at
     /// a point is what the diaphragm has delivered up to it less what the walls have taken. Over the walls under the line it
-    /// is their top plates (<see cref="WoodFraming.TopPlateCollector"/>); on a floor where no wall is under it (none at all,
-    /// or past the lower walls' ends) the floor's rim (<see cref="WoodFraming.RimCollector"/>, owner 2026-11-08).
+    /// is their top plates (<see cref="WoodFraming.TopPlateCollector"/>); where no wall is under it (none at all, or past the
+    /// lower walls' ends) the floor's rim (<see cref="WoodFraming.RimCollector"/>, owner 2026-11-08) or the roof's continuous
+    /// blocking, strapped across every joint (owner 2026-11-09).
     /// </summary>
     public static class DiaphragmLines
     {
@@ -64,8 +65,8 @@ namespace ShearWallCalculator.ModelAdapter
         /// w = F / length (the worst case). Each span between two lines is simple, M = w L² / 8 at mid-span; past the end
         /// lines a cantilever, M = w a² / 2 at the line. The chords are at the diaphragm's edges there, T = C = M / d (ASD,
         /// 0.6 W), d its depth across. A chord is the double top plate of the walls under the edge whose length covers the
-        /// point (spliced as a collector is), else on a floor the rim (a strap at each splice); the roof's edge with no wall
-        /// under it (its blocking or rafters): not designed yet. Wind along y the same, x for y.
+        /// point (spliced as a collector is), else on a floor the rim (a strap at each splice), on the roof its continuous
+        /// blocking (a strap across every joint; owner 2026-11-09). Wind along y the same, x for y.
         /// </summary>
         public static List<DiaphragmChord> Chords(Building b, LateralSection s, List<DiaphragmLine> lines, ConnectionDefaults connections = null)
         {
@@ -85,13 +86,19 @@ namespace ShearWallCalculator.ModelAdapter
                 bool isRoof = level == roof;
                 // the walls of the story under it, topped here: their double top plates
                 var walls = b.WallsUnder(level).Where(w => w.TopLevelId == level.Id).ToList();
+                // the lightest nailing of its sheathing (SDPWS Table 4.2A's 6" row, or 4.2C's one): away from the lines (owner 2026-11-09)
+                double sg = DiaphragmNailing.SpecificGravityFactor(SpeciesInfo.SpecificGravity(species), species == Species.DouglasFirLarch || species == Species.SouthernPine);
+                var light = DiaphragmNailing.Design(0, cd.StructuralI, isRoof ? cd.RoofNail : cd.FloorNail, isRoof ? cd.RoofSheathing : cd.FloorSheathing,
+                                                    cd.DiaphragmFramingWidth, isRoof ? cd.RoofBlocked : cd.FloorBlocked, sg);
                 foreach (bool alongX in new[] { true, false })
                 {
                     // wind along x: the lines running east-west (at y), the span in y, the depth (and the chords' edges) in x
-                    var at = lines.Where(l => l.LevelId == level.Id && l.DepthFt > 1e-6 &&
+                    var on = lines.Where(l => l.LevelId == level.Id && l.DepthFt > 1e-6 &&
                                               (alongX ? Math.Abs(l.Y1 - l.Y0) < 1e-9 && Math.Abs(l.X1 - l.X0) > 1e-9 : Math.Abs(l.X1 - l.X0) < 1e-9 && Math.Abs(l.Y1 - l.Y0) > 1e-9))
-                                  .Select(l => alongX ? l.Y0 : l.X0).OrderBy(v => v).ToList();
-                    if (at.Count == 0) continue;
+                                  .OrderBy(l => alongX ? l.Y0 : l.X0).ToList();
+                    if (on.Count == 0) continue;
+                    var at = on.Select(l => alongX ? l.Y0 : l.X0).ToList();
+                    DiaphragmLine LineAt(double v) => on.FirstOrDefault(l => Math.Abs((alongX ? l.Y0 : l.X0) - v) < 1e-9);
                     double f = (s.Cases ?? new List<string>()).Select(k => Math.Abs(alongX ? dw.FxOf(k) : dw.FyOf(k))).DefaultIfEmpty(0).Max();
                     if (f <= 1e-6) continue;
                     double lo = cells.Min(c => alongX ? c.Y0 : c.X0), hi = cells.Max(c => alongX ? c.Y1 : c.X1);
@@ -103,10 +110,39 @@ namespace ShearWallCalculator.ModelAdapter
                         if (at[i + 1] - at[i] > LineTolerance) spans.Add((at[i], at[i + 1], false, w * Math.Pow(at[i + 1] - at[i], 2) / 8, (at[i] + at[i + 1]) / 2));
                     if (hi - at.Last() > LineTolerance) spans.Add((at.Last(), hi, true, w * Math.Pow(hi - at.Last(), 2) / 2, at.Last()));
                     foreach (var sp in spans)
-                        list.Add(Chord(b, level, isRoof, alongX, sp, w, cells, walls, def, cd, species, grade));
+                    {
+                        var c = Chord(b, level, isRoof, alongX, sp, w, cells, walls, def, cd, species, grade);
+                        Zones(c, w, LineAt(sp.from), LineAt(sp.to), light);
+                        list.Add(c);
+                    }
                 }
             }
             return list;
+        }
+
+        /// <summary>
+        /// The span's two nailing zones (owner 2026-11-09): the shear falls linearly from each line to nothing at mid-span (a
+        /// cantilever's at its free end), from the larger of the line's own v and the span's, 0.6 w (L / 2) / d. The line's
+        /// nailing runs out from it until v is under the lightest row's (rounded up to the 2 ft), the lightest row beyond; a
+        /// line nailed at the lightest already has no zone.
+        /// </summary>
+        private static void Zones(DiaphragmChord c, double w, DiaphragmLine from, DiaphragmLine to, DiaphragmNailing light)
+        {
+            if (light == null || light.Fails != null || light.AllowablePlf <= 0) return;
+            c.LightNailing = $"{light.Nail} at {light.BoundaryIn:0.#}\" o.c. at the boundaries and {light.EdgesIn:0.#}\" at the " + (light.Blocked ? "other panel edges (blocked)" : "supported edges (unblocked)");
+            c.LightAllowablePlf = Math.Round(light.AllowablePlf, 1);
+            double reach = c.Cantilever ? c.ToFt - c.FromFt : (c.ToFt - c.FromFt) / 2;
+            double Heavy(DiaphragmLine l)
+            {
+                if (l == null || l.DepthFt <= 1e-6) return 0;
+                if (l.BoundaryIn >= light.BoundaryIn - 1e-9 && l.EdgesIn >= light.EdgesIn - 1e-9) return 0;
+                double vEnd = Math.Max(l.ShearAsdPlf, 0.6 * w * reach / l.DepthFt);
+                if (vEnd <= light.AllowablePlf + 1e-9) return 0;
+                double x = reach * (1 - light.AllowablePlf / vEnd);
+                return Math.Min(reach, Math.Ceiling(x / 2 - 1e-9) * 2);
+            }
+            c.HeavyFromFt = Math.Round(Heavy(from), 2);
+            c.HeavyToFt = Math.Round(Heavy(to), 2);
         }
 
         private static DiaphragmChord Chord(Building b, Level level, bool isRoof, bool alongX, (double from, double to, bool cant, double m, double t) sp, double w,
@@ -158,20 +194,28 @@ namespace ShearWallCalculator.ModelAdapter
                         $"At {where}: the {c.Lumber} double top plate, {c.NailsEachSide} {c.Nail} each side of a splice (Z' = {c.ZPrime:0} lb); one ply {c.TensionLb:0} lb in tension, {c.CompressionLb:0} lb in compression.");
                     Fail(c.Fails);
                 }
-                else if (!isRoof)
+                else
                 {
-                    var c = WoodFraming.RimCollector.Design(t, species, grade, def.FloorJoistSize);
+                    var c = NoWallUnder(t, isRoof, species, grade, def);
                     parts.Add(c.Fails != null && c.AreaIn2 <= 0 ? c.Fails :
-                        $"At {where} (no wall under the edge): the {level.Name} floor's {c.Lumber} rim, {c.TensionLb:0} lb in tension, {c.CompressionLb:0} lb in compression; " +
-                        $"a strap across each splice for {c.StrapLb:0} lb (ASD; the strap from the catalog: not picked by the program yet).");
+                        $"At {where} (no wall under the edge): {MemberWords(c, level, isRoof)}, {c.TensionLb:0} lb in tension, {c.CompressionLb:0} lb in compression; " +
+                        $"a strap across {(isRoof ? "every joint" : "each splice")} for {c.StrapLb:0} lb (ASD; the strap from the catalog: not picked by the program yet).");
                     chord.StrapLb = Math.Max(chord.StrapLb, Math.Round(c.StrapLb, 1));
                     Fail(c.Fails);
                 }
-                else parts.Add($"At {where} (no wall under the roof's edge): the roof's chord (its blocking or rafters) is not designed by the program yet: {t:0} lb.");
             }
             chord.Chord = string.Join(" ", parts);
             return chord;
         }
+
+        /// <summary>Where no wall is under a line or an edge: the floor's rim (the joists' size), or the roof's continuous blocking (its own size).</summary>
+        private static WoodFraming.RimCollector NoWallUnder(double forceLb, bool isRoof, Species species, Grade grade, ModelDefaults def) =>
+            WoodFraming.RimCollector.Design(forceLb, species, grade, isRoof ? def.RoofBlockingSize : def.FloorJoistSize, isRoof ? "blocking" : "rim");
+
+        private static string MemberWords(WoodFraming.RimCollector c, Level level, bool isRoof) =>
+            isRoof ? $"the roof's {c.Lumber} blocking (continuous, between the rafters)" : $"the {level.Name} floor's {c.Lumber} rim";
+
+        private static string Cap(string s) => string.IsNullOrEmpty(s) ? s : char.ToUpper(s[0]) + s.Substring(1);
 
         private static double Across(Point2 p, bool ew) => ew ? p.Y : p.X;
         private static double Along(Point2 p, bool ew) => ew ? p.X : p.Y;
@@ -180,8 +224,8 @@ namespace ShearWallCalculator.ModelAdapter
                                           List<(double lo, double hi)> plates)
         {
             // a point within the length of a wall under the line has its top plates (none past its end: owner 2026-11-09);
-            // elsewhere on a floor the rim is the collector (owner 2026-11-08); the roof's lines keep the plates (its blocking: not yet)
-            bool OverPlates(double t) => isRoof || plates.Any(w => t >= w.lo - 1e-9 && t <= w.hi + 1e-9);
+            // elsewhere the floor's rim is the collector (owner 2026-11-08), or on the roof its continuous blocking (owner 2026-11-09)
+            bool OverPlates(double t) => plates.Any(w => t >= w.lo - 1e-9 && t <= w.hi + 1e-9);
             double at = pairs.Average(p => Across(p.Middle, ew));
             // the diaphragm on the line: the cells it crosses or runs along, merged
             var spans = cells.Where(c => ew ? c.Y0 - LineTolerance <= at && at <= c.Y1 + LineTolerance : c.X0 - LineTolerance <= at && at <= c.X1 + LineTolerance)
@@ -223,7 +267,7 @@ namespace ShearWallCalculator.ModelAdapter
                     // where the plates stop the force passes between them and the rim: both carry it there
                     bool edge = plates.Any(w => Math.Abs(t - w.lo) < 1e-9 || Math.Abs(t - w.hi) < 1e-9);
                     if (OverPlates(t)) platesN = Math.Max(platesN, Math.Abs(n));
-                    if ((!OverPlates(t) || edge) && !isRoof && Math.Abs(n) > rimN) { rimN = Math.Abs(n); rimAt = t; }
+                    if ((!OverPlates(t) || edge) && Math.Abs(n) > rimN) { rimN = Math.Abs(n); rimAt = t; }
                 }
             }
             line.ShearAsdPlf = Math.Round(0.6 * worst, 1);
@@ -264,12 +308,13 @@ namespace ShearWallCalculator.ModelAdapter
             if (rimLb >= 1)
             {
                 // where no wall is under the line (none at all, or past the lower walls' ends): the floor's rim, one ply of the
-                // joists' depth in the framing's lumber, a strap across each of its butt splices (owner 2026-11-08)
-                var c = WoodFraming.RimCollector.Design(rimLb, species, grade, def.FloorJoistSize);
+                // joists' depth in the framing's lumber, a strap across each of its butt splices (owner 2026-11-08); on the roof
+                // its continuous blocking, a strap across every joint (owner 2026-11-09)
+                var c = NoWallUnder(rimLb, isRoof, species, grade, def);
                 string where = plates.Count == 0 ? "no wall under the line" : $"past the walls under the line: {rimLb:0} lb at {rimAt - start:0.##} ft";
                 parts.Add(c.Fails != null && c.AreaIn2 <= 0 ? c.Fails :
-                    $"The {level.Name} floor's {c.Lumber} rim ({where}): {c.TensionLb:0} lb in tension, {c.CompressionLb:0} lb in compression; " +
-                    $"a strap across each splice for {c.StrapLb:0} lb (ASD; the strap from the catalog: not picked by the program yet).");
+                    $"{Cap(MemberWords(c, level, isRoof))} ({where}): {c.TensionLb:0} lb in tension, {c.CompressionLb:0} lb in compression; " +
+                    $"a strap across {(isRoof ? "every joint" : "each splice")} for {c.StrapLb:0} lb (ASD; the strap from the catalog: not picked by the program yet).");
                 line.StrapLb = Math.Round(c.StrapLb, 1);
                 Fail(c.Fails);
             }

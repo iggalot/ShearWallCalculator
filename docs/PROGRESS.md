@@ -2,6 +2,19 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-09 — The roof's blocking past the walls; the diaphragm's field nailing zones
+
+- The owner's choices: on the roof, where no wall is under a line of shear walls or an edge, its continuous blocking
+  between the rafters is the collector or chord (`ModelDefaults.RoofBlockingSize`, new, 2x6 to start), checked as a floor's
+  rim is (`WoodFraming.RimCollector`, now naming its member), a strap across every joint for the whole force. The roof's
+  lines no longer keep the plates past the walls' ends.
+- Two nailing zones per span: from each line the diaphragm's shear falls linearly to nothing at mid-span (a cantilever's
+  free end), starting from the larger of the line's own v and the span's 0.6 w (L/2) / d; the line's nailing runs out
+  until v is under the lightest row of the sheathing (SDPWS Table 4.2A's 6", or 4.2C's one row), rounded up to the 2 ft,
+  the lightest row beyond. Saved on each span (`DiaphragmChord`); the construction window shows them with its chords.
+- Hub tests: the roof's line past a shortened upper wall, v × 10 ft, and past the wall at x = 20, v × 6 ft; the zones
+  with 6d on 5/16" at 170 mph: 363.1 plf at the north-south lines, the lightest row 237.5 plf, 8 ft from each line.
+
 ## 2026-11-09 — The diaphragm's chords
 
 - The owner's choices (2026-11-08): each diaphragm is a beam in simple spans between its lines of shear walls, loaded by

@@ -60,8 +60,10 @@
     (owner 2026-11-07), with the boundary nailing (`Design/DiaphragmNailing.cs`: SDPWS-2015 Tables 4.2A and 4.2C, the
     `Table4_2Manager` and `Table4_2CManager` data) and the top plates as collectors (`WoodFraming.TopPlateCollector`):
     `DiaphragmLines.Design`, saved as `Connections.DiaphragmLines`. Its chords: simple spans between the lines, M = w L² / 8 (a
-    cantilever w a² / 2), T = M / d, the edge walls' top plates or the floor's rim (owner 2026-11-08; `DiaphragmLines.Chords`,
-    `Connections.Chords`). The defaults are `ConnectionDefaults` (`DiaphragmGrade`,
+    cantilever w a² / 2), T = M / d, the edge walls' top plates, else the floor's rim or the roof's continuous blocking (owner 2026-11-08/09;
+    `DiaphragmLines.Chords`, `Connections.Chords`), with two field nailing zones per span (the line's nailing out to where
+    the shear is under the lightest row's, owner 2026-11-09). A roof line past its walls: the roof's blocking
+    (`ModelDefaults.RoofBlockingSize`). The defaults are `ConnectionDefaults` (`DiaphragmGrade`,
     `FloorNail`, `FloorBlocked`, `RoofSheathing`, `RoofNail`, `RoofBlocked`, `DiaphragmFramingWidth`, `SpliceNail`); the
     framing's species, grade and stud sizes are the model's `ModelDefaults`.
   - **Conservative, kept by the owner (2026-11-07):** a beam end's or column's connection is sized for the hold-downs'

@@ -533,9 +533,9 @@ namespace ShearWallVisualizer.Dialogs
         /// </summary>
         private static void DiaphragmLineSection(Panel p, WoodFraming.Connections.DiaphragmLine l, bool under = false)
         {
-            string collector = l.StrapLb > 0 ? "the floor's rim" : "the top plates";
+            string collector = l.StrapLb > 0 ? (l.Roof ? "the roof's blocking" : "the floor's rim") : "the top plates";
             Section(p, under ? "The floor under it along its line: boundary nailing and collector" : "Diaphragm boundary nailing and collector (at the top)",
-                    l.Fails ?? $"{l.Nailing}; {collector} a collector of {l.CollectorLb:0} lb" + (l.StrapLb > 0 ? $", a strap across each rim splice for {l.StrapLb:0} lb." : "."));
+                    l.Fails ?? $"{l.Nailing}; {collector} a collector of {l.CollectorLb:0} lb" + (l.StrapLb > 0 ? (l.Roof ? $", a strap across every blocking joint for {l.StrapLb:0} lb." : $", a strap across each rim splice for {l.StrapLb:0} lb.") : "."));
             if (l.DepthFt <= 0) return;
             int walls = l.WallIds?.Count ?? 0;
             p.Children.Add(Table(new[] { "Check (ASD)", "Value" }, new List<string[]>
@@ -548,7 +548,7 @@ namespace ShearWallVisualizer.Dialogs
             }));
             var src = new Expander { Header = "Sources (quoted)", IsExpanded = false, Margin = new Thickness(0, 4, 0, 0) };
             var sp = new StackPanel();
-            foreach (var c in ShearWallCalculator.Design.DiaphragmNailing.Citations.Concat(l.StrapLb > 0 ? WoodFraming.RimCollector.Citations : WoodFraming.TopPlateCollector.Citations))
+            foreach (var c in ShearWallCalculator.Design.DiaphragmNailing.Citations.Concat(l.StrapLb > 0 ? (l.Roof ? WoodFraming.RimCollector.BlockingCitations : WoodFraming.RimCollector.Citations) : WoodFraming.TopPlateCollector.Citations))
                 sp.Children.Add(new TextBlock { Text = "•  " + c, TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkSecondary, FontSize = 11.5, Margin = new Thickness(6, 2, 0, 2) });
             src.Content = sp;
             p.Children.Add(src);
@@ -566,15 +566,27 @@ namespace ShearWallVisualizer.Dialogs
                 $"w = {c.WPlf:0.0} plf (W); M = {(c.Cantilever ? "w a² / 2" : "w L² / 8")} = {c.MomentLbFt:0} lb·ft (ASD) at {c.AtFt:0.##} ft",
                 $"T = M / d = {c.MomentLbFt:0} / {c.DepthFt:0.##} = {c.ForceLb:0} lb",
                 (c.Chord ?? "") + (c.Fails != null ? $" {c.Fails}" : ""),
+                Zones(c),
             }).ToList();
-            p.Children.Add(Table(new[] { "Span", "Moment", "Chord force", "Chord" }, rows));
+            p.Children.Add(Table(new[] { "Span", "Moment", "Chord force", "Chord", "Field nailing zones" }, rows));
             var src = new Expander { Header = "Sources (quoted)", IsExpanded = false, Margin = new Thickness(0, 4, 0, 0) };
             var sp = new StackPanel();
             foreach (var c in new[] { "Simple spans between the lines of shear walls, M = w L² / 8, a cantilever past the last line w a² / 2, T = C = M / d (owner's choice, 2026-11-08)." }
-                         .Concat(chords.Any(c => c.StrapLb > 0) ? WoodFraming.RimCollector.Citations : WoodFraming.TopPlateCollector.Citations))
+                         .Concat(chords.Any(c => c.StrapLb > 0) ? (chords[0].Roof ? WoodFraming.RimCollector.BlockingCitations : WoodFraming.RimCollector.Citations) : WoodFraming.TopPlateCollector.Citations))
                 sp.Children.Add(new TextBlock { Text = "•  " + c, TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkSecondary, FontSize = 11.5, Margin = new Thickness(6, 2, 0, 2) });
             src.Content = sp;
             p.Children.Add(src);
+        }
+
+        /// <summary>A span's two nailing zones in words: each line's nailing out to its distance, the lightest row beyond.</summary>
+        private static string Zones(WoodFraming.Connections.DiaphragmChord c)
+        {
+            if (c.LightNailing == null) return "";
+            if (c.HeavyFromFt <= 0 && c.HeavyToFt <= 0) return $"The lightest nailing over the whole span: {c.LightNailing} ({c.LightAllowablePlf:0} plf).";
+            var heavy = new List<string>();
+            if (c.HeavyFromFt > 0) heavy.Add($"{c.HeavyFromFt:0.#} ft from the line at {c.FromFt:0.##} ft");
+            if (c.HeavyToFt > 0) heavy.Add($"{c.HeavyToFt:0.#} ft from the line at {c.ToFt:0.##} ft");
+            return $"The line's boundary nailing out to {string.Join(" and ", heavy)}; beyond, {c.LightNailing} ({c.LightAllowablePlf:0} plf).";
         }
 
         private static string NailSize(CommonNailSizes n) =>
