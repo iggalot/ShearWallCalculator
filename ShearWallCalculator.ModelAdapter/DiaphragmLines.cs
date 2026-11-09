@@ -14,9 +14,10 @@ namespace ShearWallCalculator.ModelAdapter
     /// collectors). The walls on one line in one level's diaphragm (the tops of the story under it, the sills of the story
     /// standing on it: their <see cref="ShearPairs"/>) take the line's force R from the diaphragm in each case. The diaphragm
     /// gives it along its whole depth on the line, v = R / depth, and the boundary nailing along the line is sized for the
-    /// worst v (ASD, 0.6 W; <see cref="DiaphragmNailing"/>). The top plates gather it into the walls' shear parts: the collector
-    /// force at a point is what the diaphragm has delivered up to it less what the walls have taken
-    /// (<see cref="TopPlateCollector"/>).
+    /// worst v (ASD, 0.6 W; <see cref="DiaphragmNailing"/>). The collector gathers it into the walls' shear parts: its force at
+    /// a point is what the diaphragm has delivered up to it less what the walls have taken. Over the walls under the line it
+    /// is their top plates (<see cref="WoodFraming.TopPlateCollector"/>); on a floor where no wall is under it (none at all,
+    /// or past the lower walls' ends) the floor's rim (<see cref="WoodFraming.RimCollector"/>, owner 2026-11-08).
     /// </summary>
     public static class DiaphragmLines
     {
@@ -45,7 +46,13 @@ namespace ShearWallCalculator.ModelAdapter
                         if (clusters.Count > 0 && Math.Abs(Across(p.Middle, ew) - Across(clusters.Last()[0].Middle, ew)) <= LineTolerance) clusters.Last().Add(p);
                         else clusters.Add(new List<ShearPair> { p });
                     }
-                    foreach (var c in clusters) list.Add(Line(level, levels.IndexOf(level), level == roof, ew, c, cells, s.Cases, def, cd));
+                    foreach (var c in clusters)
+                    {
+                        // the walls under the line, whole (their plates run their full length, past their shear parts)
+                        var plates = c.Where(p => p.AtTop).Select(p => b.Find(p.WallId) as Wall).Where(w => w != null).Distinct()
+                                      .Select(w => (lo: Math.Min(Along(w.Start, ew), Along(w.End, ew)), hi: Math.Max(Along(w.Start, ew), Along(w.End, ew)))).ToList();
+                        list.Add(Line(level, levels.IndexOf(level), level == roof, ew, c, cells, s.Cases, def, cd, plates));
+                    }
                 }
             }
             return list;
@@ -54,8 +61,12 @@ namespace ShearWallCalculator.ModelAdapter
         private static double Across(Point2 p, bool ew) => ew ? p.Y : p.X;
         private static double Along(Point2 p, bool ew) => ew ? p.X : p.Y;
 
-        private static DiaphragmLine Line(Level level, int index, bool isRoof, bool ew, List<ShearPair> pairs, List<Rect2> cells, IList<string> cases, ModelDefaults def, ConnectionDefaults cd)
+        private static DiaphragmLine Line(Level level, int index, bool isRoof, bool ew, List<ShearPair> pairs, List<Rect2> cells, IList<string> cases, ModelDefaults def, ConnectionDefaults cd,
+                                          List<(double lo, double hi)> plates)
         {
+            // a point over a wall under the line (within the line tolerance: the corners' insets) has top plates; elsewhere on
+            // a floor the rim is the collector (owner 2026-11-08); the roof's lines keep the plates (its blocking: not yet)
+            bool OverPlates(double t) => isRoof || plates.Any(w => t >= w.lo - LineTolerance - 1e-9 && t <= w.hi + LineTolerance + 1e-9);
             double at = pairs.Average(p => Across(p.Middle, ew));
             // the diaphragm on the line: the cells it crosses or runs along, merged
             var spans = cells.Where(c => ew ? c.Y0 - LineTolerance <= at && at <= c.Y1 + LineTolerance : c.X0 - LineTolerance <= at && at <= c.X1 + LineTolerance)
@@ -77,7 +88,7 @@ namespace ShearWallCalculator.ModelAdapter
             };
             if (depth <= 1e-6) { line.Fails = $"The {level.Name} diaphragm does not reach this line of shear walls: no diaphragm to deliver their shear."; return line; }
 
-            double worst = 0, worstN = 0, worstAt = start;
+            double worst = 0, worstN = 0, worstAt = start, platesN = 0, rimN = 0, rimAt = start;
             foreach (var k in cases ?? new List<string>())
             {
                 double r = pairs.Sum(p => p.OnOtherIn(k));
@@ -87,10 +98,17 @@ namespace ShearWallCalculator.ModelAdapter
                 // the collector: what the diaphragm has delivered (−R spread on its spans) and the walls have taken, up to t
                 var loads = merged.Select(m => (a: m.lo, b: m.hi, f: -r * (m.hi - m.lo) / depth))
                                   .Concat(pairs.Select(p => (a: Math.Min(Along(p.Start, ew), Along(p.End, ew)), b: Math.Max(Along(p.Start, ew), Along(p.End, ew)), f: p.OnOtherIn(k)))).ToList();
-                foreach (double t in loads.SelectMany(l => new[] { l.a, l.b }).Distinct())
+                // N(t) is piecewise linear: its worst on each stretch is at a load's end or where the plates start or stop
+                var ts = loads.SelectMany(l => new[] { l.a, l.b })
+                              .Concat(plates.SelectMany(w => new[] { w.lo - LineTolerance, w.hi + LineTolerance }).Where(t => t > start && t < end)).Distinct();
+                foreach (double t in ts)
                 {
                     double n = loads.Sum(l => l.b - l.a < 1e-9 ? (t >= l.a - 1e-9 ? l.f : 0) : l.f * Math.Max(0, Math.Min(t, l.b) - l.a) / (l.b - l.a));
                     if (Math.Abs(n) > worstN) { worstN = Math.Abs(n); worstAt = t; }
+                    // where the plates stop the force passes between them and the rim: both carry it there
+                    bool edge = plates.Any(w => Math.Abs(t - (w.lo - LineTolerance)) < 1e-9 || Math.Abs(t - (w.hi + LineTolerance)) < 1e-9);
+                    if (OverPlates(t)) platesN = Math.Max(platesN, Math.Abs(n));
+                    if ((!OverPlates(t) || edge) && !isRoof && Math.Abs(n) > rimN) { rimN = Math.Abs(n); rimAt = t; }
                 }
             }
             line.ShearAsdPlf = Math.Round(0.6 * worst, 1);
@@ -114,26 +132,33 @@ namespace ShearWallCalculator.ModelAdapter
             // studs on the foundation, the size above higher up)
             line.CollectorLb = Math.Round(0.6 * worstN, 1);
             line.CollectorAtFt = Math.Round(worstAt - start, 2);
-            if (line.CollectorLb < 1) line.Collector = "No collector force: the walls' shear parts take the diaphragm's shear where it arrives.";
-            else if (!pairs.Any(p => p.AtTop))
+            void Fail(string f) { if (f != null) line.Fails = line.Fails == null ? f : $"{line.Fails} {f}"; }
+            double platesLb = Math.Round(0.6 * platesN, 1), rimLb = Math.Round(0.6 * rimN, 1);
+            if (line.CollectorLb < 1) { line.Collector = "No collector force: the walls' shear parts take the diaphragm's shear where it arrives."; return line; }
+            var parts = new List<string>();
+            if (platesLb >= 1)
             {
-                // no wall under the line, the walls standing on the floor only: the floor's rim is the collector (one ply of
-                // the joists' depth, the framing's lumber), a strap across each of its butt splices (owner 2026-11-08)
-                var c = WoodFraming.RimCollector.Design(line.CollectorLb, species, grade, def.FloorJoistSize);
-                line.Collector = c.Fails != null && c.AreaIn2 <= 0 ? c.Fails :
-                    $"The {level.Name} floor's {c.Lumber} rim (no wall under the line): {c.TensionLb:0} lb in tension, {c.CompressionLb:0} lb in compression; " +
-                    $"a strap across each splice for {c.StrapLb:0} lb (ASD; the strap from the catalog: not picked by the program yet).";
-                line.StrapLb = Math.Round(c.StrapLb, 1);
-                if (c.Fails != null) line.Fails = line.Fails == null ? c.Fails : $"{line.Fails} {c.Fails}";
-            }
-            else
-            {
+                // over the walls under the line: their double top plate (a wall's own framing defaults: the first story's
+                // studs on the foundation, the size above higher up)
                 string nominal = index <= 1 ? def.StudSizeFirstStory : def.StudSizeAbove;
-                var c = WoodFraming.TopPlateCollector.Design(line.CollectorLb, species, grade, nominal, cd.SpliceNail);
-                line.Collector = c.Fails != null && c.Z <= 0 ? c.Fails :
-                    $"{c.Lumber} double top plate: {c.NailsEachSide} {c.Nail} each side of a splice (Z' = {c.ZPrime:0} lb); one ply {c.TensionLb:0} lb in tension, {c.CompressionLb:0} lb in compression.";
-                if (c.Fails != null) line.Fails = line.Fails == null ? c.Fails : $"{line.Fails} {c.Fails}";
+                var c = WoodFraming.TopPlateCollector.Design(platesLb, species, grade, nominal, cd.SpliceNail);
+                parts.Add(c.Fails != null && c.Z <= 0 ? c.Fails :
+                    $"{c.Lumber} double top plate{(rimLb >= 1 ? $" ({platesLb:0} lb over the walls under the line)" : "")}: {c.NailsEachSide} {c.Nail} each side of a splice (Z' = {c.ZPrime:0} lb); one ply {c.TensionLb:0} lb in tension, {c.CompressionLb:0} lb in compression.");
+                Fail(c.Fails);
             }
+            if (rimLb >= 1)
+            {
+                // where no wall is under the line (none at all, or past the lower walls' ends): the floor's rim, one ply of the
+                // joists' depth in the framing's lumber, a strap across each of its butt splices (owner 2026-11-08)
+                var c = WoodFraming.RimCollector.Design(rimLb, species, grade, def.FloorJoistSize);
+                string where = plates.Count == 0 ? "no wall under the line" : $"past the walls under the line: {rimLb:0} lb at {rimAt - start:0.##} ft";
+                parts.Add(c.Fails != null && c.AreaIn2 <= 0 ? c.Fails :
+                    $"The {level.Name} floor's {c.Lumber} rim ({where}): {c.TensionLb:0} lb in tension, {c.CompressionLb:0} lb in compression; " +
+                    $"a strap across each splice for {c.StrapLb:0} lb (ASD; the strap from the catalog: not picked by the program yet).");
+                line.StrapLb = Math.Round(c.StrapLb, 1);
+                Fail(c.Fails);
+            }
+            line.Collector = string.Join(" ", parts);
             return line;
         }
     }

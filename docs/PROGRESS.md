@@ -2,6 +2,16 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-09 — A floor line partly over walls: the plates, then the rim; 2x4 to 2x12 for any member
+
+- Along a floor's line of shear walls the collector is the top plates over the walls under it (their whole length, with
+  the line tolerance for the corners) and the rim past them; each is checked for the worst force on its own stretch
+  (`DiaphragmLines`, both at the hand-off), the rim's strap for the rim's. The roof keeps the plates (ROADMAP).
+- Hub test: a first-story wall under 12 of the 30 ft line at x = 20, a wall from 6 to 24 ft standing on the floor: 4,120 lb
+  in the 2x6 plates at the lower wall's end, 3,990 lb in the rim past it, both as N(t) recomputed in the test.
+- NDS library (owner): `Table4.Sizes` 2x4 to 2x12 for any 2x member (studs, rims, joists, ceiling joists, rafters);
+  the rim tested at every size by hand.
+
 ## 2026-11-08 — The floor's rim as the collector where no wall is under the line (step 6)
 
 - A line of shear walls that only stand on a floor (none under it) has no top plates to collect into: the floor's rim is

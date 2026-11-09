@@ -190,8 +190,12 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
       test: a wall on a beam, v × 6 ft by hand.
     - [ ] The rim splices' strap picked from the catalog (MSTA, CS16...): the catalog page copied in first.
     - [ ] Southern Pine 2x10 and 2x12 (NDS Supplement Table 4B): not read into the NDS library yet (the rim check says so).
-    - [ ] A line partly over walls: the stretch past the lower walls' ends is the rim too (today the plates are checked
-      for the line's worst force all along it).
+    - [x] (2026-11-09) A line partly over walls: the top plates take the collector over the walls under the line (their
+      whole length, and the 0.5 ft line tolerance for the corners), the floor's rim past their ends, each checked for its
+      own stretch's worst (both at the hand-off); the strap for the rim's. Hub test: a lower wall under 12 of 30 ft, N(t)
+      recomputed by hand along the line.
+    - [ ] The roof's lines past the walls under them: the blocking or the rafters' ends as the collector (today the plates
+      are checked for the whole line).
     - [ ] A page to edit the Building Model's defaults (`ModelDefaults`: stud sizes, the floor joists): only in the file.
     - [ ] The diaphragm's field nailing zones and chords (the line's nailing is given at the line only).
     - [x] (2026-11-08) The rim (a floor) or the roof's blocking toe-nailed into each shear wall's top plates
