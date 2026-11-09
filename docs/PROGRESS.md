@@ -2,6 +2,13 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-09 — SWC clean-up after the geometry lock
+
+- Removed the handlers nothing wired any more: Export/Apply change set, Copy from below, Move, Copy, Note, Delete (and the
+  model snapshot only the export used).
+- The Members tab shows every coordinate read-only, no delete buttons, its empty rows pointing to the Building Model
+  (`GeometryPanel.GeometryLocked`, set by SWC). Hub test: no text box in it, the wall's length shown.
+
 ## 2026-11-09 — SWC's Pieces tab: the whole wall
 
 - The construction window's Pieces tab now lists the whole wall as its Elevation and 3D tabs draw it (`WallPanel.Framing`):

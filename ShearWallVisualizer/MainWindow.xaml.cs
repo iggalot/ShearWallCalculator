@@ -279,7 +279,7 @@ namespace ShearWallVisualizer
                 catch (Exception ex) { MessageBox.Show(this, "The standard hold-down list could not be saved:\n" + ex.Message, "Hold-down standard list"); }
                 UpdateShearWallUI();
             };
-            geometryPanel = new GeometryPanel { HeightsFromLevels = true }; // the building model sets them
+            geometryPanel = new GeometryPanel { HeightsFromLevels = true, GeometryLocked = true }; // the building model sets them: shown here, edited there
             geometryPanel.GeometryChanged += GeometryTyped; // typed coordinates go to the model (that member's level)
             geometryPanel.SelectionChanged += (kind, story, id) => SelectOnLevel(story, kind, id);
             geometryPanel.DeleteRequested += (kind, story, id) => DeleteMember(story >= 0 && story < stories.Count ? stories[story].ModelId(kind, id) : CurrentStory?.ModelId(kind, id));

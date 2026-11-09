@@ -141,21 +141,6 @@ namespace ShearWallVisualizer
             if (sender is Button b && int.TryParse(b.CommandParameter as string, out int n)) ShowLevel(n - 1);
         }
 
-        /// <summary>Copy ↑: puts a copy of every wall (with its design), diaphragm and note of the story below on this one.</summary>
-        private void CopyFromBelow_Click(object sender, RoutedEventArgs e)
-        {
-            if (currentLevel < 1 || currentLevel >= stories.Count) return;
-            var from = stories[currentLevel - 1].Level;
-            var to = stories[currentLevel].Level;
-            int n = 0;
-            Sketch.Edit($"Copied {from.Name} onto {to.Name}.", b =>
-            {
-                n = BuildingEdits.CopyStory(b, from, to);
-                ShearWallAdapter.CopyDesignUp(b, from, to);
-            });
-            ShowStatusMessage(LogLevel.Info, n == 0 ? $"{from.Name} has nothing to copy." : $"Copied {n} walls, diaphragms and notes from {from.Name} to {to.Name}. Ctrl+Z undoes it.");
-        }
-
         private void UpdateLevelButtons()
         {
             if (levelGroup == null) return;

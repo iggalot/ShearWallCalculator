@@ -75,6 +75,21 @@ namespace ShearWallVisualizer.Controls
         /// </summary>
         public bool HeightsFromLevels { get; set; }
 
+        /// <summary>
+        /// The geometry is the Building Model's (the shear wall app's sketch is locked): every coordinate is shown, not edited
+        /// here, and no row has a delete button; the rows still pick their member on the drawing.
+        /// </summary>
+        public bool GeometryLocked { get; set; }
+
+        private const string LockedTip = "Drawn in the Building Model: move or resize it there (Model > Edit building).";
+
+        /// <summary>A coordinate cell: a number to type in, or (the geometry locked) the value shown.</summary>
+        private void Coordinate(UiTable t, int r, int c, double v, Func<double, bool> set, int key)
+        {
+            if (GeometryLocked) t.Text(r, c, Ui.Num(v, "0.##"), key, Ui.InkSecondary, tip: LockedTip);
+            else t.Number(r, c, v, set, key);
+        }
+
         // the tables start sorted by the level column (0), and keep the user's sort across rebuilds
         private readonly SortState wallSort = new SortState { Column = 0 }, diaphragmSort = new SortState { Column = 0 },
                                    beamSort = new SortState { Column = 0 }, columnSort = new SortState { Column = 0 };
@@ -205,7 +220,7 @@ namespace ShearWallVisualizer.Controls
             tbWallsTitle.Text = $"Walls ({count})";
             if (count == 0)
             {
-                wallsHost.Children.Add(Ui.Banner("No walls yet. Pick Wall (L) on the toolbar and click each wall's two ends on the drawing.", warning: false));
+                wallsHost.Children.Add(Ui.Banner(GeometryLocked ? "No walls on this level. They are drawn in the Building Model (Model > Edit building)." : "No walls yet. Pick Wall (L) on the toolbar and click each wall's two ends on the drawing.", warning: false));
                 return;
             }
 
@@ -239,17 +254,17 @@ namespace ShearWallVisualizer.Controls
                     LevelCell(wallTable, r, lv.Name, lv.Elevation, key);
                     wallTable.Text(r, c++, id.ToString(), key, bold: true, right: false);
                     wallTable.Text(r, c++, ew ? "E-W" : "N-S", key, Ui.InkSecondary, right: false);
-                    wallTable.Number(r, c++, w.Start.X, v => MoveWall(story, calc, w, v, w.Start.Y, w.WallLength), key);
-                    wallTable.Number(r, c++, w.Start.Y, v => MoveWall(story, calc, w, w.Start.X, v, w.WallLength), key);
-                    wallTable.Number(r, c++, w.WallLength, v => v > 0 && MoveWall(story, calc, w, w.Start.X, w.Start.Y, v), key);
-                    if (HeightsFromLevels)
+                    Coordinate(wallTable, r, c++, w.Start.X, v => MoveWall(story, calc, w, v, w.Start.Y, w.WallLength), key);
+                    Coordinate(wallTable, r, c++, w.Start.Y, v => MoveWall(story, calc, w, w.Start.X, v, w.WallLength), key);
+                    Coordinate(wallTable, r, c++, w.WallLength, v => v > 0 && MoveWall(story, calc, w, w.Start.X, w.Start.Y, v), key);
+                    if (HeightsFromLevels || GeometryLocked)
                         wallTable.Text(r, c++, Ui.Num(w.WallHeight, "0.##"), key, Ui.InkSecondary, tip: "From the building model's levels: change the plate heights in the Building Model editor (Floors… or Edit building)");
                     else
                         wallTable.Number(r, c++, w.WallHeight, v => { if (v <= 0) return false; w.WallHeight = v; Changed(story, calc); return true; }, key);
                     wallTable.Text(r, c++, Ui.Num(w.End.X, "0.##"), key, Ui.InkSecondary);
                     wallTable.Text(r, c++, Ui.Num(w.End.Y, "0.##"), key, Ui.InkSecondary);
                     wallTable.Text(r, c++, Ui.Num(w.WallRigidity, "0.000"), key, Ui.InkSecondary);
-                    wallTable.Put(r, c++, Ui.DeleteButton(() => Delete("Wall", story, id), $"Delete wall {id} ({lv.Name})"));
+                    if (!GeometryLocked) wallTable.Put(r, c, Ui.DeleteButton(() => Delete("Wall", story, id), $"Delete wall {id} ({lv.Name})"));
                 }
             }
             wallsHost.Children.Add(wallTable.InFrame());
@@ -263,7 +278,7 @@ namespace ShearWallVisualizer.Controls
             tbDiaphragmsTitle.Text = $"Diaphragms ({count})";
             if (count == 0)
             {
-                diaphragmsHost.Children.Add(Ui.Banner("No diaphragm yet. Pick Diaphragm (R) on the toolbar and click two opposite corners of the floor or roof.", warning: false));
+                diaphragmsHost.Children.Add(Ui.Banner(GeometryLocked ? "No diaphragm on this level. Floors and roofs are drawn in the Building Model (Model > Edit building)." : "No diaphragm yet. Pick Diaphragm (R) on the toolbar and click two opposite corners of the floor or roof.", warning: false));
                 return;
             }
 
@@ -293,12 +308,12 @@ namespace ShearWallVisualizer.Controls
                     int c = 1;
                     LevelCell(diaphragmTable, r, lv.Name, lv.Elevation, key);
                     diaphragmTable.Text(r, c++, id.ToString(), key, bold: true, right: false);
-                    diaphragmTable.Number(r, c++, x, v => Resize(story, calc, d, v, y, wid, dep), key);
-                    diaphragmTable.Number(r, c++, y, v => Resize(story, calc, d, x, v, wid, dep), key);
-                    diaphragmTable.Number(r, c++, wid, v => v > 0 && Resize(story, calc, d, x, y, v, dep), key);
-                    diaphragmTable.Number(r, c++, dep, v => v > 0 && Resize(story, calc, d, x, y, wid, v), key);
+                    Coordinate(diaphragmTable, r, c++, x, v => Resize(story, calc, d, v, y, wid, dep), key);
+                    Coordinate(diaphragmTable, r, c++, y, v => Resize(story, calc, d, x, v, wid, dep), key);
+                    Coordinate(diaphragmTable, r, c++, wid, v => v > 0 && Resize(story, calc, d, x, y, v, dep), key);
+                    Coordinate(diaphragmTable, r, c++, dep, v => v > 0 && Resize(story, calc, d, x, y, wid, v), key);
                     diaphragmTable.Text(r, c++, Ui.Num(d.Area, "0"), key, Ui.InkSecondary);
-                    diaphragmTable.Put(r, c++, Ui.DeleteButton(() => Delete("Diaphragm", story, id), $"Delete diaphragm {id} ({lv.Name})"));
+                    if (!GeometryLocked) diaphragmTable.Put(r, c, Ui.DeleteButton(() => Delete("Diaphragm", story, id), $"Delete diaphragm {id} ({lv.Name})"));
                 }
             }
             diaphragmsHost.Children.Add(diaphragmTable.InFrame());
@@ -342,7 +357,7 @@ namespace ShearWallVisualizer.Controls
                     beamTable.Text(r, c++, Ui.Num(b.Length, "0.##"), i, Ui.InkSecondary);
                     beamTable.Text(r, c++, b.Carries ?? "", i, Ui.InkSecondary, right: false);
                     string bid = b.Id;
-                    beamTable.Put(r, c++, Ui.DeleteButton(() => DeleteFraming(bid), $"Delete beam {bid}"));
+                    if (!GeometryLocked) beamTable.Put(r, c, Ui.DeleteButton(() => DeleteFraming(bid), $"Delete beam {bid}"));
                 }
                 beamsHost.Children.Add(beamTable.InFrame());
             }
@@ -371,7 +386,7 @@ namespace ShearWallVisualizer.Controls
                     columnTable.Text(r, c++, p.Span ?? "", i, Ui.InkSecondary, right: false);
                     columnTable.Text(r, c++, p.Carries ?? "", i, Ui.InkSecondary, right: false);
                     string cid = p.Id;
-                    columnTable.Put(r, c++, Ui.DeleteButton(() => DeleteFraming(cid), $"Delete column {cid} (every story it runs through)"));
+                    if (!GeometryLocked) columnTable.Put(r, c, Ui.DeleteButton(() => DeleteFraming(cid), $"Delete column {cid} (every story it runs through)"));
                 }
                 columnsHost.Children.Add(columnTable.InFrame());
             }

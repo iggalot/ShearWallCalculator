@@ -306,9 +306,9 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
   (the model has no wall openings yet: its openings cut floors).
 - [ ] **Relax the hub's one-app-at-a-time rule** now that saves merge (for example, allow the Load Manager beside the
   Shear Wall Calculator), and let each app warn from the locks instead.
-- [ ] **SWC clean-up after the geometry lock:** remove the dead geometry handlers (Export/Apply change set, Copy from
-  below, Move and others); show the stud size in the construction window and the Members-tab coordinates read-only
-  rather than refusing the edit.
+- [x] **SWC clean-up after the geometry lock** (2026-11-09): the dead handlers removed (Export/Apply change set, Copy from
+  below, Move, Copy, Note, Delete; nothing wired them); the Members tab shows the coordinates read-only, with no delete
+  buttons (`GeometryPanel.GeometryLocked`); the construction window already shows and picks the stud size. Hub test.
 - [x] **SWC to watch the project file always** (done with the hub's checks, 2026-11-06: `WatchProject` from the open on;
   ticked 2026-11-09).
 - [ ] **Stamp stored results with what they were based on** (model revision, inputs hash), as `Lateral` does with

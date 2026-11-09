@@ -59,9 +59,6 @@ namespace ShearWallVisualizer
             finally { amendDesign = false; }
         }
 
-        /// <summary>The model as opened or saved: Model > Export changes compares with it.</summary>
-        private string baseModelJson;
-
         private SketchCanvas m_layers => sketchView.Canvas;
         private SketchCanvas Sketch => sketchView.Canvas;
         private StoryMap CurrentStory => currentLevel >= 0 && currentLevel < stories.Count ? stories[currentLevel] : null;
@@ -164,19 +161,17 @@ namespace ShearWallVisualizer
             storing = true;
             try { Sketch.SetBuilding(building, levelsUp[currentLevel].Id); }
             finally { storing = false; }
-            baseModelJson = ModelFile.BuildingToJson(building);
             ModelToCalculators();
             Sketch.ZoomExtents();
             // again once drawn: the labels' room is measured on the first frame
             Dispatcher.BeginInvoke(new Action(() => Sketch.ZoomExtents()), System.Windows.Threading.DispatcherPriority.ContextIdle);
         }
 
-        /// <summary>After New or Open: the undo history starts here, and Model > Export changes compares with this model.</summary>
+        /// <summary>After New or Open: the undo history starts here.</summary>
         private void StartHistory()
         {
             Sketch.History.Reset(building);
             sketchView.UpdateButtons();
-            baseModelJson = ModelFile.BuildingToJson(building);
         }
 
         /// <summary>After any change to the model: the calculators are filled again from it and everything is recalculated.</summary>
@@ -325,8 +320,6 @@ namespace ShearWallVisualizer
             selectionCardOpen = false;
         }
 
-        private void Delete_Click(object sender, RoutedEventArgs e) => DeleteSelected();
-
         /// <summary>Delete on a wall or diaphragm: they are deleted in the Building Model (the geometry is edited only there).</summary>
         private void DeleteSelected() => ShowStatusMessage(LogLevel.Info, Sketch.GeometryLockedMessage);
 
@@ -334,10 +327,7 @@ namespace ShearWallVisualizer
 
         private void Undo_Click(object sender, RoutedEventArgs e) => Sketch.Undo();
         private void Redo_Click(object sender, RoutedEventArgs e) => Sketch.Redo();
-        private void btnMove_Click(object sender, RoutedEventArgs e) => Sketch.SetTool(SketchTool.Move);
-        private void btnCopy_Click(object sender, RoutedEventArgs e) => Sketch.SetTool(SketchTool.Copy);
         private void btnMeasure_Click(object sender, RoutedEventArgs e) => Sketch.SetTool(SketchTool.Measure);
-        private void btnNote_Click(object sender, RoutedEventArgs e) => Sketch.SetTool(SketchTool.Note);
         private void btnCut_Click(object sender, RoutedEventArgs e) => Sketch.SetTool(SketchTool.Cut);
         private void btnOrtho_Click(object sender, RoutedEventArgs e) => Sketch.ToggleOrtho();
         private void btnZoomExtents_Click(object sender, RoutedEventArgs e) => Sketch.ZoomExtents();
@@ -677,60 +667,6 @@ namespace ShearWallVisualizer
             if (view3D == null) return;
             view3D.HighlightLevelId = CurrentStory?.Level.Id;
             view3D.Show(building);
-        }
-
-        // ------------------------------------------------------------------ Model menu: the building for the other apps
-
-        private const string ChangesFilter = "Change set (*.changes.json)|*.changes.json|JSON (*.json)|*.json|All files (*.*)|*.*";
-
-        private void ExportChanges_Click(object sender, RoutedEventArgs e)
-        {
-            var before = baseModelJson == null ? Building.New() : ModelFile.BuildingFromJson(baseModelJson);
-            var changes = ChangeSet.Between(before, building);
-            if (changes.IsEmpty)
-            {
-                MessageBox.Show(this, "Nothing has changed in the building since the project was opened or saved.", "Export changes", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-            changes.Author = "Shear Wall Calculator";
-            var save = new SaveFileDialog { InitialDirectory = ProjectFolder.DialogFolder, Title = "Export changes", Filter = ChangesFilter, FileName = Path.GetFileNameWithoutExtension(ProjectName) + ".changes.json" };
-            if (save.ShowDialog(this) != true) return;
-            try { File.WriteAllText(save.FileName, changes.ToJson()); }
-            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
-            {
-                MessageBox.Show(this, "The changes could not be saved:\n" + ex.Message, "Export changes", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-            Log.Info($"Changes exported ({changes.Changes.Count}): {save.FileName}");
-            ShowStatusMessage(LogLevel.Info, $"{changes.Changes.Count} changes exported: {changes.Summary()}");
-        }
-
-        /// <summary>Applies a change set from another copy of the model; conflicts are listed and can be forced or skipped.</summary>
-        private void ApplyChanges_Click(object sender, RoutedEventArgs e)
-        {
-            var open = new OpenFileDialog { InitialDirectory = ProjectFolder.DialogFolder, Title = "Apply a change set", Filter = ChangesFilter };
-            if (open.ShowDialog(this) != true) return;
-            ChangeSet changes;
-            try { changes = ChangeSet.FromJson(File.ReadAllText(open.FileName)); }
-            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is InvalidDataException || ex is System.Runtime.Serialization.SerializationException)
-            {
-                MessageBox.Show(this, "The change set could not be read:\n" + ex.Message, "Apply a change set", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-            var trial = ModelFile.Clone(building);
-            var conflicts = changes.ApplyTo(trial);
-            bool force = false;
-            if (conflicts.Count > 0)
-            {
-                var answer = MessageBox.Show(this, $"{conflicts.Count} of the {changes.Changes.Count} changes conflict with this model:\n\n" +
-                                                   string.Join("\n", conflicts.Take(12).Select(c => "• " + c)) + (conflicts.Count > 12 ? "\n• ..." : "") +
-                                                   "\n\nYes: apply them anyway (theirs wins).  No: apply only the others.  Cancel: apply nothing.",
-                                             "Apply a change set", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
-                if (answer == MessageBoxResult.Cancel) return;
-                force = answer == MessageBoxResult.Yes;
-            }
-            Sketch.Edit($"Change set applied: {changes.Summary()}", b => changes.ApplyTo(b, force));
-            Log.Info($"Change set applied ({changes.Changes.Count} changes, {conflicts.Count} conflicts{(force ? ", forced" : "")}): {open.FileName}");
         }
     }
 }
