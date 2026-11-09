@@ -2,6 +2,20 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-09 — The horizontal pairs on the plans; a diaphragm's free body
+
+- The shared plan draws each shear wall's horizontal pairs in teal (`SketchCanvas.DrawShearPairs`, with the hold-downs,
+  `ShowConnections`): which half by the hold-downs' WISE rule (`ShearPairs.Drawn`), the worst case of each.
+- A diaphragm picked on its level is a body (`ShearPairs.DiaphragmKey`): its own wind at its point and each wall's half on
+  it, drawn in one case (`SketchCanvas.FreeBodyCase`, else the case with the most wind on it, `DiaphragmCase`).
+- The Load Manager's Foundation page steps up through the levels (the level bar: the foundation, then each floor and the
+  roof). Clicking a level's diaphragm lists its free body in the side panel, case by case (`ConnectionBalance.DiaphragmForces`):
+  E its wind, I each wall's push, ΣFx, ΣFy, ΣMz (the check's sums), and whether it balances in every case.
+- Tests: the drawing rule and the worst case (BM), the render with a picked diaphragm (Sketch), and Level 2's free body by
+  hand in the Load Manager (1000 − 2000 + 1000 = 0; with 1500, ΣFx = +500 shows).
+- Southern Pine 2x10 and 2x12 (NDS Supplement Table 4B, from the SFPA's 2013 guide kept in `NDS_WoodLibrary\docs\references`)
+  and the Building Model's defaults page (Building > Model defaults) are in too (ROADMAP).
+
 ## 2026-11-09 — The splice straps and the framing plates picked from the catalog
 
 - The strap across each splice of a rim or each joint of the roof's blocking (collectors and chords) is picked from the

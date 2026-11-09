@@ -192,7 +192,9 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
       strap tie of C-C-2026 p. 291 (the copy in docs/references) whose (160) tension takes the whole force and whose
       width fits the member's face less 1"; saved as `DiaphragmLine.Strap`, `DiaphragmChord.Strap`. Tests: 1,662 lb on a
       2x10 ST2215 (1,875), 301 lb HRS6 (605), 3,000 lb on a 2x4 MSTI36 (the 3" MSTC28 does not fit).
-    - [ ] Southern Pine 2x10 and 2x12 (NDS Supplement Table 4B): not read into the NDS library yet (the rim check says so).
+    - [x] (2026-11-09) Southern Pine 2x10 and 2x12 (Table 4B): from SFPA's Southern Pine Use Guide 2013 Table 1 (the June 1,
+      2013 SPIB values; it matches the 2x4 to 2x8 rows read before), kept in NDS_WoodLibrary/docs/references. No. 2 2x10
+      Fb 800, Ft 475, Fc 1300; 2x12 750, 450, 1250. The SP 2x10 rim by hand: 10,545 lb tension, 28,860 lb compression.
     - [x] (2026-11-09) A line partly over walls: the top plates take the collector over the walls under the line (within
       their length only: none past a wall's end, owner), the floor's rim past their ends, each checked for its
       own stretch's worst (both at the hand-off); the strap for the rim's. Hub test: a lower wall under 12 of 30 ft, N(t)
@@ -201,7 +203,9 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
       (owner's choice; `ModelDefaults.RoofBlockingSize`, 2x6 to start), checked as the rim is (`RimCollector`, member
       "blocking"), a strap across every joint for the whole force. Hub tests: the upper north wall shortened to 10..30 ft,
       v × 10 ft; the wall at x = 20 from 6 to 24 ft, v × 6 ft.
-    - [ ] A page to edit the Building Model's defaults (`ModelDefaults`: stud sizes, the floor joists): only in the file.
+    - [x] (2026-11-09) A page to edit the Building Model's defaults: Building > Model defaults
+      (`BuildingModel.Sketch.ModelDefaultsWindow`, one undo step): new stories, roofs and quick buildings, and the framing
+      (studs, lumber, deflection limit, rafters, floor joists, roof blocking); a value not offered is kept.
     - [x] (2026-11-09) The diaphragm's field nailing zones (owner's choice: two per span): the shear falls linearly from
       each line to nothing at mid-span (a cantilever's free end), from the larger of the line's v and 0.6 w (L/2) / d; the
       line's nailing out to where v is under the lightest row's (rounded up to the 2 ft), the lightest row beyond
@@ -227,8 +231,12 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
       SPF/HF 615 lb (`FramingPlates_Manager`); s = 12 A / v to the inch below, 24" at most, 6" at least. On a face with no
       wood panel (gypsum goes on after) with 0.131 x 1-1/2 nails; both faces paneled: over the thinner, up to 1/2", with
       0.131 x 2-1/2 nails at the full load (footnote 3). The program's placement; tell it otherwise if you place them differently.
-    - [ ] The horizontal pairs drawn on the plans and in the Load Manager's free body of a diaphragm (a diaphragm is not a
-      member you can pick yet).
+    - [x] (2026-11-09) The horizontal pairs drawn on the plans (teal, `ShearPairs.Drawn`, the hold-downs' WISE rule; the
+      worst case of each half, or the picked diaphragm's case) and a diaphragm's free body: pick it on its level (the shared
+      sketch, `ShearPairs.DiaphragmKey` in the body; the Building Model, SWC and the Load Manager's Foundation page, which now
+      steps up through the levels): its own wind and each wall's half drawn in one case (`SketchCanvas.FreeBodyCase`), the
+      Load Manager's side panel listing them with ΣFx, ΣFy, ΣMz (`ConnectionBalance.DiaphragmForces`) and a case picker.
+      LM test by hand: 1000 − 2000 + 1000 = 0.
   - [ ] 7. With joists and rafters framed under the diaphragm: the roof tie line pair becomes a point pair at each rafter
     end (its tributary width); the points along a wall must add up to the line load they replace, case by case.
 - [~] **Central hub (launcher) for the apps.** The prototype is built: the new repo `..\DesignHub`
