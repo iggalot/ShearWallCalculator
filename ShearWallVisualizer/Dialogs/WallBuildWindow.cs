@@ -293,19 +293,23 @@ namespace ShearWallVisualizer.Dialogs
         private FrameworkElement Pieces()
         {
             var p = new StackPanel { Margin = new Thickness(4, 4, 16, 16) };
-            var f = framing;
+            // the whole wall, as the Elevation and 3D tabs draw it (the shared views' framing): the hold-down posts at the shear
+            // part's ends, the sheets over it, a stud at each of the wall's own ends past it
+            var f = panel.Framing ?? framing;
             var r = data.Result;
             string sz = f.StudSize;
+            bool partOnly = f.PartTo - f.PartFrom < f.Length - 0.01;
 
-            Section(p, "Framing", $"Studs and plates {sz} ({(data.FirstStory ? "first story" : "above the first story")}); the plates are laid flat, as wide as the studs ({FtIn.Inches(f.StudDepth)} in).");
+            Section(p, "Framing", $"Studs and plates {sz} ({(data.FirstStory ? "first story" : "above the first story")}); the plates are laid flat, as wide as the studs ({FtIn.Inches(f.StudDepth)} in)." +
+                                  (partOnly ? $" The whole wall, {FtIn.Of(f.Length)}; the shear wall is {FtIn.Of(f.PartTo - f.PartFrom)} of it, from {FtIn.Of(f.PartFrom)} to {FtIn.Of(f.PartTo)}: its hold-down posts at its ends, sheathed over it." : ""));
             var rows = new List<string[]>
             {
                 new[] { "Sill plate (flat)", sz, "1", FtIn.Of(f.Length), data.FirstStory ? "On the foundation: preservative-treated; anchor bolts below (Sill anchors)." : "On the floor sheathing of the story below, nailed through it into the rim or blocking (Sill nailing)." },
                 new[] { "Top plates (flat, double)", sz, "2", FtIn.Of(f.Length), "Splices in the two plies 4 ft apart at least." },
             };
             var studs = f.Pieces.Where(x => x.Kind == FramingKind.Stud).ToList();
-            if (studs.Count > 0) rows.Add(new[] { $"Studs @ {f.Spacing:0}\" o.c.", sz, studs.Count.ToString(), FtIn.Of(studs[0].Length), "Laid out from the low (left) end." });
-            rows.Add(new[] { "Hold-down posts, at the ends", $"{f.PostPlies}-{sz}", "2", FtIn.Of(f.StudTop - WallFraming.Ply),
+            if (studs.Count > 0) rows.Add(new[] { $"Studs @ {f.Spacing:0}\" o.c.", sz, studs.Count.ToString(), FtIn.Of(studs[0].Length), "Laid out from the low (left) end" + (partOnly ? ", with a stud at each of the wall's own ends." : ".") });
+            rows.Add(new[] { partOnly ? "Hold-down posts, at the shear wall's ends" : "Hold-down posts, at the ends", $"{f.PostPlies}-{sz}", "2", FtIn.Of(f.StudTop - WallFraming.Ply),
                              $"Built up of {f.PostPlies} plies ({FtIn.Inches(f.PostPlies * WallFraming.Ply)} in along the wall)" +
                              (r?.Holdown?.WoodMinHeight is double mh && r.Holdown.WoodMinWidth is double mw ? $"; the hold-down needs {FtIn.Inches(mh)} × {FtIn.Inches(mw)} in at least." : ".") });
             int under = f.Pieces.Count(x => x.Kind == FramingKind.PostUnder) / 2;
@@ -378,13 +382,15 @@ namespace ShearWallVisualizer.Dialogs
                     "Each hold-down above pulls up on this wall's top at its post: it is carried by the post under it to this wall's bottom.");
             if (data.Above.Count > 0)
             {
+                // Along is from the shear part's low end (the calculator's wall); on the whole wall it is PartFrom further
+                double post = f.PostPlies * WallFraming.Ply + WallFraming.Ply;
                 var arows = data.Above.OrderBy(a => a.Along).Select(a => new[]
                 {
-                    FtIn.Of(a.Along), a.From, a.Landing.Model ?? "", $"{a.Landing.TensionAsd:N0}",
-                    a.Along < f.PostPlies * WallFraming.Ply + WallFraming.Ply || a.Along > f.Length - f.PostPlies * WallFraming.Ply - WallFraming.Ply
-                        ? "Over this wall's end post: it carries it down." : $"Over a 2-{sz} post added under it.",
+                    FtIn.Of(f.PartFrom + a.Along), a.From, a.Landing.Model ?? "", $"{a.Landing.TensionAsd:N0}",
+                    a.Along < post || a.Along > f.PartTo - f.PartFrom - post
+                        ? "Over the shear wall's end post: it carries it down." : $"Over a 2-{sz} post added under it.",
                 }).ToList();
-                p.Children.Add(Table(new[] { "From the low end", "From", "Its hold-down", "Uplift (lb, ASD)", "Under it" }, arows));
+                p.Children.Add(Table(new[] { "From the wall's low end", "From", "Its hold-down", "Uplift (lb, ASD)", "Under it" }, arows));
             }
 
             if (r != null)

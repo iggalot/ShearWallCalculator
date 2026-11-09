@@ -2,6 +2,12 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-09 — SWC's Pieces tab: the whole wall
+
+- The construction window's Pieces tab now lists the whole wall as its Elevation and 3D tabs draw it (`WallPanel.Framing`):
+  the plates its full length, the wall's own end studs, the hold-down posts at the shear part's ends (named), the sheets over
+  the part; the hold-downs landing from above placed from the wall's low end. Hub test: a wall declared over 10 to 30 ft of 40.
+
 ## 2026-11-09 — An undesigned shear wall shows its declared sheathing
 
 - `ShearWallCheck.ShearDesigns` gives a declared wall with no design yet its card's faces (`WallDesignInputs.EffectiveFace1`,

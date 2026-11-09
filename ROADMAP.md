@@ -51,7 +51,9 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
   nailing, the arm, the check, the sill bolts). The Building Model opens it from a wall's properties (Framing and 3D…);
   SWC's construction window hosts the same panel and adds its Pieces and Calculation tabs. Views only: nothing in them
   is calculated.
-  - [ ] SWC's Pieces tab still lists the shear part's pieces; the whole wall's would match the views.
+  - [x] (2026-11-09) SWC's Pieces tab lists the whole wall's pieces, as the views draw it (`WallPanel.Framing`): the plates
+    its full length, a stud at each of its own ends, the hold-down posts at the shear part's ends, the sheets over the part;
+    the part named. Hub test: the south wall declared over 10 to 30 ft of 40.
   - [x] (2026-11-09) An undesigned shear wall (no wind yet) shows its declared sheathing (its card's faces,
     `ShearWallCheck.ShearDesigns`), no nailing until it is designed. Hub test: the construction window's view.
 - [~] **Every connection as a pair of equal and opposite forces** (owner, 2026-11-07). The Load Manager reports every
