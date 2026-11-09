@@ -266,7 +266,9 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
     on the forces as they are now; `ProjectCheck` chains them. The wind app and the Load Manager watch the file too, and
     the Load Manager says when the saved shear wall forces are older than the building or the wind. Uplift on the
     foundation is a flag for the foundation design (amber), not a fault.
-  - [ ] Show the hub's problems in the apps too (SWC: the walls the hub marked, on opening).
+  - [x] (2026-11-09) Show the hub's problems in the apps too: the format moved to BuildingModel.Core (`ProjectStatus`,
+    `StatusItem`; the hub makes it, `HubStatus.From`); SWC shows the Shear walls step's items on opening, the Load Manager
+    its two steps' (`ProjectStatus.Words`), each with since when and whose hub saw it.
 - [x] **Merge on save, atomic saves, a shared project lock** (2026-11-05; BuildingModel `063084e` and the commits
   after it). Every app re-reads the file at save and writes only its own part: the Building Model merges three-way
   (`ModelFile.SaveMerged`), the Shear Wall Calculator replaces only its keys (`SaveOwnData`), the wind and the loads

@@ -2,6 +2,14 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-09 — The hub's problems shown in the apps
+
+- The format of the hub's mark ("Hub.Status": `ProjectStatus`, `StatusItem`) moved from DesignHub.Core to
+  BuildingModel.Core, so the apps read it without the hub; the hub still makes and writes it (`HubStatus.From`).
+- On opening a project SWC shows what the hub marked for the Shear walls step, the Load Manager for Gravity loads and
+  Foundation loads (`ProjectStatus.Words`: each item, since when, whose hub saw it), and logs it. They never write it.
+- BM test: the items kept with when they were first seen, a step's words, the section cleared.
+
 ## 2026-11-09 — The declared shear walls in the Building Model; the hub opens a step's page
 
 - The shared plan bands each declared shear wall's shear part in blue, tagged SW (SW fails in red), from the `Lateral`

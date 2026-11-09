@@ -276,6 +276,13 @@ namespace ShearWallVisualizer
             if (!reload) OpenOnWorkspace(windNow);
             if (note != null && !reload)
                 MessageBox.Show(this, note, "Open", MessageBoxButton.OK, MessageBoxImage.Information);
+            // what the hub marked for the shear walls when it last checked (its "Hub.Status"; the hub writes it, this app only reads)
+            string hub = reload ? null : ProjectStatus.Read(b)?.Words("Shear walls");
+            if (hub != null)
+            {
+                Log.Warning("Project", hub.Replace("\n", " "), null);
+                MessageBox.Show(this, hub, "Open", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
             return true;
         }
 
