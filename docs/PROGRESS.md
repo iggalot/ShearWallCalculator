@@ -2,6 +2,19 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-09 — The diaphragm's chords
+
+- The owner's choices (2026-11-08): each diaphragm is a beam in simple spans between its lines of shear walls, loaded by
+  its own wind (the worst case's force over its length), M = w L² / 8 at mid-span, a cantilever past the last line
+  w a² / 2; T = C = M / d at its edges, d its depth there, ASD (0.6 W). The chord: the double top plate of the walls under
+  the edge whose length covers the point (spliced with 16d each side, as a collector), else the floor's rim with a strap
+  at each splice; the roof's edge with no wall under it is reported, not designed (ROADMAP).
+- `DiaphragmLines.Chords` (ModelAdapter), saved as `Connections.Chords` (`DiaphragmChord`, `ChordsOn`); the construction
+  window's Pieces tab lists the chords a wall's plates are, with the sources.
+- Hub tests: the box, 40 × 30 ft: level 2 wind along x w = 393.4 plf, M = 0.6 × 393.4 × 30² / 8 = 26,551 lb·ft, T = 664 lb
+  (3 16d each side of a 2x6 splice); along y T = 1,662 lb (8); the roof's 2x4. With the lower north wall out (a beam
+  under the upper one) the north chord is the 2x10 rim, its strap 1,662 lb.
+
 ## 2026-11-09 — A floor line partly over walls: the plates, then the rim; 2x4 to 2x12 for any member
 
 - Along a floor's line of shear walls the collector is the top plates within the length of the walls under it (none past

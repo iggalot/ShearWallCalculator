@@ -455,7 +455,8 @@ namespace ShearWallCalculator.ModelAdapter
         /// WoodFraming.Connections): every shear wall's sheathing nailing (<see cref="NailingOf"/>; owner 2026-11-08), its sill, a first story's anchor bolts (<see cref="WoodFraming.SillAnchorage"/>,
         /// as the construction window lays them out) or an upper story's nailing through the floor sheathing
         /// (<see cref="SillNailingOf"/>), and each diaphragm's lines of shear walls (<see cref="DiaphragmLines.Design"/>: the line
-        /// shear, the boundary nailing, the collector; owner 2026-11-07). Null when there is nothing.
+        /// shear, the boundary nailing, the collector; owner 2026-11-07) and their chords (<see cref="DiaphragmLines.Chords"/>, owner
+        /// 2026-11-08: simple spans between the lines). Null when there is nothing.
         /// </summary>
         public static ConnectionsSection Connections(IList<ShearWallCalculatorBase> levels, IList<StoryMap> stories,
             IList<Dictionary<int, WallDesignResult>> byStory, Building building, LateralSection lateral, int revision)
@@ -505,7 +506,11 @@ namespace ShearWallCalculator.ModelAdapter
                         c.Tops.Add(new TopConnection { WallId = id, LevelId = stories[k].Level?.Id, Blocking = roof, Nail = t.Nail, SpacingIn = t.SpacingIn, ZPrimeLb = Math.Round(t.ZPrime, 1), Fails = t.Fails });
                 }
             }
-            if (building != null) c.DiaphragmLines = DiaphragmLines.Design(building, lateral, cd);
+            if (building != null)
+            {
+                c.DiaphragmLines = DiaphragmLines.Design(building, lateral, cd);
+                c.Chords = DiaphragmLines.Chords(building, lateral, c.DiaphragmLines, cd);
+            }
             return c.IsEmpty ? null : c;
         }
 

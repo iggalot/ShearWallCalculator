@@ -58,6 +58,121 @@ namespace ShearWallCalculator.ModelAdapter
             return list;
         }
 
+        /// <summary>
+        /// Each diaphragm's chords (owner 2026-11-08): for wind along x the diaphragm is a beam spanning in y between its
+        /// east-west lines of shear walls (<paramref name="lines"/>), loaded by its own wind spread over its length,
+        /// w = F / length (the worst case). Each span between two lines is simple, M = w L² / 8 at mid-span; past the end
+        /// lines a cantilever, M = w a² / 2 at the line. The chords are at the diaphragm's edges there, T = C = M / d (ASD,
+        /// 0.6 W), d its depth across. A chord is the double top plate of the walls under the edge whose length covers the
+        /// point (spliced as a collector is), else on a floor the rim (a strap at each splice); the roof's edge with no wall
+        /// under it (its blocking or rafters): not designed yet. Wind along y the same, x for y.
+        /// </summary>
+        public static List<DiaphragmChord> Chords(Building b, LateralSection s, List<DiaphragmLine> lines, ConnectionDefaults connections = null)
+        {
+            var list = new List<DiaphragmChord>();
+            if (b == null || s?.Diaphragms == null || lines == null) return list;
+            var def = b.Defaults ?? new ModelDefaults();
+            var cd = connections ?? ConnectionDefaults.Read(b);
+            var species = Enum.TryParse(def.StudSpecies, out Species sp1) ? sp1 : Species.DouglasFirLarch;
+            var grade = Enum.TryParse(def.StudGrade, out Grade gr1) ? gr1 : Grade.No2;
+            var roof = b.LevelsBottomUp.LastOrDefault();
+            foreach (var dw in s.Diaphragms)
+            {
+                var level = b.Level(dw.LevelId);
+                if (level == null) continue;
+                var cells = b.NetDiaphragm(level).Cells().ToList();
+                if (cells.Count == 0) continue;
+                bool isRoof = level == roof;
+                // the walls of the story under it, topped here: their double top plates
+                var walls = b.WallsUnder(level).Where(w => w.TopLevelId == level.Id).ToList();
+                foreach (bool alongX in new[] { true, false })
+                {
+                    // wind along x: the lines running east-west (at y), the span in y, the depth (and the chords' edges) in x
+                    var at = lines.Where(l => l.LevelId == level.Id && l.DepthFt > 1e-6 &&
+                                              (alongX ? Math.Abs(l.Y1 - l.Y0) < 1e-9 && Math.Abs(l.X1 - l.X0) > 1e-9 : Math.Abs(l.X1 - l.X0) < 1e-9 && Math.Abs(l.Y1 - l.Y0) > 1e-9))
+                                  .Select(l => alongX ? l.Y0 : l.X0).OrderBy(v => v).ToList();
+                    if (at.Count == 0) continue;
+                    double f = (s.Cases ?? new List<string>()).Select(k => Math.Abs(alongX ? dw.FxOf(k) : dw.FyOf(k))).DefaultIfEmpty(0).Max();
+                    if (f <= 1e-6) continue;
+                    double lo = cells.Min(c => alongX ? c.Y0 : c.X0), hi = cells.Max(c => alongX ? c.Y1 : c.X1);
+                    if (hi - lo <= 1e-6) continue;
+                    double w = f / (hi - lo);
+                    var spans = new List<(double from, double to, bool cant, double m, double t)>();
+                    if (at[0] - lo > LineTolerance) spans.Add((lo, at[0], true, w * Math.Pow(at[0] - lo, 2) / 2, at[0]));
+                    for (int i = 0; i + 1 < at.Count; i++)
+                        if (at[i + 1] - at[i] > LineTolerance) spans.Add((at[i], at[i + 1], false, w * Math.Pow(at[i + 1] - at[i], 2) / 8, (at[i] + at[i + 1]) / 2));
+                    if (hi - at.Last() > LineTolerance) spans.Add((at.Last(), hi, true, w * Math.Pow(hi - at.Last(), 2) / 2, at.Last()));
+                    foreach (var sp in spans)
+                        list.Add(Chord(b, level, isRoof, alongX, sp, w, cells, walls, def, cd, species, grade));
+                }
+            }
+            return list;
+        }
+
+        private static DiaphragmChord Chord(Building b, Level level, bool isRoof, bool alongX, (double from, double to, bool cant, double m, double t) sp, double w,
+                                            List<Rect2> cells, List<Wall> walls, ModelDefaults def, ConnectionDefaults cd, Species species, Grade grade)
+        {
+            // the diaphragm across the span at the worst moment: the cells it crosses, merged; its edges the chords'
+            var across = cells.Where(c => alongX ? c.Y0 - 1e-9 <= sp.t && sp.t <= c.Y1 + 1e-9 : c.X0 - 1e-9 <= sp.t && sp.t <= c.X1 + 1e-9)
+                              .Select(c => alongX ? (lo: c.X0, hi: c.X1) : (lo: c.Y0, hi: c.Y1)).OrderBy(x => x.lo).ToList();
+            var merged = new List<(double lo, double hi)>();
+            foreach (var a in across)
+            {
+                if (merged.Count > 0 && a.lo <= merged.Last().hi + 1e-6) merged[merged.Count - 1] = (merged.Last().lo, Math.Max(merged.Last().hi, a.hi));
+                else merged.Add(a);
+            }
+            double depth = merged.Sum(m => m.hi - m.lo);
+            var chord = new DiaphragmChord
+            {
+                LevelId = level.Id, Roof = isRoof, WindAlongX = alongX, FromFt = Math.Round(sp.from, 4), ToFt = Math.Round(sp.to, 4), Cantilever = sp.cant,
+                WPlf = Math.Round(w, 1), MomentLbFt = Math.Round(0.6 * sp.m, 1), AtFt = Math.Round(sp.t, 4), DepthFt = Math.Round(depth, 4),
+            };
+            if (depth <= 1e-6) { chord.Fails = $"The {level.Name} diaphragm has no depth across this span."; return chord; }
+            double edgeLo = merged[0].lo, edgeHi = merged.Last().hi;
+            chord.EdgeLoFt = Math.Round(edgeLo, 4);
+            chord.EdgeHiFt = Math.Round(edgeHi, 4);
+            double t = 0.6 * sp.m / depth;
+            chord.ForceLb = Math.Round(t, 1);
+            if (chord.ForceLb < 1) { chord.Chord = "No chord force."; return chord; }
+
+            // the walls under an edge (running along the span, on the edge) whose length covers the point: their top plates
+            bool AlongSpan(Wall x) => alongX ? Math.Abs(x.End.X - x.Start.X) < Math.Abs(x.End.Y - x.Start.Y) : Math.Abs(x.End.X - x.Start.X) > Math.Abs(x.End.Y - x.Start.Y);
+            double AcrossOf(Wall x) => alongX ? (x.Start.X + x.End.X) / 2 : (x.Start.Y + x.End.Y) / 2;
+            bool Covers(Wall x)
+            {
+                double a = alongX ? x.Start.Y : x.Start.X, c = alongX ? x.End.Y : x.End.X;
+                return sp.t >= Math.Min(a, c) - 1e-9 && sp.t <= Math.Max(a, c) + 1e-9;
+            }
+            var parts = new List<string>();
+            void Fail(string f) { if (f != null) chord.Fails = chord.Fails == null ? f : $"{chord.Fails} {f}"; }
+            string axis = alongX ? "x" : "y";
+            foreach (double edge in new[] { edgeLo, edgeHi })
+            {
+                var under = walls.Where(x => AlongSpan(x) && Math.Abs(AcrossOf(x) - edge) <= LineTolerance && Covers(x)).ToList();
+                string where = $"{axis} = {edge:0.##} ft";
+                if (under.Count > 0)
+                {
+                    chord.WallIds.AddRange(under.Select(x => x.Id).Where(id => !chord.WallIds.Contains(id)));
+                    var c = WoodFraming.TopPlateCollector.Design(t, species, grade, b.StudSizeOf(under[0], level.Id), cd.SpliceNail);
+                    parts.Add(c.Fails != null && c.Z <= 0 ? c.Fails :
+                        $"At {where}: the {c.Lumber} double top plate, {c.NailsEachSide} {c.Nail} each side of a splice (Z' = {c.ZPrime:0} lb); one ply {c.TensionLb:0} lb in tension, {c.CompressionLb:0} lb in compression.");
+                    Fail(c.Fails);
+                }
+                else if (!isRoof)
+                {
+                    var c = WoodFraming.RimCollector.Design(t, species, grade, def.FloorJoistSize);
+                    parts.Add(c.Fails != null && c.AreaIn2 <= 0 ? c.Fails :
+                        $"At {where} (no wall under the edge): the {level.Name} floor's {c.Lumber} rim, {c.TensionLb:0} lb in tension, {c.CompressionLb:0} lb in compression; " +
+                        $"a strap across each splice for {c.StrapLb:0} lb (ASD; the strap from the catalog: not picked by the program yet).");
+                    chord.StrapLb = Math.Max(chord.StrapLb, Math.Round(c.StrapLb, 1));
+                    Fail(c.Fails);
+                }
+                else parts.Add($"At {where} (no wall under the roof's edge): the roof's chord (its blocking or rafters) is not designed by the program yet: {t:0} lb.");
+            }
+            chord.Chord = string.Join(" ", parts);
+            return chord;
+        }
+
         private static double Across(Point2 p, bool ew) => ew ? p.Y : p.X;
         private static double Along(Point2 p, bool ew) => ew ? p.X : p.Y;
 

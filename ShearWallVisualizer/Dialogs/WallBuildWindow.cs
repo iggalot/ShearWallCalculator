@@ -91,6 +91,8 @@ namespace ShearWallVisualizer.Dialogs
         public WoodFraming.Connections.DiaphragmLine Line { get; set; }
         /// <summary>An upper wall's floor under it along its line, as designed (null: the first story, or none).</summary>
         public WoodFraming.Connections.DiaphragmLine LineBelow { get; set; }
+        /// <summary>The diaphragm's chords on top of it that its double top plate is (owner 2026-11-08: simple spans between the lines).</summary>
+        public List<WoodFraming.Connections.DiaphragmChord> Chords { get; set; } = new List<WoodFraming.Connections.DiaphragmChord>();
 
         /// <summary>An upper-story wall's sill nailing (null on the first story or before a design): the saved design's own routine.</summary>
         public SillNailing SillNails() => FirstStory ? null : ShearWallCalculator.ModelAdapter.ShearWallCheck.SillNailingOf(Result, Connections);
@@ -368,6 +370,7 @@ namespace ShearWallVisualizer.Dialogs
             if (toe != null) RimToPlateSection(p, toe);
             if (data.Line != null) DiaphragmLineSection(p, data.Line);
             if (data.LineBelow != null && !ReferenceEquals(data.LineBelow, data.Line)) DiaphragmLineSection(p, data.LineBelow, under: true);
+            if (data.Chords != null && data.Chords.Count > 0) ChordSection(p, data.Chords);
 
             Section(p, "Connections at the top (from the story above)", data.Above.Count == 0 ? "Nothing from above stands on this wall." :
                     "Each hold-down above pulls up on this wall's top at its post: it is carried by the post under it to this wall's bottom.");
@@ -546,6 +549,29 @@ namespace ShearWallVisualizer.Dialogs
             var src = new Expander { Header = "Sources (quoted)", IsExpanded = false, Margin = new Thickness(0, 4, 0, 0) };
             var sp = new StackPanel();
             foreach (var c in ShearWallCalculator.Design.DiaphragmNailing.Citations.Concat(l.StrapLb > 0 ? WoodFraming.RimCollector.Citations : WoodFraming.TopPlateCollector.Citations))
+                sp.Children.Add(new TextBlock { Text = "•  " + c, TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkSecondary, FontSize = 11.5, Margin = new Thickness(6, 2, 0, 2) });
+            src.Content = sp;
+            p.Children.Add(src);
+        }
+
+        /// <summary>The diaphragm's chords its top plates are: each span between the lines of shear walls, M = w L² / 8 (a cantilever w a² / 2), T = M / d.</summary>
+        private static void ChordSection(Panel p, List<WoodFraming.Connections.DiaphragmChord> chords)
+        {
+            var c0 = chords.OrderByDescending(c => c.ForceLb).First();
+            Section(p, "Diaphragm chord (at the top)",
+                    $"Its double top plate is a chord of the {(c0.Roof ? "roof" : "floor")} on top of it: {c0.ForceLb:0} lb at most (ASD), tension or compression with the wind's direction.");
+            var rows = chords.Select(c => new[]
+            {
+                $"Wind along {(c.WindAlongX ? "x" : "y")}: {(c.Cantilever ? "cantilever" : "span")} {c.FromFt:0.##} to {c.ToFt:0.##} ft",
+                $"w = {c.WPlf:0.0} plf (W); M = {(c.Cantilever ? "w a² / 2" : "w L² / 8")} = {c.MomentLbFt:0} lb·ft (ASD) at {c.AtFt:0.##} ft",
+                $"T = M / d = {c.MomentLbFt:0} / {c.DepthFt:0.##} = {c.ForceLb:0} lb",
+                (c.Chord ?? "") + (c.Fails != null ? $" {c.Fails}" : ""),
+            }).ToList();
+            p.Children.Add(Table(new[] { "Span", "Moment", "Chord force", "Chord" }, rows));
+            var src = new Expander { Header = "Sources (quoted)", IsExpanded = false, Margin = new Thickness(0, 4, 0, 0) };
+            var sp = new StackPanel();
+            foreach (var c in new[] { "Simple spans between the lines of shear walls, M = w L² / 8, a cantilever past the last line w a² / 2, T = C = M / d (owner's choice, 2026-11-08)." }
+                         .Concat(chords.Any(c => c.StrapLb > 0) ? WoodFraming.RimCollector.Citations : WoodFraming.TopPlateCollector.Citations))
                 sp.Children.Add(new TextBlock { Text = "•  " + c, TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkSecondary, FontSize = 11.5, Margin = new Thickness(6, 2, 0, 2) });
             src.Content = sp;
             p.Children.Add(src);
