@@ -403,7 +403,14 @@ namespace ShearWallCalculator.ModelAdapter
                         Check = "Not designed yet (no shear on it).",
                     };
                     list.Add(d);
-                    if (r == null) continue;
+                    if (r == null)
+                    {
+                        // not designed yet (no wind on it): its declared sheathing (its card's), so the views show its faces before
+                        // the design; no nailing until it is designed
+                        foreach (var f in new[] { w.Design?.EffectiveFace1(), w.Design?.EffectiveFace2() }.Where(f => f != null && f.Table != SheathingTable.None))
+                            d.Faces.Add(FaceOf(f.Material, f.Thickness, f.Table));
+                        continue;
+                    }
                     d.ArmIn = Math.Round(r.HoldownArm * 12, 3);
                     d.Check = r.Pass ? $"OK: v = {r.Demand:0} plf of {r.Capacity:0} plf" : $"{r.Status}: v = {r.Demand:0} plf of {r.Capacity:0} plf";
                     d.Fails = !r.Pass;
@@ -420,17 +427,20 @@ namespace ShearWallCalculator.ModelAdapter
                     foreach (var f in SheathedFaces(r))
                     {
                         var o = f.Option;
-                        d.Faces.Add(new ShearFace
-                        {
-                            Sheathing = o == null ? "Sheathing" : $"{ShearWallDesigner.MaterialName(o.Material)} {ShearWallDesigner.ThicknessName(o.Thickness)}",
-                            ThicknessIn = Thickness(o),
-                            Gypsum = o?.Table == SheathingTable.GypsumAndPlaster,
-                        });
+                        d.Faces.Add(o == null ? new ShearFace { Sheathing = "Sheathing", ThicknessIn = Thickness(null) } : FaceOf(o.Material, o.Thickness, o.Table));
                     }
                 }
             }
             return list;
         }
+
+        /// <summary>One sheathed face in the model's plain terms: "Structural I 15/32"", its thickness, gypsum or not.</summary>
+        private static ShearFace FaceOf(NDSProvisions.SheathingMaterials material, NDSProvisions.NominalPanelThicknesses thickness, SheathingTable table) => new ShearFace
+        {
+            Sheathing = $"{ShearWallDesigner.MaterialName(material)} {ShearWallDesigner.ThicknessName(thickness)}",
+            ThicknessIn = Thickness(new SheathingOption { Thickness = thickness }),
+            Gypsum = table == SheathingTable.GypsumAndPlaster,
+        };
 
         /// <summary>A design's sheathed faces, in the order both the model's faces and their nailing are saved.</summary>
         private static IEnumerable<FaceResult> SheathedFaces(WallDesignResult r) =>

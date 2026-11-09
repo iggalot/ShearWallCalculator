@@ -52,7 +52,8 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
   SWC's construction window hosts the same panel and adds its Pieces and Calculation tabs. Views only: nothing in them
   is calculated.
   - [ ] SWC's Pieces tab still lists the shear part's pieces; the whole wall's would match the views.
-  - [ ] An undesigned shear wall (no wind yet) shows no sheathing: its declared faces could be drawn before the design.
+  - [x] (2026-11-09) An undesigned shear wall (no wind yet) shows its declared sheathing (its card's faces,
+    `ShearWallCheck.ShearDesigns`), no nailing until it is designed. Hub test: the construction window's view.
 - [~] **Every connection as a pair of equal and opposite forces** (owner, 2026-11-07). The Load Manager reports every
   connection between members: the connector's force once (tension or compression, per wind case), and on each member
   as a direction (↓ on the upper, ↑ on the lower). Every member then has its whole free-body diagram (its own loads and

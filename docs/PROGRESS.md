@@ -2,6 +2,12 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-09 — An undesigned shear wall shows its declared sheathing
+
+- `ShearWallCheck.ShearDesigns` gives a declared wall with no design yet its card's faces (`WallDesignInputs.EffectiveFace1`,
+  `EffectiveFace2`; one routine for the face's words, `FaceOf`), so the wall window draws them before the wind is set up;
+  no nailing until it is designed. Hub test (SwcSaveTests): the construction window's view.
+
 ## 2026-11-09 — The hub's problems shown in the apps
 
 - The format of the hub's mark ("Hub.Status": `ProjectStatus`, `StatusItem`) moved from DesignHub.Core to
