@@ -169,6 +169,9 @@ namespace ShearWallVisualizer
                 var joints = designed != null ? ShearWallCheck.Connections(levels, stories, allDesignResults, building, designed, 0) : WoodFraming.Connections.ConnectionsSection.Read(building);
                 d.View = WoodFraming.Wpf.WallViews.FromModel(building, mw, top, live, joints ?? new WoodFraming.Connections.ConnectionsSection());
                 d.Line = joints?.LineOf(top, mw.Id);
+                // an upper wall: the floor it stands on along its line (its rim the collector where no wall is under it)
+                string floor = i > 0 && i - 1 < stories.Count ? stories[i - 1].Level?.Id : null;
+                d.LineBelow = floor == null ? null : joints?.LineOf(floor, mw.Id);
                 if (d.View != null) d.View.Name = d.Name;
             }
             // what the story above stands on this wall: its hold-downs (and beam ends or column bases) landing on it

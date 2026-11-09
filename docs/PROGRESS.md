@@ -2,6 +2,17 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-08 — The floor's rim as the collector where no wall is under the line (step 6)
+
+- A line of shear walls that only stand on a floor (none under it) has no top plates to collect into: the floor's rim is
+  the collector. One sawn ply of the floor joists' depth (`ModelDefaults.FloorJoistSize`, new, 2x10; a framing default, so
+  the model's), checked in tension and compression like the top plates (`WoodFraming.RimCollector`); its butt splices
+  carry no tension, so each needs a strap for the whole force (`DiaphragmLine.StrapLb`; the strap is not picked yet).
+- NDS library: 2x10 and 2x12 sections (Table 1B) and Table 4A's size factors for 10" and 12" wide; Southern Pine's wide
+  rows (Table 4B) are not read in yet and say so.
+- The construction window shows an upper wall's floor line too. Hub test: the wall standing on a beam at x = 20 (18 of
+  30 ft): 56.4 plf, collector 338.6 lb = v × 6 ft; DF-L No. 2 2x10 rim 14,042 lb tension, 29,970 lb compression.
+
 ## 2026-11-08 — The rim or blocking toe-nailed into the walls' top plates (step 6)
 
 - The owner's choices: toe-nails by NDS Figure 12A's geometry (12.1.6.3: 30°, started L/3 from the end; along the nail

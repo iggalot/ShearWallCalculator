@@ -89,6 +89,8 @@ namespace ShearWallVisualizer.Dialogs
         public WoodFraming.Connections.ConnectionDefaults Connections { get; set; }
         /// <summary>The line of shear walls in the diaphragm on top of it, as designed: its unit shear, boundary nailing and collector (null: none).</summary>
         public WoodFraming.Connections.DiaphragmLine Line { get; set; }
+        /// <summary>An upper wall's floor under it along its line, as designed (null: the first story, or none).</summary>
+        public WoodFraming.Connections.DiaphragmLine LineBelow { get; set; }
 
         /// <summary>An upper-story wall's sill nailing (null on the first story or before a design): the saved design's own routine.</summary>
         public SillNailing SillNails() => FirstStory ? null : ShearWallCalculator.ModelAdapter.ShearWallCheck.SillNailingOf(Result, Connections);
@@ -365,6 +367,7 @@ namespace ShearWallVisualizer.Dialogs
             var toe = data.TopToeNails();
             if (toe != null) RimToPlateSection(p, toe);
             if (data.Line != null) DiaphragmLineSection(p, data.Line);
+            if (data.LineBelow != null && !ReferenceEquals(data.LineBelow, data.Line)) DiaphragmLineSection(p, data.LineBelow, under: true);
 
             Section(p, "Connections at the top (from the story above)", data.Above.Count == 0 ? "Nothing from above stands on this wall." :
                     "Each hold-down above pulls up on this wall's top at its post: it is carried by the post under it to this wall's bottom.");
@@ -521,12 +524,15 @@ namespace ShearWallVisualizer.Dialogs
         }
 
         /// <summary>
-        /// The diaphragm on top of the wall along its line (owner 2026-11-07: the line shear and the collectors): what the
-        /// boundary nailing over the top plates is, how it was found, and the collector in the plates.
+        /// A diaphragm along the wall's line (owner 2026-11-07: the line shear and the collectors): the one on top of it
+        /// (<paramref name="under"/> false: the boundary nailing over its top plates, the plates a collector), or an upper
+        /// wall's floor under it (true: where no wall is under the line, the floor's rim is the collector, owner 2026-11-08).
         /// </summary>
-        private static void DiaphragmLineSection(Panel p, WoodFraming.Connections.DiaphragmLine l)
+        private static void DiaphragmLineSection(Panel p, WoodFraming.Connections.DiaphragmLine l, bool under = false)
         {
-            Section(p, "Diaphragm boundary nailing and collector (at the top)", l.Fails ?? $"{l.Nailing}; the top plates a collector of {l.CollectorLb:0} lb.");
+            string collector = l.StrapLb > 0 ? "the floor's rim" : "the top plates";
+            Section(p, under ? "The floor under it along its line: boundary nailing and collector" : "Diaphragm boundary nailing and collector (at the top)",
+                    l.Fails ?? $"{l.Nailing}; {collector} a collector of {l.CollectorLb:0} lb" + (l.StrapLb > 0 ? $", a strap across each rim splice for {l.StrapLb:0} lb." : "."));
             if (l.DepthFt <= 0) return;
             int walls = l.WallIds?.Count ?? 0;
             p.Children.Add(Table(new[] { "Check (ASD)", "Value" }, new List<string[]>
@@ -539,7 +545,7 @@ namespace ShearWallVisualizer.Dialogs
             }));
             var src = new Expander { Header = "Sources (quoted)", IsExpanded = false, Margin = new Thickness(0, 4, 0, 0) };
             var sp = new StackPanel();
-            foreach (var c in ShearWallCalculator.Design.DiaphragmNailing.Citations.Concat(WoodFraming.TopPlateCollector.Citations))
+            foreach (var c in ShearWallCalculator.Design.DiaphragmNailing.Citations.Concat(l.StrapLb > 0 ? WoodFraming.RimCollector.Citations : WoodFraming.TopPlateCollector.Citations))
                 sp.Children.Add(new TextBlock { Text = "•  " + c, TextWrapping = TextWrapping.Wrap, Foreground = Ui.InkSecondary, FontSize = 11.5, Margin = new Thickness(6, 2, 0, 2) });
             src.Content = sp;
             p.Children.Add(src);

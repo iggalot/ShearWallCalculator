@@ -183,7 +183,16 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
     - [x] (2026-11-08) A shear wall's face nailing moved to the Connections (owner: the nailing is a detail, the sheathing
       and the shear stay in the model): `ConnectionsSection.Walls` (`WallNailing`, a `FaceNailing` per face in the
       order of `ShearWallDesign.Faces`); `ShearFace` keeps the sheathing, thickness and gypsum. The wall window reads both.
-    - [ ] A collector where no wall is under the line (the floor's rim or blocking, walls standing on it only): not designed.
+    - [x] (2026-11-08) A collector where no wall is under the line (the walls stand on the floor only): the floor's rim,
+      one sawn ply of the joists' depth (`ModelDefaults.FloorJoistSize`, 2x10 to start; the framing's species and grade),
+      in tension and compression (`WoodFraming.RimCollector`, CP 1.0, CD 1.6), and a strap across each butt splice for
+      the whole force (`DiaphragmLine.StrapLb`). The NDS library now has 2x10 and 2x12 (Table 1B; Table 4A's CF). Hub
+      test: a wall on a beam, v × 6 ft by hand.
+    - [ ] The rim splices' strap picked from the catalog (MSTA, CS16...): the catalog page copied in first.
+    - [ ] Southern Pine 2x10 and 2x12 (NDS Supplement Table 4B): not read into the NDS library yet (the rim check says so).
+    - [ ] A line partly over walls: the stretch past the lower walls' ends is the rim too (today the plates are checked
+      for the line's worst force all along it).
+    - [ ] A page to edit the Building Model's defaults (`ModelDefaults`: stud sizes, the floor joists): only in the file.
     - [ ] The diaphragm's field nailing zones and chords (the line's nailing is given at the line only).
     - [x] (2026-11-08) The rim (a floor) or the roof's blocking toe-nailed into each shear wall's top plates
       (`WoodFraming.RimToPlate`, saved as `Connections.Tops`): the owner's choices, NDS Figure 12A's geometry for the yield

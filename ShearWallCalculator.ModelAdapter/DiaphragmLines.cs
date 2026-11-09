@@ -115,7 +115,17 @@ namespace ShearWallCalculator.ModelAdapter
             line.CollectorLb = Math.Round(0.6 * worstN, 1);
             line.CollectorAtFt = Math.Round(worstAt - start, 2);
             if (line.CollectorLb < 1) line.Collector = "No collector force: the walls' shear parts take the diaphragm's shear where it arrives.";
-            else if (!pairs.Any(p => p.AtTop)) line.Collector = $"The {level.Name} floor's rim or blocking along the line (the walls standing on it, none under it): not designed.";
+            else if (!pairs.Any(p => p.AtTop))
+            {
+                // no wall under the line, the walls standing on the floor only: the floor's rim is the collector (one ply of
+                // the joists' depth, the framing's lumber), a strap across each of its butt splices (owner 2026-11-08)
+                var c = WoodFraming.RimCollector.Design(line.CollectorLb, species, grade, def.FloorJoistSize);
+                line.Collector = c.Fails != null && c.AreaIn2 <= 0 ? c.Fails :
+                    $"The {level.Name} floor's {c.Lumber} rim (no wall under the line): {c.TensionLb:0} lb in tension, {c.CompressionLb:0} lb in compression; " +
+                    $"a strap across each splice for {c.StrapLb:0} lb (ASD; the strap from the catalog: not picked by the program yet).";
+                line.StrapLb = Math.Round(c.StrapLb, 1);
+                if (c.Fails != null) line.Fails = line.Fails == null ? c.Fails : $"{line.Fails} {c.Fails}";
+            }
             else
             {
                 string nominal = index <= 1 ? def.StudSizeFirstStory : def.StudSizeAbove;
