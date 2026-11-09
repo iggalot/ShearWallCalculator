@@ -2,6 +2,15 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-09 — The declared shear walls in the Building Model; the hub opens a step's page
+
+- The shared plan bands each declared shear wall's shear part in blue, tagged SW (SW fails in red), from the `Lateral`
+  section's walls (`SketchCanvas.ShowShearParts`): the Building Model and the Load Manager show where the hold-downs go.
+  SWC turns it off (`MainWindow.Drafting.cs`): it draws its own walls, live. Sketch test: the band on a 20 ft part, and off.
+- The hub opens each step's app on its page (`WorkflowStep.Page`, `Launcher.ArgumentsFor`): the Load Manager's step 2a on
+  Loads, step 4 on Foundation (`--page foundation`, `MainWindow.ShowPage`). Hub tests: the steps' pages and the arguments.
+- ROADMAP: SWC's watching the file from the open on was done with the hub's checks; ticked.
+
 ## 2026-11-09 — The horizontal pairs on the plans; a diaphragm's free body
 
 - The shared plan draws each shear wall's horizontal pairs in teal (`SketchCanvas.DrawShearPairs`, with the hold-downs,

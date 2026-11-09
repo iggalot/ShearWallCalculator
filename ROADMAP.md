@@ -249,7 +249,9 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
     opened still has the project.
   - [ ] The owner to click through it.
   - [ ] Access from a real license or user file (`ListedApps` is ready; `HubSettings.Access()`).
-  - [ ] Open an app on a given page (`--page foundation` for the Load Manager's foundation view).
+  - [x] (2026-11-09) Open an app on a given page: each step has its page (`WorkflowStep.Page`), the hub passes it
+    (`Launcher.ArgumentsFor`: `--page foundation`, with `--select`), the Load Manager opens on it (`MainWindow.ShowPage`:
+    loads, foundation, foundation3d).
   - [x] Keeps the project in spec (2026-11-06): the stamps on the foundation forces (`Lateral.BasedOn`, by
     `ModelFingerprint`), the shear walls designed again with no window in the background (`ShearWallCheck.Run`), a red
     "Fails" step, a problems banner with "Show W4" (opens SWC at the wall, `--select`), and the problems marked in the file
@@ -292,8 +294,9 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
   with the design.
 - [ ] **More than one shear part on a wall**, and a part per story (today one part, the same on every story the wall
   spans). For now, split the wall in the Building Model.
-- [ ] **Show the declared shear walls in the Building Model** (read-only, e.g. a thicker line on the part), so the
-  geometry editor shows where the hold-downs will be. Needs a small neutral reader the Building Model may use.
+- [x] **Show the declared shear walls in the Building Model** (2026-11-09): the shared sketch reads the `Lateral` section's
+  walls (every declared wall, designed or not) and draws a blue band on each shear part, tagged SW (SW fails in red)
+  (`SketchCanvas.ShowShearParts`, on by default; SWC turns it off, it draws its own).
 - [ ] **A suggested shear part:** the full-height stretches between doors and windows, offered when a wall is declared
   (the model has no wall openings yet: its openings cut floors).
 - [ ] **Relax the hub's one-app-at-a-time rule** now that saves merge (for example, allow the Load Manager beside the
@@ -301,8 +304,8 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
 - [ ] **SWC clean-up after the geometry lock:** remove the dead geometry handlers (Export/Apply change set, Copy from
   below, Move and others); show the stud size in the construction window and the Members-tab coordinates read-only
   rather than refusing the edit.
-- [ ] **SWC to watch the project file always** (today only while Edit building, loads or wind is open), so a change
-  saved by another app reloads it.
+- [x] **SWC to watch the project file always** (done with the hub's checks, 2026-11-06: `WatchProject` from the open on;
+  ticked 2026-11-09).
 - [ ] **Stamp stored results with what they were based on** (model revision, inputs hash), as `Lateral` does with
   `ModelRevision`, so the hub can say exactly what is out of date.
 

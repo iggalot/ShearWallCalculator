@@ -79,6 +79,7 @@ namespace ShearWallVisualizer
             sketchView.PlanEditing = false;
             sketchView.ShowBuildingTools = false; // From size... and Roof...: the building's size and roof are edited only in the Building Model editor (Edit building)
             Sketch.ShowWallLabels = false; // a wall picked on the plan opens its card (name, length and the rest)
+            Sketch.ShowShearParts = false; // this app draws its shear walls itself (WallStyle), live, with their checks
             foreach (var t in new[] { SketchTool.Calibrate, SketchTool.PlanStraighten, SketchTool.PlanMove }) sketchView.HideTool(t);
             // The building is drawn and changed only in the Building Model (Model > Edit building): here it is shown and
             // designed. The drawing tools are hidden, and any edit that would move, add or delete something is put back.
