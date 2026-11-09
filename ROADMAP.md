@@ -190,8 +190,8 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
       test: a wall on a beam, v × 6 ft by hand.
     - [ ] The rim splices' strap picked from the catalog (MSTA, CS16...): the catalog page copied in first.
     - [ ] Southern Pine 2x10 and 2x12 (NDS Supplement Table 4B): not read into the NDS library yet (the rim check says so).
-    - [x] (2026-11-09) A line partly over walls: the top plates take the collector over the walls under the line (their
-      whole length, and the 0.5 ft line tolerance for the corners), the floor's rim past their ends, each checked for its
+    - [x] (2026-11-09) A line partly over walls: the top plates take the collector over the walls under the line (within
+      their length only: none past a wall's end, owner), the floor's rim past their ends, each checked for its
       own stretch's worst (both at the hand-off); the strap for the rim's. Hub test: a lower wall under 12 of 30 ft, N(t)
       recomputed by hand along the line.
     - [ ] The roof's lines past the walls under them: the blocking or the rafters' ends as the collector (today the plates

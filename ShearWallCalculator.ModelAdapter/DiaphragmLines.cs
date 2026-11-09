@@ -64,9 +64,9 @@ namespace ShearWallCalculator.ModelAdapter
         private static DiaphragmLine Line(Level level, int index, bool isRoof, bool ew, List<ShearPair> pairs, List<Rect2> cells, IList<string> cases, ModelDefaults def, ConnectionDefaults cd,
                                           List<(double lo, double hi)> plates)
         {
-            // a point over a wall under the line (within the line tolerance: the corners' insets) has top plates; elsewhere on
-            // a floor the rim is the collector (owner 2026-11-08); the roof's lines keep the plates (its blocking: not yet)
-            bool OverPlates(double t) => isRoof || plates.Any(w => t >= w.lo - LineTolerance - 1e-9 && t <= w.hi + LineTolerance + 1e-9);
+            // a point within the length of a wall under the line has its top plates (none past its end: owner 2026-11-09);
+            // elsewhere on a floor the rim is the collector (owner 2026-11-08); the roof's lines keep the plates (its blocking: not yet)
+            bool OverPlates(double t) => isRoof || plates.Any(w => t >= w.lo - 1e-9 && t <= w.hi + 1e-9);
             double at = pairs.Average(p => Across(p.Middle, ew));
             // the diaphragm on the line: the cells it crosses or runs along, merged
             var spans = cells.Where(c => ew ? c.Y0 - LineTolerance <= at && at <= c.Y1 + LineTolerance : c.X0 - LineTolerance <= at && at <= c.X1 + LineTolerance)
@@ -100,13 +100,13 @@ namespace ShearWallCalculator.ModelAdapter
                                   .Concat(pairs.Select(p => (a: Math.Min(Along(p.Start, ew), Along(p.End, ew)), b: Math.Max(Along(p.Start, ew), Along(p.End, ew)), f: p.OnOtherIn(k)))).ToList();
                 // N(t) is piecewise linear: its worst on each stretch is at a load's end or where the plates start or stop
                 var ts = loads.SelectMany(l => new[] { l.a, l.b })
-                              .Concat(plates.SelectMany(w => new[] { w.lo - LineTolerance, w.hi + LineTolerance }).Where(t => t > start && t < end)).Distinct();
+                              .Concat(plates.SelectMany(w => new[] { w.lo, w.hi }).Where(t => t > start && t < end)).Distinct();
                 foreach (double t in ts)
                 {
                     double n = loads.Sum(l => l.b - l.a < 1e-9 ? (t >= l.a - 1e-9 ? l.f : 0) : l.f * Math.Max(0, Math.Min(t, l.b) - l.a) / (l.b - l.a));
                     if (Math.Abs(n) > worstN) { worstN = Math.Abs(n); worstAt = t; }
                     // where the plates stop the force passes between them and the rim: both carry it there
-                    bool edge = plates.Any(w => Math.Abs(t - (w.lo - LineTolerance)) < 1e-9 || Math.Abs(t - (w.hi + LineTolerance)) < 1e-9);
+                    bool edge = plates.Any(w => Math.Abs(t - w.lo) < 1e-9 || Math.Abs(t - w.hi) < 1e-9);
                     if (OverPlates(t)) platesN = Math.Max(platesN, Math.Abs(n));
                     if ((!OverPlates(t) || edge) && !isRoof && Math.Abs(n) > rimN) { rimN = Math.Abs(n); rimAt = t; }
                 }
