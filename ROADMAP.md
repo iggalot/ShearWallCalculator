@@ -31,15 +31,25 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
   depth, `StudSizes` now in BuildingModel.Core, WoodFraming reads it there); the plans show a bar where it stops. A shear
   wall's part, and its hold-downs, start at the face (`ShearWallAdapter.BuiltEnds`). Walls that cross are flagged.
   - [ ] Quick building and a DXF import drawing corners with their joints in mind.
-- [ ] **Drawing walls on a DXF** (owner's question, 2026-11-07: plans rarely show centrelines). Suggestions:
-  - [ ] Draw by a face: the wall tool's option centreline / left face / right face; an exterior wall drawn along its
-    outside face puts the centreline half the stud depth inside.
+- [x] **Drawing walls on a DXF** (owner's question, 2026-11-07: plans rarely show centrelines; the owner asked for all three
+  on 2026-11-09, with a way to turn off snapping to the plan when it gets cluttered: **Plan snap**, `SketchCanvas.SnapToPlan`,
+  in the view bar, the right-click menu and Underlay ▾; off, nothing on the underlay snaps, the plan tools excepted).
+  None tried on a real DXF yet. Suggestions:
+  - [x] Draw by a face: the wall tool's option centreline / left face / right face; an exterior wall drawn along its
+    outside face puts the centreline half the stud depth inside. (2026-11-09) **Wall: centreline ▾** in the view bar
+    (`SketchCanvas.WallDrawnBy`, `WallsFromPlan.CentreOf`): left face = the wall lies to the right going along, so
+    clockwise round the outside. In a run the corners are found again (`RunJoint`: the previous wall's end moved to the
+    new one's centreline). The preview shows where the centreline goes. Sketch test.
   - [x] Snap between two lines: where the DXF shows a wall as two parallel lines 3.5 to 7.25 in apart, a snap to the
     line midway between them. (2026-11-09) `SnapModes.WallCentre`, on by default, ranked after the host's points:
     where two centres meet (a corner or a tee), a centre's end, else the nearest point on it; among the plan's own CAD
     lines only (`Snapper.WallCentres`, ± 1/4 in, parallel within 1°). Not tried on a real DXF yet. BM test.
-  - [ ] Walls from the DXF: pick a layer, find its pairs of parallel lines, propose walls on their centrelines to accept
-    or reject one by one.
+  - [x] Walls from the DXF: pick a layer, find its pairs of parallel lines, propose walls on their centrelines to accept
+    or reject one by one. (2026-11-09) Underlay ▾ > **Walls from the plan…** (the editor): the layer named for walls
+    picked first; square walls only, the pieces on a line joined, each run on to where it meets another's centre (a
+    corner, a tee), those drawn already left out (`WallsFromPlan.Propose`). On the plan the one under review is bold, the
+    rest faint; Add it (A), Skip (S), Add all the rest; each wall its own undo step (`PlanWallReview`, `PlanWallsWindow`).
+    Not done: walls at an angle; a wall broken by a door is proposed in pieces. BM and sketch tests, a snapshot.
 - [x] **Hold-downs on every level in the Building Model** (2026-11-07, done 2026-11-07): SWC saves every story's
   hold-downs (`LateralSection.Holdowns`, `StoryHoldown`: connector, tension, post, what each anchors to) into the model;
   the shared sketch draws them on each level's plan (`SketchCanvas.LevelMarkers`): the walls' own, those coming down

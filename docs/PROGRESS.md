@@ -2,6 +2,20 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-09 — Drawing walls on a DXF: Plan snap, by a face, walls from the plan
+
+- **Plan snap** (`SketchCanvas.SnapToPlan`, owner: to turn it off when a plan clutters the snaps): a toggle by Snap in
+  every app's view bar, also in the right-click menu and Underlay ▾. Off, the underlay's lines and wall centres do not
+  snap; the model's own lines and points do; the plan tools (scale, straighten, move) still snap to the plan.
+- **Wall: centreline / left face / right face** (`SketchCanvas.WallDrawnBy`, shown where the Wall tool is): the clicks
+  on a face put the centreline half the story's stud depth to the wall's side (`WallsFromPlan.CentreOf`); a run's
+  corners are met again (`RunJoint`); the preview shows the centreline; the prompt says which face.
+- **Walls from the plan…** (Underlay ▾ in the editor): a layer's pairs of lines proposed as walls one by one
+  (`WallsFromPlan.Propose`: square walls, pieces joined, run on to meet at corners and tees, those drawn left out;
+  `PlanWallReview`, `PlanWallsWindow`). The plan keeps each CAD path's layer (`PlanImage.LayersShown`, `SegmentsOn`).
+- `SketchCanvas.SnapAt(point)`: the cursor's snapping split out, so tests can ask it.
+- Tests: `WallByAFace_…`, `WallsFromPlan_…` (BM); `PlanWallsTests` (sketch, a DXF box with a 2x4 across, a snapshot).
+
 ## 2026-11-09 — The wall-centre snap; the shear part in 3D
 
 - `SnapModes.WallCentre` (BuildingModel.Core, on by default): a CAD plan's wall drawn as two parallel lines 3.5 to
