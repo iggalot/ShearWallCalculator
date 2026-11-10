@@ -78,8 +78,8 @@ namespace ShearWallCalculator.Tests
 
         /// <summary>
         /// A beam (y = 10, x 0 to 12) from the W wall into a girder (x = 12, y 0 to 20) on the S and N walls, a wall on the
-        /// beam (x 2 to 10). The beam's end lands on the girder at its middle: a strap onto the girder, and half its reaction
-        /// to each of the girder's ends, on the walls.
+        /// beam (x 2 to 10). The beam's end lands on the girder 10 ft along its 20 ft: a strap onto the girder, and from the
+        /// girder's own free body R (20 − 10) / 20 to its start and R × 10 / 20 to its end, on the walls (off-centre: AGirder_TakesEachBeamAtItsPlace).
         /// </summary>
         [TestMethod]
         public void ABeamOnAGirder_ItsEndGoesOnDownTheGirder()
@@ -105,11 +105,47 @@ namespace ShearWallCalculator.Tests
             Assert.AreEqual("beam BM2", end.SupportId);
             Assert.AreEqual(HoldownFamilies.Strap_ToWallBelow, end.Family);
             var rg = trace.Beams.Single(x => x.Beam == girder);
-            Assert.AreEqual(rEnd / 2, rg.StartAsd, 1e-6);
-            Assert.AreEqual(rEnd / 2, rg.EndAsd, 1e-6);
+            Assert.AreEqual(rEnd * (20 - 10) / 20, rg.StartAsd, 1e-6);
+            Assert.AreEqual(rEnd * 10 / 20, rg.EndAsd, 1e-6);
             Assert.AreEqual(13, on.Single(x => x.From == "beam BM2 start").LowerWallId);
             Assert.AreEqual(14, on.Single(x => x.From == "beam BM2 end").LowerWallId);
             Assert.IsFalse(on.Any(x => x.Support == SupportKind.None), "everything lands on something");
+        }
+
+        /// <summary>
+        /// The girder's reactions from its own free body, each load at its place: two beams landing on a 20 ft girder at 6 ft
+        /// and at 15 ft from its start, each with a wall on it. A beam's end reaction R lands at a: (20 − a) / 20 of it to the
+        /// girder's start, a / 20 to its end; the two summed (each beam end acts in both wind directions, so both go in
+        /// together). Not half to each end.
+        /// </summary>
+        [TestMethod]
+        public void AGirder_TakesEachBeamAtItsPlace()
+        {
+            var lower = new Dictionary<int, WallData>
+            {
+                [11] = new WallData(9, 0, 0, 0, 20), [13] = new WallData(9, 0, 0, 20, 0), [14] = new WallData(9, 0, 20, 20, 20),
+            };
+            var upper = new Dictionary<int, WallData> { [1] = new WallData(9, 2, 6, 10, 6), [2] = new WallData(9, 3, 15, 9, 15) };
+            var design = new Dictionary<int, WallDesignResult>
+            {
+                [1] = new WallDesignResult { TensionAsd = 1000, TensionLrfd = 1667 },
+                [2] = new WallDesignResult { TensionAsd = 700, TensionLrfd = 1167 },
+            };
+            var b1 = new FramingBeam { Id = "BM1", Start = new Point(0, 6), End = new Point(12, 6), OnStory = 0 };
+            var b2 = new FramingBeam { Id = "BM2", Start = new Point(0, 15), End = new Point(12, 15), OnStory = 0 };
+            var girder = new FramingBeam { Id = "G", Start = new Point(12, 0), End = new Point(12, 20), OnStory = 0 };
+            var trace = new LoadPathTrace(new[] { b1, b2, girder }, null, Size);
+            trace.Land(1, upper, design, lower);
+
+            double R1 = trace.Beams.Single(x => x.Beam == b1).EndAsd, R2 = trace.Beams.Single(x => x.Beam == b2).EndAsd;
+            var (q1, q2) = WallSchedule.HoldownPoints(upper[1], null);
+            Assert.AreEqual(System.Math.Max(1000 * q1.X / 12, 1000 * q2.X / 12), R1, 1e-6, "BM1's end, from its own free body");
+            var rg = trace.Beams.Single(x => x.Beam == girder);
+            Assert.AreEqual(R1 * 14 / 20 + R2 * 5 / 20, rg.StartAsd, 1e-6, "the girder's start: each at its place");
+            Assert.AreEqual(R1 * 6 / 20 + R2 * 15 / 20, rg.EndAsd, 1e-6, "the girder's end");
+            Assert.AreNotEqual((R1 + R2) / 2, rg.StartAsd, 1.0, "not half to each end");
+            Assert.AreEqual(6, rg.Loads.Single(l => l.From == "beam BM1 end").A, 1e-9);
+            Assert.AreEqual(15, rg.Loads.Single(l => l.From == "beam BM2 end").A, 1e-9);
         }
 
         /// <summary>
