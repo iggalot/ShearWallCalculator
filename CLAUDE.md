@@ -16,7 +16,9 @@
   - Newtonsoft.Json comes from `packages\`.
 - **The rules this app stands on:**
   - **No design without a valid building model.** No project, or a model with errors, gives no design, loads or
-    reports.
+    reports. A beam that cannot stand (fewer than two supports, or beams propping each other up over nothing) is such an
+    error (`ModelChecks` `BeamNotHeldUp`, `BuildingModel.Statics.BeamSupports.Unstable`; owner 2026-11-10: never leave the
+    one member out). Every app refuses it, the wind's headless check too; the error names the beams and their level.
   - **The wind is the wind calculator's `WindCases`** (by name, every case). SWC makes no wind of its own.
   - **Shear walls are declared here.** A wall is a plain wall (it carries its gravity load) until it is declared in SWC:
     its card's **Make it a shear wall**, then **Shear part** from–to (ft from its west or south end). The hold-downs go at
