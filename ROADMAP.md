@@ -434,6 +434,20 @@ Shown greyed as "coming" in the hub (`SuiteApps`, in `..\DesignHub\DesignHub.Cor
     **Done 2026-11-10 (WoodFraming e6b17df):** over the shear part the studs are laid out from its own low end, and a
     joint not on a stud or post gets a stud (`WallFraming.Build`); `AShearPartPartwayAlong_EverySheetEdgeOnFraming`.
     Tutorials re-run (DesignHub f512944).
+  - The support hierarchy (the owner, 2026-11-10: how primary, secondary and tertiary members are found, a stair
+    opening, reciprocal framing). **Done 2026-11-10 (LoadManager 7e64524, BuildingModel 5de3986):** found from the
+    geometry (`GravityLoadPath.SupportOf`), solved carried before carrier, a reciprocal loop solved together and said so,
+    a loop resting only on each other's ends a mechanism (`SolveBeams`); a trimmer, or any beam along the joists, carries
+    half a spacing each side (`ModelDefaults.FloorJoistSpacing`, new), never taken from a member it carries (owner: a
+    girder takes nothing off its beams). `FramingHierarchyTests`.
+  - [ ] **SWC's hold-down path stops at a beam on a beam** (`LoadPath.Place`, `beamLoads: null` for a beam end): a beam
+    end carrying hold-downs that lands on another beam is "nothing under it". It should follow the beams on down as the
+    gravity path does (loops too).
+  - [ ] **Cantilevered beams and overhangs**: every beam is a simple span between its two ends; a beam over a support
+    with a cantilevered end (and the small reciprocal frames at an overhang's corner, where the back-spans hold each
+    other down) is not modelled. Needs a beam with interior supports and the back-span's uplift.
+  - [ ] A wall along the joists gets no strip (only beams do): the rim or edge joist's half spacing over it stays with the
+    walls across the framing. Small; the owner to say if it matters.
 
 ## Wind Load Calculator
 
