@@ -14,7 +14,12 @@ _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`
   (`ViewOnlyEditRefused`); never "unsaved"; the other person's saves read again as they come, still view only.
 - The Load Manager: `Edit` puts the loads back, zones not drawn, the side panel's boxes read only, Save refused; their
   saves read again.
-- Test: `ViewOnlyTests` (sketch). Still to do: the wind calculator, and the hub's view only opening the apps (ROADMAP).
+- Test: `ViewOnlyTests` (sketch).
+- Then the rest: the wind calculator opens it view only (Results only, no Save or Edit building, their saves read
+  again whole); the hub's view only opens the apps with `--view-only` (`Launcher.ArgumentsFor(..., viewOnly)`; the app
+  does not ask again, `ProjectDialogs.StartedViewOnly`), its next step "Look in the … (view only)"; the Load Manager's
+  floor and roof loads window read only; SWC's Loads… and Connection defaults refused. Tests: the hub's
+  `ViewOnly_SomeoneElseHasIt_TheAppsOpenToLookOnly`, `Launcher_OpensTheShearWallsAtAWall` (`--view-only`).
 
 ## 2026-11-09 — Drawing walls on a DXF: Plan snap, by a face, walls from the plan
 

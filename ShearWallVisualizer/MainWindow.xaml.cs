@@ -1221,6 +1221,7 @@ namespace ShearWallVisualizer
                 Log.Warning("Loads dialog: no calculator is open.");
                 return;
             }
+            if (RefusedViewOnly("the loads are not changed from here")) return;
             windSetup?.FlushPendingChange();
             var dialog = new LoadInputDialog(buildingData, windLoadParams, windVersion, Calculator.V_x, Calculator.V_y,
                                              windSetup?.OnlyCases1And3 ?? false, manualNow: !windLoadsLinked)

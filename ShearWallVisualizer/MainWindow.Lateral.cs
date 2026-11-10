@@ -55,7 +55,7 @@ namespace ShearWallVisualizer
         /// </summary>
         private void ConnectionDefaults_Click(object sender, System.Windows.RoutedEventArgs e)
         {
-            if (building == null) return;
+            if (building == null || RefusedViewOnly("the connection defaults are not changed from here")) return;
             var now = WoodFraming.Connections.ConnectionDefaults.Read(building);
             var d = WoodFraming.Wpf.ConnectionDefaultsWindow.Edit(this, now);
             if (d == null || d.ToJson() == now.ToJson()) return;

@@ -293,9 +293,10 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
     editing menus are off and its properties panel too; SWC reads the calculators again after a refused card edit and
     opens no Edit building, wind or loads; the Load Manager's load edits are put back and its side panel's boxes read
     only. SWC and the Load Manager read the other person's saves as they make them.
-  - [ ] View only, still to do: the wind calculator (it still refuses someone else's project), and the hub opening the
-    apps view only from its own view-only mode (today it opens none). The Load Manager's floor and roof loads window and
-    SWC's dialogs open and are refused only at the end (their OK): turn them read only too.
+  - [x] View only, the rest (2026-11-09): the wind calculator (its Results page only, `WindSetupControl.ReadOnly`; their
+    saves read again whole); the hub's view only opens the apps view only (`--view-only`, `ProjectLock.ViewOnlyArgument`,
+    no second question; "Look in the … (view only)"); the Load Manager's floor and roof loads window read only
+    (`AreaLoadsWindow(b, readOnly)`); SWC's Loads… and Connection defaults not opened.
   - [x] Every app's calculation re-run with no window, in order (2026-11-06): `WindCheck` (the wind calculator's),
     `ShearWallCheck` on that wind, the hold-downs now against saved (by how much), `FoundationCheck` (the Load Manager's)
     on the forces as they are now; `ProjectCheck` chains them. The wind app and the Load Manager watch the file too, and
