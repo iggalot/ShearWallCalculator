@@ -11,7 +11,9 @@ _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`
 - The walls figure's exception (Fig. 30.3-1, both editions): θ = 0° to 7° and a least dimension over 300 ft, a at most 0.8h.
 - The wind's details page: the mean roof height and the figure height shown apart; Kh, qh and h/L at the figure height
   (the calculators already used it for the MWFRS; the page showed qh at the mean roof height).
-- Tests: `CcFigureHeightTests` (7). Every app's suite run again: unchanged.
+- 7-16 hip roofs, 7° < θ ≤ 20° (Figs. 30.3-2E/2F note 7): h/B from the figure height and the least dimension
+  (`HipCladdingHOverB`; exact for Zone 3, safe for Zones 1 and 2e; the per-eave B asked of the owner in the ROADMAP).
+- Tests: `CcFigureHeightTests` (8). Every app's suite run again: unchanged.
 
 ## 2026-11-09 — View only: someone else's project, to look at
 

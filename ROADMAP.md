@@ -423,7 +423,12 @@ Shown greyed as "coming" in the hub (`SuiteApps`, in `..\DesignHub\DesignHub.Cor
   the zone widths (`BuildingData.CcFigureHeight`, the MWFRS figures' rule); the walls' "a" ≤ 0.8h for θ ≤ 7° and a least
   dimension over 300 ft (Fig. 30.3-1, walls only: `AreaCalculator_CC_Base.IsWallFigure`). The wind's details page
   shows the figure height and finds Kh and qh at it, as the calculators do. Tests: `CcFigureHeightTests`.
-- [ ] C&C: 7-16 Figs. 30.3-2E/2F note 8 (B for Zone 3 vs Zones 1/2e; one h/B used now).
+- [x] C&C, 7-16 hip roofs 7° < θ ≤ 20° (Figs. 30.3-2E/2F, 7-16 p. 340 note 7), 2026-11-09: h/B from the figure height
+  and the least horizontal dimension (`BuildingData.HipCladdingHOverB`): exact for Zone 3; on the safe side for Zones 1
+  and 2e (a larger h/B is the larger suction in every zone). Was the mean roof height over the building's width.
+- [ ] **Owner's question:** 7-16 Fig. 30.3-2E note 7, Zones 1 and 2e: "B ... is normal to the building width and normal
+  to the eave defining Zone 2e". Its two halves read differently (the length of that eave, or the dimension across it).
+  Each eave's own h/B would need the roof's Zones 1 and 2e split by eave. Today one h/B from the least dimension (safe).
 - [ ] 7-22 hip roofs θ ≤ 7° with overhangs: Table 30.7-1 sends hip roofs to roof + wall GCp; the code
   uses the Fig. 30.3-2A overhang curves (as for gables). Decide which applies.
 
