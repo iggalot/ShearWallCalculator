@@ -424,6 +424,10 @@ Shown greyed as "coming" in the hub (`SuiteApps`, in `..\DesignHub\DesignHub.Cor
     part must still lie on the wall; an older save with no `Walls` as before. `LateralStaleTests`.
   - The post (column C2) put under an upstairs hold-down that lands partway along a wall below: "does not balance the
     wind: ΣM = 294 lb·ft in Case 1, from W, roof Case A, +GCpi (rigid) (of 35,260)" in the Load Manager and the hub.
+    **Done 2026-11-10 (LoadManager 5c8f6a9):** the cause was W5's east end pressing at its end post's centreline (x 15.875)
+    on the post at the hold-down (x 15.75): 2,350.6 lb × 0.125 ft. A column's free body now takes the wind's connections
+    on its axis, as its gravity loads already were (`FreeBodyConnection.Axis`); the wall's own free body keeps its post's
+    centreline. The example: 13 of 13 members balance, the hub all Done.
 
 ## Wind Load Calculator
 
