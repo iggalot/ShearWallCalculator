@@ -423,12 +423,19 @@ Shown greyed as "coming" in the hub (`SuiteApps`, in `..\DesignHub\DesignHub.Cor
   the zone widths (`BuildingData.CcFigureHeight`, the MWFRS figures' rule); the walls' "a" ≤ 0.8h for θ ≤ 7° and a least
   dimension over 300 ft (Fig. 30.3-1, walls only: `AreaCalculator_CC_Base.IsWallFigure`). The wind's details page
   shows the figure height and finds Kh and qh at it, as the calculators do. Tests: `CcFigureHeightTests`.
-- [x] C&C, 7-16 hip roofs 7° < θ ≤ 20° (Figs. 30.3-2E/2F, 7-16 p. 340 note 7), 2026-11-09: h/B from the figure height
-  and the least horizontal dimension (`BuildingData.HipCladdingHOverB`): exact for Zone 3; on the safe side for Zones 1
-  and 2e (a larger h/B is the larger suction in every zone). Was the mean roof height over the building's width.
-- [ ] **Owner's question:** 7-16 Fig. 30.3-2E note 7, Zones 1 and 2e: "B ... is normal to the building width and normal
-  to the eave defining Zone 2e". Its two halves read differently (the length of that eave, or the dimension across it).
-  Each eave's own h/B would need the roof's Zones 1 and 2e split by eave. Today one h/B from the least dimension (safe).
+- [x] C&C, 7-16 hip roofs 7° < θ ≤ 20° (Figs. 30.3-2E/2F, 7-16 p. 340 note 7), 2026-11-09: each zone at its own h/B,
+  B the dimension normal to the wind (26.3; the owner, 2026-11-09: h/B goes by the wind direction). Zone 3: the least
+  dimension (note 7); Zones 1 and 2e: the eave they lie along, wind normal to it, B that eave's length; Zone 2r (not in
+  note 7): the larger suction of the two directions (`WindLoadCalculator_CC.HipRatiosFor`, `ApplyHipHOverBByZone`,
+  the overhangs too). `BuildingData.HipCladdingHOverB` is Zone 3's, the figure the charts show. Was one h/B from the
+  least dimension for the whole roof (wrong: it is not per direction).
+- [x] MWFRS L/B and h/L per wind direction, 2026-11-09 (the owner asked): already so, each direction's calculator on
+  the building turned so L is along the wind (`WindAnalysis.Run`); now tested (`Mwfrs_LeewardWallCp_ByEachWindDirectionsLOverB`).
+  The wind's Building page showed one L/B and h/L as if for every wind: now each direction's L, B and L/B.
+- [x] The wind's MWFRS pages: a hand calculation of the wall pressures (owner, 2026-11-09): that direction's L and B,
+  V, α, zg, Kz, Kh, qh with the numbers, G, GCpi, each Fig. 27.3-1 Cp (the leeward's interpolation by L/B), qz up the
+  windward wall (Table 26.10-1's heights, qz = qh at h), qh on the leeward and side walls, both signs of GCpi, and
+  windward + leeward. Printed in the report too (`WindReportTests.MwfrsPages_HandCalculation_ThisDirectionsLAndB`).
 - [ ] 7-22 hip roofs θ ≤ 7° with overhangs: Table 30.7-1 sends hip roofs to roof + wall GCp; the code
   uses the Fig. 30.3-2A overhang curves (as for gables). Decide which applies.
 

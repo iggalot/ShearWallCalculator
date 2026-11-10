@@ -2,7 +2,7 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
-## 2026-11-09 — The wind's cladding: h is the eave height for θ ≤ 10°
+## 2026-11-09 — The wind: the cladding h for θ ≤ 10°; L and B by the wind direction; the walls by hand
 
 - Read in both editions (7-16 Figs. 30.3-1, 30.3-2A, 30.3-2B; 7-22 Figs. 30.3-1, 30.3-2A, 30.3-2C): the cladding figures'
   h is the mean roof height except the eave height for θ ≤ 10°. `BuildingData.CcFigureHeight` (the MWFRS figures' rule)
@@ -11,9 +11,16 @@ _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`
 - The walls figure's exception (Fig. 30.3-1, both editions): θ = 0° to 7° and a least dimension over 300 ft, a at most 0.8h.
 - The wind's details page: the mean roof height and the figure height shown apart; Kh, qh and h/L at the figure height
   (the calculators already used it for the MWFRS; the page showed qh at the mean roof height).
-- 7-16 hip roofs, 7° < θ ≤ 20° (Figs. 30.3-2E/2F note 7): h/B from the figure height and the least dimension
-  (`HipCladdingHOverB`; exact for Zone 3, safe for Zones 1 and 2e; the per-eave B asked of the owner in the ROADMAP).
-- Tests: `CcFigureHeightTests` (8). Every app's suite run again: unchanged.
+- 7-16 hip roofs, 7° < θ ≤ 20° (Figs. 30.3-2E/2F note 7): each roof zone at its own h/B, B normal to the wind
+  (the owner: h/B goes by the wind direction, 26.3). Zone 3 the least dimension; Zones 1 and 2e their eave's length;
+  Zone 2r the larger of the two directions (`HipRatiosFor`). An earlier pass took one h/B for the whole roof: corrected.
+- MWFRS: L/B and h/L were already per direction (each direction's calculator on the turned building); now tested. The
+  Building page's single L/B, h/L and h/B tiles (right for one wind only) are now each direction's L, B and L/B; the
+  Inputs page the same.
+- Each MWFRS page has a hand calculation of the wall pressures (L, B, Kz, qh, G, GCpi, Cp with the interpolation, qz
+  up the windward wall, qh elsewhere, both GCpi signs), in the printed report too. The wall table's windward row says
+  it is at z = h.
+- Tests: `CcFigureHeightTests` (10), `WindReportTests` (+2). Every app's suite run again: unchanged.
 
 ## 2026-11-09 — View only: someone else's project, to look at
 
