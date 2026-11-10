@@ -428,6 +428,12 @@ Shown greyed as "coming" in the hub (`SuiteApps`, in `..\DesignHub\DesignHub.Cor
     on the post at the hold-down (x 15.75): 2,350.6 lb × 0.125 ft. A column's free body now takes the wind's connections
     on its axis, as its gravity loads already were (`FreeBodyConnection.Axis`); the wall's own free body keeps its post's
     centreline. The example: 13 of 13 members balance, the hub all Done.
+  - The wall elevation's 4x8 sheet joints (blue) fell between studs on a shear part that starts partway along its wall
+    (the owner, 2026-11-10: every panel edge must have a stud or blocking to nail to). The studs were laid out from the
+    wall's end, the sheets from the part's.
+    **Done 2026-11-10 (WoodFraming e6b17df):** over the shear part the studs are laid out from its own low end, and a
+    joint not on a stud or post gets a stud (`WallFraming.Build`); `AShearPartPartwayAlong_EverySheetEdgeOnFraming`.
+    Tutorials re-run (DesignHub f512944).
 
 ## Wind Load Calculator
 
