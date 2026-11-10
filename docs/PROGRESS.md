@@ -2,6 +2,17 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-09 — The wind's cladding: h is the eave height for θ ≤ 10°
+
+- Read in both editions (7-16 Figs. 30.3-1, 30.3-2A, 30.3-2B; 7-22 Figs. 30.3-1, 30.3-2A, 30.3-2C): the cladding figures'
+  h is the mean roof height except the eave height for θ ≤ 10°. `BuildingData.CcFigureHeight` (the MWFRS figures' rule)
+  now gives the cladding qh and the zone widths (a, and Fig. 30.3-2A's 0.6h and 0.2h). Was the mean roof height:
+  conservative, now as the code says (lower qh and narrower zones on a gable or hip of 10° or less).
+- The walls figure's exception (Fig. 30.3-1, both editions): θ = 0° to 7° and a least dimension over 300 ft, a at most 0.8h.
+- The wind's details page: the mean roof height and the figure height shown apart; Kh, qh and h/L at the figure height
+  (the calculators already used it for the MWFRS; the page showed qh at the mean roof height).
+- Tests: `CcFigureHeightTests` (7). Every app's suite run again: unchanged.
+
 ## 2026-11-09 — View only: someone else's project, to look at
 
 - `ProjectDialogs.TakeLock(..., offerViewOnly, out refused, out viewOnly)`: when another person or PC has the project,

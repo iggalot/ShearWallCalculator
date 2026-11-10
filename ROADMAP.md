@@ -418,9 +418,12 @@ Shown greyed as "coming" in the hub (`SuiteApps`, in `..\DesignHub\DesignHub.Cor
   each run on its own edition. The current three (Quimby 7-05, SkyCiv 7-10, Medeek 7-10) run as 7-16.
   Candidate found: SkyCiv "ASCE 7-16 Wind Load Calculation for L-shaped Building" (Ch. 27, partially
   enclosed, metric, Ke = 0.987).
-- [ ] C&C (Ch. 30): use the eave height for h at θ ≤ 10° where the figures say so (now the mean roof
-  height, conservative); the "a" ≤ 0.8h exception for θ ≤ 7° and least dimension over 300 ft (not applied,
-  conservative); 7-16 Figs. 30.3-2E/2F note 8 (B for Zone 3 vs Zones 1/2e; one h/B used now).
+- [x] C&C (Ch. 30), 2026-11-09: h is the eave height for θ ≤ 10° (Figs. 30.3-1 and 30.3-2A to 2I, 7-16 pp. 335-337
+  and 7-22 pp. 317-321 read: "h = Mean roof height, except that eave height shall be used for θ ≤ 10°"), for qh and
+  the zone widths (`BuildingData.CcFigureHeight`, the MWFRS figures' rule); the walls' "a" ≤ 0.8h for θ ≤ 7° and a least
+  dimension over 300 ft (Fig. 30.3-1, walls only: `AreaCalculator_CC_Base.IsWallFigure`). The wind's details page
+  shows the figure height and finds Kh and qh at it, as the calculators do. Tests: `CcFigureHeightTests`.
+- [ ] C&C: 7-16 Figs. 30.3-2E/2F note 8 (B for Zone 3 vs Zones 1/2e; one h/B used now).
 - [ ] 7-22 hip roofs θ ≤ 7° with overhangs: Table 30.7-1 sends hip roofs to roof + wall GCp; the code
   uses the Fig. 30.3-2A overhang curves (as for gables). Decide which applies.
 
