@@ -65,9 +65,15 @@ namespace ShearWallCalculator.Tests
         public void BeamSheet_ReactionsAddUpPerWindDirection()
         {
             var bm = new FramingBeam { Id = "BM1", Start = new Point(0, 0), End = new Point(20, 0) };
-            var br = new BeamReactions { Beam = bm, StartAsd = 900, EndAsd = 700 };
-            br.Loads.Add(new BeamLoad { From = "wall 1", A = 5, Asd = 1000, LowEndUp = true, StartAsd = 750, EndAsd = 250 });
-            br.Loads.Add(new BeamLoad { From = "wall 2", A = 16, Asd = 500, LowEndUp = true, StartAsd = 100, EndAsd = 400 });
+            var br = new BeamReactions { Beam = bm };
+            br.Supports.Add(new BeamSupportReaction { Name = "start", At = 0, Where = bm.Start, Asd = 900 });
+            br.Supports.Add(new BeamSupportReaction { Name = "end", At = 20, Where = bm.End, Asd = 700 });
+            var l1 = new BeamLoad { From = "wall 1", A = 5, Asd = 1000, LowEndUp = true };
+            l1.ToSupports.AddRange(new[] { 750.0, 250 });
+            var l2 = new BeamLoad { From = "wall 2", A = 16, Asd = 500, LowEndUp = true };
+            l2.ToSupports.AddRange(new[] { 100.0, 400 });
+            br.Loads.Add(l1);
+            br.Loads.Add(l2);
             var lines = DetailCalcs.Beam(br, new[]
             {
                 new HoldownLanding { From = "beam BM1 start", Support = SupportKind.Wall, LowerWallId = 3, SupportId = "wall 3", Family = HoldownFamilies.Strap_ToWallBelow, Model = "CS16", TensionAsd = 900 },

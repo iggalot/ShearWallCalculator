@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
+using BuildingModel.Statics;
 
 namespace ShearWallCalculator
 {
@@ -93,7 +94,7 @@ namespace ShearWallCalculator
         public int TopStory { get; set; }
     }
 
-    /// <summary>One load on a beam and the beam's end reactions for it (simple span).</summary>
+    /// <summary>One load on a beam and what it passes to each of the beam's supports (<see cref="BeamReactions.Supports"/>, in order).</summary>
     public sealed class BeamLoad
     {
         public string From { get; set; }
@@ -102,19 +103,41 @@ namespace ShearWallCalculator
         public double Asd { get; set; }
         public double Lrfd { get; set; }
         public bool LowEndUp { get; set; }
-        public double StartAsd { get; set; }
-        public double EndAsd { get; set; }
+        /// <summary>Its tension passed to each support (lb ASD, + up; a cantilever's back support is pushed down, −).</summary>
+        public List<double> ToSupports { get; } = new List<double>();
     }
 
-    /// <summary>A beam that carries hold-downs: its loads and the reactions at its ends (for each wind direction, the worse taken).</summary>
+    /// <summary>One support of a beam carrying hold-downs, and its reaction (the worse wind direction).</summary>
+    public sealed class BeamSupportReaction
+    {
+        /// <summary>"start", "end", or "at 12.5 ft" (from its start): its hold-down is "beam BM1 start", "beam BM1 at 12.5 ft".</summary>
+        public string Name { get; set; }
+        /// <summary>ft from the beam's start.</summary>
+        public double At { get; set; }
+        public Point Where { get; set; }
+        public double Asd { get; set; }
+        public double Lrfd { get; set; }
+    }
+
+    /// <summary>
+    /// A beam that carries hold-downs: its loads and the reactions at its supports (for each wind direction, the worse taken):
+    /// the walls and columns under it anywhere along it and, at an end with neither, a beam (owner 2026-11-10).
+    /// </summary>
     public sealed class BeamReactions
     {
         public FramingBeam Beam { get; set; }
         public List<BeamLoad> Loads { get; } = new List<BeamLoad>();
-        public double StartAsd { get; set; }
-        public double EndAsd { get; set; }
-        public double StartLrfd { get; set; }
-        public double EndLrfd { get; set; }
+        public List<BeamSupportReaction> Supports { get; } = new List<BeamSupportReaction>();
+        /// <summary>False: fewer than two supports, it cannot stand; its ends are taken as a simple span, an end on nothing an error.</summary>
+        public bool Stands { get; set; } = true;
+        /// <summary>Two supports by statics (an overhang past them too), else continuous (EI the same along it).</summary>
+        public string Method => !Stands ? "it cannot stand (fewer than two supports): taken as a simple span"
+                              : Supports.Count == 2 ? "statics, ΣM about each support" : $"continuous over {Supports.Count} supports, EI constant";
+        private BeamSupportReaction Named(string n) => Supports.FirstOrDefault(x => x.Name == n);
+        public double StartAsd => Named("start")?.Asd ?? 0;
+        public double EndAsd => Named("end")?.Asd ?? 0;
+        public double StartLrfd => Named("start")?.Lrfd ?? 0;
+        public double EndLrfd => Named("end")?.Lrfd ?? 0;
     }
 
     /// <summary>
@@ -125,8 +148,11 @@ namespace ShearWallCalculator
     /// take it down;</item>
     /// <item>a COLUMN under that level: it carries the load to its base, which is traced again (to the foundation for a
     /// column standing on the ground);</item>
-    /// <item>a BEAM on that level: the beam's end reactions (simple span: R_start = Σ T (L − a) / L, R_end = Σ T a / L, each
-    /// wind direction apart, the worse taken) are new hold-down points, traced to the walls or columns under the ends;</item>
+    /// <item>a BEAM on that level: the beam's reactions at its supports (every wall and column under it anywhere along it, a
+    /// beam at an end with neither; by its own free body, <see cref="BeamStatics"/>: two supports by statics, R_start = Σ T
+    /// (L − a) / L on a simple span, an overhang past them too; three or more continuous, EI the same along it; each wind
+    /// direction apart, the worse taken) are new hold-down points ("beam BM1 start", "beam BM1 at 12.5 ft"), traced to what
+    /// is under each;</item>
     /// <item>the FOUNDATION under the first story;</item>
     /// <item>or nothing: an error (draw a beam or a column).</item>
     /// </list>
@@ -275,10 +301,13 @@ namespace ShearWallCalculator
             // changes (each a simple span, linear), which settles a chain in a pass or two and beams bearing on each other
             // round a loop (reciprocal framing) to the exact answer. A loop resting only on each other's ends never settles:
             // a mechanism, its ends left on nothing (an error: draw a column or a post).
-            var onBeams = new Dictionary<(FramingBeam bm, bool start), (FramingBeam onto, Arrival a)>();
-            var solved = new Dictionary<FramingBeam, (BeamReactions r, Arrival start, Arrival end)>();
-            var cut = new HashSet<(FramingBeam, bool)>();
-            var last = new Dictionary<(FramingBeam, bool), double>(); // each end's force at the last pass
+            var onBeams = new Dictionary<(FramingBeam bm, string support), (FramingBeam onto, Arrival a)>();
+            var solved = new Dictionary<FramingBeam, (BeamReactions r, List<(string name, Arrival a)> at)>();
+            var cut = new HashSet<(FramingBeam, string)>();
+            var last = new Dictionary<(FramingBeam, string), double>(); // each support's force at the last pass
+            var supportsOf = new Dictionary<FramingBeam, List<BeamSupportReaction>>();
+            List<BeamSupportReaction> Supports(FramingBeam bm) =>
+                supportsOf.TryGetValue(bm, out var s) ? s : supportsOf[bm] = SupportsOf(bm, level, wallsBelow);
             for (int round = 0; round < 2; round++)
             {
                 bool settled = false;
@@ -291,11 +320,11 @@ namespace ShearWallCalculator
                         var loads = (beamLoads.TryGetValue(bm, out var own) ? own : new List<Arrival>())
                                     .Concat(onBeams.Where(o => o.Value.onto == bm).Select(o => o.Value.a)).ToList();
                         if (loads.Count == 0) continue;
-                        var s = React(bm, loads);
+                        var s = React(bm, loads, Supports(bm));
                         solved[bm] = s;
-                        foreach (var (start, a) in new[] { (true, s.start), (false, s.end) })
+                        foreach (var (name, a) in s.at)
                         {
-                            var key = (bm, start);
+                            var key = (bm, name);
                             var onto = a == null || cut.Contains(key) ? null : BeamUnder(a, level, wallsBelow, bm);
                             last.TryGetValue(key, out var was);
                             double size = a == null ? 0 : Size(a);
@@ -333,9 +362,53 @@ namespace ShearWallCalculator
             foreach (var kv in solved)
             {
                 Beams.Add(kv.Value.r);
-                foreach (var (start, a) in new[] { (true, kv.Value.start), (false, kv.Value.end) })
-                    if (a != null) Place(a, level, wallsBelow, cut.Contains((kv.Key, start)) ? null : new Dictionary<FramingBeam, List<Arrival>>(), kv.Key);
+                foreach (var (name, a) in kv.Value.at)
+                    if (a != null) Place(a, level, wallsBelow, cut.Contains((kv.Key, name)) ? null : new Dictionary<FramingBeam, List<Arrival>>(), kv.Key);
             }
+        }
+
+        /// <summary>
+        /// What holds a beam up, in order along it: the walls of the story below crossing it, ending under it or under one of
+        /// its ends (a wall along it: where they overlap ends), the columns under it, and at an end with neither, a beam (as the
+        /// gravity load path, <c>GravityLoadPath.SupportsOf</c>). Two within <see cref="Tolerance"/> are one; one within it of an
+        /// end is that end.
+        /// </summary>
+        private List<BeamSupportReaction> SupportsOf(FramingBeam bm, int level, IDictionary<int, WallData> wallsBelow)
+        {
+            double L = bm.Length;
+            var list = new List<BeamSupportReaction>();
+            if (level < 0) return list;
+            var u = L > 0 ? (bm.End - bm.Start) / L : new Vector();
+            double Along(Point p) => L <= 0 ? 0 : Math.Max(0, Math.Min(L, Vector.Multiply(p - bm.Start, u)));
+            bool Under(Point p) => WallOrColumnUnder(new Arrival { At = p }, level, wallsBelow, out _, out _);
+            var xs = new List<double>();
+            if (Under(bm.Start) || OnBeam(bm.Start, level, bm) != null) xs.Add(0);
+            if (Under(bm.End) || OnBeam(bm.End, level, bm) != null) xs.Add(L);
+            foreach (var w in wallsBelow?.Values ?? Enumerable.Empty<WallData>())
+            {
+                foreach (var p in new[] { w.Start, w.End }) if (OnSegment(p, bm.Start, bm.End)) xs.Add(Along(p));
+                if (Crossing(bm.Start, bm.End, w.Start, w.End, out double t)) xs.Add(t * L);
+            }
+            foreach (var c in columns.Where(c => c.BaseStory <= level && c.TopStory >= level && OnSegment(c.At, bm.Start, bm.End))) xs.Add(Along(c.At));
+            foreach (var x0 in xs.Select(x => x <= Tolerance ? 0 : x >= L - Tolerance ? L : x).OrderBy(x => x))
+            {
+                if (list.Any(s => Math.Abs(s.At - x0) <= Tolerance)) continue;
+                string name = x0 <= 0 ? "start" : x0 >= L ? "end" : $"at {x0:0.##} ft";
+                list.Add(new BeamSupportReaction { Name = name, At = x0, Where = name == "start" ? bm.Start : name == "end" ? bm.End : bm.Start + u * x0 });
+            }
+            return list;
+        }
+
+        /// <summary>Where two segments cross, as a share of the first (0 to 1); false when they do not, or run alongside.</summary>
+        private static bool Crossing(Point a, Point b, Point c, Point d, out double t)
+        {
+            t = 0;
+            Vector r = b - a, s = d - c, q = c - a;
+            double den = Vector.CrossProduct(r, s);
+            if (Math.Abs(den) < 1e-12) return false;
+            t = Vector.CrossProduct(q, s) / den;
+            double v = Vector.CrossProduct(q, r) / den;
+            return t >= -1e-9 && t <= 1 + 1e-9 && v >= -1e-9 && v <= 1 + 1e-9;
         }
 
         /// <summary>The size of a beam end's force, to tell when the beams have settled.</summary>
@@ -343,80 +416,93 @@ namespace ShearWallCalculator
             Math.Abs(a.Asd) + Math.Abs(a.Lrfd) + (a.CaseAsd?.Values.Sum(Math.Abs) ?? 0) + (a.CaseLrfd?.Values.Sum(Math.Abs) ?? 0) + (a.CaseUp?.Values.Sum(Math.Abs) ?? 0);
 
         /// <summary>
-        /// A beam's reactions for the loads on it, and the new points at its ends (null: an end with nothing to pass on).
+        /// A beam's reactions for the loads on it, by its own free body (<see cref="BeamStatics"/>: two supports by statics,
+        /// an overhang past them too; three or more continuous, EI the same along it; owner 2026-11-10), and the new points at
+        /// its supports (null: one with nothing to pass on). Each load's share of each support is its influence there: a unit
+        /// load at its place. With fewer than two supports it cannot stand: it is taken as a simple span on its ends, and an end
+        /// with nothing under it goes on nothing (an error: draw a wall, a column or a beam).
         /// </summary>
-        private (BeamReactions r, Arrival start, Arrival end) React(FramingBeam bm, List<Arrival> loads)
+        private (BeamReactions r, List<(string name, Arrival a)> at) React(FramingBeam bm, List<Arrival> loads, List<BeamSupportReaction> supports)
         {
-            var kv = new KeyValuePair<FramingBeam, List<Arrival>>(bm, loads);
-            Arrival startArrival = null, endArrival = null;
+            double L = bm.Length;
+            var reactions = new BeamReactions { Beam = bm, Stands = supports.Count >= 2 && L > 0 };
+            var sup = reactions.Stands ? supports
+                    : new List<BeamSupportReaction> { new BeamSupportReaction { Name = "start", At = 0, Where = bm.Start }, new BeamSupportReaction { Name = "end", At = L, Where = bm.End } };
+            foreach (var s in sup) reactions.Supports.Add(new BeamSupportReaction { Name = s.Name, At = s.At, Where = s.Where });
+            int n = sup.Count;
+            double X(Point p) => L <= 0 ? 0 : Math.Max(0, Math.Min(L, Vector.Multiply(p - bm.Start, (bm.End - bm.Start) / L)));
+
+            // each place a load pulls or presses: what a unit load there gives each support
+            var places = new List<double>();
+            foreach (var a in loads)
             {
-                double L = bm.Length;
-                var reactions = new BeamReactions { Beam = bm };
-                double s0 = 0, e0 = 0, s1 = 0, e1 = 0, sl0 = 0, el0 = 0, sl1 = 0, el1 = 0;
-                foreach (var a in kv.Value)
+                places.Add(X(a.At));
+                if (a.PressAt != null) places.Add(X(a.PressAt.Value));
+            }
+            places = places.Distinct().ToList();
+            double[][] infl = null;
+            if (L > 0)
+                infl = BeamStatics.Reactions(L, sup.Select(s => s.At).ToList(),
+                    places.Select(x => { var u = new BeamLoads(); u.Points.Add((x, 1.0)); return u; }).ToList());
+            double[] Share(double x)
+            {
+                int i = places.IndexOf(x);
+                if (infl != null && i >= 0) return infl[i];
+                return Enumerable.Repeat(1.0 / n, n).ToArray(); // a beam of no length: shared
+            }
+
+            var dir = new double[2, n];
+            var dirL = new double[2, n];
+            foreach (var a in loads)
+            {
+                double x = X(a.At);
+                var k = Share(x);
+                var load = new BeamLoad { From = a.From, A = x, Asd = a.Asd, Lrfd = a.Lrfd, LowEndUp = a.LowEndUp ?? true };
+                for (int i = 0; i < n; i++)
                 {
-                    double x = L <= 0 ? 0 : Math.Max(0, Math.Min(L, Vector.Multiply(a.At - bm.Start, (bm.End - bm.Start) / L)));
-                    var load = new BeamLoad { From = a.From, A = x, Asd = a.Asd, Lrfd = a.Lrfd, LowEndUp = a.LowEndUp ?? true,
-                                              StartAsd = L > 0 ? a.Asd * (L - x) / L : a.Asd / 2, EndAsd = L > 0 ? a.Asd * x / L : a.Asd / 2 };
-                    reactions.Loads.Add(load);
-                    double ls = L > 0 ? a.Lrfd * (L - x) / L : a.Lrfd / 2, le = L > 0 ? a.Lrfd * x / L : a.Lrfd / 2;
+                    load.ToSupports.Add(a.Asd * k[i]);
                     // a load with no wind direction (from a beam or column above) goes with both
-                    if (a.LowEndUp != false) { s0 += load.StartAsd; e0 += load.EndAsd; sl0 += ls; el0 += le; }
-                    if (a.LowEndUp != true) { s1 += load.StartAsd; e1 += load.EndAsd; sl1 += ls; el1 += le; }
+                    if (a.LowEndUp != false) { dir[0, i] += a.Asd * k[i]; dirL[0, i] += a.Lrfd * k[i]; }
+                    if (a.LowEndUp != true) { dir[1, i] += a.Asd * k[i]; dirL[1, i] += a.Lrfd * k[i]; }
                 }
-                reactions.StartAsd = Math.Max(s0, s1);
-                reactions.EndAsd = Math.Max(e0, e1);
-                reactions.StartLrfd = Math.Max(sl0, sl1);
-                reactions.EndLrfd = Math.Max(el0, el1);
-                // case by case when every load knows its cases: each end's worst case of the sum
-                var xs = kv.Value.Select(a => L <= 0 ? 0 : Math.Max(0, Math.Min(L, Vector.Multiply(a.At - bm.Start, (bm.End - bm.Start) / L)))).ToList();
-                var toStart = xs.Select(x => L > 0 ? (L - x) / L : 0.5).ToList();
-                var toEnd = xs.Select(x => L > 0 ? x / L : 0.5).ToList();
-                var sAsd = SumByCase(kv.Value.Select(a => a.CaseAsd), toStart);
-                var eAsd = SumByCase(kv.Value.Select(a => a.CaseAsd), toEnd);
-                var sLrfd = SumByCase(kv.Value.Select(a => a.CaseLrfd), toStart);
-                var eLrfd = SumByCase(kv.Value.Select(a => a.CaseLrfd), toEnd);
+                reactions.Loads.Add(load);
+            }
+            var first = loads.FirstOrDefault(a => a.Kind == PathPointKind.WallHoldown) ?? loads[0];
+            var at = new List<(string, Arrival)>();
+            for (int i = 0; i < n; i++)
+            {
+                var r = reactions.Supports[i];
+                r.Asd = Math.Max(dir[0, i], dir[1, i]);
+                r.Lrfd = Math.Max(dirL[0, i], dirL[1, i]);
+                // case by case when every load knows its cases: each support's worst case of the sum
+                int j = i;
+                var shares = loads.Select(a => Share(X(a.At))[j]).ToList();
+                var cA = SumByCase(loads.Select(a => a.CaseAsd), shares);
+                var cL = SumByCase(loads.Select(a => a.CaseLrfd), shares);
+                if (cA != null && cL != null) { r.Asd = Max(cA); r.Lrfd = Max(cL); }
                 // the compression too: a wall end pressing on the beam is a load on it as much as one lifting it, where it
                 // presses (its end post's centreline: as the Load Manager's free bodies take it), the pull at the hold-down
-                Dictionary<string, double> sUp = null, eUp = null;
-                if (kv.Value.All(a => a.CaseUp != null))
+                Dictionary<string, double> cU = null;
+                if (loads.All(a => a.CaseUp != null))
                 {
-                    sUp = new Dictionary<string, double>();
-                    eUp = new Dictionary<string, double>();
-                    foreach (var a in kv.Value)
+                    cU = new Dictionary<string, double>();
+                    foreach (var a in loads)
                     {
-                        double xPull = L <= 0 ? 0 : Math.Max(0, Math.Min(L, Vector.Multiply(a.At - bm.Start, (bm.End - bm.Start) / L)));
-                        double xPress = a.PressAt == null || L <= 0 ? xPull : Math.Max(0, Math.Min(L, Vector.Multiply(a.PressAt.Value - bm.Start, (bm.End - bm.Start) / L)));
+                        double kPull = Share(X(a.At))[j], kPress = a.PressAt == null ? kPull : Share(X(a.PressAt.Value))[j];
                         foreach (var c in a.CaseUp)
-                        {
-                            double x = c.Value < 0 ? xPress : xPull;
-                            sUp[c.Key] = (sUp.TryGetValue(c.Key, out var s) ? s : 0) + c.Value * (L > 0 ? (L - x) / L : 0.5);
-                            eUp[c.Key] = (eUp.TryGetValue(c.Key, out var e) ? e : 0) + c.Value * (L > 0 ? x / L : 0.5);
-                        }
+                            cU[c.Key] = (cU.TryGetValue(c.Key, out var v) ? v : 0) + c.Value * (c.Value < 0 ? kPress : kPull);
                     }
                 }
-                if (sAsd != null && eAsd != null && sLrfd != null && eLrfd != null)
+                // a support that only presses down still lands on what is under it (in bearing: no hold-down to size)
+                if (!(r.Asd > 0) && (cU == null || cU.Values.All(v => Math.Abs(v) < 0.05))) { at.Add((r.Name, null)); continue; }
+                at.Add((r.Name, new Arrival
                 {
-                    reactions.StartAsd = Max(sAsd);
-                    reactions.EndAsd = Max(eAsd);
-                    reactions.StartLrfd = Max(sLrfd);
-                    reactions.EndLrfd = Max(eLrfd);
-                }
-                var first = kv.Value.FirstOrDefault(a => a.Kind == PathPointKind.WallHoldown) ?? kv.Value[0];
-                foreach (var (end, asd, lrfd, which, cA, cL, cU) in new[] { (bm.Start, reactions.StartAsd, reactions.StartLrfd, "start", sAsd, sLrfd, sUp), (bm.End, reactions.EndAsd, reactions.EndLrfd, "end", eAsd, eLrfd, eUp) })
-                {
-                    // an end that only presses down still lands on what is under it (in bearing: no hold-down to size)
-                    if (!(asd > 0) && (cU == null || cU.Values.All(v => Math.Abs(v) < 0.05))) continue;
-                    var a = new Arrival
-                    {
-                        At = end, Asd = asd, Lrfd = lrfd, LowEndUp = null, Kind = PathPointKind.BeamEnd, From = $"beam {bm.Id} {which}",
-                        UpperStory = first.UpperStory, WallId = first.WallId, Family = first.Family, Species = first.Species,
-                        CaseAsd = cA, CaseLrfd = cL, CaseUp = cU,
-                    };
-                    if (which == "start") startArrival = a; else endArrival = a;
-                }
-                return (reactions, startArrival, endArrival);
+                    At = r.Where, Asd = r.Asd, Lrfd = r.Lrfd, LowEndUp = null, Kind = PathPointKind.BeamEnd, From = $"beam {bm.Id} {r.Name}",
+                    UpperStory = first.UpperStory, WallId = first.WallId, Family = first.Family, Species = first.Species,
+                    CaseAsd = cA, CaseLrfd = cL, CaseUp = cU,
+                }));
             }
+            return (reactions, at);
         }
 
         /// <summary>

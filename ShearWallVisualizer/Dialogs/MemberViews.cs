@@ -31,10 +31,13 @@ namespace ShearWallVisualizer.Dialogs
         public string Footnote { get; set; }
     }
 
-    /// <summary>One end of a beam: its uplift reaction, its connection (the traced landing, null with no uplift) and what is under it.</summary>
+    /// <summary>One support of a beam (an end, or partway along): its uplift reaction, its connection (the traced landing, null with no uplift) and what is under it.</summary>
     public sealed class BeamEndInfo
     {
-        public string Which { get; set; }        // "start", "end"
+        public string Which { get; set; }        // "start", "end", "at 12.5 ft"
+        /// <summary>ft from the beam's start.</summary>
+        public double At { get; set; }
+        public string Title => Which == "start" ? "Start" : Which == "end" ? "End" : char.ToUpper(Which[0]) + Which.Substring(1);
         public double Reaction { get; set; }     // lb ASD, uplift
         public HoldownLanding Landing { get; set; }
         /// <summary>What it bears on: "column C3", "wall 4", "nothing found".</summary>
@@ -56,33 +59,37 @@ namespace ShearWallVisualizer.Dialogs
 
         // ------------------------------------------------------------------ beam
 
-        public static MemberView Beam(string id, string levelName, BeamReactions br, BeamEndInfo start, BeamEndInfo end, List<CalcLine> lines, string footnote)
+        /// <summary>Which way a support's labels and strap go: in from an end, to the right partway along.</summary>
+        private static double Inward(BeamEndInfo e, double L) => e.At * 12 >= L - 0.5 ? -1.0 : 1.0;
+
+        public static MemberView Beam(string id, string levelName, BeamReactions br, List<BeamEndInfo> supports, List<CalcLine> lines, string footnote)
         {
             double L = (br?.Beam?.Length ?? 0) * 12;
+            supports = supports ?? new List<BeamEndInfo>();
             return new MemberView
             {
                 Key = "beam " + id,
                 WindowTitle = $"Beam {id}: elevation, 3D and pieces",
                 Title = $"Beam {id} · {levelName}",
-                Subtitle = $"In the framing of {levelName}, {FtIn.Of(L)} span, start on the left. " +
+                Subtitle = $"In the framing of {levelName}, {FtIn.Of(L)} long, start on the left. " +
                            (br == null || br.Loads.Count == 0 ? "No hold-downs stand on it. " : $"{br.Loads.Count} hold-down{(br.Loads.Count == 1 ? "" : "s")} of the story above stand on it, ") +
-                           (br == null || br.Loads.Count == 0 ? "" : $"held down at its ends ({start.Reaction:N0} and {end.Reaction:N0} lb, ASD). ") +
+                           (br == null || br.Loads.Count == 0 ? "" : $"held down at its supports ({string.Join(", ", supports.Select(e => $"{e.Which} {e.Reaction:N0}"))} lb, ASD). ") +
                            "Not sized here: drawn 3 1/2 × 11 1/4 in.",
-                Elevation = () => new BeamElevation(id, br, start, end),
-                Model = () => BeamModel(br, start, end),
-                Pieces = () => BeamPieces(id, br, start, end),
+                Elevation = () => new BeamElevation(id, br, supports),
+                Model = () => BeamModel(br, supports),
+                Pieces = () => BeamPieces(id, br, supports),
                 Lines = lines ?? new List<CalcLine>(),
                 Footnote = footnote,
             };
         }
 
-        private static Model3DGroup BeamModel(BeamReactions br, BeamEndInfo start, BeamEndInfo end)
+        private static Model3DGroup BeamModel(BeamReactions br, List<BeamEndInfo> supports)
         {
             var g = new Model3DGroup();
             double L = (br?.Beam?.Length ?? 0) * 12;
             if (L <= 0) return g;
             g.Children.Add(FramingModel.Box(0, 0, 0, L, BeamDepth, BeamWidth, FramingMaterials.Plate));
-            foreach (var (e, x, inward) in new[] { (start, 0.0, 1.0), (end, L, -1.0) })
+            foreach (var (e, x, inward) in supports.Select(e => (e, e.At * 12, Inward(e, L))))
             {
                 // what it bears on, and the connection on its face
                 if (e.OnColumn) g.Children.Add(FramingModel.Box(x - PostSize / 2, -60, 0, x + PostSize / 2, -0.05, PostSize, FramingMaterials.Post));
@@ -101,28 +108,28 @@ namespace ShearWallVisualizer.Dialogs
             return g;
         }
 
-        private static FrameworkElement BeamPieces(string id, BeamReactions br, BeamEndInfo start, BeamEndInfo end)
+        private static FrameworkElement BeamPieces(string id, BeamReactions br, List<BeamEndInfo> supports)
         {
             var p = new StackPanel { Margin = new Thickness(4, 4, 16, 16) };
             double L = (br?.Beam?.Length ?? 0) * 12;
             WallBuildWindow.Section(p, "Beam", "");
             p.Children.Add(WallBuildWindow.Table(new[] { "Piece", "Size", "Qty", "Length", "Notes" }, new List<string[]>
             {
-                new[] { $"Beam {id}", "not sized (drawn 3 1/2 × 11 1/4)", "1", FtIn.Of(L), "Its uplift is found here; size it for its gravity loads too, with bearing at each end." },
+                new[] { $"Beam {id}", "not sized (drawn 3 1/2 × 11 1/4)", "1", FtIn.Of(L), "Its uplift is found here; size it for its gravity loads too, with bearing at each support." },
             }));
-            WallBuildWindow.Section(p, "End connections", "Each end held down to what it bears on, for that end's uplift reaction (wind, ASD).");
-            p.Children.Add(WallBuildWindow.Table(new[] { "End", "Uplift (lb)", "Connection", "Fasteners", "Allowable (lb)", "Bears on", "Notes" },
-                new[] { start, end }.Select(e => new[]
+            WallBuildWindow.Section(p, "Support connections", "Each support held down to what it bears on, for its uplift reaction (wind, ASD).");
+            p.Children.Add(WallBuildWindow.Table(new[] { "Support", "Uplift (lb)", "Connection", "Fasteners", "Allowable (lb)", "Bears on", "Notes" },
+                supports.Select(e => new[]
                 {
-                    e.Which == "start" ? "Start (left)" : "End (right)", $"{e.Reaction:N0}", e.Connection, WallBuildWindow.Fast(e.Landing?.Choice?.Fasteners),
+                    e.Which == "start" ? "Start (left)" : e.Which == "end" ? "End (right)" : e.Title, $"{e.Reaction:N0}", e.Connection, WallBuildWindow.Fast(e.Landing?.Choice?.Fasteners),
                     e.Landing?.Choice?.Allowable > 0 ? $"{e.Landing.Choice.Allowable:N0}" : "", e.Under ?? "",
-                    e.Landing == null ? "No uplift at this end (gravity is not calculated)." : e.Landing.Note ?? "",
+                    e.Landing == null ? "No uplift here (gravity is not calculated)." : e.Landing.Note ?? "",
                 }).ToList()));
             WallBuildWindow.Section(p, "Hold-downs on it from above", br == null || br.Loads.Count == 0 ? "None." : "Each pulls up on the beam at its distance a from the start.");
             if (br != null && br.Loads.Count > 0)
-                p.Children.Add(WallBuildWindow.Table(new[] { "a (from the start)", "From", "Uplift (lb, ASD)", "To the start / end (lb)" },
-                    br.Loads.OrderBy(x => x.A).Select(x => new[] { FtIn.Of(x.A * 12), x.From ?? "", $"{x.Asd:N0}", $"{x.StartAsd:N0} / {x.EndAsd:N0}" }).ToList()));
-            Assumed(p, "The beam is a simple span between its supports; the connections are sized for uplift only.",
+                p.Children.Add(WallBuildWindow.Table(new[] { "a (from the start)", "From", "Uplift (lb, ASD)", $"To the supports: {string.Join(" / ", br.Supports.Select(x => x.Name))} (lb)" },
+                    br.Loads.OrderBy(x => x.A).Select(x => new[] { FtIn.Of(x.A * 12), x.From ?? "", $"{x.Asd:N0}", string.Join(" / ", x.ToSupports.Select(v => $"{v:N0}")) }).ToList()));
+            Assumed(p, $"The beam's reactions from its own free body: {br?.Method ?? "statics"}; the connections are sized for uplift only.",
                        "Beam size, bearing and gravity loads are not designed here.");
             return p;
         }
@@ -213,14 +220,13 @@ namespace ShearWallVisualizer.Dialogs
         {
             private readonly string id;
             private readonly BeamReactions br;
-            private readonly BeamEndInfo start, end;
+            private readonly List<BeamEndInfo> supports;
 
-            public BeamElevation(string id, BeamReactions br, BeamEndInfo start, BeamEndInfo end)
+            public BeamElevation(string id, BeamReactions br, List<BeamEndInfo> supports)
             {
                 this.id = id;
                 this.br = br;
-                this.start = start;
-                this.end = end;
+                this.supports = supports ?? new List<BeamEndInfo>();
             }
 
             protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo) { base.OnRenderSizeChanged(sizeInfo); InvalidateVisual(); }
@@ -240,8 +246,9 @@ namespace ShearWallVisualizer.Dialogs
                 dc.DrawRectangle(DetailInk.Post, DetailInk.P(DetailInk.Timber, 1.2), new Rect(X(0), yt, L * s, dpx));
                 DetailInk.Label(dc, this, $"Beam {id}  (not sized: drawn 3 1/2 × 11 1/4)", new Point(X(L / 2), yt + dpx / 2), DetailInk.Timber, 11, bold: true, centre: true);
 
-                foreach (var (e, x, inward) in new[] { (start, 0.0, 1.0), (end, L, -1.0) })
+                foreach (var e in supports)
                 {
+                    double x = e.At * 12, inward = Inward(e, L);
                     double px = X(x);
                     // what it bears on
                     if (e.OnColumn) dc.DrawRectangle(DetailInk.Post, DetailInk.P(DetailInk.Timber, 1), new Rect(px - Math.Max(10, PostSize * s) / 2, yb, Math.Max(10, PostSize * s), 80));
@@ -251,12 +258,12 @@ namespace ShearWallVisualizer.Dialogs
                     if (e.Landing != null) dc.DrawRectangle(DetailInk.Hardware, null, new Rect(px + inward * 6 - 3, yt + 3, 6, dpx + 34));
                     bool ra = inward < 0;
                     double ty = yb + 96;
-                    DetailInk.Label(dc, this, $"({e.Reaction / 1000:0.0}k)", inward > 0 ? new Point(X(0), ty) : new Point(X(L), ty), e.Ink, 12, bold: true, rightAligned: ra);
-                    DetailInk.Label(dc, this, e.Connection, inward > 0 ? new Point(X(0), ty + 17) : new Point(X(L), ty + 17), e.Ink, 12, bold: true, rightAligned: ra);
+                    DetailInk.Label(dc, this, $"({e.Reaction / 1000:0.0}k)", new Point(px, ty), e.Ink, 12, bold: true, rightAligned: ra);
+                    DetailInk.Label(dc, this, e.Connection, new Point(px, ty + 17), e.Ink, 12, bold: true, rightAligned: ra);
                     string fast = WallBuildWindow.Fast(e.Landing?.Choice?.Fasteners);
-                    if (!string.IsNullOrEmpty(fast)) DetailInk.Label(dc, this, "fasteners " + fast, inward > 0 ? new Point(X(0), ty + 34) : new Point(X(L), ty + 34), e.Ink, 10.5, rightAligned: ra);
-                    if (e.Landing != null && e.Landing.Supported) DetailInk.Label(dc, this, $"→ {DetailCalcs.Support(e.Landing)}", inward > 0 ? new Point(X(0), ty + 49) : new Point(X(L), ty + 49), e.Ink, 10.5, rightAligned: ra);
-                    DetailInk.Label(dc, this, e.Which == "start" ? "Start" : "End", new Point(px, yt - 16), DetailInk.Dim, 10, bold: true, centre: true);
+                    if (!string.IsNullOrEmpty(fast)) DetailInk.Label(dc, this, "fasteners " + fast, new Point(px, ty + 34), e.Ink, 10.5, rightAligned: ra);
+                    if (e.Landing != null && e.Landing.Supported) DetailInk.Label(dc, this, $"→ {DetailCalcs.Support(e.Landing)}", new Point(px, ty + 49), e.Ink, 10.5, rightAligned: ra);
+                    DetailInk.Label(dc, this, e.Title, new Point(px, yt - 16), DetailInk.Dim, 10, bold: true, centre: true);
                 }
 
                 // the hold-downs from above, at a

@@ -218,14 +218,17 @@ namespace ShearWallVisualizer.Controls
                 k++;
             }
 
-            // each end: the reaction holding it down, and what it bears on
-            foreach (var (x, R, which) in new[] { (xs, br.StartAsd, "start"), (xe, br.EndAsd, "end") })
+            // each support (its ends, partway along): the reaction holding it down, and what it bears on
+            var supports = br.Supports.Count > 0 ? br.Supports.Select(s => (x: X(s.At), R: s.Asd, which: s.Name)).ToList()
+                         : new List<(double x, double R, string which)> { (xs, 0, "start"), (xe, 0, "end") };
+            foreach (var (x, R, which) in supports)
             {
-                var l = ends.FirstOrDefault(e => e.From.EndsWith(which));
+                var l = ends.FirstOrDefault(e => DetailCalcs.SupportName(e.From) == which);
                 DetailInk.Arrow(dc, DetailInk.P(Ui.Ink, 1.8), new Point(x, y - 60), new Point(x, y - 9));
                 DetailInk.Label(dc, this, $"R = {R:N0} lb", new Point(x, y - 70), Ui.Ink, 11, bold: true, centre: true);
                 var under = new Rect(x - 14, y + 8, 28, 26);
-                if (l == null || !l.Supported) DetailInk.Label(dc, this, "✕ nothing under it", new Point(x, y + 20), Ui.FailInk, 10.5, true, centre: true);
+                if (l == null && br.Supports.Count > 0) DetailInk.Label(dc, this, "no uplift here", new Point(x, y + 20), DetailInk.Dim, 10.5, centre: true);
+                else if (l == null || !l.Supported) DetailInk.Label(dc, this, "✕ nothing under it", new Point(x, y + 20), Ui.FailInk, 10.5, true, centre: true);
                 else if (l.Support == SupportKind.Column) dc.DrawRectangle(DetailInk.Timber, null, new Rect(x - 5, y + 8, 10, 40));
                 else DetailInk.Hatch(dc, under, DetailInk.Joint);
                 if (l != null && l.Supported)

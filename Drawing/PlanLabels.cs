@@ -14,6 +14,8 @@ namespace ShearWallCalculator.Drawing
             string s = from ?? "";
             foreach (var w in new[] { "beam ", "column " }) if (s.StartsWith(w)) s = s.Substring(w.Length);
             foreach (var w in new[] { " end", " start", " base" }) if (s.EndsWith(w)) s = s.Substring(0, s.Length - w.Length);
+            int at = s.IndexOf(" at ", StringComparison.Ordinal); // "BM2 at 12.5 ft": a support partway along
+            if (at > 0 && s.EndsWith(" ft")) s = s.Substring(0, at);
             return s;
         }
 

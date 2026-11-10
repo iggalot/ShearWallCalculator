@@ -97,23 +97,36 @@ namespace ShearWallCalculator.Design
             if (br == null) return lines;
             double L = br.Beam.Length;
             lines.Add(new CalcLine("Span", $"from ({br.Beam.Start.X:0.##}, {br.Beam.Start.Y:0.##}) to ({br.Beam.End.X:0.##}, {br.Beam.End.Y:0.##})", $"L = {L:0.##} ft"));
+            var sup = br.Supports;
+            lines.Add(new CalcLine("Supports", br.Method, string.Join(", ", sup.Select(s => $"{s.Name} ({s.At:0.##} ft)"))));
+            if (sup.Count > 0 && sup.Min(s => s.At) > 0.01) lines.Add(new CalcLine("Cantilever", "its start runs past its first support", $"{sup.Min(s => s.At):0.##} ft"));
+            if (sup.Count > 0 && L - sup.Max(s => s.At) > 0.01) lines.Add(new CalcLine("Cantilever", "its end runs past its last support", $"{L - sup.Max(s => s.At):0.##} ft"));
+            string simple = sup.Count == 2 && sup[0].At <= 0 && sup[1].At >= L ? "R start = T (L − a) / L, R end = T a / L" : "each support's share from the beam's free body";
+            string Each(IEnumerable<double> v) => string.Join(" / ", v.Select(x => $"{x:0}")) + " lb";
             foreach (var g in br.Loads.GroupBy(x => x.LowEndUp).OrderByDescending(x => x.Key))
             {
                 lines.Add(new CalcLine("Wind", $"the direction lifting the {(g.Key ? "low" : "high")} ends of the walls", ""));
                 foreach (var ld in g)
-                    lines.Add(new CalcLine($"  {ld.From}", $"T = {ld.Asd:0} lb at a = {ld.A:0.##} ft: R start = T (L − a) / L, R end = T a / L",
-                                           $"{ld.StartAsd:0} / {ld.EndAsd:0} lb"));
-                lines.Add(new CalcLine("  Sum", "", $"{g.Sum(x => x.StartAsd):0} / {g.Sum(x => x.EndAsd):0} lb"));
+                    lines.Add(new CalcLine($"  {ld.From}", $"T = {ld.Asd:0} lb at a = {ld.A:0.##} ft: {simple}", Each(ld.ToSupports)));
+                lines.Add(new CalcLine("  Sum", "", Each(Enumerable.Range(0, sup.Count).Select(i => g.Sum(x => i < x.ToSupports.Count ? x.ToSupports[i] : 0)))));
             }
-            lines.Add(new CalcLine("Reactions", "the worse wind direction at each end (uplift, ASD)", $"start {br.StartAsd:0} lb, end {br.EndAsd:0} lb"));
+            lines.Add(new CalcLine("Reactions", "the worse wind direction at each support (uplift + , ASD)", string.Join(", ", sup.Select(s => $"{s.Name} {s.Asd:0} lb"))));
             foreach (var l in ends ?? Enumerable.Empty<HoldownLanding>())
             {
-                string which = l.From.EndsWith("start") ? "Start" : "End";
+                string which = SupportName(l.From);
+                which = char.ToUpper(which[0]) + which.Substring(1);
                 lines.Add(!l.Supported
-                    ? new CalcLine($"{which} support", "nothing under the end", "add a wall or a column", fails: true)
+                    ? new CalcLine($"{which} support", "nothing under it", "add a wall or a column", fails: true)
                     : new CalcLine($"{which} support", $"{FamilyName(l.Family)} to {Support(l)}, sized for {l.TensionAsd:0} lb", l.Model ?? "none strong enough", fails: l.Model == null));
             }
             return lines;
+        }
+
+        /// <summary>A beam support's name from its hold-down's: "beam BM1 at 12.5 ft" → "at 12.5 ft", "beam BM1 start" → "start".</summary>
+        public static string SupportName(string from)
+        {
+            var w = (from ?? "").Split(' ');
+            return w.Length >= 3 ? string.Join(" ", w.Skip(2)) : from ?? "";
         }
 
         /// <summary>A column's sheet: what lands on it, what goes down it, and its base connection.</summary>

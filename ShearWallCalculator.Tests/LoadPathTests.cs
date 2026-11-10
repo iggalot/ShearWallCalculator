@@ -202,6 +202,85 @@ namespace ShearWallCalculator.Tests
             Assert.AreEqual(11, on.Single(l => l.From == "beam A start").LowerWallId);
         }
 
+        /// <summary>
+        /// A cantilever (owner 2026-11-10): a 14 ft beam on a wall at its start and a wall crossing under it at 8 ft, a wall
+        /// standing on its overhang (10 to 14 ft). By statics, ΣM about the start: a hold-down's T at a gives T a / 8 at the
+        /// back of the overhang and T (1 − a / 8) at the start, less than nothing: the start is pressed down (no hold-down).
+        /// Nothing at the tip.
+        /// </summary>
+        [TestMethod]
+        public void ACantilever_ByStatics_TheBackSupportTakesMoreThanT()
+        {
+            var lower = new Dictionary<int, WallData> { [11] = new WallData(9, 0, 0, 0, 20), [12] = new WallData(9, 8, 0, 8, 20) };
+            var upper = new Dictionary<int, WallData> { [1] = new WallData(9, 10, 10, 14, 10) };
+            var design = new Dictionary<int, WallDesignResult> { [1] = new WallDesignResult { TensionAsd = 1000, TensionLrfd = 1667 } };
+            var bm = new FramingBeam { Id = "BM1", Start = new Point(0, 10), End = new Point(14, 10), OnStory = 0 };
+            var trace = new LoadPathTrace(new[] { bm }, null, Size);
+            trace.Land(1, upper, design, lower);
+
+            var rb = trace.Beams.Single();
+            Assert.IsTrue(rb.Stands);
+            CollectionAssert.AreEqual(new[] { "start", "at 8 ft" }, rb.Supports.Select(s => s.Name).ToArray());
+            var (p1, p2) = WallSchedule.HoldownPoints(upper[1], null);
+            double a = System.Math.Max(p1.X, p2.X);
+            Assert.AreEqual(1000 * a / 8, rb.Supports[1].Asd, 1e-6, "T a / 8: more than T");
+            Assert.IsTrue(rb.Supports[0].Asd < 0, "the start is pressed down");
+            foreach (var ld in rb.Loads) Assert.AreEqual(ld.Asd, ld.ToSupports.Sum(), 1e-6, "ΣF");
+            var on = trace.ByLevel[0];
+            var back = on.Single(l => l.From == "beam BM1 at 8 ft");
+            Assert.AreEqual(12, back.LowerWallId);
+            Assert.AreEqual(8, back.At.X, 1e-9);
+            Assert.IsFalse(on.Any(l => l.From == "beam BM1 start" || l.From == "beam BM1 end"), "no hold-down at the start (pressed) nor at the tip (nothing there)");
+            Assert.IsFalse(on.Any(l => l.Support == SupportKind.None));
+        }
+
+        /// <summary>
+        /// A beam continuous over a wall at its middle (two 10 ft spans, EI the same along it), a wall standing on its first
+        /// span. A unit load at a in the first span: the middle support's moment m = a (l² − a²) / (4 l²), so the far end
+        /// takes −m / l (pressed down), the start 1 − a / l − m / l, the middle a / l + 2 m / l.
+        /// </summary>
+        [TestMethod]
+        public void AContinuousBeam_EIConstant_TheTextbook()
+        {
+            var lower = new Dictionary<int, WallData>
+            {
+                [11] = new WallData(9, 0, 0, 0, 20), [12] = new WallData(9, 10, 0, 10, 20), [13] = new WallData(9, 20, 0, 20, 20),
+            };
+            var upper = new Dictionary<int, WallData> { [1] = new WallData(9, 2, 10, 8, 10) };
+            var design = new Dictionary<int, WallDesignResult> { [1] = new WallDesignResult { TensionAsd = 1000, TensionLrfd = 1667 } };
+            var bm = new FramingBeam { Id = "BM1", Start = new Point(0, 10), End = new Point(20, 10), OnStory = 0 };
+            var trace = new LoadPathTrace(new[] { bm }, null, Size);
+            trace.Land(1, upper, design, lower);
+
+            var rb = trace.Beams.Single();
+            CollectionAssert.AreEqual(new[] { "start", "at 10 ft", "end" }, rb.Supports.Select(s => s.Name).ToArray());
+            const double l = 10;
+            double K(double a) => a * (l * l - a * a) / (4 * l * l * l);
+            var (p1, p2) = WallSchedule.HoldownPoints(upper[1], null);
+            double lo = System.Math.Min(p1.X, p2.X), hi = System.Math.Max(p1.X, p2.X);
+            Assert.AreEqual(1000 * System.Math.Max(1 - lo / l - K(lo), 1 - hi / l - K(hi)), rb.Supports[0].Asd, 1e-6);
+            Assert.AreEqual(1000 * System.Math.Max(lo / l + 2 * K(lo), hi / l + 2 * K(hi)), rb.Supports[1].Asd, 1e-6);
+            Assert.AreEqual(1000 * System.Math.Max(-K(lo), -K(hi)), rb.Supports[2].Asd, 1e-6, "the far end pressed down");
+            var on = trace.ByLevel[0];
+            Assert.AreEqual(11, on.Single(x => x.From == "beam BM1 start").LowerWallId);
+            Assert.AreEqual(12, on.Single(x => x.From == "beam BM1 at 10 ft").LowerWallId);
+            Assert.IsFalse(on.Any(x => x.From == "beam BM1 end"), "pressed down only: no hold-down");
+        }
+
+        /// <summary>A beam on one wall only, at its start: it cannot stand. Its end goes on nothing: an error.</summary>
+        [TestMethod]
+        public void ABeamOnOneSupport_CannotStand_AnError()
+        {
+            var lower = new Dictionary<int, WallData> { [11] = new WallData(9, 0, 0, 0, 20) };
+            var upper = new Dictionary<int, WallData> { [1] = new WallData(9, 2, 10, 8, 10) };
+            var design = new Dictionary<int, WallDesignResult> { [1] = new WallDesignResult { TensionAsd = 1000, TensionLrfd = 1667 } };
+            var bm = new FramingBeam { Id = "BM1", Start = new Point(0, 10), End = new Point(12, 10), OnStory = 0 };
+            var trace = new LoadPathTrace(new[] { bm }, null, Size);
+            trace.Land(1, upper, design, lower);
+            Assert.IsFalse(trace.Beams.Single().Stands);
+            Assert.AreEqual(SupportKind.None, trace.ByLevel[0].Single(x => x.From == "beam BM1 end").Support);
+        }
+
         [TestMethod]
         public void AColumn_CarriesAHoldown_ToTheFoundation_AndNothingIsAnError()
         {

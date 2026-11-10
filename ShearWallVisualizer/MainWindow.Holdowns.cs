@@ -142,7 +142,7 @@ namespace ShearWallVisualizer
                 string endName = $"beam {bm.Id} {(atStart ? "start" : "end")}";
                 var l = ends.FirstOrDefault(x => x.From == endName); // null: no uplift at this end
                 Point end = Sketch.ToScreen(atStart ? bm.Start : bm.End), other = Sketch.ToScreen(atStart ? bm.End : bm.Start);
-                if ((other - end).Length < 20) continue;
+                if ((other - end).Length < 20 || (l == null && IsTip(bm.Id, atStart))) continue;
                 var ink = l == null ? BeamInk : l.Supported && (l.Choice != null || l.TensionAsd <= 0) ? (l.Note != null ? Controls.Ui.CloseInk : BeamInk) : Controls.Ui.FailInk;
 
                 // the reaction, along the beam just inside its end
@@ -173,6 +173,25 @@ namespace ShearWallVisualizer
 
                 // its own connection: the marker at this end (DrawPlanHoldowns) and its label (PlaceIconLabel)
             }
+            // a support partway along (a wall or column under the beam: continuous, or a cantilever's back span): its uplift
+            // beside the point, its marker the shared sketch's
+            foreach (var l in ends.Where(x => x.From != null && x.From.Contains(" at ") && x.From.EndsWith(" ft")))
+            {
+                var p = Sketch.ToScreen(new BuildingModel.Geometry.Point2(l.At.X, l.At.Y));
+                var ink = l.Supported && (l.Choice != null || l.TensionAsd <= 0) ? (l.Note != null ? Controls.Ui.CloseInk : BeamInk) : Controls.Ui.FailInk;
+                var ft = new FormattedText($"({l.TensionAsd / 1000:0.0}k)", CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 9.5 * LabelScale, ink, dip);
+                var box = new Rect(p.X + 6, p.Y - ft.Height - 4, ft.Width + 4, ft.Height);
+                ctx.DrawRectangle(LabelBack, null, box);
+                ctx.DrawText(ft, new Point(box.X + 2, box.Y));
+                labelsTaken.Add(box);
+            }
+        }
+
+        /// <summary>A beam's start or end with no support under it, the beam standing on others: a cantilever's tip.</summary>
+        private bool IsTip(string beamId, bool atStart)
+        {
+            var br = loadPath?.Beams.FirstOrDefault(x => x.Beam.Id == beamId);
+            return br != null && br.Stands && br.Supports.Count >= 2 && !br.Supports.Any(s => s.Name == (atStart ? "start" : "end"));
         }
 
         /// <summary>A hold-down marker on the plan, drawn before the tags and labels, waiting for its own label.</summary>
@@ -212,6 +231,7 @@ namespace ShearWallVisualizer
                 {
                     string endName = $"beam {bm.Id} {(atStart ? "start" : "end")}";
                     if (onto.Any(x => x.Kind == PathPointKind.BeamEnd && x.From == endName)) continue; // the shared sketch's
+                    if (IsTip(bm.Id, atStart)) continue; // a cantilever's tip: nothing there to hold down
                     Mark(Sketch.ToScreen(atStart ? bm.Start : bm.End), Sketch.ToScreen(atStart ? bm.End : bm.Start), BuildingModel.Sketch.HoldownMark.None, "None", BeamInk);
                 }
             }

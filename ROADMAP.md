@@ -448,10 +448,16 @@ Shown greyed as "coming" in the hub (`SuiteApps`, in `..\DesignHub\DesignHub.Cor
     other's ends is left on nothing (an error). A wall end pressing on a beam presses at its end post's centreline
     (`PressAt`), as the Load Manager takes it (it was at the hold-down: 0.125 ft off). `LoadPathTests` (girder, pinwheel
     by hand, mechanism); DesignHub `AWallOnABeamOnAGirder_TheHoldownsGoOnDown_EveryMemberBalances`.
-  - [ ] **Cantilevered beams and overhangs**: every beam is a simple span between its two ends; a beam over a support
+  - [x] **Cantilevered beams and overhangs**: every beam is a simple span between its two ends; a beam over a support
     with a cantilevered end (and the small reciprocal frames at an overhang's corner, where the back-spans hold each
     other down) is not modelled. Needs a beam with interior supports and the back-span's uplift.
-  - [ ] A wall along the joists gets no strip (only beams do): the rim or edge joist's half spacing over it stays with the
+    **Done 2026-11-10** (BuildingModel 231df60, LoadManager f4e28b2, this commit): a beam is held by every wall and column
+    under it anywhere along it, and at an end with neither by a beam; its reactions are its own free body's
+    (`BuildingModel.Statics.BeamStatics`): two supports by statics, an end past them a cantilever; three or more a
+    continuous beam, EI constant (owner); fewer than two it cannot stand (said so). A back support pulled up is said so in
+    the Load Manager; in SWC a support partway along is a hold-down point of its own ("beam BM1 at 12 ft"), a cantilever's
+    tip has none. `BeamStaticsTests`, `BeamSupportTests`, `LoadPathTests`, DesignHub
+    `AWallOnACantilever_TheBackSpanHoldsIt_EveryMemberBalances`.  - [ ] A wall along the joists gets no strip (only beams do): the rim or edge joist's half spacing over it stays with the
     walls across the framing. Small; the owner to say if it matters.
 
 ## Wind Load Calculator

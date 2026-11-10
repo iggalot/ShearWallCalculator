@@ -77,19 +77,23 @@ namespace ShearWallVisualizer
                      ?? new BeamReactions { Beam = new FramingBeam { Id = id, Start = new Point(bm.Start.X, bm.Start.Y), End = new Point(bm.End.X, bm.End.Y) } };
             var landings = AllLandings();
             var cols = Framing().columns;
-            Dialogs.BeamEndInfo End(string which, Point at, double asd)
+            Dialogs.BeamEndInfo End(string which, double along, Point at, double asd)
             {
                 var l = landings.FirstOrDefault(x => x.Kind == PathPointKind.BeamEnd && x.From == $"beam {id} {which}");
-                // what it bears on: as traced; with no uplift (no landing), a column at the end, if there is one
+                // what it bears on: as traced; with no uplift (no landing), a column there, if there is one
                 string under = l != null ? DetailCalcs.Support(l)
                              : cols.FirstOrDefault(fc => (fc.At - at).Length <= 0.5) is FramingColumn under0 ? $"column {under0.Id}" : "a wall or beam (no uplift here)";
-                return new Dialogs.BeamEndInfo { Which = which, Reaction = asd, Landing = l, Under = under };
+                return new Dialogs.BeamEndInfo { Which = which, At = along, Reaction = asd, Landing = l, Under = under };
             }
             var level = building.Level(bm.LevelId);
             var ends = landings.Where(l => l.Kind == PathPointKind.BeamEnd && l.From.StartsWith($"beam {id} ")).ToList();
             var lines = DetailCalcs.Beam(br, ends) ?? new List<CalcLine>();
-            var view = Dialogs.MemberViews.Beam(id, level?.Name, br, End("start", br.Beam.Start, br.StartAsd), End("end", br.Beam.End, br.EndAsd),
-                                            lines, "The beam itself is not sized here: these are the uplift reactions its end connections and supports must take.");
+            // every support (its ends, and partway along); a beam carrying nothing: its two ends
+            var supports = br.Supports.Count > 0
+                ? br.Supports.Select(x => End(x.Name, x.At, x.Where, x.Asd)).ToList()
+                : new List<Dialogs.BeamEndInfo> { End("start", 0, br.Beam.Start, 0), End("end", br.Beam.Length, br.Beam.End, 0) };
+            var view = Dialogs.MemberViews.Beam(id, level?.Name, br, supports,
+                                            lines, "The beam itself is not sized here: these are the uplift reactions its support connections must take.");
             // the building model's north arrow (as in every view): the beam's own axes run along it from its start, seen from its right
             Point s = br.Beam.Start, e = br.Beam.End;
             view.North = BuildingModel.Model.NorthArrow.For(new BuildingModel.Geometry.Rect2(Math.Min(s.X, e.X), Math.Min(s.Y, e.Y), Math.Max(s.X, e.X), Math.Max(s.Y, e.Y)), Dialogs.MemberViews.BeamDepth / 12);
@@ -315,7 +319,7 @@ namespace ShearWallVisualizer
             return c;
         }
 
-        /// <summary>A beam's end reactions and their connections: "start 367 lb → column C1 HRS6, end 420 lb → column C3 HRS6".</summary>
+        /// <summary>A beam's support reactions and their connections: "start 367 lb → column C1 HRS6, at 12 ft 420 lb → wall 3 MSTI36".</summary>
         private static string EndsText(string beamId, BeamReactions r, IEnumerable<HoldownLanding> landings)
         {
             string End(string which, double asd)
@@ -324,7 +328,7 @@ namespace ShearWallVisualizer
                 string to = l == null ? "" : !l.Supported ? " → nothing under it" : $" → {l.SupportId} {l.Model ?? "none strong enough"}";
                 return $"{which} {asd:N0} lb{to}";
             }
-            return End("start", r.StartAsd) + ", " + End("end", r.EndAsd);
+            return string.Join(", ", r.Supports.Select(x => End(x.Name, x.Asd)));
         }
 
         private DetailContent BeamDetail(string id)
@@ -339,8 +343,8 @@ namespace ShearWallVisualizer
             {
                 Title = $"Beam {id} · {level?.Name}",
                 Subtitle = $"In the framing of {level?.Name}, {bm.Length:0.##} ft. " +
-                           (br.Loads.Count == 0 ? "It carries no hold-downs." : $"It carries {br.Loads.Count} hold-down{(br.Loads.Count == 1 ? "" : "s")} from the story above to its ends (simple span)."),
-                Footnote = "The beam itself is not sized here: these are the uplift reactions its end connections and supports must take.",
+                           (br.Loads.Count == 0 ? "It carries no hold-downs." : $"It carries {br.Loads.Count} hold-down{(br.Loads.Count == 1 ? "" : "s")} from the story above to its supports ({br.Method})."),
+                Footnote = "The beam itself is not sized here: these are the uplift reactions its support connections must take.",
             };
             c.Drawing = () => new BeamDiagram(br, ends);
             c.Lines = DetailCalcs.Beam(br, ends);
@@ -382,9 +386,9 @@ namespace ShearWallVisualizer
                 var br = loadPath?.Beams.FirstOrDefault(x => x.Beam.Id == bm.Id);
                 var ends = all.Where(l => l.Kind == PathPointKind.BeamEnd && l.From.StartsWith($"beam {bm.Id} ")).ToList();
                 rows.Add(("Carries", br == null ? "no hold-downs" : $"{br.Loads.Count} hold-down{(br.Loads.Count == 1 ? "" : "s")}", false));
-                if (br != null) rows.Add(("Reactions", $"{br.StartAsd:N0} / {br.EndAsd:N0} lb up (ASD)", false));
+                if (br != null) rows.Add(("Reactions", $"{string.Join(" / ", br.Supports.Select(x => $"{x.Asd:N0}"))} lb up (ASD; {string.Join(", ", br.Supports.Select(x => x.Name))})", false));
                 foreach (var e in ends)
-                    rows.Add((e.From.EndsWith("start") ? "Start" : "End", e.Supported ? $"{DetailCalcs.Support(e)}: {e.Model ?? "none strong enough"}" : "nothing under it", !e.Supported || e.Model == null));
+                    rows.Add((char.ToUpper(DetailCalcs.SupportName(e.From)[0]) + DetailCalcs.SupportName(e.From).Substring(1), e.Supported ? $"{DetailCalcs.Support(e)}: {e.Model ?? "none strong enough"}" : "nothing under it", !e.Supported || e.Model == null));
                 selectionCard.ShowMember($"Beam {bm.Id}", $"{building.Level(bm.LevelId)?.Name} · {bm.Length:0.##} ft", rows,
                     () => RefreshWallBuild(open: true), null); // deleted in the Building Model
             }
