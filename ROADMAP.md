@@ -420,6 +420,8 @@ Shown greyed as "coming" in the hub (`SuiteApps`, in `..\DesignHub\DesignHub.Cor
     measures each saved point against the wall's Start and End only, so a shear part's end partway along the wall is
     always "moved". It should measure against the shear part's ends (or the point's distance to the wall's line). The
     Load Manager and the hub repeat it, and the hub marks Foundation loads **Fails**.
+    **Done 2026-11-10 (BuildingModel 6a37744):** measured from the shear part's ends as saved (`Walls`), and the saved
+    part must still lie on the wall; an older save with no `Walls` as before. `LateralStaleTests`.
   - The post (column C2) put under an upstairs hold-down that lands partway along a wall below: "does not balance the
     wind: ΣM = 294 lb·ft in Case 1, from W, roof Case A, +GCpi (rigid) (of 35,260)" in the Load Manager and the hub.
 
