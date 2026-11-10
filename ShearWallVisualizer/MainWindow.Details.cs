@@ -164,7 +164,7 @@ namespace ShearWallVisualizer
             {
                 // (the design this window shows, linked to the wind or not; the foundation takes it only when linked)
                 var designed = ShearWallCheck.Lateral(levels, stories, allDesignResults, foundationAnchors, 0, loadPath?.ByLevel, building?.Ground?.Id);
-                var live = designed ?? BuildingModel.Model.LateralSection.Read(building);
+                var live = designed ?? SavedLateral();
                 // its connections (the sill's bolts or nailing, the diaphragm line on top): details, not the model's
                 var joints = designed != null ? ShearWallCheck.Connections(levels, stories, allDesignResults, building, designed, 0) : WoodFraming.Connections.ConnectionsSection.Read(building);
                 d.View = WoodFraming.Wpf.WallViews.FromModel(building, mw, top, live, joints ?? new WoodFraming.Connections.ConnectionsSection());

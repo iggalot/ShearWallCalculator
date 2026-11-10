@@ -2,6 +2,19 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-09 — Every app's views read the design's stamp
+
+- `LateralSection.OutOfDate(b)` (BuildingModel.Core): `Stale` (a wall gone or moved), else `ChangedSince` (the stamp's
+  building and wind parts against the model: "The wind inputs changed since the shear walls were saved."). The wall
+  views (`WallViews.FromModel`), the plans' muted bands and hold-downs (cached per model version, `LateralOutOfDate`) and
+  the Load Manager's foundation page use it. Before, the Building Model's views went grey only when a wall was gone.
+- The stamp also keeps the connection defaults (`ShearWallCheck.ConnectionDefaultsPart`); `ModelFingerprint.Changed`
+  treats a part an older stamp lacks as unknown (no false "out of date" on older projects); `ModelFingerprint.Words`
+  says "the connection defaults".
+- SWC: its building holds the wind aside, so its fallback to the saved section drops the wind's part (`SavedLateral`).
+- Tests: `FromModel_TheWindChangedSinceTheDesign_TheViewSaysItIsOutOfDate` (WF),
+  `Fingerprint_TheConnectionDefaults_AreInTheStamp_AnOlderStampIsNotOutOfDateForThem`, and the SWC save test (hub).
+
 ## 2026-11-09 — Not designed, said everywhere; the Pieces tab's Where column
 
 - A declared shear wall with no shear on it yet is `ShearWallDesign.NotDesigned` (BuildingModel.Core, saved in `Lateral`;

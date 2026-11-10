@@ -321,8 +321,15 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
   buttons (`GeometryPanel.GeometryLocked`); the construction window already shows and picks the stud size. Hub test.
 - [x] **SWC to watch the project file always** (done with the hub's checks, 2026-11-06: `WatchProject` from the open on;
   ticked 2026-11-09).
-- [ ] **Stamp stored results with what they were based on** (model revision, inputs hash), as `Lateral` does with
-  `ModelRevision`, so the hub can say exactly what is out of date.
+- [x] **Stamp stored results with what they were based on** (model revision, inputs hash), as `Lateral` does with
+  `ModelRevision`, so the hub can say exactly what is out of date. (2026-11-09) The only results stored are SWC's
+  `Lateral` and `Connections` (one save; the foundation loads are worked out when shown). `Lateral.BasedOn` already had
+  the building, the wind and the walls' inputs; now also the connection defaults (`ShearWallCheck.ConnectionDefaultsPart`).
+  A part an older stamp lacks is unknown, not changed (`ModelFingerprint.Changed`). Every app's views now read the stamp
+  too, through one routine (`LateralSection.OutOfDate`: a wall gone or moved, or the building or the wind changed): the
+  Building Model's wall window and plans said nothing when only the wind or the building changed. The plans cache it per
+  model version. SWC's fallback to the saved section leaves the wind out (its building holds the wind aside:
+  `SavedLateral`). Tests: WF, hub.
 
 ## Future modules
 

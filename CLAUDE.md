@@ -76,7 +76,9 @@
     which adds its Pieces and Calculation tabs) draw the same thing. SWC hands it its live design
     (`ShearWallCheck.Lateral`, whose `Walls` are `ShearDesigns`: every declared wall, designed or not). One not designed is
     `ShearWallDesign.NotDesigned`, and every view, plan, the hub and the Load Manager say so in red (owner 2026-11-09:
-    never leave it to someone to know it needs designing). A change to how a
+    never leave it to someone to know it needs designing). Whether a saved design is current is
+    `LateralSection.OutOfDate` (its stamp `BasedOn`: the building, the wind, the walls' inputs, the connection defaults);
+    SWC's building holds the wind aside, so its own views use `SavedLateral` (the stamp without the wind's part). A change to how a
     wall is drawn goes into WoodFraming.Wpf, not this app.
   - **SWC writes only its own data** (`OwnsData` in `MainWindow.Project.cs`): `ShearWall.Project`,
     `ShearWall.DesignSettings`, the walls' and diaphragms' `ShearWall` design, `Lateral` and `Connections`. `SaveProject` uses

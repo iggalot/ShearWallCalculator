@@ -25,6 +25,19 @@ namespace ShearWallVisualizer
         }
 
         /// <summary>
+        /// The saved "Lateral" section for the views when this window has no design of its own, its stamp without the wind's
+        /// part: this window's building has no Wind section (it is held aside, <see cref="windJsonInUse"/>), so the shared
+        /// views (<see cref="BuildingModel.Model.LateralSection.OutOfDate"/>) would call the wind changed when it is not. The
+        /// building and the connection defaults are still compared.
+        /// </summary>
+        private BuildingModel.Model.LateralSection SavedLateral()
+        {
+            var s = BuildingModel.Model.LateralSection.Read(building);
+            s?.BasedOn?.Remove(ShearWallCheck.WindPart);
+            return s;
+        }
+
+        /// <summary>
         /// The fingerprints of what this design was found from: the geometry and the walls' design inputs of
         /// <paramref name="mine"/> (the building as saved), and the wind this window used (<see cref="windJsonInUse"/>), not
         /// <paramref name="mine"/>'s, which has no Wind section here. The hub and the Load Manager compare them with the file.

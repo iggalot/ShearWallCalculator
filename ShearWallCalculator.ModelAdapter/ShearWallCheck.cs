@@ -53,6 +53,8 @@ namespace ShearWallCalculator.ModelAdapter
         /// <summary>The parts of the project the design is based on (<see cref="ModelFingerprint"/>).</summary>
         public static readonly string WindPart = ModelFingerprint.DataPart(WindSection.Key); // "data:Wind": the Load Manager finds it again too
         public const string DesignPart = "shear walls";
+        /// <summary>The connection details' defaults ("data:ConnectionDefaults"): the nailing, sill and diaphragm details use them.</summary>
+        public static readonly string ConnectionDefaultsPart = ModelFingerprint.DataPart(WoodFraming.Connections.ConnectionDefaults.Key);
 
         /// <summary>The fingerprints of what the shear wall design uses, as the project is now.</summary>
         public static Dictionary<string, string> InputsNow(Building b) => new Dictionary<string, string>
@@ -60,6 +62,7 @@ namespace ShearWallCalculator.ModelAdapter
             [ModelFingerprint.GeometryPart] = ModelFingerprint.Geometry(b),
             [WindPart] = ModelFingerprint.Data(b, WindSection.Key),
             [DesignPart] = ModelFingerprint.AppData(b, ShearWallAdapter.WallKey, ShearWallAdapter.SettingsKey, ShearWallAdapter.DeclaredKey),
+            [ConnectionDefaultsPart] = ModelFingerprint.Data(b, WoodFraming.Connections.ConnectionDefaults.Key),
         };
 
         /// <summary>
