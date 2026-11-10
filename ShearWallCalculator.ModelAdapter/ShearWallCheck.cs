@@ -400,11 +400,12 @@ namespace ShearWallCalculator.ModelAdapter
                     {
                         WallId = id, LevelId = stories[k].Level?.Id,
                         X0 = w.Start.X, Y0 = w.Start.Y, X1 = w.End.X, Y1 = w.End.Y,
-                        Check = "Not designed yet (no shear on it).",
+                        Check = "NOT DESIGNED (no shear on it yet)",
                     };
                     list.Add(d);
                     if (r == null)
                     {
+                        d.NotDesigned = true; // every view says so (ShearWallDesign.NotDesignedWarning)
                         // not designed yet (no wind on it): its declared sheathing (its card's), so the views show its faces before
                         // the design; no nailing until it is designed
                         foreach (var f in new[] { w.Design?.EffectiveFace1(), w.Design?.EffectiveFace2() }.Where(f => f != null && f.Table != SheathingTable.None))

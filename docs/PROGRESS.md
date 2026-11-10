@@ -2,6 +2,19 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-09 — Not designed, said everywhere; the Pieces tab's Where column
+
+- A declared shear wall with no shear on it yet is `ShearWallDesign.NotDesigned` (BuildingModel.Core, saved in `Lateral`;
+  `LateralSection.NotDesigned()`, `NotDesignedWords()`). Every view says so, so nobody has to know to design it again by
+  hand: the shared wall window's red banner over every tab (`WallPanel.NotDesignedBanner`), NOT DESIGNED on the elevation
+  whatever is toggled, "SW NOT DESIGNED" on the plans (BM, LM), SWC's construction-window heading and Pieces tab, the
+  hub's shear-wall step (Attention, the walls named; each one in the hub's mark, read by SWC on opening), and the Load
+  Manager's foundation page (in red: no forces come down from them).
+- The Pieces tab's framing table: a Where column (whole wall, shear wall from–to, plain wall past it), the studs split in
+  and outside the part, the posts' and posts-under positions, the sheathing "over the shear wall only".
+- Tests: `ShearWalls_ADeclaredWallNotDesigned_FlaggedByName` (hub), `SwcPicksAWall_ItsCardOpens` (banner, heading,
+  Pieces), `SwcPieces_TheWholeWall_AsTheViews` (the Where column).
+
 ## 2026-11-09 — SWC clean-up after the geometry lock
 
 - Removed the handlers nothing wired any more: Export/Apply change set, Copy from below, Move, Copy, Note, Delete (and the

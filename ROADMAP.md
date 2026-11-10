@@ -56,6 +56,16 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
     the part named. Hub test: the south wall declared over 10 to 30 ft of 40.
   - [x] (2026-11-09) An undesigned shear wall (no wind yet) shows its declared sheathing (its card's faces,
     `ShearWallCheck.ShearDesigns`), no nailing until it is designed. Hub test: the construction window's view.
+  - [x] (2026-11-09, owner: "a note needs to be added that the shear wall hasn't been designed… a dangerous step that
+    could be missed") Not designed is said everywhere it shows: `ShearWallDesign.NotDesigned` (saved in `Lateral`), a red
+    banner over every tab of the shared wall window (`WallPanel.NotDesignedBanner`, `NotDesignedWarning`) and NOT DESIGNED
+    across the elevation, "SW NOT DESIGNED" on every app's plan, the construction window's heading and Pieces tab, the
+    hub's shear-wall step never Done (Attention, the walls named) with each wall in the hub's mark (shown on opening SWC),
+    and the Load Manager's foundation page in red (no forces from them). Hub tests.
+  - [x] (2026-11-09, owner: "since walls and shear wall portions can be different length, how do you distinguish those?")
+    The Pieces tab's framing table has a Where column: each piece in the whole wall (the plates), the shear wall (its
+    studs, posts, blocking, from–to), or the plain wall past it; the studs split in and outside the part; the sheathing
+    "over the shear wall only". The Elevation already dimensions the part ("shear wall 20'-0"") under the wall.
 - [~] **Every connection as a pair of equal and opposite forces** (owner, 2026-11-07). The Load Manager reports every
   connection between members: the connector's force once (tension or compression, per wind case), and on each member
   as a direction (↓ on the upper, ↑ on the lower). Every member then has its whole free-body diagram (its own loads and

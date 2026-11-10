@@ -74,7 +74,9 @@
   - **The wall window is shared** (`WoodFraming.Wpf` `WallPanel`, made by `WallViews.FromModel` from the model and a
     `Lateral` section): the Building Model's wall window and SWC's construction window (`Dialogs/WallBuildWindow.cs`,
     which adds its Pieces and Calculation tabs) draw the same thing. SWC hands it its live design
-    (`ShearWallCheck.Lateral`, whose `Walls` are `ShearDesigns`: every declared wall, designed or not). A change to how a
+    (`ShearWallCheck.Lateral`, whose `Walls` are `ShearDesigns`: every declared wall, designed or not). One not designed is
+    `ShearWallDesign.NotDesigned`, and every view, plan, the hub and the Load Manager say so in red (owner 2026-11-09:
+    never leave it to someone to know it needs designing). A change to how a
     wall is drawn goes into WoodFraming.Wpf, not this app.
   - **SWC writes only its own data** (`OwnsData` in `MainWindow.Project.cs`): `ShearWall.Project`,
     `ShearWall.DesignSettings`, the walls' and diaphragms' `ShearWall` design, `Lateral` and `Connections`. `SaveProject` uses

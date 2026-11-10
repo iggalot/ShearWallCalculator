@@ -275,7 +275,7 @@ namespace ShearWallVisualizer.Dialogs
             title.Text = $"{d.Name} · {d.LevelName}";
             subtitle.Text = $"{(d.EastWest ? "East-west" : "North-south")} wall, {FtIn.Of(whole.Length)} long × {FtIn.Of(whole.Height)} high as built" +
                             (Math.Abs(whole.Length - framing.Length) > 0.01 ? $", the shear wall {FtIn.Of(framing.Length)} of it" : "") + $" (story {d.Story + 1} of {d.Stories}). " +
-                            (r == null ? "Not designed yet (no shear on it)." :
+                            (r == null ? "NOT DESIGNED: no shear on it yet, so no shear check, nailing or hold-downs." :
                              $"{r.Status}: v = {r.Demand:0} plf of {r.Capacity:0} plf" + (r.HoldownNeeded ? $", hold-downs {r.Holdown?.Model ?? "none strong enough"} for T = {r.TensionAsd:N0} lb (ASD)." : ", no uplift."));
             subtitle.Text += $" Studs {framing.StudSize} at {framing.Spacing:0}\" o.c. (not designed here).";
             pieces.Content = Pieces();
@@ -300,23 +300,42 @@ namespace ShearWallVisualizer.Dialogs
             string sz = f.StudSize;
             bool partOnly = f.PartTo - f.PartFrom < f.Length - 0.01;
 
+            // where each piece is: the whole wall, or the shear wall (its part) only, from the wall's low end
+            string At(double x) => x < 0.01 ? "0'-0\"" : FtIn.Of(x); // the low end too, in feet and inches
+            string wholeAt = $"Whole wall, {At(0)} to {FtIn.Of(f.Length)}";
+            string partAt = $"Shear wall, {At(f.PartFrom)} to {FtIn.Of(f.PartTo)}";
             Section(p, "Framing", $"Studs and plates {sz} ({(data.FirstStory ? "first story" : "above the first story")}); the plates are laid flat, as wide as the studs ({FtIn.Inches(f.StudDepth)} in)." +
-                                  (partOnly ? $" The whole wall, {FtIn.Of(f.Length)}; the shear wall is {FtIn.Of(f.PartTo - f.PartFrom)} of it, from {FtIn.Of(f.PartFrom)} to {FtIn.Of(f.PartTo)}: its hold-down posts at its ends, sheathed over it." : ""));
+                                  (partOnly ? $" The whole wall, {FtIn.Of(f.Length)}; the shear wall is {FtIn.Of(f.PartTo - f.PartFrom)} of it, from {FtIn.Of(f.PartFrom)} to {FtIn.Of(f.PartTo)}: its hold-down posts at its ends, sheathed over it." +
+                                              " The Where column says which each piece is in; positions are from the wall's low (left) end."
+                                            : " The shear wall is the whole wall."));
             var rows = new List<string[]>
             {
-                new[] { "Sill plate (flat)", sz, "1", FtIn.Of(f.Length), data.FirstStory ? "On the foundation: preservative-treated; anchor bolts below (Sill anchors)." : "On the floor sheathing of the story below, nailed through it into the rim or blocking (Sill nailing)." },
-                new[] { "Top plates (flat, double)", sz, "2", FtIn.Of(f.Length), "Splices in the two plies 4 ft apart at least." },
+                new[] { "Sill plate (flat)", sz, "1", FtIn.Of(f.Length), wholeAt, data.FirstStory ? "On the foundation: preservative-treated; anchor bolts below (Sill anchors)." : "On the floor sheathing of the story below, nailed through it into the rim or blocking (Sill nailing)." },
+                new[] { "Top plates (flat, double)", sz, "2", FtIn.Of(f.Length), wholeAt, "Splices in the two plies 4 ft apart at least." },
             };
             var studs = f.Pieces.Where(x => x.Kind == FramingKind.Stud).ToList();
-            if (studs.Count > 0) rows.Add(new[] { $"Studs @ {f.Spacing:0}\" o.c.", sz, studs.Count.ToString(), FtIn.Of(studs[0].Length), "Laid out from the low (left) end" + (partOnly ? ", with a stud at each of the wall's own ends." : ".") });
+            bool InPart(FramingPiece x) => x.X0 >= f.PartFrom - 0.01 && x.X1 <= f.PartTo + 0.01;
+            var inPart = studs.Where(InPart).ToList();
+            var outside = studs.Where(x => !InPart(x)).ToList();
+            if (inPart.Count > 0) rows.Add(new[] { partOnly ? $"Studs @ {f.Spacing:0}\" o.c., in the shear wall" : $"Studs @ {f.Spacing:0}\" o.c.", sz, inPart.Count.ToString(), FtIn.Of(inPart[0].Length), partAt,
+                                                   "Laid out from the low (left) end; the sheets' edges and field nailed into them." });
+            if (outside.Count > 0) rows.Add(new[] { $"Studs @ {f.Spacing:0}\" o.c., outside the shear wall", sz, outside.Count.ToString(), FtIn.Of(outside[0].Length),
+                                                    "Plain wall, " + string.Join(" and ", new[] { f.PartFrom > 0.01 ? $"{At(0)} to {FtIn.Of(f.PartFrom)}" : null,
+                                                                                                f.PartTo < f.Length - 0.01 ? $"{FtIn.Of(f.PartTo)} to {FtIn.Of(f.Length)}" : null }.Where(s => s != null)),
+                                                    "A plain wall: not sheathed for shear; with a stud at each of the wall's own ends." });
             rows.Add(new[] { partOnly ? "Hold-down posts, at the shear wall's ends" : "Hold-down posts, at the ends", $"{f.PostPlies}-{sz}", "2", FtIn.Of(f.StudTop - WallFraming.Ply),
+                             $"At {At(f.PartFrom)} and {FtIn.Of(f.PartTo)}",
                              $"Built up of {f.PostPlies} plies ({FtIn.Inches(f.PostPlies * WallFraming.Ply)} in along the wall)" +
                              (r?.Holdown?.WoodMinHeight is double mh && r.Holdown.WoodMinWidth is double mw ? $"; the hold-down needs {FtIn.Inches(mh)} × {FtIn.Inches(mw)} in at least." : ".") });
-            int under = f.Pieces.Count(x => x.Kind == FramingKind.PostUnder) / 2;
-            if (under > 0) rows.Add(new[] { "Posts under hold-downs from above", $"2-{sz}", under.ToString(), FtIn.Of(f.StudTop - WallFraming.Ply), "Under each hold-down of the story above that lands along the wall (see Connections at the top)." });
+            var unders = f.Pieces.Where(x => x.Kind == FramingKind.PostUnder).ToList();
+            int under = unders.Count / 2;
+            if (under > 0) rows.Add(new[] { "Posts under hold-downs from above", $"2-{sz}", under.ToString(), FtIn.Of(f.StudTop - WallFraming.Ply),
+                                            "At " + string.Join(", ", unders.Where((x, i) => i % 2 == 0).Select(x => FtIn.Of(x.X0 + WallFraming.Ply))), // two plies each, their middles
+                                            "Under each hold-down of the story above that lands along the wall (see Connections at the top)." });
             var blocks = f.Pieces.Where(x => x.Kind == FramingKind.Blocking).ToList();
-            if (blocks.Count > 0) rows.Add(new[] { "Blocking at the horizontal sheet joint", sz, blocks.Count.ToString(), $"{FtIn.Of(blocks.Sum(b => b.Length))} total", $"At {FtIn.Of(WallFraming.SheetHeight)} up: every sheet edge is blocked (the capacities are for blocked walls)." });
-            p.Children.Add(Table(new[] { "Piece", "Size", "Qty", "Length (each)", "Notes" }, rows));
+            if (blocks.Count > 0) rows.Add(new[] { "Blocking at the horizontal sheet joint", sz, blocks.Count.ToString(), $"{FtIn.Of(blocks.Sum(b => b.Length))} total", partOnly ? partAt : wholeAt,
+                                                   $"At {FtIn.Of(WallFraming.SheetHeight)} up, under the sheets: every sheet edge is blocked (the capacities are for blocked walls)." });
+            p.Children.Add(Table(new[] { "Piece", "Size", "Qty", "Length (each)", "Where", "Notes" }, rows));
             ShearWallFramingSection(p, f, Faces());
 
             var faces = Faces();
@@ -325,7 +344,7 @@ namespace ShearWallVisualizer.Dialogs
                 var fr = faces[i];
                 var fs = fr.Face;
                 var o = fr.Option;
-                Section(p, $"Sheathing, face {i + 1}", o?.Description ?? "");
+                Section(p, $"Sheathing, face {i + 1}", (o?.Description ?? "") + (partOnly ? $" Over the shear wall only, {FtIn.Of(f.PartFrom)} to {FtIn.Of(f.PartTo)} ({FtIn.Of(f.PartTo - f.PartFrom)}): the rest of the wall is not sheathed for shear." : ""));
                 var groups = f.Sheets.GroupBy(s => (Math.Round(s.Width, 2), Math.Round(s.Height, 2))).OrderByDescending(g => g.Key.Item1 * g.Key.Item2);
                 var srows = groups.Select(g => new[] { g.First().Full ? "Whole sheet" : "Cut piece", $"{FtIn.Of(g.Key.Item1)} × {FtIn.Of(g.Key.Item2)}", g.Count().ToString(),
                                                          g.First().Full ? "Long side up (vertical)." : "Cut from a 4 × 8 sheet." }).ToList();
@@ -346,9 +365,9 @@ namespace ShearWallVisualizer.Dialogs
                 }
                 p.Children.Add(Table(new[] { "Nailing", "Nail", "Spacing", "Count", "Notes" }, nrows));
             }
-            if (faces.Count == 0) Section(p, "Sheathing", "Not designed yet.");
+            if (faces.Count == 0) Section(p, "Sheathing", "NOT DESIGNED: none designed yet (no shear on it). The Elevation and 3D tabs draw the sheathing its card asks for, not a design.");
 
-            Section(p, "Hold-downs at the bottom", r == null ? "Not designed yet." : !r.HoldownNeeded ? "No uplift: none needed." :
+            Section(p, "Hold-downs at the bottom", r == null ? "NOT DESIGNED: none sized yet." : !r.HoldownNeeded ? "No uplift: none needed." :
                     $"One at each end (wind reverses), on the end post. Required T = {r.TensionAsd:N0} lb (ASD, 0.6W)" + (r.TensionFromAboveAsd > 0 ? $", of which {r.TensionFromAboveAsd:N0} lb comes from the story above." : "."));
             if (r != null && r.HoldownNeeded)
             {
