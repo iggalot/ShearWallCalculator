@@ -2,6 +2,12 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-10 — The step-by-step tutorials (DesignHub\Tutorials)
+
+- Seven PDF chapters (the hub, the Building Model, the DXF plans, the wind, the Load Manager, this app, the results and
+  reports) made by `DesignHub\Tutorials\Tools\TutorialMaker`, driving the real apps on a two-story 60 × 40 ft example.
+- What the tutorials found in the apps is in `ROADMAP.md` ("Found while making the tutorials"): not fixed here.
+
 ## 2026-11-09 — The wind: the cladding h for θ ≤ 10°; L and B by the wind direction; the walls by hand
 
 - Read in both editions (7-16 Figs. 30.3-1, 30.3-2A, 30.3-2B; 7-22 Figs. 30.3-1, 30.3-2A, 30.3-2C): the cladding figures'

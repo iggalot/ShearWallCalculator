@@ -402,6 +402,26 @@ Shown greyed as "coming" in the hub (`SuiteApps`, in `..\DesignHub\DesignHub.Cor
 ## Shear Wall Calculator
 
 - [ ] The next pass on the Shear Wall Calculator (scope to be agreed).
+- [ ] Found while making the tutorials (2026-11-10):
+  - The Calculations tab's hint still says "Draw the shear walls: click Wall, then click each wall's start and end"; the
+    geometry is the Building Model's now, so it should say to pick a wall and **Make it a shear wall**.
+  - **Make it a shear wall** (and picking a wall upstairs just after) opens the construction window even with "Open when
+    a wall, beam or column is picked" cleared.
+  - The Building Model's DXF underlay draws the lines and arcs only: a plan's TEXT (room names, labels) is not drawn.
+  - A roof (or floor) nailing the SDPWS 4.2 tables do not have (10d with 7/16" roof sheathing, blocked) shows on a wall's
+    Pieces tab as "Nailing (not designed): 0.0 plf ≥ 63.4 plf (0.00)": it reads like a pass. It should say NOT DESIGNED in
+    red everywhere (and be an issue), and Connection defaults could warn when the nail and panel do not go together.
+  - The construction window's chord table ("Diaphragm chord (at the top)": Span, Moment, Chord force, Chord, Field nailing
+    zones) lays out badly: the auto-width columns take the width, the last (star) column gets almost none, its text wraps a
+    letter a line and the row grows very tall (`WallBuildWindow.Table`).
+  - After File > Save (shear parts set, two posts added in the Building Model), the plan's hold-down labels still say
+    "(out of date)" and the construction window says "The lateral design is out of date: W1 east end: wall W1 has moved
+    (13.5 ft from its end)". W1's shear part is 0 to 14 of its 60 ft. Cause: `LateralSection.Stale` (BuildingModel.Core)
+    measures each saved point against the wall's Start and End only, so a shear part's end partway along the wall is
+    always "moved". It should measure against the shear part's ends (or the point's distance to the wall's line). The
+    Load Manager and the hub repeat it, and the hub marks Foundation loads **Fails**.
+  - The post (column C2) put under an upstairs hold-down that lands partway along a wall below: "does not balance the
+    wind: ΣM = 294 lb·ft in Case 1, from W, roof Case A, +GCpi (rigid) (of 35,260)" in the Load Manager and the hub.
 
 ## Wind Load Calculator
 
