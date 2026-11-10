@@ -132,6 +132,12 @@
             </DockPanel>
         </Border>
 
+        <!-- View only: someone else is working on this project (no lock, no saves, every edit put back) -->
+        <Border x:Name="viewOnlyBanner" DockPanel.Dock="Top" Background="#3F4A5C" Padding="10,5" Visibility="Collapsed">
+            <TextBlock Foreground="White" TextWrapping="Wrap"
+                       Text="View only: someone else is working on this project. You can look at the design, the plans and the reports; nothing can be changed or saved here. Their saves show here as they make them. Open it again once they have closed it."/>
+        </Border>
+
         <!-- Main Content Area -->
         <!-- Rows: toolbar, drawing + tabs (fills the window), status line -->
         <Grid>

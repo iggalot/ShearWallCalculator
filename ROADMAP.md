@@ -285,9 +285,17 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
     (`Hub.Status`: since when, seen by whom). SWC watches the file the whole time and names the walls that newly fail.
   - [x] One person per project; the rest look only (2026-11-06): the hub's own lock, `ProjectLock.HeldByOthers`; the apps
     refuse a project someone else has, and the hub opens it view only (no apps, no writes).
-  - [ ] **View-only mode for the apps** (the owner's idea, 2026-11-06): someone else's project opened in an app to look at
-    only: the plan, the results and the reports, no edits and no saves (the Building Model's and SWC's tools off, the
-    Load Manager's grids read-only, no lock taken). Today they refuse it.
+  - [x] **View-only mode for the apps** (the owner's idea, 2026-11-06; done 2026-11-09 in the Building Model, SWC and the
+    Load Manager): someone else's project is offered "Open it view only?" (`ProjectDialogs.TakeLock(..., offerViewOnly)`,
+    no lock taken); then no saves, no "save first?", a banner and "(view only)" in the title. The sketch puts back every
+    edit, the geometry and the apps' data alike (`SketchCanvas.ViewOnly`, `EditRefused`), and `SketchView.ViewOnly` hides
+    the tools that change anything (Select and Measure stay; set back for a project of one's own). The Building Model's
+    editing menus are off and its properties panel too; SWC reads the calculators again after a refused card edit and
+    opens no Edit building, wind or loads; the Load Manager's load edits are put back and its side panel's boxes read
+    only. SWC and the Load Manager read the other person's saves as they make them.
+  - [ ] View only, still to do: the wind calculator (it still refuses someone else's project), and the hub opening the
+    apps view only from its own view-only mode (today it opens none). The Load Manager's floor and roof loads window and
+    SWC's dialogs open and are refused only at the end (their OK): turn them read only too.
   - [x] Every app's calculation re-run with no window, in order (2026-11-06): `WindCheck` (the wind calculator's),
     `ShearWallCheck` on that wind, the hold-downs now against saved (by how much), `FoundationCheck` (the Load Manager's)
     on the forces as they are now; `ProjectCheck` chains them. The wind app and the Load Manager watch the file too, and

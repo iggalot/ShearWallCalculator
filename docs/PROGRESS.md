@@ -2,6 +2,20 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-09 — View only: someone else's project, to look at
+
+- `ProjectDialogs.TakeLock(..., offerViewOnly, out refused, out viewOnly)`: when another person or PC has the project,
+  "Open it view only?" (`ViewOnlyQuestion`); yes takes no lock. This person's own other copy of the app is still refused.
+- `SketchCanvas.ViewOnly`: `Commit` puts back any change (`ModelHistory.Differs`: the geometry and the apps' data),
+  says `ViewOnlyMessage`, raises `EditRefused`; no grips. `SketchView.ViewOnly`: only Select and Measure, no undo or
+  redo, no plan editing or From size or Roof; false puts the tools back as they were.
+- The Building Model: the editing menus off, the properties panel off, Save refused, a banner, "(view only)".
+- SWC: Save, Edit building, wind and loads refused; a refused edit reads the calculators again from the model
+  (`ViewOnlyEditRefused`); never "unsaved"; the other person's saves read again as they come, still view only.
+- The Load Manager: `Edit` puts the loads back, zones not drawn, the side panel's boxes read only, Save refused; their
+  saves read again.
+- Test: `ViewOnlyTests` (sketch). Still to do: the wind calculator, and the hub's view only opening the apps (ROADMAP).
+
 ## 2026-11-09 — Drawing walls on a DXF: Plan snap, by a face, walls from the plan
 
 - **Plan snap** (`SketchCanvas.SnapToPlan`, owner: to turn it off when a plan clutters the snaps): a toggle by Snap in

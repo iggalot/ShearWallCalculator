@@ -85,6 +85,7 @@ namespace ShearWallVisualizer
                                       SketchTool.Split, SketchTool.Mirror, SketchTool.Cut, SketchTool.Beam, SketchTool.Column })
                 sketchView.HideTool(t);
             Sketch.GeometryLocked = true;
+            Sketch.EditRefused += (o, e) => ViewOnlyEditRefused(); // view only: a card's or a tab's change put back in the calculators too
             Sketch.GeometryLockedMessage = "The building is drawn and changed in the Building Model: Model > Edit building opens it on this project.";
             var s = Sketch;
             s.DrawOver += (o, e) =>

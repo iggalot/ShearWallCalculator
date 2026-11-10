@@ -81,10 +81,47 @@ namespace ShearWallVisualizer
         private bool HoldProject(string file)
         {
             if (projectLock != null && string.Equals(projectLock.ModelPath, file, StringComparison.OrdinalIgnoreCase)) return true;
-            var taken = ProjectDialogs.TakeLock(this, file, "shearwalls", "Shear Wall Calculator", out bool refused);
+            if (viewOnly && reloadingViewOnly) return true; // their save read again: still view only, not asked again
+            var taken = ProjectDialogs.TakeLock(this, file, "shearwalls", "Shear Wall Calculator", true, out bool refused, out bool lookOnly);
             if (refused) return false;
             projectLock?.Dispose();
             projectLock = taken;
+            SetViewOnly(lookOnly);
+            return true;
+        }
+
+        /// <summary>
+        /// Someone else's project, opened to look at only (the suite's view-only mode): no lock taken, no saves, no "save
+        /// changes?", no Edit building, wind or loads, and every edit put back by the sketch (<see cref="SketchCanvas.ViewOnly"/>:
+        /// a card's or a tab's change too, then the calculators are read again from the model). Their saves are read
+        /// as they make them (<see cref="ProjectChangedOnDisk"/>). Opening the project again once they have closed it works on it.
+        /// </summary>
+        private bool viewOnly;
+        private bool reloadingViewOnly;
+
+        private void SetViewOnly(bool on)
+        {
+            viewOnly = on;
+            if (sketchView != null) sketchView.ViewOnly = on;
+            if (viewOnlyBanner != null) viewOnlyBanner.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
+            if (on) Log.Info("Project", "View only: someone else is working on this project.");
+            UpdateTitle();
+        }
+
+        /// <summary>An edit put back (view only): the calculators, which a card or a tab changed first, read again from the model.</summary>
+        private void ViewOnlyEditRefused()
+        {
+            ModelToCalculators();
+            UpdateShearWallUI();
+            ShowStatusMessage(LogLevel.Warning, Sketch.ViewOnlyMessage);
+        }
+
+        /// <summary>Says no to a change for the view-only mode; true when it said it.</summary>
+        private bool RefusedViewOnly(string what)
+        {
+            if (!viewOnly) return false;
+            MessageBox.Show(this, $"View only: someone else is working on this project, so {what}.", "Shear Wall Calculator",
+                            MessageBoxButton.OK, MessageBoxImage.Information);
             return true;
         }
 
@@ -116,14 +153,16 @@ namespace ShearWallVisualizer
         {
             if (!HasProject || !File.Exists(currentProjectPath)) return;
             if (editorProcess != null && !editorProcess.HasExited) return; // Edit building / wind / loads: its own watcher reloads
-            if (HasUnsavedChanges)
+            if (HasUnsavedChanges && !viewOnly) // view only: nothing here is kept, theirs is read
             {
                 Log.Info("Project", "The project was saved by another app while this one has unsaved changes.");
                 ShowStatusMessage(LogLevel.Warning, "Another app saved this project meanwhile. Save here to put your design into it (the building, wind and loads stay as it has them): the walls are then designed for it as it is now.");
                 return;
             }
             var before = FailingWalls();
-            OpenProject(currentProjectPath, reload: true);
+            reloadingViewOnly = viewOnly;
+            try { OpenProject(currentProjectPath, reload: true); }
+            finally { reloadingViewOnly = false; }
             var newly = FailingWalls().Except(before).ToList();
             if (newly.Count == 0)
             {
@@ -150,13 +189,13 @@ namespace ShearWallVisualizer
 
         private string CurrentProjectJson() => HasProject ? ModelFile.BuildingToJson(BuildingToSave()) : null;
 
-        private bool HasUnsavedChanges => HasProject && savedProjectJson != null && CurrentProjectJson() != savedProjectJson;
+        private bool HasUnsavedChanges => HasProject && !viewOnly && savedProjectJson != null && CurrentProjectJson() != savedProjectJson;
 
         /// <summary>Title bar: the project name, with * when there are unsaved changes.</summary>
         private void UpdateTitle()
         {
             if (windSetup == null) return;
-            Title = $"{ProjectName}{(HasUnsavedChanges ? " *" : "")} - Shear Wall Calculator";
+            Title = $"{ProjectName}{(HasUnsavedChanges ? " *" : "")}{(viewOnly ? " (view only)" : "")} - Shear Wall Calculator";
         }
 
         /// <summary>Remembers the current state as saved (after New, Open and Save).</summary>
@@ -329,6 +368,7 @@ namespace ShearWallVisualizer
         private bool SaveProject(bool saveAs)
         {
             if (!HasProject) return false;
+            if (RefusedViewOnly("it is not saved from here")) return false;
             windSetup?.FlushPendingChange(); // a value still being typed counts
             string path = currentProjectPath;
             if (saveAs)
@@ -596,6 +636,7 @@ namespace ShearWallVisualizer
         private void OpenInOtherApp(string exe, string name, string caption, string overlay)
         {
             if (!HasProject) return;
+            if (RefusedViewOnly($"the {name} is not opened on it from here")) return;
             if (editorProcess != null && !editorProcess.HasExited) return;
             if (!File.Exists(exe))
             {
