@@ -76,6 +76,96 @@ namespace ShearWallCalculator.Tests
             Assert.AreEqual(r.StartAsd, extra[11][0].Asd, 1e-9);
         }
 
+        /// <summary>
+        /// A beam (y = 10, x 0 to 12) from the W wall into a girder (x = 12, y 0 to 20) on the S and N walls, a wall on the
+        /// beam (x 2 to 10). The beam's end lands on the girder at its middle: a strap onto the girder, and half its reaction
+        /// to each of the girder's ends, on the walls.
+        /// </summary>
+        [TestMethod]
+        public void ABeamOnAGirder_ItsEndGoesOnDownTheGirder()
+        {
+            var lower = new Dictionary<int, WallData>
+            {
+                [11] = new WallData(9, 0, 0, 0, 20), [13] = new WallData(9, 0, 0, 20, 0), [14] = new WallData(9, 0, 20, 20, 20),
+            };
+            var upper = new Dictionary<int, WallData> { [1] = new WallData(9, 2, 10, 10, 10) };
+            var design = new Dictionary<int, WallDesignResult> { [1] = new WallDesignResult { TensionAsd = 1000, TensionLrfd = 1667 } };
+            var beam = new FramingBeam { Id = "BM1", Start = new Point(0, 10), End = new Point(12, 10), OnStory = 0 };
+            var girder = new FramingBeam { Id = "BM2", Start = new Point(12, 0), End = new Point(12, 20), OnStory = 0 };
+            var trace = new LoadPathTrace(new[] { beam, girder }, null, Size);
+            trace.Land(1, upper, design, lower);
+
+            var (p1, p2) = WallSchedule.HoldownPoints(upper[1], null);
+            double rEnd = System.Math.Max(1000 * p1.X / 12, 1000 * p2.X / 12);
+            var rb = trace.Beams.Single(x => x.Beam == beam);
+            Assert.AreEqual(rEnd, rb.EndAsd, 1e-6);
+            var on = trace.ByLevel[0];
+            var end = on.Single(x => x.From == "beam BM1 end");
+            Assert.AreEqual(SupportKind.Beam, end.Support, "onto the girder, not nothing");
+            Assert.AreEqual("beam BM2", end.SupportId);
+            Assert.AreEqual(HoldownFamilies.Strap_ToWallBelow, end.Family);
+            var rg = trace.Beams.Single(x => x.Beam == girder);
+            Assert.AreEqual(rEnd / 2, rg.StartAsd, 1e-6);
+            Assert.AreEqual(rEnd / 2, rg.EndAsd, 1e-6);
+            Assert.AreEqual(13, on.Single(x => x.From == "beam BM2 start").LowerWallId);
+            Assert.AreEqual(14, on.Single(x => x.From == "beam BM2 end").LowerWallId);
+            Assert.IsFalse(on.Any(x => x.Support == SupportKind.None), "everything lands on something");
+        }
+
+        /// <summary>
+        /// Reciprocal framing: four beams round a square, pinwheel-fashion, each from a wall to the middle of the next, the last
+        /// onto the first (A on B on C on D on A); a wall on A (x = 10, y 2 to 8). A's far end x passes half to each beam in
+        /// turn and an eighth comes back to A's middle: x = T a / 20 + x / 16, so x = (16 / 15) T a / 20 (a: the hold-down
+        /// further along, the worse direction). Solved together, and everything lands on a wall.
+        /// </summary>
+        [TestMethod]
+        public void BeamsRoundALoop_SolvedTogether()
+        {
+            var lower = new Dictionary<int, WallData>
+            {
+                [11] = new WallData(9, 0, 0, 0, 30), [12] = new WallData(9, 30, 0, 30, 30),
+                [13] = new WallData(9, 0, 0, 30, 0), [14] = new WallData(9, 0, 30, 30, 30),
+            };
+            var upper = new Dictionary<int, WallData> { [1] = new WallData(9, 10, 2, 10, 8) };
+            var design = new Dictionary<int, WallDesignResult> { [1] = new WallDesignResult { TensionAsd = 1000, TensionLrfd = 1667 } };
+            var a = new FramingBeam { Id = "A", Start = new Point(10, 0), End = new Point(10, 20), OnStory = 0 };
+            var b = new FramingBeam { Id = "B", Start = new Point(0, 20), End = new Point(20, 20), OnStory = 0 };
+            var c = new FramingBeam { Id = "C", Start = new Point(20, 30), End = new Point(20, 10), OnStory = 0 };
+            var d = new FramingBeam { Id = "D", Start = new Point(30, 10), End = new Point(10, 10), OnStory = 0 };
+            var trace = new LoadPathTrace(new[] { a, b, c, d }, null, Size);
+            trace.Land(1, upper, design, lower);
+
+            var (p1, p2) = WallSchedule.HoldownPoints(upper[1], null);
+            double far = System.Math.Max(p1.Y, p2.Y), near = System.Math.Min(p1.Y, p2.Y);
+            double x = 16.0 / 15 * 1000 * far / 20;
+            Assert.AreEqual(x, trace.Beams.Single(r => r.Beam == a).EndAsd, 1e-6);
+            Assert.AreEqual(x / 2, trace.Beams.Single(r => r.Beam == b).EndAsd, 1e-6);
+            Assert.AreEqual(x / 4, trace.Beams.Single(r => r.Beam == c).EndAsd, 1e-6);
+            Assert.AreEqual(x / 8, trace.Beams.Single(r => r.Beam == d).EndAsd, 1e-6);
+            Assert.AreEqual(1000 * (20 - near) / 20 + x / 16, trace.Beams.Single(r => r.Beam == a).StartAsd, 1e-6);
+            var on = trace.ByLevel[0];
+            Assert.AreEqual("beam B", on.Single(l => l.From == "beam A end").SupportId);
+            Assert.AreEqual("beam A", on.Single(l => l.From == "beam D end").SupportId);
+            Assert.IsFalse(on.Any(l => l.Support == SupportKind.None), "everything lands on something");
+            Assert.AreEqual(4, on.Count(l => l.Kind == PathPointKind.BeamEnd && l.LowerWallId != null), "each beam's start on a wall");
+        }
+
+        /// <summary>Two beams meeting end to end over nothing, a wall on one: a mechanism, their ends on nothing (an error).</summary>
+        [TestMethod]
+        public void TwoBeamsOnEachOthersEnds_OverNothing_AnError()
+        {
+            var lower = new Dictionary<int, WallData> { [11] = new WallData(9, 0, 0, 0, 20), [12] = new WallData(9, 30, 0, 30, 20) };
+            var upper = new Dictionary<int, WallData> { [1] = new WallData(9, 2, 10, 8, 10) };
+            var design = new Dictionary<int, WallDesignResult> { [1] = new WallDesignResult { TensionAsd = 1000, TensionLrfd = 1667 } };
+            var a = new FramingBeam { Id = "A", Start = new Point(0, 10), End = new Point(15, 10), OnStory = 0 };
+            var c = new FramingBeam { Id = "C", Start = new Point(15, 10), End = new Point(30, 10), OnStory = 0 };
+            var trace = new LoadPathTrace(new[] { a, c }, null, Size);
+            trace.Land(1, upper, design, lower);
+            var on = trace.ByLevel[0];
+            Assert.AreEqual(SupportKind.None, on.Single(l => l.From == "beam A end").Support);
+            Assert.AreEqual(11, on.Single(l => l.From == "beam A start").LowerWallId);
+        }
+
         [TestMethod]
         public void AColumn_CarriesAHoldown_ToTheFoundation_AndNothingIsAnError()
         {

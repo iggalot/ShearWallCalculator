@@ -182,6 +182,8 @@ namespace ShearWallCalculator
             public Dictionary<string, double> CaseAsd, CaseLrfd;
             /// <summary>The force on what is under it in each load case (lb ASD, + up: tension / − down: compression), both ends of every couple; null when not known.</summary>
             public Dictionary<string, double> CaseUp;
+            /// <summary>A wall's end: where it presses in the cases it does not lift (its end post's centreline); null: at <see cref="At"/>.</summary>
+            public Point? PressAt;
         }
 
         /// <summary>Σ case by case of loads that act together; null when any of them has no cases (then the envelope rules apply).</summary>
@@ -260,6 +262,7 @@ namespace ShearWallCalculator
                             CaseAsd = r.TensionByCase?.ToDictionary(c => c.Key, c => c.Value[atLow ? 0 : 1]),
                             CaseLrfd = r.TensionByCase?.ToDictionary(c => c.Key, c => c.Value[atLow ? 2 : 3]),
                             CaseUp = r.EndForceByCase?.ToDictionary(c => c.Key, c => c.Value[atLow ? 0 : 1]),
+                            PressAt = PressPoint(w, at, r.Holdown),
                         });
                     }
                 }
@@ -267,10 +270,86 @@ namespace ShearWallCalculator
             var beamLoads = new Dictionary<FramingBeam, List<Arrival>>();
             foreach (var a in arriving) Place(a, level, wallsBelow, beamLoads);
 
-            // the beams: their reactions are new hold-down points at their ends, on the walls or columns under them
-            foreach (var kv in beamLoads)
+            // the beams: their reactions are new hold-down points at their ends, on the walls, columns or beams under them. A
+            // beam end on another beam is a load on it, so the level's beams are solved together: going round until nothing
+            // changes (each a simple span, linear), which settles a chain in a pass or two and beams bearing on each other
+            // round a loop (reciprocal framing) to the exact answer. A loop resting only on each other's ends never settles:
+            // a mechanism, its ends left on nothing (an error: draw a column or a post).
+            var onBeams = new Dictionary<(FramingBeam bm, bool start), (FramingBeam onto, Arrival a)>();
+            var solved = new Dictionary<FramingBeam, (BeamReactions r, Arrival start, Arrival end)>();
+            var cut = new HashSet<(FramingBeam, bool)>();
+            var last = new Dictionary<(FramingBeam, bool), double>(); // each end's force at the last pass
+            for (int round = 0; round < 2; round++)
             {
-                var bm = kv.Key;
+                bool settled = false;
+                for (int pass = 0; pass < 5000 && !settled; pass++)
+                {
+                    double change = 0, scale = 0;
+                    var carrying = beamLoads.Keys.Concat(onBeams.Values.Select(v => v.onto)).Distinct().ToList();
+                    foreach (var bm in carrying)
+                    {
+                        var loads = (beamLoads.TryGetValue(bm, out var own) ? own : new List<Arrival>())
+                                    .Concat(onBeams.Where(o => o.Value.onto == bm).Select(o => o.Value.a)).ToList();
+                        if (loads.Count == 0) continue;
+                        var s = React(bm, loads);
+                        solved[bm] = s;
+                        foreach (var (start, a) in new[] { (true, s.start), (false, s.end) })
+                        {
+                            var key = (bm, start);
+                            var onto = a == null || cut.Contains(key) ? null : BeamUnder(a, level, wallsBelow, bm);
+                            last.TryGetValue(key, out var was);
+                            double size = a == null ? 0 : Size(a);
+                            change += Math.Abs(size - was);
+                            last[key] = size;
+                            scale += size;
+                            if (onto == null) onBeams.Remove(key);
+                            else onBeams[key] = (onto, a);
+                        }
+                    }
+                    settled = pass > 0 && change <= 1e-9 * (1 + scale);
+                }
+                if (settled) break;
+                // a mechanism: the ends resting on one another's ends with nothing under them carry nothing on
+                bool BackTo(FramingBeam from, FramingBeam to)
+                {
+                    var seen = new HashSet<FramingBeam>();
+                    var next = new Stack<FramingBeam>(new[] { from });
+                    while (next.Count > 0)
+                    {
+                        var cur = next.Pop();
+                        foreach (var o in onBeams.Where(x => x.Key.bm == cur).Select(x => x.Value.onto).ToList())
+                        {
+                            if (o == to) return true;
+                            if (seen.Add(o)) next.Push(o);
+                        }
+                    }
+                    return false;
+                }
+                foreach (var kv in onBeams.ToList().Where(kv => BackTo(kv.Value.onto, kv.Key.bm)).ToList()) cut.Add(kv.Key);
+                foreach (var k in cut) onBeams.Remove(k);
+                solved.Clear();
+                last.Clear();
+            }
+            foreach (var kv in solved)
+            {
+                Beams.Add(kv.Value.r);
+                foreach (var (start, a) in new[] { (true, kv.Value.start), (false, kv.Value.end) })
+                    if (a != null) Place(a, level, wallsBelow, cut.Contains((kv.Key, start)) ? null : new Dictionary<FramingBeam, List<Arrival>>(), kv.Key);
+            }
+        }
+
+        /// <summary>The size of a beam end's force, to tell when the beams have settled.</summary>
+        private static double Size(Arrival a) =>
+            Math.Abs(a.Asd) + Math.Abs(a.Lrfd) + (a.CaseAsd?.Values.Sum(Math.Abs) ?? 0) + (a.CaseLrfd?.Values.Sum(Math.Abs) ?? 0) + (a.CaseUp?.Values.Sum(Math.Abs) ?? 0);
+
+        /// <summary>
+        /// A beam's reactions for the loads on it, and the new points at its ends (null: an end with nothing to pass on).
+        /// </summary>
+        private (BeamReactions r, Arrival start, Arrival end) React(FramingBeam bm, List<Arrival> loads)
+        {
+            var kv = new KeyValuePair<FramingBeam, List<Arrival>>(bm, loads);
+            Arrival startArrival = null, endArrival = null;
+            {
                 double L = bm.Length;
                 var reactions = new BeamReactions { Beam = bm };
                 double s0 = 0, e0 = 0, s1 = 0, e1 = 0, sl0 = 0, el0 = 0, sl1 = 0, el1 = 0;
@@ -297,9 +376,25 @@ namespace ShearWallCalculator
                 var eAsd = SumByCase(kv.Value.Select(a => a.CaseAsd), toEnd);
                 var sLrfd = SumByCase(kv.Value.Select(a => a.CaseLrfd), toStart);
                 var eLrfd = SumByCase(kv.Value.Select(a => a.CaseLrfd), toEnd);
-                // the compression too: a wall end pressing on the beam is a load on it as much as one lifting it
-                var sUp = SumByCase(kv.Value.Select(a => a.CaseUp), toStart);
-                var eUp = SumByCase(kv.Value.Select(a => a.CaseUp), toEnd);
+                // the compression too: a wall end pressing on the beam is a load on it as much as one lifting it, where it
+                // presses (its end post's centreline: as the Load Manager's free bodies take it), the pull at the hold-down
+                Dictionary<string, double> sUp = null, eUp = null;
+                if (kv.Value.All(a => a.CaseUp != null))
+                {
+                    sUp = new Dictionary<string, double>();
+                    eUp = new Dictionary<string, double>();
+                    foreach (var a in kv.Value)
+                    {
+                        double xPull = L <= 0 ? 0 : Math.Max(0, Math.Min(L, Vector.Multiply(a.At - bm.Start, (bm.End - bm.Start) / L)));
+                        double xPress = a.PressAt == null || L <= 0 ? xPull : Math.Max(0, Math.Min(L, Vector.Multiply(a.PressAt.Value - bm.Start, (bm.End - bm.Start) / L)));
+                        foreach (var c in a.CaseUp)
+                        {
+                            double x = c.Value < 0 ? xPress : xPull;
+                            sUp[c.Key] = (sUp.TryGetValue(c.Key, out var s) ? s : 0) + c.Value * (L > 0 ? (L - x) / L : 0.5);
+                            eUp[c.Key] = (eUp.TryGetValue(c.Key, out var e) ? e : 0) + c.Value * (L > 0 ? x / L : 0.5);
+                        }
+                    }
+                }
                 if (sAsd != null && eAsd != null && sLrfd != null && eLrfd != null)
                 {
                     reactions.StartAsd = Max(sAsd);
@@ -307,24 +402,69 @@ namespace ShearWallCalculator
                     reactions.StartLrfd = Max(sLrfd);
                     reactions.EndLrfd = Max(eLrfd);
                 }
-                Beams.Add(reactions);
-                var first = kv.Value[0];
+                var first = kv.Value.FirstOrDefault(a => a.Kind == PathPointKind.WallHoldown) ?? kv.Value[0];
                 foreach (var (end, asd, lrfd, which, cA, cL, cU) in new[] { (bm.Start, reactions.StartAsd, reactions.StartLrfd, "start", sAsd, sLrfd, sUp), (bm.End, reactions.EndAsd, reactions.EndLrfd, "end", eAsd, eLrfd, eUp) })
                 {
                     // an end that only presses down still lands on what is under it (in bearing: no hold-down to size)
                     if (!(asd > 0) && (cU == null || cU.Values.All(v => Math.Abs(v) < 0.05))) continue;
-                    Place(new Arrival
+                    var a = new Arrival
                     {
                         At = end, Asd = asd, Lrfd = lrfd, LowEndUp = null, Kind = PathPointKind.BeamEnd, From = $"beam {bm.Id} {which}",
                         UpperStory = first.UpperStory, WallId = first.WallId, Family = first.Family, Species = first.Species,
                         CaseAsd = cA, CaseLrfd = cL, CaseUp = cU,
-                    }, level, wallsBelow, null);
+                    };
+                    if (which == "start") startArrival = a; else endArrival = a;
                 }
+                return (reactions, startArrival, endArrival);
             }
         }
 
-        /// <summary>What carries one point at <paramref name="level"/>, and what that does.</summary>
-        private void Place(Arrival a, int level, IDictionary<int, WallData> wallsBelow, Dictionary<FramingBeam, List<Arrival>> beamLoads)
+        /// <summary>
+        /// The beam a beam end lands on when no wall or column is under it: one it lands on partway along, else one whose end
+        /// is there (as the gravity load path). Null: a wall or a column carries it, or nothing does.
+        /// </summary>
+        private FramingBeam BeamUnder(Arrival a, int level, IDictionary<int, WallData> wallsBelow, FramingBeam except)
+        {
+            if (level < 0 || WallOrColumnUnder(a, level, wallsBelow, out _, out _)) return null;
+            return OnBeam(a.At, level, except);
+        }
+
+        /// <summary>
+        /// Where a wall's hold-down end presses down: its end post's centreline, half a post nearer the wall's end than the
+        /// hold-down (as <c>DesignPass.CaseForcesOn</c> and <c>ShearWallCheck.CompressionAt</c>).
+        /// </summary>
+        private static Point PressPoint(WallData w, Point at, HoldownChoice holdown)
+        {
+            double half = WallSchedule.PostAlongWall(holdown) / 24.0;
+            var end = (at - w.Start).Length <= (at - w.End).Length ? w.Start : w.End;
+            var toEnd = end - at;
+            return toEnd.Length < 1e-9 ? at : at + toEnd / toEnd.Length * half;
+        }
+
+        private FramingBeam OnBeam(Point at, int level, FramingBeam except)
+        {
+            var on = beams.Where(b => b != except && b.OnStory == level && OnSegment(at, b.Start, b.End)).ToList();
+            return on.FirstOrDefault(b => (at - b.Start).Length > Tolerance && (at - b.End).Length > Tolerance) ?? on.FirstOrDefault();
+        }
+
+        /// <summary>A wall of the story below through the point (on the same line for a wall's hold-down), else a column under it.</summary>
+        private bool WallOrColumnUnder(Arrival a, int level, IDictionary<int, WallData> wallsBelow, out int? wallId, out FramingColumn col)
+        {
+            wallId = wallsBelow == null ? null
+                   : a.Dir != null ? StoryCascade.WallUnder(a.At, a.Dir.Value, wallsBelow)
+                   : StoryCascade.WallUnder(a.At, WallDirs.EastWest, wallsBelow) ?? StoryCascade.WallUnder(a.At, WallDirs.NorthSouth, wallsBelow);
+            col = null;
+            if (wallId != null) return true;
+            var at = a.At;
+            col = columns.FirstOrDefault(c => c.BaseStory <= level && c.TopStory >= level && (c.At - at).Length <= Tolerance);
+            return col != null;
+        }
+
+        /// <summary>
+        /// What carries one point at <paramref name="level"/>, and what that does. <paramref name="beamLoads"/> null: no beam
+        /// is looked for (an end left on nothing); <paramref name="except"/>: the beam whose end the point is.
+        /// </summary>
+        private void Place(Arrival a, int level, IDictionary<int, WallData> wallsBelow, Dictionary<FramingBeam, List<Arrival>> beamLoads, FramingBeam except = null)
         {
             var l = new HoldownLanding
             {
@@ -340,13 +480,10 @@ namespace ShearWallCalculator
             if (level < 0) { l.Support = SupportKind.Foundation; l.OnFoundation = true; }
             else
             {
-                wallId = wallsBelow == null ? null
-                       : a.Dir != null ? StoryCascade.WallUnder(a.At, a.Dir.Value, wallsBelow)
-                       : StoryCascade.WallUnder(a.At, WallDirs.EastWest, wallsBelow) ?? StoryCascade.WallUnder(a.At, WallDirs.NorthSouth, wallsBelow);
+                WallOrColumnUnder(a, level, wallsBelow, out wallId, out col);
                 if (wallId != null) { l.Support = SupportKind.Wall; l.LowerWallId = wallId; l.SupportId = $"wall {wallId}"; }
-                else if ((col = columns.FirstOrDefault(c => c.BaseStory <= level && c.TopStory >= level && (c.At - a.At).Length <= Tolerance)) != null)
-                { l.Support = SupportKind.Column; l.SupportId = $"column {col.Id}"; }
-                else if (beamLoads != null && (beam = beams.FirstOrDefault(b => b.OnStory == level && OnSegment(a.At, b.Start, b.End))) != null)
+                else if (col != null) { l.Support = SupportKind.Column; l.SupportId = $"column {col.Id}"; }
+                else if (beamLoads != null && (beam = OnBeam(a.At, level, except)) != null)
                 { l.Support = SupportKind.Beam; l.SupportId = $"beam {beam.Id}"; }
                 else l.Support = SupportKind.None;
             }

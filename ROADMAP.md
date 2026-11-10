@@ -440,9 +440,14 @@ Shown greyed as "coming" in the hub (`SuiteApps`, in `..\DesignHub\DesignHub.Cor
     a loop resting only on each other's ends a mechanism (`SolveBeams`); a trimmer, or any beam along the joists, carries
     half a spacing each side (`ModelDefaults.FloorJoistSpacing`, new), never taken from a member it carries (owner: a
     girder takes nothing off its beams). `FramingHierarchyTests`.
-  - [ ] **SWC's hold-down path stops at a beam on a beam** (`LoadPath.Place`, `beamLoads: null` for a beam end): a beam
+  - [x] **SWC's hold-down path stops at a beam on a beam** (`LoadPath.Place`, `beamLoads: null` for a beam end): a beam
     end carrying hold-downs that lands on another beam is "nothing under it". It should follow the beams on down as the
     gravity path does (loops too).
+    **Done 2026-11-10:** the level's beams are solved together (`LoadPathTrace.Land`, `React`): a beam end on a beam
+    lands on it (partway along, else at its end), a loop is gone round until it settles, a loop resting only on each
+    other's ends is left on nothing (an error). A wall end pressing on a beam presses at its end post's centreline
+    (`PressAt`), as the Load Manager takes it (it was at the hold-down: 0.125 ft off). `LoadPathTests` (girder, pinwheel
+    by hand, mechanism); DesignHub `AWallOnABeamOnAGirder_TheHoldownsGoOnDown_EveryMemberBalances`.
   - [ ] **Cantilevered beams and overhangs**: every beam is a simple span between its two ends; a beam over a support
     with a cantilevered end (and the small reciprocal frames at an overhang's corner, where the back-spans hold each
     other down) is not modelled. Needs a beam with interior supports and the back-span's uplift.

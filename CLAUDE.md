@@ -30,7 +30,7 @@
     (Loads > Edit loads); SWC only reads them.
   - On save, the end couples per wind case go into the `Lateral` section (`BuildingModel.Model.LateralSection`), for the
     foundation, with each point's hold-down (`Connector`), and every story's hold-downs (`Holdowns`, `StoryHoldown`:
-    each wall's, and the beam ends and column bases carrying them down, with what each anchors to). SWC relays; the
+    each wall's, and the beam ends and column bases carrying them down, with what each anchors to; a beam end on a beam goes on down it, the level's beams solved together, loops too: `LoadPathTrace.Land`). SWC relays; the
     shared sketch draws the hold-downs on every level's plan, its own and those from above (`ConnectionMarkers` on Ground,
     `LevelMarkers` above; `Sketch.Connections` gives it SWC's live ones before a save). SWC draws only the beam-end
     reactions and the beam ends with no uplift itself. Each story hold-down keeps its force per wind case (`Up`: + tension,
