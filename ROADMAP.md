@@ -34,8 +34,10 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
 - [ ] **Drawing walls on a DXF** (owner's question, 2026-11-07: plans rarely show centrelines). Suggestions:
   - [ ] Draw by a face: the wall tool's option centreline / left face / right face; an exterior wall drawn along its
     outside face puts the centreline half the stud depth inside.
-  - [ ] Snap between two lines: where the DXF shows a wall as two parallel lines 3.5 to 7.25 in apart, a snap to the
-    line midway between them.
+  - [x] Snap between two lines: where the DXF shows a wall as two parallel lines 3.5 to 7.25 in apart, a snap to the
+    line midway between them. (2026-11-09) `SnapModes.WallCentre`, on by default, ranked after the host's points:
+    where two centres meet (a corner or a tee), a centre's end, else the nearest point on it; among the plan's own CAD
+    lines only (`Snapper.WallCentres`, ± 1/4 in, parallel within 1°). Not tried on a real DXF yet. BM test.
   - [ ] Walls from the DXF: pick a layer, find its pairs of parallel lines, propose walls on their centrelines to accept
     or reject one by one.
 - [x] **Hold-downs on every level in the Building Model** (2026-11-07, done 2026-11-07): SWC saves every story's
@@ -65,7 +67,9 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
   - [x] (2026-11-09, owner: "since walls and shear wall portions can be different length, how do you distinguish those?")
     The Pieces tab's framing table has a Where column: each piece in the whole wall (the plates), the shear wall (its
     studs, posts, blocking, from–to), or the plain wall past it; the studs split in and outside the part; the sheathing
-    "over the shear wall only". The Elevation already dimensions the part ("shear wall 20'-0"") under the wall.
+    "over the shear wall only". The Elevation already dimensions the part ("shear wall 20'-0"") under the wall. The 3D
+    tab (2026-11-09): a strip on the top plates along the part, whatever is toggled (blue; red not designed), said in its
+    bar (`WallModel3D.PartCaption`, `WallPanel.PartNote`). WF test.
 - [~] **Every connection as a pair of equal and opposite forces** (owner, 2026-11-07). The Load Manager reports every
   connection between members: the connector's force once (tension or compression, per wind case), and on each member
   as a direction (↓ on the upper, ↑ on the lower). Every member then has its whole free-body diagram (its own loads and
@@ -306,7 +310,11 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
   `ProjectDialogs.SaveChangesFirst` and `TakeLock` (BM, SWC, LM, Wind 9f7c920).
 - [ ] **SWC's unsaved `*` from the history:** SWC still compares its whole saved project text, because its design
   also holds the calculators' loads that are not in the model's undo. Move it onto `EditHistory` once those are kept
-  with the design.
+  with the design. (Looked at 2026-11-09, left as it is: three things are outside the history, not one. The typed story
+  loads reach the building only at save (`ShearWallProject.Save`). The manual-or-wind switch (`windLoadsLinked`) changes
+  what a save writes, `Lateral` included, and lives only in the window. And the calculators read the typed loads only
+  on opening, so an undo would not put them back. First: keep the loads and the mode in the "ShearWall.Project" section
+  as they change, each an undo step, applied again after an undo. Until then the text compare is correct.)
 - [ ] **More than one shear part on a wall**, and a part per story (today one part, the same on every story the wall
   spans). For now, split the wall in the Building Model.
 - [x] **Show the declared shear walls in the Building Model** (2026-11-09): the shared sketch reads the `Lateral` section's

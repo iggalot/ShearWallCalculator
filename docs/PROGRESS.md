@@ -2,6 +2,17 @@
 
 _Branch `dev/wind-core-refactor` in both repositories. Companion to `ROADMAP.md`, `AUDIT.md` and `DATA_VERIFICATION.md`._
 
+## 2026-11-09 — The wall-centre snap; the shear part in 3D
+
+- `SnapModes.WallCentre` (BuildingModel.Core, on by default): a CAD plan's wall drawn as two parallel lines 3.5 to
+  7.25 in apart (± 1/4 in) snaps to midway: where two centres meet first (a corner or a tee: each pair stops at the other
+  wall's face, so the centres are run on to meet), then a centre's end, then the nearest point on it. Only the plan's own
+  lines are paired (`Snapper.Find`'s `planLines`; the sketch passes those within 3/4 ft at least). Test:
+  `Snaps_WallCentre_MidwayBetweenAPlansTwoLines`.
+- The wall window's 3D tab marks the shear part: a strip on the top plates (blue; red not designed), said in its bar.
+  Test: `ThreeD_TheShearPart_AStripOnTheTopPlates_SaidInTheBar`.
+- SWC's unsaved `*` onto the history: looked at, left as it is (ROADMAP says why).
+
 ## 2026-11-09 — Every app's views read the design's stamp
 
 - `LateralSection.OutOfDate(b)` (BuildingModel.Core): `Stale` (a wall gone or moved), else `ChangedSince` (the stamp's
