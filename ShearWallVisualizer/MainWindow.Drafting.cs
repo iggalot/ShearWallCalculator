@@ -522,7 +522,7 @@ namespace ShearWallVisualizer
             LogIssues(list); // what the user is warned about, and where
             Sketch.Issues = list;
             int errors = list.Count(i => i.Severity == Severity.Error), warnings = list.Count - errors;
-            ShowIssueState(errors, warnings);
+            ShowIssueState(list, errors, warnings);
 
             // the Design tab lists what stops or bends the design, each going to its element on the plan: model errors and the
             // load path (hold-downs with nothing under them, a replaced type, beams and columns not connected). Failing walls are
@@ -535,33 +535,31 @@ namespace ShearWallVisualizer
             }).ToList(), () => { rbWorkspaceWalls.IsChecked = true; ShowIssueList(btnIssues); });
         }
 
-        // The issues button in the top bar, on every workspace and tab: solid red with errors (it flashes when there are
-        // more than before), solid amber with warnings only, green when clear.
-        private static readonly Brush IssueErrorFill = Controls.Ui.Frozen("#C62828"), IssueWarnFill = Controls.Ui.Frozen("#F2B233"), IssueWarnInk = Controls.Ui.Frozen("#3D2A00"),
-                                      IssueOkFill = Controls.Ui.PassFill, IssueOkInk = Controls.Ui.PassInk;
+        // The issues button in the top bar, on every workspace and tab: the suite's (BuildingModel.Sketch.IssuesButton, the same
+        // in every app): solid red with errors (it flashes when there are more than before), amber with warnings only, green when clear.
         private int shownErrors;
+        private bool issuesHooked;
 
-
-        private void ShowIssueState(int errors, int warnings)
+        private void ShowIssueState(List<ModelIssue> list, int errors, int warnings)
         {
-            string E(int n) => n == 1 ? "1 error" : $"{n} errors";
-            string W(int n) => n == 1 ? "1 warning" : $"{n} warnings";
-            btnIssues.Content = errors > 0 ? "✗ " + E(errors) + (warnings > 0 ? "  ·  ⚠ " + W(warnings) : "")
-                              : warnings > 0 ? "⚠ " + W(warnings) : "✓ No issues";
-            btnIssues.Background = errors > 0 ? IssueErrorFill : warnings > 0 ? IssueWarnFill : IssueOkFill;
-            btnIssues.BorderBrush = errors > 0 ? IssueErrorFill : warnings > 0 ? IssueWarnFill : IssueOkInk;
-            btnIssues.Foreground = errors > 0 ? Brushes.White : warnings > 0 ? IssueWarnInk : IssueOkInk;
-            btnIssues.ToolTip = errors + warnings == 0 ? "No errors or warnings in the model or the design."
-                              : $"{E(errors)}, {W(warnings)} in the model and the design: click for the list (click one to find it on the plan).";
-            if (errors > shownErrors)
-            {
-                // a few flashes to catch the eye, then it stays solid red
-                var flash = new System.Windows.Media.Animation.DoubleAnimation(1, 0.25, TimeSpan.FromMilliseconds(350))
-                { AutoReverse = true, RepeatBehavior = new System.Windows.Media.Animation.RepeatBehavior(4) };
-                btnIssues.BeginAnimation(OpacityProperty, flash);
-                Log.Info("Issues", $"{E(errors)} now (was {shownErrors}), {W(warnings)}: the issues button flashes.");
-            }
+            HookIssues();
+            btnIssues.Show(list);
+            if (errors > shownErrors) Log.Info("Issues", $"{errors} error(s) now (was {shownErrors}), {warnings} warning(s): the issues button flashes.");
             shownErrors = errors;
+        }
+
+        /// <summary>The issues button's list: a row goes to the plan, so it shows the plan first (the Shear walls workspace, the PLAN side open).</summary>
+        private void HookIssues()
+        {
+            if (issuesHooked) return;
+            issuesHooked = true;
+            btnIssues.Sketch = Sketch;
+            btnIssues.Picking += (s, i) =>
+            {
+                rbWorkspaceWalls.IsChecked = true;
+                if (!planOpen) { planOpen = true; ApplyPanels(); }
+            };
+            btnIssues.Picked += (s, i) => Log.Info("Issues", $"Picked from the list: {i.Code} {string.Join(", ", i.Ids)} (zoomed to it on the plan)");
         }
 
         /// <summary>The warnings that matter to the design (besides every error).</summary>
@@ -602,36 +600,17 @@ namespace ShearWallVisualizer
             Log.Info("Issues", $"Shown on the plan: {i.Code} {string.Join(", ", i.Ids)}");
         }
 
-        private void Issues_Click(object sender, RoutedEventArgs e) => ShowIssueList(btnIssues);
-
         private void CheckModel_Click(object sender, RoutedEventArgs e)
         {
             rbWorkspaceWalls.IsChecked = true;
             ShowIssueList(btnIssues);
         }
 
-        private void ShowIssueList(UIElement target)
+        /// <summary>Drops the issues button's list down (the Design tab's "List them all", the error message's "List the errors").</summary>
+        private void ShowIssueList(BuildingModel.Sketch.IssuesButton button)
         {
-            // its own ink: a popup inherits from its placement target, and the button's text is white on red
-            var list = new IssueList(Sketch) { Width = 420, MaxHeight = 360, Margin = new Thickness(8) };
-            System.Windows.Documents.TextElement.SetForeground(list, Controls.Ui.Ink);
-            list.Show(issues);
-            // from any workspace: a row goes to the plan, so show it first (the Shear walls workspace, the PLAN side open)
-            list.PreviewMouseLeftButtonUp += (s, a) =>
-            {
-                rbWorkspaceWalls.IsChecked = true;
-                if (!planOpen) { planOpen = true; ApplyPanels(); }
-            };
-            var popup = new Popup
-            {
-                PlacementTarget = target,
-                Placement = PlacementMode.Bottom,
-                StaysOpen = false,
-                AllowsTransparency = true,
-                Child = new Border { Background = Brushes.White, BorderBrush = new SolidColorBrush(Color.FromRgb(0xC3, 0xC2, 0xB7)), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(4), Child = list },
-            };
-            list.Picked += (s, i) => { popup.IsOpen = false; Log.Info("Issues", $"Picked from the list: {i.Code} {string.Join(", ", i.Ids)} (zoomed to it on the plan)"); };
-            popup.IsOpen = true;
+            HookIssues();
+            button.Open();
         }
 
         // ------------------------------------------------------------------ 3D

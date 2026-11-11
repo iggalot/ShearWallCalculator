@@ -7,7 +7,7 @@
         xmlns:ctrl="clr-namespace:ShearWallVisualizer.Controls"
         xmlns:sketch="clr-namespace:BuildingModel.Sketch;assembly=BuildingModel.Sketch"
         mc:Ignorable="d"
-        Title="Rigid Diaphragm Shear Wall Calculator v0.1" Height="900" Width="1600" MinHeight="600" MinWidth="1000" WindowState="Maximized" WindowStartupLocation="CenterScreen"
+        Title="Shear Wall Calculator" Height="900" Width="1600" MinHeight="600" MinWidth="1000" WindowState="Maximized" WindowStartupLocation="CenterScreen"
         Background="#F7F8FA" FontFamily="Segoe UI"
         >
 
@@ -16,23 +16,18 @@
         <!-- Menu Bar at the very top -->
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="_File">
-                <MenuItem Header="_New project..." Click="MenuItem_New_Click" InputGestureText="Ctrl+N"
+                <MenuItem Header="_New project…" Click="MenuItem_New_Click" InputGestureText="Ctrl+N"
                           ToolTip="Pick a folder for the project, then the building's size; the model, reports and logs are kept in that folder"/>
-                <MenuItem Header="_Open project..." Click="MenuItem_Load_Click" InputGestureText="Ctrl+O"
+                <MenuItem Header="_Open project…" Click="MenuItem_Load_Click" InputGestureText="Ctrl+O"
                           ToolTip="A building model (.bldg.json); its folder becomes the project folder"/>
                 <MenuItem Header="_Save" Click="MenuItem_Save_Click" InputGestureText="Ctrl+S"/>
-                <MenuItem Header="Save _As (a copy in another folder)..." Click="MenuItem_SaveAs_Click"/>
+                <MenuItem Header="Save _As (a copy in another folder)…" Click="MenuItem_SaveAs_Click"/>
                 <Separator/>
                 <MenuItem Header="Open _Recent" x:Name="RecentFilesMenu"/>
                 <Separator/>
-                <MenuItem Header="_Print report..." Click="MenuItem_PrintReport_Click" InputGestureText="Ctrl+P"/>
+                <MenuItem Header="_Print report…" Click="MenuItem_PrintReport_Click" InputGestureText="Ctrl+P"/>
                 <Separator/>
-                <MenuItem Header="E_xit" Click="Exit_Click"/>
-            </MenuItem>
-            <MenuItem Header="_View">
-                <MenuItem Header="_Refresh" Click="Refresh_Click"/>
-                <MenuItem Header="3D _Wind View (window)" Click="Open3DWindWindow_Click"/>
-                <MenuItem Header="_Hold-down catalog (values used by the design)" Click="OpenHoldownCatalog_Click"/>
+                <MenuItem Header="E_xit" Click="Exit_Click" InputGestureText="Alt+F4"/>
             </MenuItem>
             <MenuItem Header="_Edit">
                 <MenuItem Header="_Undo" Click="Undo_Click" InputGestureText="Ctrl+Z"/>
@@ -40,32 +35,38 @@
                 <Separator/>
                 <MenuItem Header="Mea_sure distance" Click="btnMeasure_Click" InputGestureText="T"/>
                 <Separator/>
-                <MenuItem Header="Move, copy, delete, notes, cuts: in the _Building Model editor..." Click="EditBuilding_Click"
+                <MenuItem Header="Move, copy, delete, notes, cuts: in the _Building Model editor…" Click="EditBuilding_Click"
                           ToolTip="The building is drawn and changed only in the Building Model. This saves the project and opens it there; this window updates each time the editor saves."/>
                 <Separator/>
                 <MenuItem Header="_Ortho (move, copy, measure)" Click="btnOrtho_Click" InputGestureText="F8"/>
                 <MenuItem Header="_Zoom to the drawing" Click="btnZoomExtents_Click" InputGestureText="Z"/>
                 <Separator/>
-                <MenuItem Header="Plans: import or place them in the Building Model editor..." Click="EditBuilding_Click"/>
+                <MenuItem Header="Plans: import or place them in the Building Model editor…" Click="EditBuilding_Click"/>
+            </MenuItem>
+            <!-- File, Edit, then View: the order of every app in the suite -->
+            <MenuItem Header="_View">
+                <MenuItem Header="_Refresh" Click="Refresh_Click"/>
+                <MenuItem Header="3D _Wind View (window)" Click="Open3DWindWindow_Click"/>
+                <MenuItem Header="_Hold-down catalog (values used by the design)" Click="OpenHoldownCatalog_Click"/>
             </MenuItem>
             <MenuItem Header="_Model">
                 <MenuItem Header="_3D view of the building" Click="Show3D_Click"/>
                 <MenuItem Header="_Check the model (errors and warnings)" Click="CheckModel_Click"/>
                 <Separator/>
-                <MenuItem Header="_Edit building in the Building Model editor..." Click="EditBuilding_Click"
+                <MenuItem Header="_Edit building in the Building Model editor…" Click="EditBuilding_Click"
                           ToolTip="Saves the project and opens it in the Building Model editor: the levels, size and roof are edited there. This window updates each time the editor saves."/>
             </MenuItem>
             <MenuItem Header="_Details">
-                <MenuItem Header="_Connection defaults (sheathing, nails, blocking)..." Click="ConnectionDefaults_Click"
+                <MenuItem Header="_Connection defaults (sheathing, nails, blocking)…" Click="ConnectionDefaults_Click"
                           ToolTip="The project's choices the connection details start from: the diaphragms' sheathing, nails and blocking, the upper sills' nail, the top plates' splice nail. Part of the connection details, not the building model."/>
             </MenuItem>
             <MenuItem Header="_Loads">
-                <MenuItem Header="_Open in the Load Manager..." Click="EditLoads_Click"
+                <MenuItem Header="_Open in the Load Manager…" Click="EditLoads_Click"
                           ToolTip="The gravity loads, the wind uplift and the foundation (the gravity loads combined with these hold-down forces) are in the Load Manager. This app uses no gravity loads: it finds the hold-downs from the overturning alone."/>
             </MenuItem>
             <MenuItem Header="_Help">
                 <MenuItem Header="Open _log folder" Click="OpenLogFolder_Click"/>
-                <MenuItem Header="_Two-face sheathing rule..." Click="TwoFaceRule_Click"/>
+                <MenuItem Header="_Two-face sheathing rule…" Click="TwoFaceRule_Click"/>
                 <MenuItem Header="_About" Click="About_Click"/>
             </MenuItem>
         </Menu>
@@ -105,23 +106,8 @@
             </Border.Resources>
             <DockPanel>
                 <!-- Errors and warnings in the model and the design, on every workspace and tab (MainWindow.Drafting:
-                     UpdateIssues sets its colour: solid red with errors, amber with warnings only, green when clear) -->
-                <Button x:Name="btnIssues" DockPanel.Dock="Right" VerticalAlignment="Center" Margin="12,0,4,0" Cursor="Hand"
-                        Click="Issues_Click" FontSize="14" FontWeight="SemiBold" Content="✓ No issues"
-                        Background="#E6F4EA" Foreground="#1E7B34" BorderBrush="#1E7B34"
-                        ToolTip="Errors and warnings in the model and the design (also marked on the plan)">
-                    <Button.Template>
-                        <ControlTemplate TargetType="Button">
-                            <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                                    BorderThickness="1.5" CornerRadius="16" Padding="14,6">
-                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </Border>
-                            <ControlTemplate.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="bd" Property="BorderThickness" Value="2.5"/></Trigger>
-                            </ControlTemplate.Triggers>
-                        </ControlTemplate>
-                    </Button.Template>
-                </Button>
+                     UpdateIssues: the suite's IssuesButton, solid red with errors, amber with warnings only, green when clear) -->
+                <sketch:IssuesButton x:Name="btnIssues" DockPanel.Dock="Right" Scope="the model and the design"/>
                 <RadioButton x:Name="rbWorkspaceWind" GroupName="workspace" Style="{StaticResource Workspace}"
                              Content="1   Wind loads" Checked="Workspace_Checked"
                              ToolTip="The Wind Load Calculator's results for this project, read only (Edit wind changes them there). The shear walls take every wind case."/>

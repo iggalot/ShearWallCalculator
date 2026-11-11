@@ -8,6 +8,32 @@ Status tags: `[ ]` not started, `[~]` in progress, `[x]` done.
 
 ## Next up
 
+- [~] **One look across the apps** (owner 2026-11-10/11: warnings and errors, and the buttons and toggles that do the same
+  job). Done 2026-11-11:
+  - The issues button (the owner's pick, from SWC) is the suite's: `BuildingModel.Sketch.IssuesButton`, at the right of
+    the top bar in the Building Model, the Load Manager, SWC and the Wind Load Calculator. Green "✓ No issues", amber
+    with warnings, red with errors (it flashes when they grow); a click drops the list down, a row goes to its level,
+    selects its members and zooms (in Wind, with no plan: the Building Model opens at the member, `--select`). The Load
+    Manager's list now has the model's warnings too, not only its errors.
+  - `IssueList`'s header says only what there is ("2 errors", not "2 errors, 0 warnings"); the shared error ink is red
+    (#B42318), not orange; the plan's status line says "Error: …" in it.
+  - Titles: "<project> * (view only) - <App>" everywhere (no ".bldg.json", a hyphen). "Open project…" in every File menu.
+    SWC's menus: File, Edit, View (as the others), "…" not "...", Exit shows Alt+F4.
+  - Load Manager: Ctrl+Shift+Z redoes (it undid); the level bar reads "Level", bottom up, no "Roof (roof)"; its model
+    error text no longer points at a menu it has not got.
+  Open:
+  - [ ] The hub: its error and warning pills and its problem lists clickable as the issues button's (each to its app at
+    the member); its "Fails" chip has no glyph.
+  - [ ] Wind: its Checks list does not tell errors from warnings ("! Check:" for both; reminders look the same).
+  - [ ] A Help menu (Open the log folder, About) in the Building Model, the Load Manager and Wind; "Reload the building"
+    in one place (File); Ctrl+N.
+  - [ ] The level bar: SWC's "LEVEL G 2 R" buttons vs the others' full names; the Load Manager's plan bar has no Snap,
+    Grid or Issues toggles; its "Show each wall's top load" is a side-panel check box where SWC's "Loads" is a bar button.
+  - [ ] Edit building / wind / loads: one label and one menu in each app (SWC has four ways to Edit building; the Load
+    Manager none).
+  - [ ] The status bars' fill and line colours (four different); one error red and one warning amber in every app's
+    own palette (SWC's `Controls.Ui`, the hub's, Wind's XAML), and NOT DESIGNED drawn the same everywhere.
+
 - [x] **The Ground plan shows what stands on it** (2026-11-06, BM 24fb4c4): the walls and columns whose base is the
   lowest level, drawn cut at their base (a double line). Select and edit only; no drawing on Ground (walls are drawn
   on the level they carry). It is a view only: the same objects, no copies, counted once by their story. Tied to the
