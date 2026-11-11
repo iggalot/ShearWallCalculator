@@ -483,6 +483,9 @@ Shown greyed as "coming" in the hub (`SuiteApps`, in `..\DesignHub\DesignHub.Cor
   labels each area's loads, the side panel lists the level's areas. Found on the way: two plates meeting on a wall took
   the larger strip, not the sum; now summed place by place. The rectangle tools in the Building Model also take a drag.
   `AreaUse_ByTheAreasName_ThenPickedByHand`, `Name_KeptByThePieces_JoinKeepsDifferentNamesApart`.
+  - [x] Joists run through areas framed the same way (2026-11-11, owner): a hallway named apart is no break in the floor;
+    the Load Manager's plate is the run, each use loading its own part of the span. `SameWayNeighbours_TheJoistsRunThrough`,
+    `AreaUse_AHallwayFramedTheSameWay_TheJoistsRunThrough`.
 - [x] **SWC's hold-down path sees only the shear parts as walls under a point** (found 2026-11-10 by the tutorial's
   stair framing). `DesignPass.TopDown` gives `LoadPathTrace.Land` the calculator's `_walls`: each declared wall's shear
   part only. A beam end carrying hold-downs on a plain wall, or on a shear wall past its shear part, is "nothing under it"
