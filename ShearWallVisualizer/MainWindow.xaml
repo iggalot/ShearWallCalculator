@@ -43,29 +43,31 @@
                 <Separator/>
                 <MenuItem Header="Plans: import or place them in the Building Model editor…" Click="EditBuilding_Click"/>
             </MenuItem>
-            <!-- File, Edit, then View: the order of every app in the suite -->
-            <MenuItem Header="_View">
-                <MenuItem Header="_Refresh" Click="Refresh_Click"/>
-                <MenuItem Header="3D _Wind View (window)" Click="Open3DWindWindow_Click"/>
-                <MenuItem Header="_Hold-down catalog (values used by the design)" Click="OpenHoldownCatalog_Click"/>
-            </MenuItem>
-            <MenuItem Header="_Model">
+            <!-- every app: File, Edit, its own menus (Building first), View, Help (owner 2026-11-11) -->
+            <MenuItem Header="_Building">
+                <MenuItem Header="_Edit building…" Click="EditBuilding_Click"
+                          ToolTip="Saves the project and opens it in the Building Model editor: the levels, size and roof are edited there. This window updates each time the editor saves."/>
+                <Separator/>
                 <MenuItem Header="_3D view of the building" Click="Show3D_Click"/>
                 <MenuItem Header="_Check the model (errors and warnings)" Click="CheckModel_Click"/>
-                <Separator/>
-                <MenuItem Header="_Edit building in the Building Model editor…" Click="EditBuilding_Click"
-                          ToolTip="Saves the project and opens it in the Building Model editor: the levels, size and roof are edited there. This window updates each time the editor saves."/>
             </MenuItem>
             <MenuItem Header="_Details">
                 <MenuItem Header="_Connection defaults (sheathing, nails, blocking)…" Click="ConnectionDefaults_Click"
                           ToolTip="The project's choices the connection details start from: the diaphragms' sheathing, nails and blocking, the upper sills' nail, the top plates' splice nail. Part of the connection details, not the building model."/>
             </MenuItem>
             <MenuItem Header="_Loads">
-                <MenuItem Header="_Open in the Load Manager…" Click="EditLoads_Click"
-                          ToolTip="The gravity loads, the wind uplift and the foundation (the gravity loads combined with these hold-down forces) are in the Load Manager. This app uses no gravity loads: it finds the hold-downs from the overturning alone."/>
+                <MenuItem Header="Edit _loads…" Click="EditLoads_Click"
+                          ToolTip="Opens the project in the Load Manager: the gravity loads, the wind uplift and the foundation (the gravity loads combined with these hold-down forces) are there. This app uses no gravity loads: it finds the hold-downs from the overturning alone."/>
+                <MenuItem Header="Edit _wind…" Click="EditWind_Click"
+                          ToolTip="Opens the project in the Wind Load Calculator, the one place the wind is set up; the walls take its wind cases when it saves."/>
+            </MenuItem>
+            <MenuItem Header="_View">
+                <MenuItem Header="_Refresh" Click="Refresh_Click"/>
+                <MenuItem Header="3D _Wind View (window)" Click="Open3DWindWindow_Click"/>
+                <MenuItem Header="_Hold-down catalog (values used by the design)" Click="OpenHoldownCatalog_Click"/>
             </MenuItem>
             <MenuItem Header="_Help">
-                <MenuItem Header="Open _log folder" Click="OpenLogFolder_Click"/>
+                <MenuItem Header="Open the _log folder" Click="OpenLogFolder_Click"/>
                 <MenuItem Header="_Two-face sheathing rule…" Click="TwoFaceRule_Click"/>
                 <MenuItem Header="_About" Click="About_Click"/>
             </MenuItem>

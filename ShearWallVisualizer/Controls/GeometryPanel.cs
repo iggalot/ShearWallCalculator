@@ -81,7 +81,7 @@ namespace ShearWallVisualizer.Controls
         /// </summary>
         public bool GeometryLocked { get; set; }
 
-        private const string LockedTip = "Drawn in the Building Model: move or resize it there (Model > Edit building).";
+        private const string LockedTip = "Drawn in the Building Model: move or resize it there (Building > Edit building).";
 
         /// <summary>A coordinate cell: a number to type in, or (the geometry locked) the value shown.</summary>
         private void Coordinate(UiTable t, int r, int c, double v, Func<double, bool> set, int key)
@@ -220,7 +220,7 @@ namespace ShearWallVisualizer.Controls
             tbWallsTitle.Text = $"Walls ({count})";
             if (count == 0)
             {
-                wallsHost.Children.Add(Ui.Banner(GeometryLocked ? "No walls on this level. They are drawn in the Building Model (Model > Edit building)." : "No walls yet. Pick Wall (L) on the toolbar and click each wall's two ends on the drawing.", warning: false));
+                wallsHost.Children.Add(Ui.Banner(GeometryLocked ? "No walls on this level. They are drawn in the Building Model (Building > Edit building)." : "No walls yet. Pick Wall (L) on the toolbar and click each wall's two ends on the drawing.", warning: false));
                 return;
             }
 
@@ -278,7 +278,7 @@ namespace ShearWallVisualizer.Controls
             tbDiaphragmsTitle.Text = $"Diaphragms ({count})";
             if (count == 0)
             {
-                diaphragmsHost.Children.Add(Ui.Banner(GeometryLocked ? "No diaphragm on this level. Floors and roofs are drawn in the Building Model (Model > Edit building)." : "No diaphragm yet. Pick Diaphragm (R) on the toolbar and click two opposite corners of the floor or roof.", warning: false));
+                diaphragmsHost.Children.Add(Ui.Banner(GeometryLocked ? "No diaphragm on this level. Floors and roofs are drawn in the Building Model (Building > Edit building)." : "No diaphragm yet. Pick Diaphragm (R) on the toolbar and click two opposite corners of the floor or roof.", warning: false));
                 return;
             }
 

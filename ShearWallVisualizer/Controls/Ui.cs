@@ -21,10 +21,10 @@ namespace ShearWallVisualizer.Controls
         // inks read these brushes: change a colour here only.
         public static readonly Brush Ink = Frozen("#0B0B0B"), InkSecondary = Frozen("#52514E"), InkMuted = Frozen("#7A7974"),
                                      Hairline = Frozen("#D5DAE1"), HeaderFill = Frozen("#EEF1F5"), Surface = Frozen("#F7F8FA"),
-                                     SelectedFill = Frozen("#E4EDFA"), PassInk = Frozen("#1E7B34"), FailInk = Frozen("#A50E1F"),
+                                     SelectedFill = Frozen("#E4EDFA"), PassInk = Frozen("#1E7B34"), FailInk = Frozen("#B42318"),
                                      PassFill = Frozen("#E6F4EA"), PassStripe = Frozen("#2E9E4F"), FailFill = Frozen("#FAD4D8"), CloseInk = Frozen("#6E5200"), CloseFill = Frozen("#FFF5C7"),
                                      FailStripe = Frozen("#C8102E"), CloseStripe = Frozen("#F2C200"), FailRowFill = Frozen("#FDEDEF"),
-                                     WarnInk = Frozen("#8A5300"), WarnFill = Frozen("#FDF3E1"), InfoFill = Frozen("#EEF4FC"), InfoLine = Frozen("#2A78D6");
+                                     WarnInk = Frozen("#8A5A00"), WarnFill = Frozen("#FDF3E1"), InfoFill = Frozen("#EEF4FC"), InfoLine = Frozen("#2A78D6");
 
         /// <summary>The mark of a design state: ✓ pass, ▲ close to the limit, ✗ fail.</summary>
         public static string Mark(ShearWallCalculator.Design.DesignState s) =>

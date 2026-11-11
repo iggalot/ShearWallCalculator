@@ -87,7 +87,7 @@
     `ModelFile.SaveOwnData`: it re-reads the file and replaces only those keys. It never writes the geometry, the wind or
     the loads. If the building changed meanwhile, the project is reloaded after the save.
   - **The geometry is the Building Model's.** `Sketch.GeometryLocked` is on and the drawing tools are hidden. Move,
-    copy, delete, notes, cuts and copying a level are done there (Model > Edit building).
+    copy, delete, notes, cuts and copying a level are done there (Building > Edit building).
   - **The wind page is read-only** (`WindSetupControl.ReadOnly`, under a bar with **Edit wind**). It shows the
     wind calculator's Results page only (read-only stays on Results: no input pages). SWC opens on the wind when the
     project has no current wind (`WindCheck`: none, or it cannot be calculated), else on the shear walls (`OpenOnWorkspace`). Edit wind opens

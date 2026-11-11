@@ -78,7 +78,7 @@ namespace ShearWallVisualizer
             Sketch.ShowWallLabels = false; // a wall picked on the plan opens its card (name, length and the rest)
             Sketch.ShowShearParts = false; // this app draws its shear walls itself (WallStyle), live, with their checks
             foreach (var t in new[] { SketchTool.Calibrate, SketchTool.PlanStraighten, SketchTool.PlanMove }) sketchView.HideTool(t);
-            // The building is drawn and changed only in the Building Model (Model > Edit building): here it is shown and
+            // The building is drawn and changed only in the Building Model (Building > Edit building): here it is shown and
             // designed. The drawing tools are hidden, and any edit that would move, add or delete something is put back.
             // A wall's design is data on the wall, so it still changes (and is what this app saves).
             foreach (var t in new[] { SketchTool.Wall, SketchTool.Diaphragm, SketchTool.Opening, SketchTool.Note, SketchTool.Move, SketchTool.Copy,
@@ -86,7 +86,7 @@ namespace ShearWallVisualizer
                 sketchView.HideTool(t);
             Sketch.GeometryLocked = true;
             Sketch.EditRefused += (o, e) => ViewOnlyEditRefused(); // view only: a card's or a tab's change put back in the calculators too
-            Sketch.GeometryLockedMessage = "The building is drawn and changed in the Building Model: Model > Edit building opens it on this project.";
+            Sketch.GeometryLockedMessage = "The building is drawn and changed in the Building Model: Building > Edit building opens it on this project.";
             var s = Sketch;
             s.DrawOver += (o, e) =>
             {
