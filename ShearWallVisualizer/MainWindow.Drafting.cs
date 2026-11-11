@@ -268,7 +268,8 @@ namespace ShearWallVisualizer
         /// </summary>
         private void PlaceSelectionCard() => Dispatcher.BeginInvoke(new Action(() =>
         {
-            if (selectionCard.Visibility != Visibility.Visible || Sketch == null || building == null || !(selectionCard.Parent is FrameworkElement host)) return;
+            if (selectionCard.Visibility != Visibility.Visible || Sketch == null || building == null || dockpanel == null) return;
+            FrameworkElement host = dockpanel; // the card's cell: the plan's column (its parent grid spans the data panel too)
             var marks = new List<Point>();
             // the sketch's selection, and the card's own member (after a declare the card shows it with the sketch's selection gone)
             var ids = Sketch.Selection.ToList();

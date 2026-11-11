@@ -443,8 +443,8 @@ Shown greyed as "coming" in the hub (`SuiteApps`, in `..\DesignHub\DesignHub.Cor
   - **Make it a shear wall** (and picking a wall upstairs just after) opens the construction window even with "Open when
     a wall, beam or column is picked" cleared.
     **Done 2026-11-11 (this commit):** not the setting: the card sat over the north wall, so the next click hit the card's
-    Detail button. The card now goes to a corner clear of the picked members and its own (`PlaceSelectionCard`); the
-    tutorial's chapter 6 is to be run again to see it.
+    Detail button. The card now goes to a corner clear of the picked members and its own (`PlaceSelectionCard`), measured in
+    the plan's own column (the window grid spans the data panel too). Tutorial chapter 6 shows it at the bottom right.
   - The Building Model's DXF underlay draws the lines and arcs only: a plan's TEXT (room names, labels) is not drawn.
     **Done 2026-11-11 (BuildingModel 2a9741c):** TEXT and MTEXT are read (`DxfText`, MTEXT's formatting stripped, `PlainMText`)
     and drawn with the plan, turned and aligned, left out under 4 pixels high. `DxfReaderTests`.
