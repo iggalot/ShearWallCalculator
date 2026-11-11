@@ -435,18 +435,29 @@ Shown greyed as "coming" in the hub (`SuiteApps`, in `..\DesignHub\DesignHub.Cor
 ## Shear Wall Calculator
 
 - [ ] The next pass on the Shear Wall Calculator (scope to be agreed).
-- [ ] Found while making the tutorials (2026-11-10):
+- [x] Found while making the tutorials (2026-11-10):
   - The Calculations tab's hint still says "Draw the shear walls: click Wall, then click each wall's start and end"; the
     geometry is the Building Model's now, so it should say to pick a wall and **Make it a shear wall**.
+    **Done 2026-11-11 (this commit):** it says to pick a wall and click Make it a shear wall on its card, and that the
+    diaphragm is drawn in the Building Model.
   - **Make it a shear wall** (and picking a wall upstairs just after) opens the construction window even with "Open when
     a wall, beam or column is picked" cleared.
+    **Done 2026-11-11 (this commit):** not the setting: the card sat over the north wall, so the next click hit the card's
+    Detail button. The card now goes to a corner clear of the picked members and its own (`PlaceSelectionCard`); the
+    tutorial's chapter 6 is to be run again to see it.
   - The Building Model's DXF underlay draws the lines and arcs only: a plan's TEXT (room names, labels) is not drawn.
+    **Done 2026-11-11 (BuildingModel 2a9741c):** TEXT and MTEXT are read (`DxfText`, MTEXT's formatting stripped, `PlainMText`)
+    and drawn with the plan, turned and aligned, left out under 4 pixels high. `DxfReaderTests`.
   - A roof (or floor) nailing the SDPWS 4.2 tables do not have (10d with 7/16" roof sheathing, blocked) shows on a wall's
     Pieces tab as "Nailing (not designed): 0.0 plf ≥ 63.4 plf (0.00)": it reads like a pass. It should say NOT DESIGNED in
     red everywhere (and be an issue), and Connection defaults could warn when the nail and panel do not go together.
+    **Done 2026-11-11 (this commit, DesignHub, WoodFraming f056254):** NOT DESIGNED in red on the Pieces tab, an error on the
+    issues button (`DiaphragmNotDesigned`), a failure of the headless check (`ShearWallCheck.DiaphragmFailures`, the hub
+    says Fails), and Connection defaults warns in amber as the nail or panel is picked (`DiaphragmLines.DefaultsCheck`).
   - The construction window's chord table ("Diaphragm chord (at the top)": Span, Moment, Chord force, Chord, Field nailing
     zones) lays out badly: the auto-width columns take the width, the last (star) column gets almost none, its text wraps a
     letter a line and the row grows very tall (`WallBuildWindow.Table`).
+    **Done 2026-11-11 (this commit):** a column with long text takes a star share by its length, the rest Auto.
   - After File > Save (shear parts set, two posts added in the Building Model), the plan's hold-down labels still say
     "(out of date)" and the construction window says "The lateral design is out of date: W1 east end: wall W1 has moved
     (13.5 ft from its end)". W1's shear part is 0 to 14 of its 60 ft. Cause: `LateralSection.Stale` (BuildingModel.Core)
@@ -491,8 +502,13 @@ Shown greyed as "coming" in the hub (`SuiteApps`, in `..\DesignHub\DesignHub.Cor
     the Load Manager; in SWC a support partway along is a hold-down point of its own ("beam BM1 at 12 ft"), a cantilever's
     tip has none. `BeamStaticsTests`, `BeamSupportTests`, `LoadPathTests`, DesignHub
     `AWallOnACantilever_TheBackSpanHoldsIt_EveryMemberBalances`.
-  - [ ] A wall along the joists gets no strip (only beams do): the rim or edge joist's half spacing over it stays with the
+  - [x] A wall along the joists gets no strip (only beams do): the rim or edge joist's half spacing over it stays with the
     walls across the framing. Small; the owner to say if it matters.
+    **Done 2026-11-11 (LoadManager af0b1a0; owner 2026-11-11: every line along the framing, wall or beam, takes half a spacing
+    each side, an edge wall its edge joist or rafter):** walls along the framing take their strips, the walls across
+    lose them. No area load is dropped: a row with no wall or beam across it goes to the nearest one along. Each
+    diaphragm's area is accounted for (`AreaCheck`): its area load against what its walls and beams carry, within 0.5%,
+    else an error in the Load Manager, its issues and the hub. `AreaAccountTests`.
 - [x] **Joists turned in parts of a floor: framing areas** (2026-11-10, BuildingModel and LoadManager, this commit; owner:
   no span on the diaphragm with overrides on it). Each diaphragm is covered exactly by rectangles, each with its joists'
   way (`FramingArea`, format 8); a part turned cuts the areas round it back, so a long joist becomes two ending at it.

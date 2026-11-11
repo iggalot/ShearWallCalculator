@@ -61,7 +61,9 @@
     Each diaphragm's lines of shear walls are designed by the line shear, v = R / the diaphragm's depth along the line
     (owner 2026-11-07), with the boundary nailing (`Design/DiaphragmNailing.cs`: SDPWS-2015 Tables 4.2A and 4.2C, the
     `Table4_2Manager` and `Table4_2CManager` data) and the top plates as collectors (`WoodFraming.TopPlateCollector`):
-    `DiaphragmLines.Design`, saved as `Connections.DiaphragmLines`. Its chords: simple spans between the lines, M = w L² / 8 (a
+    `DiaphragmLines.Design`, saved as `Connections.DiaphragmLines`. A nailing the tables do not have is NOT DESIGNED: red on
+    the Pieces tab, an issue (`DiaphragmNotDesigned`), a failure of `Run` (`ShearWallCheck.DiaphragmFailures`), and
+    Connection defaults warns as it is picked (`DiaphragmLines.DefaultsCheck`, the window's `Check`). Its chords: simple spans between the lines, M = w L² / 8 (a
     cantilever w a² / 2), T = M / d, the edge walls' top plates, else the floor's rim or the roof's continuous blocking (owner 2026-11-08/09;
     `DiaphragmLines.Chords`, `Connections.Chords`), with two field nailing zones per span (the line's nailing out to where
     the shear is under the lightest row's, owner 2026-11-09). A roof line past its walls: the roof's blocking

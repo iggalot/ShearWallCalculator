@@ -25,6 +25,27 @@ namespace ShearWallCalculator.ModelAdapter
         /// <summary>Parallel walls this close across (ft) are on one line: the app's, for walls drawn a little off a common line.</summary>
         public const double LineTolerance = 0.5;
 
+        /// <summary>
+        /// Whether the connection defaults' floor and roof sheathing and nails are in SDPWS Tables 4.2A and 4.2C together (for
+        /// Details > Connection defaults, as the choices change): null when both are, else what is not, in a sentence. The
+        /// framing's species as the design takes it (footnote 2).
+        /// </summary>
+        public static string DefaultsCheck(Building b, ConnectionDefaults cd)
+        {
+            if (cd == null) return null;
+            var def = b?.Defaults ?? new ModelDefaults();
+            var species = Enum.TryParse(def.StudSpecies, out Species sp) ? sp : Species.DouglasFirLarch;
+            double sg = DiaphragmNailing.SpecificGravityFactor(SpeciesInfo.SpecificGravity(species), species == Species.DouglasFirLarch || species == Species.SouthernPine);
+            string One(string what, string nail, double t, bool blocked)
+            {
+                var n = DiaphragmNailing.Design(0, cd.StructuralI, nail, t, cd.DiaphragmFramingWidth, blocked, sg);
+                return n.Fails == null ? null : $"{what}: {n.Fails}";
+            }
+            var bad = new[] { One("The floors", cd.FloorNail, cd.FloorSheathing, cd.FloorBlocked), One("The roof", cd.RoofNail, cd.RoofSheathing, cd.RoofBlocked) }
+                      .Where(x => x != null).ToList();
+            return bad.Count == 0 ? null : string.Join(" ", bad) + " Its lines of shear walls will say NOT DESIGNED.";
+        }
+
         public static List<DiaphragmLine> Design(Building b, LateralSection s, ConnectionDefaults connections = null)
         {
             var list = new List<DiaphragmLine>();

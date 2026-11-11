@@ -573,8 +573,12 @@ namespace ShearWallVisualizer.Dialogs
         private static void DiaphragmLineSection(Panel p, WoodFraming.Connections.DiaphragmLine l, bool under = false)
         {
             string collector = l.StrapLb > 0 ? (l.Roof ? "the roof's blocking" : "the floor's rim") : "the top plates";
+            // not designed (a nailing the SDPWS tables do not have) or failing: said so in red, never a ratio that reads as a pass
+            bool designed = l.BoundaryIn > 0 && l.AllowablePlf > 0, holds = designed && l.AllowablePlf >= l.ShearAsdPlf - 1e-9;
             Section(p, under ? "The floor under it along its line: boundary nailing and collector" : "Diaphragm boundary nailing and collector (at the top)",
-                    l.Fails ?? $"{l.Nailing}; {collector} a collector of {l.CollectorLb:0} lb" + (l.StrapLb > 0 ? (l.Roof ? $", a strap across every blocking joint for {l.StrapLb:0} lb." : $", a strap across each rim splice for {l.StrapLb:0} lb.") : "."));
+                    !designed ? "NOT DESIGNED: " + (l.Fails ?? "no nailing found for this sheathing and nail.") + " Change them in Details > Connection defaults."
+                    : l.Fails ?? $"{l.Nailing}; {collector} a collector of {l.CollectorLb:0} lb" + (l.StrapLb > 0 ? (l.Roof ? $", a strap across every blocking joint for {l.StrapLb:0} lb." : $", a strap across each rim splice for {l.StrapLb:0} lb.") : "."));
+            if (!designed || l.Fails != null) { var t = (TextBlock)p.Children[p.Children.Count - 1]; t.Foreground = Ui.FailInk; t.FontWeight = FontWeights.SemiBold; }
             if (l.DepthFt <= 0) return;
             int walls = l.WallIds?.Count ?? 0;
             p.Children.Add(Table(new[] { "Check (ASD)", "Value" }, new List<string[]>
@@ -582,7 +586,8 @@ namespace ShearWallVisualizer.Dialogs
                 new[] { "Line", $"{(l.Roof ? "The roof" : "The floor")} along this wall's line: {walls} shear wall{(walls == 1 ? "" : "s")} on it (under it, and standing on it), the diaphragm {l.DepthFt:0.##} ft deep along it" },
                 new[] { "Unit shear", $"v = R / depth, R the walls' shear on the line per wind case (the rigid and flexible runs each); worst 0.6 × {l.ShearAsdPlf / 0.6:0.0} = {l.ShearAsdPlf:0.0} plf" },
                 new[] { "Sheathing", $"{l.Sheathing}; {(l.Blocked ? "blocked (SDPWS Table 4.2A)" : "unblocked (SDPWS Table 4.2C, Cases 2-6: the panel layout is not in the model)")}" },
-                new[] { "Nailing", $"{l.Nailing}: {l.AllowablePlf:0.0} plf ≥ {l.ShearAsdPlf:0.0} plf ({(l.AllowablePlf > 0 ? l.ShearAsdPlf / l.AllowablePlf : 0):0.00})" + (l.Note != null ? $". {l.Note}" : "") },
+                new[] { "Nailing", !designed ? $"NOT DESIGNED: {l.Fails ?? "no nailing found"} (the shear is {l.ShearAsdPlf:0.0} plf)"
+                                   : $"{l.Nailing}: {l.AllowablePlf:0.0} plf {(holds ? "≥" : "<")} {l.ShearAsdPlf:0.0} plf ({l.ShearAsdPlf / l.AllowablePlf:0.00}){(holds ? "" : ": FAILS")}" + (l.Note != null ? $". {l.Note}" : "") },
                 new[] { "Collector", $"{l.CollectorLb:0} lb at {l.CollectorAtFt:0.##} ft from the line's west or south end: the diaphragm's even delivery less the walls' shear parts. {l.Collector}" },
             }));
             var src = new Expander { Header = "Sources (quoted)", IsExpanded = false, Margin = new Thickness(0, 4, 0, 0) };
@@ -659,8 +664,17 @@ namespace ShearWallVisualizer.Dialogs
         internal static FrameworkElement Table(string[] head, List<string[]> rows)
         {
             var g = new Grid { Margin = new Thickness(0, 2, 0, 2) };
+            // short columns (numbers, names) as wide as they need; long ones share the rest by how much they hold, and wrap (an
+            // auto column never wraps: a long one took the width and left the last a letter a line, tutorials 2026-11-10)
+            int Longest(int c) => Math.Max(head[c]?.Length ?? 0, rows.Select(r => c < r.Length ? r[c]?.Length ?? 0 : 0).DefaultIfEmpty(0).Max());
+            var longCols = Enumerable.Range(0, head.Length).Where(c => Longest(c) > 28).ToList();
+            if (longCols.Count == 0) longCols.Add(head.Length - 1);
             for (int c = 0; c < head.Length; c++)
-                g.ColumnDefinitions.Add(new ColumnDefinition { Width = c == head.Length - 1 ? new GridLength(1, GridUnitType.Star) : GridLength.Auto });
+                g.ColumnDefinitions.Add(new ColumnDefinition
+                {
+                    Width = longCols.Contains(c) ? new GridLength(Math.Min(80, Math.Max(10, Longest(c))), GridUnitType.Star) : GridLength.Auto,
+                    MinWidth = longCols.Contains(c) ? 90 : 0,
+                });
             void Cell(string text, int row, int col, bool bold)
             {
                 var t = new TextBlock { Text = text ?? "", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(4, 2, 12, 2), FontWeight = bold ? FontWeights.SemiBold : FontWeights.Normal, Foreground = bold ? Ui.InkSecondary : Ui.Ink };

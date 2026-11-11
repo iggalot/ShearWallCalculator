@@ -57,7 +57,7 @@ namespace ShearWallVisualizer
         {
             if (building == null || RefusedViewOnly("the connection defaults are not changed from here")) return;
             var now = WoodFraming.Connections.ConnectionDefaults.Read(building);
-            var d = WoodFraming.Wpf.ConnectionDefaultsWindow.Edit(this, now);
+            var d = WoodFraming.Wpf.ConnectionDefaultsWindow.Edit(this, now, x => DiaphragmLines.DefaultsCheck(building, x));
             if (d == null || d.ToJson() == now.ToJson()) return;
             Sketch.Edit("Connection defaults changed: the sills above the first story and the diaphragm lines are designed with them.",
                 b => WoodFraming.Connections.ConnectionDefaults.Write(b, d));

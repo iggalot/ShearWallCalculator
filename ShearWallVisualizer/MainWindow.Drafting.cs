@@ -261,6 +261,46 @@ namespace ShearWallVisualizer
             ShowStatusMessage(LogLevel.Info, $"{modelId}: {Sketch.GeometryLockedMessage}");
         }
 
+        /// <summary>
+        /// The card keeps clear of what it describes (a second click on the wall must not land on the card's buttons): the top
+        /// right of the plan, else the bottom right, else the top left, the first that does not cover the picked walls, beams
+        /// and columns. Measured after the layout, so it runs at Loaded priority.
+        /// </summary>
+        private void PlaceSelectionCard() => Dispatcher.BeginInvoke(new Action(() =>
+        {
+            if (selectionCard.Visibility != Visibility.Visible || Sketch == null || building == null || !(selectionCard.Parent is FrameworkElement host)) return;
+            var marks = new List<Point>();
+            // the sketch's selection, and the card's own member (after a declare the card shows it with the sketch's selection gone)
+            var ids = Sketch.Selection.ToList();
+            if (selectedModelId != null) ids.Add(selectedModelId);
+            if (selectedId >= 0 && selectedKind != null && CurrentStory?.ModelId(selectedKind, selectedId) is string own) ids.Add(own);
+            foreach (var o in ids.Distinct().Select(building.Find))
+            {
+                if (o is Wall w) { marks.Add(Sketch.ToScreen(w.Start)); marks.Add(Sketch.ToScreen(w.End)); }
+                else if (o is Beam m) { marks.Add(Sketch.ToScreen(m.Start)); marks.Add(Sketch.ToScreen(m.End)); }
+                else if (o is Column c) marks.Add(Sketch.ToScreen(c.At));
+            }
+            var tops = new[] { (HorizontalAlignment.Right, VerticalAlignment.Top, new Thickness(0, 48, 8, 0)),
+                               (HorizontalAlignment.Right, VerticalAlignment.Bottom, new Thickness(0, 0, 8, 48)),
+                               (HorizontalAlignment.Left, VerticalAlignment.Top, new Thickness(64, 48, 0, 0)) };
+            var pick = tops[0];
+            if (marks.Count > 0)
+            {
+                var pts = marks.Select(p => Sketch.TranslatePoint(p, host)).ToList();
+                var mine = new Rect(new Point(pts.Min(p => p.X), pts.Min(p => p.Y)), new Point(pts.Max(p => p.X), pts.Max(p => p.Y)));
+                mine.Inflate(16, 16);
+                selectionCard.UpdateLayout(); // its size for what it shows now
+                double cw = selectionCard.ActualWidth, ch = selectionCard.ActualHeight, hw = host.ActualWidth, hh = host.ActualHeight;
+                Rect At((HorizontalAlignment h, VerticalAlignment v, Thickness m) t) => new Rect(
+                    t.h == HorizontalAlignment.Right ? hw - t.m.Right - cw : t.m.Left, t.v == VerticalAlignment.Bottom ? hh - t.m.Bottom - ch : t.m.Top, cw, ch);
+                int k = Array.FindIndex(tops, t => !At(t).IntersectsWith(mine));
+                pick = tops[k < 0 ? 0 : k];
+            }
+            selectionCard.HorizontalAlignment = pick.Item1;
+            selectionCard.VerticalAlignment = pick.Item2;
+            selectionCard.Margin = pick.Item3;
+        }), System.Windows.Threading.DispatcherPriority.Loaded);
+
         // ------------------------------------------------------------------ selection: model IDs ↔ calculator keys
 
         /// <summary>The sketch's selection drives the selection card and the tables (one wall or diaphragm).</summary>
@@ -498,6 +538,28 @@ namespace ShearWallVisualizer
         /// <summary>The issues shown on the plan and in the issue list: the model checks, then the design of each wall.</summary>
         private List<ModelIssue> issues = new List<ModelIssue>();
 
+        /// <summary>
+        /// The diaphragms' lines and chords not designed or failing (a nailing the SDPWS tables do not have, a splice with no
+        /// strap): errors, as the headless check has them (<see cref="ShearWallCheck.DiaphragmFailures"/>), at the line's first wall.
+        /// </summary>
+        private void AddDiaphragmIssues(List<ModelIssue> list)
+        {
+            try
+            {
+                var designed = ShearWallCheck.Lateral(levels, stories, allDesignResults, foundationAnchors, 0, loadPath?.ByLevel, building?.Ground?.Id);
+                if (designed == null) return;
+                var joints = ShearWallCheck.Connections(levels, stories, allDesignResults, building, designed, 0);
+                foreach (var f in ShearWallCheck.DiaphragmFailures(building, joints))
+                {
+                    var w = f.Id == null ? null : building.Find(f.Id) as Wall;
+                    var issue = new ModelIssue { Severity = Severity.Error, Code = "DiaphragmNotDesigned", Message = f.Message, LevelId = f.LevelId };
+                    if (w != null) { issue.Ids.Add(w.Id); issue.At = w.Middle; }
+                    list.Add(issue);
+                }
+            }
+            catch (Exception ex) { Log.Warning("Issues", "The diaphragms' lines could not be checked.", ex); }
+        }
+
         /// <summary>Model checks (overlaps, walls no diaphragm reaches, bad references...) and failing walls, as markers on the plan.</summary>
         private void UpdateIssues()
         {
@@ -515,6 +577,7 @@ namespace ShearWallVisualizer
                 }
                 AddLandingIssues(list);
                 AddOffFloorIssues(list);
+                AddDiaphragmIssues(list);
                 if (Calculator != null && !Calculator.IsValidForCalculation && (s.Walls.Count > 0 || s.Diaphragms.Count > 0))
                     list.Add(new ModelIssue { Severity = Severity.Warning, Code = "NotCalculated", Message = $"{s.Level.Name} cannot be calculated yet: " + (CalculationTodo() ?? "check the walls and diaphragm."), LevelId = s.Level.Id });
             }

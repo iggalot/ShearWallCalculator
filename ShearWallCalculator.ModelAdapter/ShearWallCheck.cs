@@ -201,7 +201,43 @@ namespace ShearWallCalculator.ModelAdapter
             result.Lateral = Lateral(levels, stories, byStory, anchors, 0, trace.ByLevel, b.Ground?.Id);
             if (result.Lateral != null) result.Lateral.BasedOn = InputsNow(building);
             result.Connections = Connections(levels, stories, byStory, b, result.Lateral, 0);
+            result.Failures.AddRange(DiaphragmFailures(b, result.Connections));
             return result;
+        }
+
+        /// <summary>
+        /// The diaphragms' lines of shear walls and chords that are not designed or do not work (owner 2026-11-09: never leave
+        /// it to someone to know it needs designing): a nailing the SDPWS tables do not have for the sheathing and nail of the
+        /// connection defaults, a collector or a chord with no splice strong enough. Each a failure, as a wall's is: the issues
+        /// list, the hub. One routine for the window and the headless check.
+        /// </summary>
+        public static List<CheckFailure> DiaphragmFailures(Building b, ConnectionsSection c)
+        {
+            var list = new List<CheckFailure>();
+            if (c == null) return list;
+            string Walls(List<string> ids) => ids == null || ids.Count == 0 ? "" : $" ({string.Join(", ", ids)})";
+            foreach (var l in c.DiaphragmLines ?? new List<WoodFraming.Connections.DiaphragmLine>())
+            {
+                if (l.Fails == null && l.BoundaryIn > 0) continue;
+                var lv = b?.Level(l.LevelId);
+                list.Add(new CheckFailure
+                {
+                    Id = l.WallIds?.FirstOrDefault(), LevelId = l.LevelId, LevelName = lv?.Name,
+                    Message = $"The {(l.Roof ? "roof" : "floor")} at {lv?.Name} along its line of shear walls{Walls(l.WallIds)}: boundary nailing NOT DESIGNED: " +
+                              (l.Fails ?? "no nailing found.") + " Change the sheathing or nail in Details > Connection defaults.",
+                });
+            }
+            foreach (var ch in c.Chords ?? new List<WoodFraming.Connections.DiaphragmChord>())
+            {
+                if (ch.Fails == null) continue;
+                var lv = b?.Level(ch.LevelId);
+                list.Add(new CheckFailure
+                {
+                    Id = ch.WallIds?.FirstOrDefault(), LevelId = ch.LevelId, LevelName = lv?.Name,
+                    Message = $"The {(ch.Roof ? "roof" : "floor")} chord at {lv?.Name} ({ch.FromFt:0.##} to {ch.ToFt:0.##} ft){Walls(ch.WallIds)}: {ch.Fails}",
+                });
+            }
+            return list;
         }
 
         /// <summary>

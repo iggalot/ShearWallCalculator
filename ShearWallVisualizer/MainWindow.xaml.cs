@@ -206,6 +206,7 @@ namespace ShearWallVisualizer
                 resultsPanel?.Show(Calculator, CalculationTodo(), selectedKind == "Wall" ? selectedId : -1);
                 if (selectionCardOpen && (selectedKind == "Beam" || selectedKind == "Column" || selectedKind == PlainWallKind || selectedKind == MultiWallKind)) ShowMemberCard();
                 else selectionCard.Show(Calculator, selectionCardOpen ? selectedKind : null, selectedId, designResults);
+                PlaceSelectionCard(); // clear of the picked member, so a second click on it is not a click on the card
                 RefreshWallBuild(); // the wall construction window follows the selected wall and its design
 
                 // notify controls that we have updated
@@ -447,10 +448,9 @@ namespace ShearWallVisualizer
         }
 
         /// <summary>
-        /// Calculations tab: only the table for this calculator type, and until there is something to
-        /// calculate, a note saying what to draw (the tables used to stay empty with no explanation).
+        /// Calculations tab: what to do next before the walls can be calculated, or null when they can (the tables used to stay
+        /// empty with no explanation). The geometry is the Building Model's; the shear walls are declared here.
         /// </summary>
-        /// <summary>What to draw next before the walls can be calculated, or null when they can.</summary>
         private string CalculationTodo()
         {
             int walls = Calculator._wall_system?._walls?.Count ?? 0;
@@ -460,12 +460,12 @@ namespace ShearWallVisualizer
             string todo = ModelErrorTodo(); // no project, or a model with errors: nothing is designed
             if (todo != null) { }
             else if (diaphragms == 0)
-                todo = "Draw the floor or roof (diaphragm): click Diaphragm, then click two opposite corners on the drawing.";
+                todo = "This level has no floor or roof (diaphragm). It is drawn in the Building Model: Building > Edit building.";
             else if (xWalls == 0 || yWalls == 0)
-                todo = $"Draw the shear walls: click Wall, then click each wall's start and end. You need walls in both directions, usually two or more each way " +
-                       $"(now {xWalls} running W-E and {yWalls} running S-N).";
+                todo = $"Declare the shear walls: pick a wall on the plan and click Make it a shear wall on its card (Shift+click several for one card). " +
+                       $"You need shear walls both ways, usually two or more each way (now {xWalls} running W-E and {yWalls} running S-N).";
             else if (Calculator.IsValidForCalculation != true)
-                todo = "The walls and diaphragm cannot be calculated yet. Check that the walls sit inside the diaphragm.";
+                todo = "The shear walls and the diaphragm cannot be calculated yet. Check that the shear walls sit inside the diaphragm.";
             return todo;
         }
 
