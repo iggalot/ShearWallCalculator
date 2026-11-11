@@ -457,8 +457,30 @@ Shown greyed as "coming" in the hub (`SuiteApps`, in `..\DesignHub\DesignHub.Cor
     continuous beam, EI constant (owner); fewer than two it cannot stand (said so). A back support pulled up is said so in
     the Load Manager; in SWC a support partway along is a hold-down point of its own ("beam BM1 at 12 ft"), a cantilever's
     tip has none. `BeamStaticsTests`, `BeamSupportTests`, `LoadPathTests`, DesignHub
-    `AWallOnACantilever_TheBackSpanHoldsIt_EveryMemberBalances`.  - [ ] A wall along the joists gets no strip (only beams do): the rim or edge joist's half spacing over it stays with the
+    `AWallOnACantilever_TheBackSpanHoldsIt_EveryMemberBalances`.
+  - [ ] A wall along the joists gets no strip (only beams do): the rim or edge joist's half spacing over it stays with the
     walls across the framing. Small; the owner to say if it matters.
+- [x] **Joists turned in parts of a floor: framing areas** (2026-11-10, BuildingModel and LoadManager, this commit; owner:
+  no span on the diaphragm with overrides on it). Each diaphragm is covered exactly by rectangles, each with its joists'
+  way (`FramingArea`, format 8); a part turned cuts the areas round it back, so a long joist becomes two ending at it.
+  Joists are laid out from them and each needs two supports (walls, columns, beams, girders; `JoistNotHeldUp`, nothing
+  calculated); girders are found from what lands on them (`FramingRoles`). The Load Manager's plates are the areas.
+  `FramingAreaTests`. Open:
+  - [ ] Polygons for the areas' borders (owner: rectangles are enough for testing; polygons better in the end).
+  - [ ] The Load Manager takes each joist's own reactions (now each area is a plate with tributary strips: the same for
+    uniform loads; a joist's own free body for point loads on it and continuous joists).
+  - [ ] SWC's diaphragm checks with framing that runs both ways (the SDPWS load case and the blocking per area; the worst
+    case on each line to start).
+  - [ ] Joist sizes and their design in WoodFraming (the model keeps the geometry and the way only, no god class);
+    doubled joists, trimmers and headers at openings (headers and trimmers are beams now: an opening's tail joists
+    need them drawn).
+  - [ ] Drawing the joists for the framing plan and the takeoff (they are drawn on the plan now, thin; no schedule yet).
+- [ ] **SWC's hold-down path sees only the shear parts as walls under a point** (found 2026-11-10 by the tutorial's
+  stair framing). `DesignPass.TopDown` gives `LoadPathTrace.Land` the calculator's `_walls`: each declared wall's shear
+  part only. A beam end carrying hold-downs on a plain wall, or on a shear wall past its shear part, is "nothing under it"
+  (the example: trimmer BM3's north end at x = 50 on the north wall, whose shear part is 0–36 ft; W6's hold-down on BM3).
+  The Load Manager's gravity path already takes every wall as a support. Owner to say how the uplift goes down a plain
+  wall (a post or strap in it down to what is under it, as a column; or an error).
 
 ## Wind Load Calculator
 
