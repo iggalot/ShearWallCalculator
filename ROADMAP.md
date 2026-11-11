@@ -475,6 +475,14 @@ Shown greyed as "coming" in the hub (`SuiteApps`, in `..\DesignHub\DesignHub.Cor
     doubled joists, trimmers and headers at openings (headers and trimmers are beams now: an opening's tail joists
     need them drawn).
   - [ ] Drawing the joists for the framing plan and the takeoff (they are drawn on the plan now, thin; no schedule yet).
+- [x] **Framing areas' loads by their use** (2026-11-10, BuildingModel, LoadManager, this commit; owner: the areas often
+  are the load areas, hallways, balconies, and setting 90 of them one by one would be a nuisance). An area may be named in
+  the Building Model (`FramingArea.Name`; several picked: one name for all). The Load Manager's uses are entered once
+  (Floor and roof loads > Area uses: a name and D, L, Lr, S); each area takes the use picked for it on the Loads plan
+  (click it, Shift+click several), else the use its name gives, else the level's loads; a zone still wins. The plan
+  labels each area's loads, the side panel lists the level's areas. Found on the way: two plates meeting on a wall took
+  the larger strip, not the sum; now summed place by place. The rectangle tools in the Building Model also take a drag.
+  `AreaUse_ByTheAreasName_ThenPickedByHand`, `Name_KeptByThePieces_JoinKeepsDifferentNamesApart`.
 - [x] **SWC's hold-down path sees only the shear parts as walls under a point** (found 2026-11-10 by the tutorial's
   stair framing). `DesignPass.TopDown` gives `LoadPathTrace.Land` the calculator's `_walls`: each declared wall's shear
   part only. A beam end carrying hold-downs on a plain wall, or on a shear wall past its shear part, is "nothing under it"
