@@ -305,6 +305,48 @@ namespace ShearWallCalculator.Tests
             Assert.AreEqual("HDU_ToFoundation:2400", b.Model, "the column base anchor sized for what the column carries");
         }
 
+        /// <summary>
+        /// The tutorial's stair trimmer: a beam (x = 12, y 0 to 20) on the S and N walls, which are shear walls only from x = 0
+        /// to 6 (their shear parts), with a wall on the beam. Its ends are on the plain parts of the walls: each goes down a
+        /// post in the wall (owner 2026-11-10: as a column) to the foundation, anchored there for its reaction. Nothing is
+        /// "on nothing".
+        /// </summary>
+        [TestMethod]
+        public void ABeamEnd_OnAPlainWall_GoesDownAPostInIt_ToTheFoundation()
+        {
+            var shearParts = new Dictionary<int, WallData> { [13] = new WallData(9, 0, 0, 6, 0), [14] = new WallData(9, 0, 20, 6, 20) };
+            var walls = new[]
+            {
+                new FramingWall { Id = "W1", Start = new Point(0, 0), End = new Point(20, 0), Story = 0 },
+                new FramingWall { Id = "W2", Start = new Point(0, 20), End = new Point(20, 20), Story = 0 },
+            };
+            var upper = new Dictionary<int, WallData> { [1] = new WallData(9, 12, 4, 12, 14) }; // N-S, along the beam
+            var design = new Dictionary<int, WallDesignResult> { [1] = new WallDesignResult { TensionAsd = 1000, TensionLrfd = 1667 } };
+            var beam = new FramingBeam { Id = "BM3", Start = new Point(12, 0), End = new Point(12, 20), OnStory = 0 };
+            var trace = new LoadPathTrace(new[] { beam }, null, Size, walls);
+            trace.Land(1, upper, design, shearParts);
+
+            var r = trace.Beams.Single();
+            Assert.IsTrue(r.Stands, "held by the two walls at its ends, plain parts though they are");
+            var on = trace.ByLevel[0];
+            Assert.IsFalse(on.Any(x => !x.Supported), "everything lands on something");
+            var start = on.Single(x => x.From == "beam BM3 start");
+            Assert.AreEqual(SupportKind.Wall, start.Support);
+            Assert.AreEqual("wall W1", start.SupportId);
+            Assert.IsNull(start.LowerWallId, "not a shear wall's shear part: no force on a shear wall's overturning");
+            Assert.AreEqual(0, trace.ExtraOn(0).Count);
+
+            trace.Land(0, new Dictionary<int, WallData>(), new Dictionary<int, WallDesignResult>(), null);
+            var posts = trace.ByLevel[-1].Where(x => x.Kind == PathPointKind.WallPost).OrderBy(x => x.At.Y).ToList();
+            Assert.AreEqual(2, posts.Count);
+            Assert.AreEqual("wall W1 post", posts[0].From);
+            Assert.AreEqual("wall W2 post", posts[1].From);
+            Assert.IsTrue(posts.All(x => x.OnFoundation && x.Support == SupportKind.Foundation));
+            Assert.AreEqual(r.StartAsd, posts[0].TensionAsd, 1e-9, "the post carries the beam end's reaction down");
+            Assert.AreEqual(r.EndAsd, posts[1].TensionAsd, 1e-9);
+            Assert.IsNotNull(posts[0].Model, "anchored at the foundation, sized for it");
+        }
+
         [TestMethod]
         public void AnSthd_CannotConnectFloorToFloor()
         {

@@ -17,9 +17,9 @@ namespace ShearWallCalculator.Design
         /// (<see cref="StoryCascade.Analyze"/>). Returns the load-path trace.
         /// </summary>
         public static LoadPathTrace TopDown(IList<ShearWallCalculatorBase> calcs, int down, Dictionary<int, WallDesignResult>[] all,
-                                            ShearWallDesigner designer, List<FramingBeam> beams, List<FramingColumn> columns)
+                                            ShearWallDesigner designer, List<FramingBeam> beams, List<FramingColumn> columns, List<FramingWall> walls = null)
         {
-            var trace = NewLoadPath(calcs, designer, beams, columns);
+            var trace = NewLoadPath(calcs, designer, beams, columns, walls);
             Dictionary<int, WallDesignResult> above = null;
             for (int k = calcs.Count - 1; k >= down; k--)
             {
@@ -31,19 +31,19 @@ namespace ShearWallCalculator.Design
 
         /// <summary>Every story's checks (index = story) and the trace.</summary>
         public static (List<Dictionary<int, WallDesignResult>> byStory, LoadPathTrace loadPath) All(IList<ShearWallCalculatorBase> calcs,
-            ShearWallDesigner designer, List<FramingBeam> beams, List<FramingColumn> columns)
+            ShearWallDesigner designer, List<FramingBeam> beams, List<FramingColumn> columns, List<FramingWall> walls = null)
         {
             var all = new Dictionary<int, WallDesignResult>[calcs.Count];
-            var trace = TopDown(calcs, 0, all, designer, beams, columns);
+            var trace = TopDown(calcs, 0, all, designer, beams, columns, walls);
             return (all.Select(x => x ?? new Dictionary<int, WallDesignResult>()).ToList(), trace);
         }
 
         /// <summary>A trace with the model's beams and columns by story, sizing new connections from the project's catalog.</summary>
-        public static LoadPathTrace NewLoadPath(IList<ShearWallCalculatorBase> calcs, ShearWallDesigner designer, List<FramingBeam> beams, List<FramingColumn> columns)
+        public static LoadPathTrace NewLoadPath(IList<ShearWallCalculatorBase> calcs, ShearWallDesigner designer, List<FramingBeam> beams, List<FramingColumn> columns, List<FramingWall> walls = null)
         {
             var settings = calcs.FirstOrDefault(c => c != null)?.DesignSettings ?? new DesignSettings();
             return new LoadPathTrace(beams ?? new List<FramingBeam>(), columns ?? new List<FramingColumn>(), (f, species, t) =>
-                designer?.SelectHoldown(f, species, t, settings.HoldownsFromStandardList, settings.StrapHoldownsOrDefault()));
+                designer?.SelectHoldown(f, species, t, settings.HoldownsFromStandardList, settings.StrapHoldownsOrDefault()), walls);
         }
 
         /// <summary>

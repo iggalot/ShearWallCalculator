@@ -432,7 +432,7 @@ namespace ShearWallVisualizer
                 string name = stories.Count > 0 && stories[0].Walls.TryGetValue(kv.Key, out var id) ? id : $"W{kv.Key}";
                 loads.AddRange(ShearWallCalculator.Design.FoundationForces.OfWall(name, lowIsStart ? s : e, lowIsStart ? e : s, r.EndForceByCase));
             }
-            foreach (var a in foundationAnchors.Where(a => a.Kind == PathPointKind.ColumnBase))
+            foreach (var a in foundationAnchors.Where(a => a.Kind == PathPointKind.ColumnBase || a.Kind == PathPointKind.WallPost))
                 loads.Add(new ShearWallCalculator.Design.FoundationLoad
                 {
                     At = a.At, From = a.From, Envelope = a.TensionAsd,

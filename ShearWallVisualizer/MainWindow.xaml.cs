@@ -388,7 +388,7 @@ namespace ShearWallVisualizer
         private LoadPathTrace DesignTopDown(IList<ShearWallCalculatorBase> calcs, int down, Dictionary<int, WallDesignResult>[] all)
         {
             var (beams, columns) = Framing();
-            return DesignPass.TopDown(calcs, down, all, designer, beams, columns); // the one design pass (the hub's re-check runs it too)
+            return DesignPass.TopDown(calcs, down, all, designer, beams, columns, ShearWallCheck.Walls(building, stories)); // the one design pass (the hub's re-check runs it too)
         }
 
         /// <summary>

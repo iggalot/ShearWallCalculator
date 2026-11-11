@@ -475,12 +475,19 @@ Shown greyed as "coming" in the hub (`SuiteApps`, in `..\DesignHub\DesignHub.Cor
     doubled joists, trimmers and headers at openings (headers and trimmers are beams now: an opening's tail joists
     need them drawn).
   - [ ] Drawing the joists for the framing plan and the takeoff (they are drawn on the plan now, thin; no schedule yet).
-- [ ] **SWC's hold-down path sees only the shear parts as walls under a point** (found 2026-11-10 by the tutorial's
+- [x] **SWC's hold-down path sees only the shear parts as walls under a point** (found 2026-11-10 by the tutorial's
   stair framing). `DesignPass.TopDown` gives `LoadPathTrace.Land` the calculator's `_walls`: each declared wall's shear
   part only. A beam end carrying hold-downs on a plain wall, or on a shear wall past its shear part, is "nothing under it"
   (the example: trimmer BM3's north end at x = 50 on the north wall, whose shear part is 0–36 ft; W6's hold-down on BM3).
   The Load Manager's gravity path already takes every wall as a support. Owner to say how the uplift goes down a plain
   wall (a post or strap in it down to what is under it, as a column; or an error).
+  **Done 2026-11-10** (owner: down the wall, as a column): every wall of the model goes to the trace (`FramingWall`,
+  `ShearWallCheck.Walls`); a point on a plain wall, or on a shear wall past its shear part, goes down a post in it
+  ("wall W2 post", `PathPointKind.WallPost`, saved as "wall post") to what is under the wall, anchored at the foundation;
+  a plain wall holds a beam up too. `ConnectionPairs` takes the post's upper member as the wall, so its free body balances.
+  Posts at different places in one wall stay apart (they were merged by name). `LoadPathTests`, DesignHub
+  `ABeamOnThePlainPartOfAWall_GoesDownAPostInIt_EveryMemberBalances`. The Load Manager's `UpperUplift` does not take
+  the posts (sized for the tension alone, as the beam ends).
 
 ## Wind Load Calculator
 

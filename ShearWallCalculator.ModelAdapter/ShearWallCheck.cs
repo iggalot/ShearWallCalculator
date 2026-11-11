@@ -105,6 +105,21 @@ namespace ShearWallCalculator.ModelAdapter
         }
 
         /// <summary>
+        /// Every wall of the model by the story it stands in (0 = the first; a wall through two stories in each), its
+        /// whole length: the load path takes what lands on a plain wall, or on a shear wall past its shear part, down a post in
+        /// it (owner 2026-11-10).
+        /// </summary>
+        public static List<FramingWall> Walls(Building b, IList<StoryMap> stories)
+        {
+            var list = new List<FramingWall>();
+            if (b == null || stories == null || stories.Count == 0) return list;
+            for (int i = 0; i < stories.Count; i++)
+                foreach (var w in b.WallsUnder(stories[i].Level)) // the walls of story i: under the level on top of it
+                    list.Add(new FramingWall { Id = w.Id, Start = new Point(w.Start.X, w.Start.Y), End = new Point(w.End.X, w.End.Y), Story = i });
+            return list;
+        }
+
+        /// <summary>
         /// The wind calculator's own wind cases on every story (each story its strip of the building), as the shear wall
         /// app takes them. Returns the per-story result (null with no levels).
         /// </summary>
@@ -154,7 +169,7 @@ namespace ShearWallCalculator.ModelAdapter
             }
             var (beams, columns) = Framing(b, stories);
             StoryCascade.Analyze(levels, i => beams.Where(x => x.OnStory == i).Select(x => (x.Start, x.End)), i => i >= 0 && i < stories.Count ? stories[i].Level.Name : null);
-            var (byStory, trace) = DesignPass.All(levels, designer ?? NewDesigner(), beams, columns);
+            var (byStory, trace) = DesignPass.All(levels, designer ?? NewDesigner(), beams, columns, Walls(b, stories));
             result.ByStory = byStory;
             result.LoadPath = trace;
 
@@ -241,7 +256,7 @@ namespace ShearWallCalculator.ModelAdapter
                 s.Points.Add(new LateralPoint { From = $"{name} {(ew ? "west" : "south")} end", WallId = modelId, X = low.X, Y = low.Y, Up = upLow, Connector = r.Holdown?.Model });
                 s.Points.Add(new LateralPoint { From = $"{name} {(ew ? "east" : "north")} end", WallId = modelId, X = high.X, Y = high.Y, Up = upHigh, Connector = r.Holdown?.Model });
             }
-            foreach (var a in (foundationAnchors ?? Enumerable.Empty<HoldownLanding>()).Where(a => a.Kind == PathPointKind.ColumnBase && (a.CaseUp ?? a.CaseAsd) != null && (a.CaseUp ?? a.CaseAsd).Count > 0))
+            foreach (var a in (foundationAnchors ?? Enumerable.Empty<HoldownLanding>()).Where(a => (a.Kind == PathPointKind.ColumnBase || a.Kind == PathPointKind.WallPost) && (a.CaseUp ?? a.CaseAsd) != null && (a.CaseUp ?? a.CaseAsd).Count > 0))
             {
                 var up = new Dictionary<string, double>();
                 foreach (var kv in a.CaseUp ?? a.CaseAsd) { string k = kv.Key; Put(up, k, Math.Round(kv.Value / 0.6, 1)); Case(k); }
@@ -318,7 +333,7 @@ namespace ShearWallCalculator.ModelAdapter
                         Connector = l.Model,
                         TensionAsd = Math.Round(l.TensionAsd, 1),
                         Onto = what,
-                        Kind = wall ? "wall" : l.Kind == PathPointKind.BeamEnd ? "beam end" : "column base",
+                        Kind = wall ? "wall" : l.Kind == PathPointKind.BeamEnd ? "beam end" : l.Kind == PathPointKind.WallPost ? "wall post" : "column base",
                         PostAlongWall = wall ? WallSchedule.PostAlongWall(l.Choice) : 0,
                         Family = fam == HoldownFamilies.Strap_ToWallBelow || fam == HoldownFamilies.STHD_ToFoundation ? "strap" : "bolted",
                         Up = CaseForces(l, story, levels, byStory),

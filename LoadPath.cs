@@ -13,7 +13,11 @@ namespace ShearWallCalculator
     public enum SupportKind { None, Foundation, Wall, Column, Beam }
 
     /// <summary>What a load-path point is: a wall's hold-down, the end of a beam that carries one, or the base of a column.</summary>
-    public enum PathPointKind { WallHoldown, BeamEnd, ColumnBase }
+    /// <summary>
+    /// A wall's hold-down, a beam's end, a column's base, or a post in a plain wall (or a shear wall past its shear part)
+    /// taking what lands on the wall down to what is under it, as a column does (owner 2026-11-10).
+    /// </summary>
+    public enum PathPointKind { WallHoldown, BeamEnd, ColumnBase, WallPost }
 
     /// <summary>
     /// Which hold-down family can anchor to what. The rules:
@@ -94,6 +98,19 @@ namespace ShearWallCalculator
         public int TopStory { get; set; }
     }
 
+    /// <summary>
+    /// A wall of the model, its whole length, standing in story <see cref="Story"/> (0 = the first). Any wall holds up what
+    /// lands on it: a shear wall's shear part takes it into its overturning; anywhere else (a plain wall, a shear wall past
+    /// its shear part) a post or strap in the wall takes it down to what is under the wall, as a column (owner 2026-11-10).
+    /// </summary>
+    public sealed class FramingWall
+    {
+        public string Id { get; set; }
+        public Point Start { get; set; }
+        public Point End { get; set; }
+        public int Story { get; set; }
+    }
+
     /// <summary>One load on a beam and what it passes to each of the beam's supports (<see cref="BeamReactions.Supports"/>, in order).</summary>
     public sealed class BeamLoad
     {
@@ -148,6 +165,8 @@ namespace ShearWallCalculator
     /// take it down;</item>
     /// <item>a COLUMN under that level: it carries the load to its base, which is traced again (to the foundation for a
     /// column standing on the ground);</item>
+    /// <item>a plain WALL of the story below (or a shear wall past its shear part): a post or strap in the wall takes it down
+    /// to what is under the wall, traced again, as a column ("wall W2 post"; owner 2026-11-10);</item>
     /// <item>a BEAM on that level: the beam's reactions at its supports (every wall and column under it anywhere along it, a
     /// beam at an end with neither; by its own free body, <see cref="BeamStatics"/>: two supports by statics, R_start = Σ T
     /// (L − a) / L on a simple span, an overhang past them too; three or more continuous, EI the same along it; each wind
@@ -170,6 +189,7 @@ namespace ShearWallCalculator
 
         private readonly List<FramingBeam> beams;
         private readonly List<FramingColumn> columns;
+        private readonly List<FramingWall> walls;
         private readonly Func<HoldownFamilies, WoodTypes, double, HoldownChoice> size;
 
         /// <summary>Loads arriving on the level on top of story k (k = −1: the foundation), waiting for that level to be traced.</summary>
@@ -183,10 +203,13 @@ namespace ShearWallCalculator
         public List<BeamReactions> Beams { get; } = new List<BeamReactions>();
 
         /// <param name="size">Sizes a hold-down: family, species, required tension (lb ASD) → the lightest that works (null: none).</param>
-        public LoadPathTrace(IEnumerable<FramingBeam> beams, IEnumerable<FramingColumn> columns, Func<HoldownFamilies, WoodTypes, double, HoldownChoice> size)
+        /// <param name="walls">Every wall of the model (the shear walls' shear parts come with each story's <c>Land</c>).</param>
+        public LoadPathTrace(IEnumerable<FramingBeam> beams, IEnumerable<FramingColumn> columns, Func<HoldownFamilies, WoodTypes, double, HoldownChoice> size,
+                             IEnumerable<FramingWall> walls = null)
         {
             this.beams = beams?.ToList() ?? new List<FramingBeam>();
             this.columns = columns?.ToList() ?? new List<FramingColumn>();
+            this.walls = walls?.ToList() ?? new List<FramingWall>();
             this.size = size ?? ((f, s, t) => null);
         }
 
@@ -250,8 +273,8 @@ namespace ShearWallCalculator
             int level = story - 1;
             var arriving = new List<Arrival>();
             if (pending.TryGetValue(level, out var p))
-                // one column base for everything a column carries: the worse wind direction
-                foreach (var g in p.GroupBy(x => x.From))
+                // one column base for everything a column carries: the worse wind direction (a wall's posts: one at each place)
+                foreach (var g in p.GroupBy(x => (x.From, Math.Round(x.At.X, 4), Math.Round(x.At.Y, 4))))
                 {
                     var f = g.First();
                     double up = g.Where(x => x.LowEndUp != false).Sum(x => x.Asd), dn = g.Where(x => x.LowEndUp != true).Sum(x => x.Asd);
@@ -384,10 +407,12 @@ namespace ShearWallCalculator
             var xs = new List<double>();
             if (Under(bm.Start) || OnBeam(bm.Start, level, bm) != null) xs.Add(0);
             if (Under(bm.End) || OnBeam(bm.End, level, bm) != null) xs.Add(L);
-            foreach (var w in wallsBelow?.Values ?? Enumerable.Empty<WallData>())
+            var segs = (wallsBelow?.Values ?? Enumerable.Empty<WallData>()).Select(w => (w.Start, w.End))
+                       .Concat(walls.Where(w => w.Story == level).Select(w => (w.Start, w.End))); // every wall: a plain one holds it up too
+            foreach (var (ws, we) in segs)
             {
-                foreach (var p in new[] { w.Start, w.End }) if (OnSegment(p, bm.Start, bm.End)) xs.Add(Along(p));
-                if (Crossing(bm.Start, bm.End, w.Start, w.End, out double t)) xs.Add(t * L);
+                foreach (var p in new[] { ws, we }) if (OnSegment(p, bm.Start, bm.End)) xs.Add(Along(p));
+                if (Crossing(bm.Start, bm.End, ws, we, out double t)) xs.Add(t * L);
             }
             foreach (var c in columns.Where(c => c.BaseStory <= level && c.TopStory >= level && OnSegment(c.At, bm.Start, bm.End))) xs.Add(Along(c.At));
             foreach (var x0 in xs.Select(x => x <= Tolerance ? 0 : x >= L - Tolerance ? L : x).OrderBy(x => x))
@@ -534,16 +559,28 @@ namespace ShearWallCalculator
         }
 
         /// <summary>A wall of the story below through the point (on the same line for a wall's hold-down), else a column under it.</summary>
-        private bool WallOrColumnUnder(Arrival a, int level, IDictionary<int, WallData> wallsBelow, out int? wallId, out FramingColumn col)
+        private bool WallOrColumnUnder(Arrival a, int level, IDictionary<int, WallData> wallsBelow, out int? wallId, out FramingColumn col) =>
+            WallOrColumnUnder(a, level, wallsBelow, out wallId, out col, out _);
+
+        /// <summary>
+        /// What stands under a point at <paramref name="level"/>: a shear wall's shear part (<paramref name="wallId"/>; on the
+        /// same line for a wall's hold-down), else a column, else any other wall of the story below through the point
+        /// (<paramref name="plain"/>: a plain wall, or a shear wall past its shear part).
+        /// </summary>
+        private bool WallOrColumnUnder(Arrival a, int level, IDictionary<int, WallData> wallsBelow, out int? wallId, out FramingColumn col, out FramingWall plain)
         {
             wallId = wallsBelow == null ? null
                    : a.Dir != null ? StoryCascade.WallUnder(a.At, a.Dir.Value, wallsBelow)
                    : StoryCascade.WallUnder(a.At, WallDirs.EastWest, wallsBelow) ?? StoryCascade.WallUnder(a.At, WallDirs.NorthSouth, wallsBelow);
             col = null;
+            plain = null;
             if (wallId != null) return true;
             var at = a.At;
             col = columns.FirstOrDefault(c => c.BaseStory <= level && c.TopStory >= level && (c.At - at).Length <= Tolerance);
-            return col != null;
+            if (col != null) return true;
+            if (level < 0) return false;
+            plain = walls.FirstOrDefault(w => w.Story == level && OnSegment(at, w.Start, w.End));
+            return plain != null;
         }
 
         /// <summary>
@@ -563,12 +600,14 @@ namespace ShearWallCalculator
             int? wallId = null;
             FramingColumn col = null;
             FramingBeam beam = null;
+            FramingWall plain = null;
             if (level < 0) { l.Support = SupportKind.Foundation; l.OnFoundation = true; }
             else
             {
-                WallOrColumnUnder(a, level, wallsBelow, out wallId, out col);
+                WallOrColumnUnder(a, level, wallsBelow, out wallId, out col, out plain);
                 if (wallId != null) { l.Support = SupportKind.Wall; l.LowerWallId = wallId; l.SupportId = $"wall {wallId}"; }
                 else if (col != null) { l.Support = SupportKind.Column; l.SupportId = $"column {col.Id}"; }
+                else if (plain != null) { l.Support = SupportKind.Wall; l.SupportId = $"wall {plain.Id}"; }
                 else if (beamLoads != null && (beam = OnBeam(a.At, level, except)) != null)
                 { l.Support = SupportKind.Beam; l.SupportId = $"beam {beam.Id}"; }
                 else l.Support = SupportKind.None;
@@ -594,6 +633,17 @@ namespace ShearWallCalculator
 
             switch (l.Support)
             {
+                case SupportKind.Wall when plain != null:
+                    // a plain wall (or a shear wall past its shear part): a post or strap in it takes the load down to what is
+                    // under the wall, the level under its story (the foundation for the first story), as a column (owner 2026-11-10)
+                    int under = plain.Story - 1;
+                    if (!pending.TryGetValue(under, out var post)) pending[under] = post = new List<Arrival>();
+                    post.Add(new Arrival
+                    {
+                        At = a.At, Asd = a.Asd, Lrfd = a.Lrfd, LowEndUp = a.LowEndUp, Kind = PathPointKind.WallPost, From = $"wall {plain.Id} post",
+                        UpperStory = a.UpperStory, WallId = a.WallId, Family = a.Family, Species = a.Species, CaseAsd = a.CaseAsd, CaseLrfd = a.CaseLrfd, CaseUp = a.CaseUp,
+                    });
+                    break;
                 case SupportKind.Wall:
                     // a wall's hold-down on a wall on the same line is already in that wall's design (StoryCascade.HoldownForcesOn);
                     // a beam end or a column base on a wall is a force from above, for both wind directions
